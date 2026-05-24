@@ -3,9 +3,7 @@
 ## Purpose
 
 Specify the NestJS HTTP surface for listing, reading, creating, updating, and deleting CVs, including request validation, optimistic concurrency hints, and integration with Supabase for persistence.
-
 ## Requirements
-
 ### Requirement: All `/cv` routes MUST require authentication
 
 The `CvController` SHALL apply the Supabase auth guard to every handler so unauthenticated requests never reach service logic.
@@ -55,3 +53,18 @@ On `POST`, the service SHALL insert a row with empty `data`, merge schema meta v
 
 - **WHEN** `POST /cv` includes valid `title` and `data`
 - **THEN** the response SHALL include the new row with persisted `data` including applied meta and schema-valid content
+
+### Requirement: Media routes MUST inherit CV-grade authentication on upload and public read on stream
+
+Nest SHALL classify **`POST /media/upload`** under `MediaController` guarded by the identical Supabase-derived authentication strategy used for `/cv`. **`GET /media/:id`** SHALL be public (no Bearer) and stream stored objects by registry id. Upload handlers MUST remain tenant-isolated via authenticated user id embedded in Storage paths and registry rows.
+
+#### Scenario: Auth parity with CV fetch on upload
+
+- **WHEN** a valid bearer used for `GET /cv/:id` is replayed onto `POST /media/upload`
+- **THEN** Nest SHALL authorize identically modulo multipart validation errors
+
+#### Scenario: Public media stream without token
+
+- **WHEN** any client requests `GET /media/{valid_uuid}` without Authorization
+- **THEN** Nest SHALL return the image stream when the registry row exists
+

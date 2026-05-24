@@ -17,6 +17,8 @@
   --border: 240 5.9% 90%;
   --input: 240 5.9% 90%;
   --ring: 240 5.9% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -37,6 +39,8 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
   }
 }
 
@@ -57,6 +61,8 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -67,97 +73,27 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
-.md-editor-field .w-md-editor {
-  border-radius: 0.375rem;
-  border: 1px solid hsl(var(--input));
-  box-shadow: none;
-  background: hsl(var(--background));
-  --md-editor-box-shadow-color: hsl(var(--input));
-}
-
-.md-editor-field .w-md-editor-toolbar {
-  border-bottom: 1px solid hsl(var(--border));
-  background: hsl(var(--muted));
-}
-
-.md-editor-field .w-md-editor-text-input,
-.md-editor-field .w-md-editor-text-pre,
-.md-editor-field .w-md-editor-text,
-.md-editor-field .w-md-editor-text-pre > code {
-  font-size: 0.875rem !important;
-  line-height: 1.25rem !important;
-}
-
-.md-editor-field .w-md-editor-text {
-  padding: 0.5rem 0.75rem !important;
-}
-
-.md-editor-field .w-md-editor-preview {
-  padding: 0.5rem 0.75rem;
+.rich-text-editor .rounded-md.border {
   font-size: 0.875rem;
   line-height: 1.25rem;
 }
 
-.md-editor-field--inline .w-md-editor {
-  overflow: hidden;
+.rich-text-editor--inline .rounded-md.border {
+  font-size: 0.8125rem;
 }
 
-.md-editor-field--inline .w-md-editor-content {
-  height: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
-  overflow: hidden !important;
+/* Wysimark renders Slate's `<Editable as={$Editable}>` so `[data-slate-editor='true']`
+ * IS the styled `$Editable` div carrying its `padding: 2em`. Override it directly. */
+.rich-text-editor [data-slate-editor='true'] {
+  padding: 1rem !important;
 }
 
-.md-editor-field--inline .w-md-editor-text {
-  min-height: 40px !important;
-  height: 40px !important;
-  overflow: hidden !important;
-  white-space: nowrap !important;
-  word-break: normal !important;
-  overflow-wrap: normal !important;
+.rich-text-editor--inline [data-slate-editor='true'] {
+  padding: 0.5rem !important;
 }
 
-.md-editor-field--inline .w-md-editor-text-input,
-.md-editor-field--inline .w-md-editor-text-pre,
-.md-editor-field--inline .w-md-editor-text-pre > code {
-  white-space: nowrap !important;
-  word-break: normal !important;
-  overflow-wrap: normal !important;
-  line-height: 1.25rem !important;
-}
-
-.md-editor-field--inline .w-md-editor-text-pre,
-.md-editor-field--inline .w-md-editor-text-pre > code {
-  padding: 0 !important;
-  visibility: hidden !important;
-}
-
-.md-editor-field--inline .w-md-editor-text-input {
-  -webkit-text-fill-color: hsl(var(--foreground)) !important;
-  color: hsl(var(--foreground)) !important;
-}
-
-.md-editor-field--inline .w-md-editor-preview {
-  height: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
-  overflow: hidden !important;
-  white-space: nowrap !important;
-}
-
-.md-editor-field--inline .w-md-editor-text-input::-webkit-scrollbar,
-.md-editor-field--inline .w-md-editor-preview::-webkit-scrollbar {
-  display: none;
-}
-
-.md-editor-field--inline .w-md-editor-text-input,
-.md-editor-field--inline .w-md-editor-preview {
-  scrollbar-width: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  .md-editor-field[data-color-mode='light'] {
-    color-scheme: light;
-  }
+.rich-text-editor--inline [data-slate-node='element'] {
+  margin-block: 0;
+  padding-block: 0;
+  line-height: 1.4;
 }

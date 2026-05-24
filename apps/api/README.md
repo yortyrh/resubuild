@@ -4,12 +4,16 @@ REST API for authenticated CV persistence and **auth issuance** consumed by `app
 
 ## Environment
 
-| Variable            | Purpose                                                                                                                                                                                                         |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SUPABASE_URL`      | Supabase project URL (server-side only).                                                                                                                                                                        |
-| `SUPABASE_ANON_KEY` | Public anon key — used server-side only for `/auth/login`, `/auth/register`, `/auth/refresh` and JWT validation (`auth.getUser`).                                                                               |
-| `PORT`              | Listen port (`3001` default locally).                                                                                                                                                                           |
-| `CORS_ORIGIN`       | Comma-separated browser origins allowed to call the API (example: `http://localhost:3000` or `https://app.example.com`). No cookies auth: **`credentials` is off** — clients send `Authorization: Bearer` only. |
+| Variable                    | Purpose                                                                                                                                                                                                                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SUPABASE_URL`              | Supabase project URL (server-side only).                                                                                                                                                                                                                                  |
+| `SUPABASE_ANON_KEY`         | Public anon key — used server-side only for `/auth/login`, `/auth/register`, `/auth/refresh` and JWT validation (`auth.getUser`).                                                                                                                                         |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key — **server-only** — used for Supabase Storage uploads in `POST /media/upload` (`MediaService`). Never expose to the browser.                                                                                                                             |
+| `MEDIA_BUCKET`              | Supabase Storage bucket name for resume-owned uploads (images). Required for uploads when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set.                                                                                                                         |
+| `MEDIA_MAX_BYTES`           | Optional max upload size in bytes (default 10 MiB).                                                                                                                                                                                                                       |
+| `PUBLIC_API_URL`            | Optional. Public base URL of this API (**no trailing slash**) used when building canonical image URLs (`{PUBLIC_API_URL}/media/{id}`). If omitted, defaults to `http://localhost:${PORT}`. Production: set to the HTTPS origin browsers use (`<img src=…>` must load it). |
+| `PORT`                      | Listen port (`3001` default locally).                                                                                                                                                                                                                                     |
+| `CORS_ORIGIN`               | Comma-separated browser origins allowed to call the API (example: `http://localhost:3000` or `https://app.example.com`). No cookies auth: **`credentials` is off** — clients send `Authorization: Bearer` only.                                                           |
 
 Optional / legacy entries may exist in `.env.example`; JWT secret validation is unused if you rely solely on Supabase-backed tokens.
 
@@ -30,6 +34,14 @@ Authorization: Bearer <access_token>
 | `GET`  | `/auth/me`       | Bearer required; `{ user: { id, email } }`                                             |
 
 CORS exposes `Authorization` and `Content-Type` on preflight. Add every deployed web origin exactly (no wildcard in production recommended).
+
+### Media (Supabase Storage + registry rows)
+
+Uploads accept **multipart** `file` on `POST /media/upload` behind the same **Bearer** guard as `/cv`. The service writes objects to Storage under `{user_id}/{media_uuid}.{ext}` (MIME allowlist: PNG, JPEG, WebP, GIF), inserts a row in **`public.media`**, and responds with **`{ id, url, contentType }`**. The **`url`** points at **`GET /media/:id`** on this API (`PUBLIC_API_URL` or `http://localhost:${PORT}`), not the Supabase Storage public URL, so embeddings depend only on the media id portion of that path.
+
+**`GET /media/:id`** is **public** (no Bearer) and streams bytes with `Cache-Control: public`. Treat the UUID as an unguessable capability if you rely on secrecy.
+
+In **production**, if `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `MEDIA_BUCKET` are not all set at startup, `MediaService` **throws** during `onModuleInit`. In non-production, uploads are disabled with a warning until those variables are provided.
 
 ## CV routes
 

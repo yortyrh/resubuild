@@ -45,6 +45,43 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   return response.json() as Promise<T>;
 }
 
+export interface MediaUploadResult {
+  /** Opaque media id (UUID v4). */
+  id: string;
+  /** Absolute URL on this API (`GET /media/:id`) for use in Markdown or `basics.image`. */
+  url: string;
+  contentType: string;
+}
+
+/** Multipart POST to authenticated `/media/upload`; returns API-hosted image URL keyed by media id. */
+export async function uploadResumeMedia(file: File): Promise<MediaUploadResult> {
+  const token = await getValidAccessToken(apiUrl);
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${apiUrl}/media/upload`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    const message =
+      typeof body.message === 'string'
+        ? body.message
+        : Array.isArray(body.message)
+          ? body.message.join(', ')
+          : `Upload failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<MediaUploadResult>;
+}
+
 export function listCvs() {
   return apiFetch<CvRecord[]>('/cv');
 }

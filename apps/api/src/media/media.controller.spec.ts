@@ -1,0 +1,91 @@
+import { BadRequestException, CanActivate, ExecutionContext, StreamableFile } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { MediaController } from './media.controller';
+import { MediaService } from './media.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+
+describe('MediaController', () => {
+  let controller: MediaController;
+  const uploadObject = jest.fn();
+  const loadMediaPayload = jest.fn();
+
+  beforeEach(async () => {
+    uploadObject.mockReset();
+    loadMediaPayload.mockReset();
+
+    const alwaysAuthGuard: CanActivate = {
+      canActivate: (ctx: ExecutionContext) => {
+        const req = ctx.switchToHttp().getRequest<AuthenticatedRequest>();
+        req.user = { id: 'user-test-1', accessToken: 't', email: 'example@example.com' };
+        return true;
+      },
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [MediaController],
+      providers: [
+        {
+          provide: MediaService,
+          useValue: { uploadObject, loadMediaPayload },
+        },
+      ],
+    })
+      .overrideGuard(SupabaseAuthGuard)
+      .useValue(alwaysAuthGuard)
+      .compile();
+
+    controller = module.get(MediaController);
+  });
+
+  const sampleFile = {
+    fieldname: 'file',
+    originalname: 'a.png',
+    encoding: '7bit',
+    mimetype: 'image/png',
+    buffer: Buffer.from([1, 2, 3]),
+    size: 3,
+  } as unknown as Express.Multer.File;
+
+  it('delegates multipart file to MediaService.uploadObject', async () => {
+    uploadObject.mockResolvedValue({
+      id: 'aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee',
+      url: 'https://api.example.com/media/aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee',
+      contentType: 'image/png',
+    });
+
+    const req = {
+      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+    } as AuthenticatedRequest;
+
+    await expect(controller.upload(req, sampleFile)).resolves.toEqual({
+      id: 'aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee',
+      url: 'https://api.example.com/media/aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee',
+      contentType: 'image/png',
+    });
+
+    expect(uploadObject).toHaveBeenCalledWith('user-test-1', sampleFile);
+  });
+
+  it('streams media by id via MediaService.loadMediaPayload', async () => {
+    const buffer = Buffer.from([9, 8, 7]);
+    loadMediaPayload.mockResolvedValue({
+      buffer,
+      contentType: 'image/jpeg',
+    });
+
+    const id = '123e4567-e89b-12d3-a456-426614174000';
+
+    await expect(controller.stream(id)).resolves.toBeInstanceOf(StreamableFile);
+    expect(loadMediaPayload).toHaveBeenCalledWith(id);
+  });
+
+  it('rejects upload when file part is missing', () => {
+    const req = {
+      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+    } as AuthenticatedRequest;
+
+    expect(() => controller.upload(req)).toThrow(BadRequestException);
+    expect(uploadObject).not.toHaveBeenCalled();
+  });
+});

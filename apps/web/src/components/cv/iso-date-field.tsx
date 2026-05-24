@@ -14,6 +14,7 @@ import {
 
 interface IsoDateFieldProps {
   label: string;
+  description?: string;
   value?: string;
   onChange: (value: string) => void;
   defaultPrecision?: IsoDatePrecision;
@@ -27,6 +28,7 @@ const precisionLabels: Record<IsoDatePrecision, string> = {
 
 export function IsoDateField({
   label,
+  description,
   value = '',
   onChange,
   defaultPrecision = 'month',
@@ -68,6 +70,7 @@ export function IsoDateField({
           ))}
         </div>
       </div>
+      {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
 
       {precision === 'year' ? (
         <Input

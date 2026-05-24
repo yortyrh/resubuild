@@ -6,6 +6,7 @@ import { MarkdownEditor } from '@/components/cv/markdown-editor';
 
 interface TextFieldProps {
   label: string;
+  description?: string;
   value?: string;
   onChange: (value: string) => void;
   type?: 'text' | 'email' | 'url';
@@ -16,6 +17,7 @@ interface TextFieldProps {
 
 export function TextField({
   label,
+  description,
   value = '',
   onChange,
   type = 'text',
@@ -26,6 +28,7 @@ export function TextField({
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
+      {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
       {markdown ? (
         <MarkdownEditor
           value={value}
@@ -53,6 +56,7 @@ export function TextField({
 
 interface StringListFieldProps {
   label: string;
+  description?: string;
   values?: string[];
   onChange: (values: string[]) => void;
   markdown?: boolean;
@@ -60,6 +64,7 @@ interface StringListFieldProps {
 
 export function StringListField({
   label,
+  description,
   values = [],
   onChange,
   markdown = false,
@@ -77,6 +82,7 @@ export function StringListField({
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
+      {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
       <div className="space-y-3">
         {values.map((value, index) => (
           <div key={index} className="flex items-start gap-2">

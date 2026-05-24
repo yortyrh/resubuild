@@ -192,6 +192,28 @@ describe('AuthService', () => {
     );
   });
 
+  it('reject token mapping when session user id is missing', async () => {
+    mockedCreateClient.mockReturnValue({
+      auth: {
+        signInWithPassword: jest.fn().mockResolvedValue({
+          data: {
+            session: {
+              access_token: 'access',
+              refresh_token: 'refresh',
+              expires_in: 3600,
+              user: { email: 'u@test.com' },
+            },
+          },
+          error: null,
+        }),
+      },
+    } as never);
+
+    await expect(service.login({ email: 'u@test.com', password: 'pw123456' })).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
+
   it('reject token mapping when Supabase omits refresh_token inside session object', async () => {
     mockedCreateClient.mockReturnValue({
       auth: {

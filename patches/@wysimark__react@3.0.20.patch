@@ -1,0 +1,453 @@
+diff --git a/.dist/browser/index.cjs.js b/.dist/browser/index.cjs.js
+index 070da84eb321a5cc97d7d16511ebde8f0629ad8a..b35083cca761db7ad1841a109e1142760291a887 100644
+--- a/.dist/browser/index.cjs.js
++++ b/.dist/browser/index.cjs.js
+@@ -138,6 +138,8 @@ function getMarksFromSegment(segment) {
+     return getMarksFromText(segment);
+   } else if (segment.type === "anchor") {
+     return getCommonAnchorMarks(segment.children);
++  } else if (segment.type === "image-inline") {
++    return [];
+   } else {
+     throw new Error(`Unhandled type ${segment.type}`);
+   }
+@@ -3988,7 +3990,7 @@ function normalizeNode3(editor, entry) {
+ var $Paragraph = _styled2.default.call(void 0, "p")`
+   padding: 0;
+   margin: 1em 0;
+-  &:first-child {
++  &:first-of-type {
+     margin-top: 0;
+   }
+ 
+@@ -4192,7 +4194,7 @@ var _react3 = require('@emotion/react');
+ 
+ var headingStyles = _react3.css`
+   margin-top: 1em;
+-  &:first-child {
++  &:first-of-type {
+     margin-top: 0;
+   }
+   font-weight: bold;
+diff --git a/.dist/browser/index.esm.js b/.dist/browser/index.esm.js
+index 46d1f77be5f12d21b737de08c0cd911830ca2acd..fb1b647a77a83cd99f8461418a9f38f78f5601bf 100644
+--- a/.dist/browser/index.esm.js
++++ b/.dist/browser/index.esm.js
+@@ -138,6 +138,8 @@ function getMarksFromSegment(segment) {
+     return getMarksFromText(segment);
+   } else if (segment.type === "anchor") {
+     return getCommonAnchorMarks(segment.children);
++  } else if (segment.type === "image-inline") {
++    return [];
+   } else {
+     throw new Error(`Unhandled type ${segment.type}`);
+   }
+@@ -3988,7 +3990,7 @@ import styled17 from "@emotion/styled";
+ var $Paragraph = styled17("p")`
+   padding: 0;
+   margin: 1em 0;
+-  &:first-child {
++  &:first-of-type {
+     margin-top: 0;
+   }
+ 
+@@ -4192,7 +4194,7 @@ import { css } from "@emotion/react";
+ import styled18 from "@emotion/styled";
+ var headingStyles = css`
+   margin-top: 1em;
+-  &:first-child {
++  &:first-of-type {
+     margin-top: 0;
+   }
+   font-weight: bold;
+@@ -8116,6 +8118,59 @@ var smallItems = [
+ ];
+ var initialItems = [blockDropdownItem, "divider"];
+ var itemSets = [largeItems, mediumItems, smallItems];
++var minimalInlineToolbarItems = [
++  {
++    icon: Bold,
++    title: "Bold",
++    hotkey: "mod+b",
++    action: (editor) => editor.marksPlugin.toggleBold()
++  },
++  "divider",
++  {
++    icon: Italic,
++    title: "Italic",
++    hotkey: "mod+i",
++    action: (editor) => editor.marksPlugin.toggleItalic()
++  },
++  "divider",
++  {
++    icon: Strikethrough,
++    title: "Strikethrough",
++    hotkey: "super+k",
++    action: (editor) => editor.marksPlugin.toggleStrike()
++  },
++  "divider",
++  dialogItems[3]
++];
++var compactBlockToolbarItems = [
++  {
++    icon: Bold,
++    title: "Bold",
++    hotkey: "mod+b",
++    action: (editor) => editor.marksPlugin.toggleBold()
++  },
++  "divider",
++  {
++    icon: Italic,
++    title: "Italic",
++    hotkey: "mod+i",
++    action: (editor) => editor.marksPlugin.toggleItalic()
++  },
++  "divider",
++  {
++    icon: Strikethrough,
++    title: "Strikethrough",
++    hotkey: "super+k",
++    action: (editor) => editor.marksPlugin.toggleStrike()
++  },
++  "divider",
++  linkItem,
++  dropdownItems[0],
++  dropdownItems[1],
++  "divider",
++  dialogItems[0],
++  dialogItems[3]
++];
+ 
+ // src/toolbar-plugin/components/toolbar/toolbar-button.tsx
+ import { clsx as clsx9 } from "clsx";
+@@ -8217,9 +8272,20 @@ function measureItemSetWidth(items, buttonWidth, dividerWidth) {
+   return width;
+ }
+ function Toolbar() {
++  const editor = useSlateStatic22();
+   const ref = useRef13(null);
+-  const [items, setItems] = useState9(initialItems);
++  const minimal = editor.toolbar.minimalInline;
++  const compactBlock = editor.toolbar.compactBlock;
++  const [items, setItems] = useState9(
++    minimal
++      ? minimalInlineToolbarItems
++      : compactBlock
++        ? compactBlockToolbarItems
++        : initialItems
++  );
+   useEffect7(() => {
++    if (minimal || compactBlock)
++      return;
+     const refresh = throttle2(
+       () => {
+         const toolbar = ref.current;
+@@ -8247,7 +8313,7 @@ function Toolbar() {
+     return () => {
+       window.removeEventListener("resize", refresh);
+     };
+-  }, []);
++  }, [minimal, compactBlock]);
+   return /* @__PURE__ */ jsx63($ToolbarContainer, { ref, children: /* @__PURE__ */ jsx63($Toolbar, { children: items.map((item, index) => /* @__PURE__ */ jsx63(
+     ToolbarItem,
+     {
+@@ -8305,7 +8371,9 @@ var ToolbarPlugin = createPlugin(
+       height: options.toolbar?.height,
+       minHeight: options.toolbar?.minHeight,
+       maxHeight: options.toolbar?.maxHeight,
+-      showUploadButtons: options.toolbar?.showUploadButtons ?? true
++      showUploadButtons: options.toolbar?.showUploadButtons ?? true,
++      minimalInline: options.toolbar?.minimalInline ?? false,
++      compactBlock: options.toolbar?.compactBlock ?? false
+     };
+     return {
+       name: "toolbar",
+@@ -8670,7 +8738,9 @@ function useEditor({
+   authToken,
+   height,
+   minHeight,
+-  maxHeight
++  maxHeight,
++  minimalToolbar,
++  compactBlockToolbar
+ }) {
+   const [editor] = useState10(() => {
+     const editor2 = createEditor();
+@@ -8684,7 +8754,9 @@ function useEditor({
+         /**
+          * If `authToken` is provided then show upload buttons.
+          */
+-        showUploadButtons: !!authToken
++        showUploadButtons: !!authToken,
++        minimalInline: !!minimalToolbar,
++        compactBlock: !!compactBlockToolbar
+       }
+     });
+     nextEditor.convertElement.addConvertElementType("paragraph");
+diff --git a/.dist/browser/index.iife.js b/.dist/browser/index.iife.js
+index a2b231e812bd0178f15b294f65c826fbf4b4b0a4..4ea6d95d3ac5cd69f49d1f4c17bd1aae2012f85d 100644
+--- a/.dist/browser/index.iife.js
++++ b/.dist/browser/index.iife.js
+@@ -47027,6 +47027,8 @@
+       return getMarksFromText(segment);
+     } else if (segment.type === "anchor") {
+       return getCommonAnchorMarks(segment.children);
++    } else if (segment.type === "image-inline") {
++      return [];
+     } else {
+       throw new Error(`Unhandled type ${segment.type}`);
+     }
+@@ -53224,7 +53226,7 @@ https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_liter
+   var $Paragraph = emotion_styled_browser_esm_default("p")`
+   padding: 0;
+   margin: 1em 0;
+-  &:first-child {
++  &:first-of-type {
+     margin-top: 0;
+   }
+ 
+@@ -53442,7 +53444,7 @@ https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_liter
+   init_react_shim();
+   var headingStyles = css`
+   margin-top: 1em;
+-  &:first-child {
++  &:first-of-type {
+     margin-top: 0;
+   }
+   font-weight: bold;
+diff --git a/.dist/node/index.cjs.js b/.dist/node/index.cjs.js
+index 070da84eb321a5cc97d7d16511ebde8f0629ad8a..b35083cca761db7ad1841a109e1142760291a887 100644
+--- a/.dist/node/index.cjs.js
++++ b/.dist/node/index.cjs.js
+@@ -138,6 +138,8 @@ function getMarksFromSegment(segment) {
+     return getMarksFromText(segment);
+   } else if (segment.type === "anchor") {
+     return getCommonAnchorMarks(segment.children);
++  } else if (segment.type === "image-inline") {
++    return [];
+   } else {
+     throw new Error(`Unhandled type ${segment.type}`);
+   }
+@@ -3988,7 +3990,7 @@ function normalizeNode3(editor, entry) {
+ var $Paragraph = _styled2.default.call(void 0, "p")`
+   padding: 0;
+   margin: 1em 0;
+-  &:first-child {
++  &:first-of-type {
+     margin-top: 0;
+   }
+ 
+@@ -4192,7 +4194,7 @@ var _react3 = require('@emotion/react');
+ 
+ var headingStyles = _react3.css`
+   margin-top: 1em;
+-  &:first-child {
++  &:first-of-type {
+     margin-top: 0;
+   }
+   font-weight: bold;
+diff --git a/.dist/node/index.esm.js b/.dist/node/index.esm.js
+index 46d1f77be5f12d21b737de08c0cd911830ca2acd..fb1b647a77a83cd99f8461418a9f38f78f5601bf 100644
+--- a/.dist/node/index.esm.js
++++ b/.dist/node/index.esm.js
+@@ -138,6 +138,8 @@ function getMarksFromSegment(segment) {
+     return getMarksFromText(segment);
+   } else if (segment.type === "anchor") {
+     return getCommonAnchorMarks(segment.children);
++  } else if (segment.type === "image-inline") {
++    return [];
+   } else {
+     throw new Error(`Unhandled type ${segment.type}`);
+   }
+@@ -3988,7 +3990,7 @@ import styled17 from "@emotion/styled";
+ var $Paragraph = styled17("p")`
+   padding: 0;
+   margin: 1em 0;
+-  &:first-child {
++  &:first-of-type {
+     margin-top: 0;
+   }
+ 
+@@ -4192,7 +4194,7 @@ import { css } from "@emotion/react";
+ import styled18 from "@emotion/styled";
+ var headingStyles = css`
+   margin-top: 1em;
+-  &:first-child {
++  &:first-of-type {
+     margin-top: 0;
+   }
+   font-weight: bold;
+@@ -8116,6 +8118,59 @@ var smallItems = [
+ ];
+ var initialItems = [blockDropdownItem, "divider"];
+ var itemSets = [largeItems, mediumItems, smallItems];
++var minimalInlineToolbarItems = [
++  {
++    icon: Bold,
++    title: "Bold",
++    hotkey: "mod+b",
++    action: (editor) => editor.marksPlugin.toggleBold()
++  },
++  "divider",
++  {
++    icon: Italic,
++    title: "Italic",
++    hotkey: "mod+i",
++    action: (editor) => editor.marksPlugin.toggleItalic()
++  },
++  "divider",
++  {
++    icon: Strikethrough,
++    title: "Strikethrough",
++    hotkey: "super+k",
++    action: (editor) => editor.marksPlugin.toggleStrike()
++  },
++  "divider",
++  dialogItems[3]
++];
++var compactBlockToolbarItems = [
++  {
++    icon: Bold,
++    title: "Bold",
++    hotkey: "mod+b",
++    action: (editor) => editor.marksPlugin.toggleBold()
++  },
++  "divider",
++  {
++    icon: Italic,
++    title: "Italic",
++    hotkey: "mod+i",
++    action: (editor) => editor.marksPlugin.toggleItalic()
++  },
++  "divider",
++  {
++    icon: Strikethrough,
++    title: "Strikethrough",
++    hotkey: "super+k",
++    action: (editor) => editor.marksPlugin.toggleStrike()
++  },
++  "divider",
++  linkItem,
++  dropdownItems[0],
++  dropdownItems[1],
++  "divider",
++  dialogItems[0],
++  dialogItems[3]
++];
+ 
+ // src/toolbar-plugin/components/toolbar/toolbar-button.tsx
+ import { clsx as clsx9 } from "clsx";
+@@ -8217,9 +8272,20 @@ function measureItemSetWidth(items, buttonWidth, dividerWidth) {
+   return width;
+ }
+ function Toolbar() {
++  const editor = useSlateStatic22();
+   const ref = useRef13(null);
+-  const [items, setItems] = useState9(initialItems);
++  const minimal = editor.toolbar.minimalInline;
++  const compactBlock = editor.toolbar.compactBlock;
++  const [items, setItems] = useState9(
++    minimal
++      ? minimalInlineToolbarItems
++      : compactBlock
++        ? compactBlockToolbarItems
++        : initialItems
++  );
+   useEffect7(() => {
++    if (minimal || compactBlock)
++      return;
+     const refresh = throttle2(
+       () => {
+         const toolbar = ref.current;
+@@ -8247,7 +8313,7 @@ function Toolbar() {
+     return () => {
+       window.removeEventListener("resize", refresh);
+     };
+-  }, []);
++  }, [minimal, compactBlock]);
+   return /* @__PURE__ */ jsx63($ToolbarContainer, { ref, children: /* @__PURE__ */ jsx63($Toolbar, { children: items.map((item, index) => /* @__PURE__ */ jsx63(
+     ToolbarItem,
+     {
+@@ -8305,7 +8371,9 @@ var ToolbarPlugin = createPlugin(
+       height: options.toolbar?.height,
+       minHeight: options.toolbar?.minHeight,
+       maxHeight: options.toolbar?.maxHeight,
+-      showUploadButtons: options.toolbar?.showUploadButtons ?? true
++      showUploadButtons: options.toolbar?.showUploadButtons ?? true,
++      minimalInline: options.toolbar?.minimalInline ?? false,
++      compactBlock: options.toolbar?.compactBlock ?? false
+     };
+     return {
+       name: "toolbar",
+@@ -8670,7 +8738,9 @@ function useEditor({
+   authToken,
+   height,
+   minHeight,
+-  maxHeight
++  maxHeight,
++  minimalToolbar,
++  compactBlockToolbar
+ }) {
+   const [editor] = useState10(() => {
+     const editor2 = createEditor();
+@@ -8684,7 +8754,9 @@ function useEditor({
+         /**
+          * If `authToken` is provided then show upload buttons.
+          */
+-        showUploadButtons: !!authToken
++        showUploadButtons: !!authToken,
++        minimalInline: !!minimalToolbar,
++        compactBlock: !!compactBlockToolbar
+       }
+     });
+     nextEditor.convertElement.addConvertElementType("paragraph");
+diff --git a/.dist/node/index.iife.js b/.dist/node/index.iife.js
+index f3152d38ad4666cf0be4fb6aebe887088668a1e8..633550008ba09bc8236da883e592b2537f217c53 100644
+--- a/.dist/node/index.iife.js
++++ b/.dist/node/index.iife.js
+@@ -67913,6 +67913,8 @@
+       return getMarksFromText(segment);
+     } else if (segment.type === "anchor") {
+       return getCommonAnchorMarks(segment.children);
++    } else if (segment.type === "image-inline") {
++      return [];
+     } else {
+       throw new Error(`Unhandled type ${segment.type}`);
+     }
+@@ -74265,7 +74267,7 @@ https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_liter
+   var $Paragraph = emotion_styled_esm_default("p")`
+   padding: 0;
+   margin: 1em 0;
+-  &:first-child {
++  &:first-of-type {
+     margin-top: 0;
+   }
+ 
+@@ -74483,7 +74485,7 @@ https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_liter
+   init_react_shim();
+   var headingStyles = css`
+   margin-top: 1em;
+-  &:first-child {
++  &:first-of-type {
+     margin-top: 0;
+   }
+   font-weight: bold;
+diff --git a/.dist/types/index.d.ts b/.dist/types/index.d.ts
+index 2e68608630e0e20b4e6dbb297d3c3048c7f2f731..745e77db696065dfdee5f9fe06b3f14f4b495d84 100644
+--- a/.dist/types/index.d.ts
++++ b/.dist/types/index.d.ts
+@@ -1037,11 +1037,13 @@ declare module "slate" {
+     }
+ }
+ 
+-declare function useEditor({ authToken, height, minHeight, maxHeight, }: {
++declare function useEditor({ authToken, height, minHeight, maxHeight, minimalToolbar, compactBlockToolbar, }: {
+     authToken?: string;
+     height?: string | number;
+     minHeight?: string | number;
+     maxHeight?: string | number;
++    minimalToolbar?: boolean;
++    compactBlockToolbar?: boolean;
+ }): Editor & ReactEditor & WysimarkEditor;
+ 
+ type EditableProps = {

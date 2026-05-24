@@ -1,5 +1,7 @@
 'use client';
 
+import { useRef, type ChangeEvent } from 'react';
+import { toast } from 'sonner';
 import type {
   Resume,
   ResumeAward,
@@ -16,9 +18,14 @@ import type {
   ResumeWork,
 } from '@resumind/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { CountryCodeField } from '@/components/cv/country-code-field';
 import { TextField, StringListField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ArraySection } from '@/components/cv/array-section';
+import { uploadResumeMedia } from '@/lib/api';
 
 interface CvSectionsProps {
   resume: Resume;
@@ -26,6 +33,8 @@ interface CvSectionsProps {
 }
 
 export function CvSections({ resume, onChange }: CvSectionsProps) {
+  const profilePhotoInputRef = useRef<HTMLInputElement>(null);
+
   const updateBasics = (patch: Partial<NonNullable<Resume['basics']>>) => {
     onChange({ ...resume, basics: { ...resume.basics, ...patch } });
   };
@@ -40,10 +49,55 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
     });
   };
 
+  const handleProfilePhoto = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) {
+      return;
+    }
+    try {
+      const { url } = await uploadResumeMedia(file);
+      updateBasics({ image: url });
+      toast.success('Profile photo uploaded');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Photo upload failed');
+    }
+  };
+
+  const profileFields = (
+    <ArraySection
+      title="Social profiles"
+      items={resume.basics?.profiles ?? []}
+      onChange={(profiles) => updateBasics({ profiles })}
+      createItem={(): ResumeProfile => ({})}
+      renderItem={(item, _index, update) => (
+        <>
+          <TextField
+            label="Network"
+            value={item.network}
+            onChange={(network) => update({ ...item, network })}
+          />
+          <TextField
+            label="Username"
+            value={item.username}
+            onChange={(username) => update({ ...item, username })}
+          />
+          <TextField
+            label="URL"
+            type="url"
+            value={item.url}
+            onChange={(url) => update({ ...item, url })}
+          />
+        </>
+      )}
+    />
+  );
+
   return (
     <Tabs defaultValue="basics" className="w-full">
-      <TabsList className="h-auto flex-wrap">
+      <TabsList className="h-auto max-w-full flex-wrap justify-start gap-1">
         <TabsTrigger value="basics">Basics</TabsTrigger>
+        <TabsTrigger value="profiles">Social profiles</TabsTrigger>
         <TabsTrigger value="work">Work</TabsTrigger>
         <TabsTrigger value="volunteer">Volunteer</TabsTrigger>
         <TabsTrigger value="education">Education</TabsTrigger>
@@ -65,8 +119,17 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
         />
         <TextField
           label="Label"
+          description='Your professional headline — e.g. "Senior Software Engineer" or "Marketing Specialist".'
           value={resume.basics?.label}
           onChange={(label) => updateBasics({ label })}
+        />
+        <TextField
+          label="Summary"
+          markdown="block"
+          multiline
+          value={resume.basics?.summary}
+          onChange={(summary) => updateBasics({ summary })}
+          placeholder="Who you are, what you excel at, and what you’re looking for — plain language is fine."
         />
         <TextField
           label="Email"
@@ -85,19 +148,6 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
           value={resume.basics?.url}
           onChange={(url) => updateBasics({ url })}
         />
-        <TextField
-          label="Image URL"
-          type="url"
-          value={resume.basics?.image}
-          onChange={(image) => updateBasics({ image })}
-        />
-        <TextField
-          label="Summary"
-          markdown="block"
-          multiline
-          value={resume.basics?.summary}
-          onChange={(summary) => updateBasics({ summary })}
-        />
 
         <div className="grid gap-4 md:grid-cols-2">
           <TextField
@@ -115,45 +165,55 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
             value={resume.basics?.location?.postalCode}
             onChange={(postalCode) => updateLocation({ postalCode })}
           />
-          <TextField
-            label="Country code"
+          <CountryCodeField
             value={resume.basics?.location?.countryCode}
             onChange={(countryCode) => updateLocation({ countryCode })}
           />
         </div>
         <TextField
           label="Address"
-          multiline
+          description="Optional. Street number and street name (suite or unit if needed). Locality stays in City / Region / Postal code above."
           value={resume.basics?.location?.address}
           onChange={(address) => updateLocation({ address })}
         />
 
-        <ArraySection
-          title="Profiles"
-          items={resume.basics?.profiles ?? []}
-          onChange={(profiles) => updateBasics({ profiles })}
-          createItem={(): ResumeProfile => ({})}
-          renderItem={(item, _index, update) => (
-            <>
-              <TextField
-                label="Network"
-                value={item.network}
-                onChange={(network) => update({ ...item, network })}
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label htmlFor="basics-image-url">Profile photo</Label>
+            <div className="flex gap-2">
+              <input
+                ref={profilePhotoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                onChange={handleProfilePhoto}
               />
-              <TextField
-                label="Username"
-                value={item.username}
-                onChange={(username) => update({ ...item, username })}
-              />
-              <TextField
-                label="URL"
-                type="url"
-                value={item.url}
-                onChange={(url) => update({ ...item, url })}
-              />
-            </>
-          )}
-        />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => profilePhotoInputRef.current?.click()}
+              >
+                Upload
+              </Button>
+            </div>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            Upload a portrait or paste an HTTPS URL. Many résumés only need basic contact info
+            earlier—photo is optional.
+          </p>
+          <Input
+            id="basics-image-url"
+            type="url"
+            value={resume.basics?.image ?? ''}
+            placeholder="https://..."
+            onChange={(e) => updateBasics({ image: e.target.value })}
+          />
+        </div>
+      </TabsContent>
+
+      <TabsContent value="profiles" className="space-y-4">
+        {profileFields}
       </TabsContent>
 
       <TabsContent value="work">
@@ -196,20 +256,24 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
                 onChange={(endDate) => update({ ...item, endDate })}
               />
               <TextField
-                label="Description"
-                markdown="inline"
-                value={item.description}
-                onChange={(description) => update({ ...item, description })}
-              />
-              <TextField
                 label="Summary"
+                description="Acts as your professional elevator pitch for the specific job. Use 2–3 concise sentences to summarize your overall impact, key projects, and the scope of your responsibilities."
                 markdown="block"
                 multiline
                 value={item.summary}
                 onChange={(summary) => update({ ...item, summary })}
               />
+              <TextField
+                label="Description"
+                description="Provides a detailed paragraph diving into the day-to-day operations, leadership duties, and technologies used on the job."
+                markdown="block"
+                multiline
+                value={item.description}
+                onChange={(description) => update({ ...item, description })}
+              />
               <StringListField
                 label="Highlight"
+                description="Best utilized as bullet points for your quantifiable achievements, metrics, and notable awards."
                 markdown
                 values={item.highlights}
                 onChange={(highlights) => update({ ...item, highlights })}
@@ -286,11 +350,13 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
               />
               <TextField
                 label="Area"
+                description='Field or concentration — e.g. "Computer Science" or "Industrial Design".'
                 value={item.area}
                 onChange={(area) => update({ ...item, area })}
               />
               <TextField
                 label="Study type"
+                description='e.g. "Bachelor", "Master", "Certificate", "Associate".'
                 value={item.studyType}
                 onChange={(studyType) => update({ ...item, studyType })}
               />
@@ -335,11 +401,13 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
             <>
               <TextField
                 label="Name"
+                description='Skill or tooling name — e.g. "PostgreSQL", "Spanish", "Photoshop".'
                 value={item.name}
                 onChange={(name) => update({ ...item, name })}
               />
               <TextField
                 label="Level"
+                description='Comfort or proficiency — free text scale (e.g. "Expert", "4/5").'
                 value={item.level}
                 onChange={(level) => update({ ...item, level })}
               />
@@ -381,11 +449,13 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
               />
               <TextField
                 label="Entity"
+                description="Company, OSS org, foundation, or team that stewards this project."
                 value={item.entity}
                 onChange={(entity) => update({ ...item, entity })}
               />
               <TextField
                 label="Type"
+                description='e.g. "open source", "side project", "client work".'
                 value={item.type}
                 onChange={(type) => update({ ...item, type })}
               />
@@ -401,6 +471,7 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
               />
               <StringListField
                 label="Role"
+                description='Your hats on the initiative — one per row (e.g. "Technical lead", "Solo founder").'
                 values={item.roles}
                 onChange={(roles) => update({ ...item, roles })}
               />
@@ -411,6 +482,7 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
               />
               <StringListField
                 label="Highlight"
+                description="Outcomes readers should notice — shipments, traction, migrations, KPIs."
                 markdown
                 values={item.highlights}
                 onChange={(highlights) => update({ ...item, highlights })}
@@ -430,6 +502,7 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
             <>
               <TextField
                 label="Title"
+                description="Official award headline — matched to trophies, honours, nominations."
                 value={item.title}
                 onChange={(title) => update({ ...item, title })}
               />
@@ -440,6 +513,7 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
               />
               <TextField
                 label="Awarder"
+                description="Organization granting the accolade."
                 value={item.awarder}
                 onChange={(awarder) => update({ ...item, awarder })}
               />
@@ -447,6 +521,7 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
                 label="Summary"
                 markdown="block"
                 multiline
+                description="Short context explaining why this mattered."
                 value={item.summary}
                 onChange={(summary) => update({ ...item, summary })}
               />
@@ -465,22 +540,26 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
             <>
               <TextField
                 label="Name"
+                description="Credential title printed on certificate — keep vendor wording when possible."
                 value={item.name}
                 onChange={(name) => update({ ...item, name })}
               />
               <IsoDateField
                 label="Date"
+                description="Earned/issue date exactly as issuer records it."
                 value={item.date}
                 onChange={(date) => update({ ...item, date })}
               />
               <TextField
                 label="Issuer"
+                description="Vendor, awarding body, or learning platform issuing the credential."
                 value={item.issuer}
                 onChange={(issuer) => update({ ...item, issuer })}
               />
               <TextField
                 label="URL"
                 type="url"
+                description="Public verification badge or Credly/cert link."
                 value={item.url}
                 onChange={(url) => update({ ...item, url })}
               />
@@ -499,22 +578,26 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
             <>
               <TextField
                 label="Name"
+                description="Article/book/talk title precisely as cited."
                 value={item.name}
                 onChange={(name) => update({ ...item, name })}
               />
               <TextField
                 label="Publisher"
+                description="Publication channel, imprint, proceedings, venue, etc."
                 value={item.publisher}
                 onChange={(publisher) => update({ ...item, publisher })}
               />
               <IsoDateField
                 label="Release date"
+                description="Release or presentation date aligned with bibliography."
                 value={item.releaseDate}
                 onChange={(releaseDate) => update({ ...item, releaseDate })}
               />
               <TextField
                 label="URL"
                 type="url"
+                description="Canonical HTTPS link."
                 value={item.url}
                 onChange={(url) => update({ ...item, url })}
               />
@@ -522,6 +605,7 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
                 label="Summary"
                 markdown="block"
                 multiline
+                description="Elevator synopsis or impact statement about the publication."
                 value={item.summary}
                 onChange={(summary) => update({ ...item, summary })}
               />
@@ -563,11 +647,13 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
             <>
               <TextField
                 label="Name"
+                description="Theme grouping — music, philanthropy, mentorship, athletics, reading, etc."
                 value={item.name}
                 onChange={(name) => update({ ...item, name })}
               />
               <StringListField
                 label="Keyword"
+                description="Specific topics you want hiring teams to resonate with."
                 values={item.keywords}
                 onChange={(keywords) => update({ ...item, keywords })}
               />
@@ -586,6 +672,7 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
             <>
               <TextField
                 label="Name"
+                description="Reference full name."
                 value={item.name}
                 onChange={(name) => update({ ...item, name })}
               />
@@ -593,6 +680,7 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
                 label="Reference"
                 markdown="block"
                 multiline
+                description="Recommendation text, quoting relationship + contact guidance where appropriate."
                 value={item.reference}
                 onChange={(reference) => update({ ...item, reference })}
               />
