@@ -56,10 +56,10 @@ psql "$DATABASE_URL" -f supabase/migrations/20260523000000_create_cv_table.sql
 
 ## Troubleshooting
 
-| Error | Fix |
-|-------|-----|
-| `Could not find the table 'public.cv' in the schema cache` | Run `supabase db push` (or apply the migration SQL manually). |
-| `Invalid or expired token` | Sign out and sign in again. Ensure `SUPABASE_URL` and `SUPABASE_ANON_KEY` match between `apps/web` and `apps/api`. The API uses `auth.getUser()` — no legacy JWT secret required. |
+| Error                                                      | Fix                                                                                                                                                                               |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Could not find the table 'public.cv' in the schema cache` | Run `supabase db push` (or apply the migration SQL manually).                                                                                                                     |
+| `Invalid or expired token`                                 | Sign out and sign in again. Ensure `SUPABASE_URL` and `SUPABASE_ANON_KEY` match between `apps/web` and `apps/api`. The API uses `auth.getUser()` — no legacy JWT secret required. |
 
 ## 2. Environment variables
 
@@ -84,6 +84,16 @@ pnpm dev:api   # NestJS on http://localhost:3001
 pnpm dev:web   # Next.js on http://localhost:3000
 ```
 
+### Quality checks
+
+From the repo root:
+
+- **`pnpm format`** / **`pnpm format:check`** — Prettier (`prettier-plugin-tailwindcss` for class sorting in the web app)
+- **`pnpm lint`** — Turborepo runs ESLint in each workspace that defines a `lint` script
+- **`pnpm test`** — unit tests with coverage (Vitest in `packages/types` and `apps/web`, Jest in `apps/api`)
+
+CI mirrors this with `.github/workflows/ci.yml` on pushes and pull requests to `main`.
+
 ## Usage
 
 1. Open http://localhost:3000 and **register** / **sign in**.
@@ -95,13 +105,13 @@ pnpm dev:web   # Next.js on http://localhost:3000
 
 All routes require `Authorization: Bearer <supabase_access_token>`.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/cv` | List user's CVs |
-| GET | `/cv/:id` | Get one CV |
-| POST | `/cv` | Create `{ title?, data }` |
-| PATCH | `/cv/:id` | Update `{ title?, data? }` |
-| DELETE | `/cv/:id` | Delete CV |
+| Method | Path      | Description                |
+| ------ | --------- | -------------------------- |
+| GET    | `/cv`     | List user's CVs            |
+| GET    | `/cv/:id` | Get one CV                 |
+| POST   | `/cv`     | Create `{ title?, data }`  |
+| PATCH  | `/cv/:id` | Update `{ title?, data? }` |
+| DELETE | `/cv/:id` | Delete CV                  |
 
 ## Security
 

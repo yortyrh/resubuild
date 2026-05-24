@@ -7,13 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export function RegisterForm() {
   const router = useRouter();
@@ -82,13 +76,13 @@ export function RegisterForm() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
+          {error ? <p className="text-destructive text-sm">{error}</p> : null}
+          {message ? <p className="text-muted-foreground text-sm">{message}</p> : null}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Creating account…' : 'Register'}
           </Button>
         </form>
-        <p className="mt-4 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-4 text-sm">
           Already have an account?{' '}
           <Link href="/login" className="text-primary underline-offset-4 hover:underline">
             Sign in

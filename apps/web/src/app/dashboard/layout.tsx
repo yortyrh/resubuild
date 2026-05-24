@@ -1,11 +1,7 @@
 import Link from 'next/link';
 import { SignOutButton } from '@/components/dashboard/sign-out-button';
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen">
       <header className="border-b">
@@ -14,7 +10,7 @@ export default function DashboardLayout({
             <Link href="/dashboard" className="text-lg font-semibold">
               Resumind
             </Link>
-            <nav className="text-sm text-muted-foreground">
+            <nav className="text-muted-foreground text-sm">
               <Link href="/dashboard" className="hover:text-foreground">
                 My CVs
               </Link>

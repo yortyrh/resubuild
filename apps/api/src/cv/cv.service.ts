@@ -64,11 +64,7 @@ export class CvService {
 
   async findOne(user: AuthenticatedRequest['user'], id: string): Promise<CvRecord> {
     const supabase = this.createUserClient(user.accessToken);
-    const { data, error } = await supabase
-      .from('cv')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
+    const { data, error } = await supabase.from('cv').select('*').eq('id', id).maybeSingle();
 
     if (error) {
       throw new BadRequestException(error.message);
@@ -89,10 +85,7 @@ export class CvService {
     );
   }
 
-  async create(
-    user: AuthenticatedRequest['user'],
-    dto: CreateCvDto,
-  ): Promise<CvRecord> {
+  async create(user: AuthenticatedRequest['user'], dto: CreateCvDto): Promise<CvRecord> {
     const supabase = this.createUserClient(user.accessToken);
     const baseUrl = this.appBaseUrl();
 
@@ -147,11 +140,7 @@ export class CvService {
       const expectedVersion = getResumeMetaVersion(dto.data);
       const currentVersion = getResumeMetaVersion(existing.data);
 
-      if (
-        expectedVersion &&
-        currentVersion &&
-        expectedVersion !== currentVersion
-      ) {
+      if (expectedVersion && currentVersion && expectedVersion !== currentVersion) {
         throw new ConflictException(
           'This CV was modified elsewhere. Reload the page and try again.',
         );

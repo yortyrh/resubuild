@@ -1,18 +1,5 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  AuthenticatedRequest,
-  SupabaseAuthGuard,
-} from '../auth/supabase-auth.guard';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CvService } from './cv.service';
 import { CreateCvDto, UpdateCvDto } from './dto/cv.dto';
 
@@ -37,11 +24,7 @@ export class CvController {
   }
 
   @Patch(':id')
-  update(
-    @Req() req: AuthenticatedRequest,
-    @Param('id') id: string,
-    @Body() dto: UpdateCvDto,
-  ) {
+  update(@Req() req: AuthenticatedRequest, @Param('id') id: string, @Body() dto: UpdateCvDto) {
     return this.cvService.update(req.user, id, dto);
   }
 

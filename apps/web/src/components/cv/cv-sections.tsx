@@ -58,21 +58,75 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
       </TabsList>
 
       <TabsContent value="basics" className="space-y-4">
-        <TextField label="Name" value={resume.basics?.name} onChange={(name) => updateBasics({ name })} />
-        <TextField label="Label" value={resume.basics?.label} onChange={(label) => updateBasics({ label })} />
-        <TextField label="Email" type="email" value={resume.basics?.email} onChange={(email) => updateBasics({ email })} />
-        <TextField label="Phone" value={resume.basics?.phone} onChange={(phone) => updateBasics({ phone })} />
-        <TextField label="Website" type="url" value={resume.basics?.url} onChange={(url) => updateBasics({ url })} />
-        <TextField label="Image URL" type="url" value={resume.basics?.image} onChange={(image) => updateBasics({ image })} />
-        <TextField label="Summary" markdown="block" multiline value={resume.basics?.summary} onChange={(summary) => updateBasics({ summary })} />
+        <TextField
+          label="Name"
+          value={resume.basics?.name}
+          onChange={(name) => updateBasics({ name })}
+        />
+        <TextField
+          label="Label"
+          value={resume.basics?.label}
+          onChange={(label) => updateBasics({ label })}
+        />
+        <TextField
+          label="Email"
+          type="email"
+          value={resume.basics?.email}
+          onChange={(email) => updateBasics({ email })}
+        />
+        <TextField
+          label="Phone"
+          value={resume.basics?.phone}
+          onChange={(phone) => updateBasics({ phone })}
+        />
+        <TextField
+          label="Website"
+          type="url"
+          value={resume.basics?.url}
+          onChange={(url) => updateBasics({ url })}
+        />
+        <TextField
+          label="Image URL"
+          type="url"
+          value={resume.basics?.image}
+          onChange={(image) => updateBasics({ image })}
+        />
+        <TextField
+          label="Summary"
+          markdown="block"
+          multiline
+          value={resume.basics?.summary}
+          onChange={(summary) => updateBasics({ summary })}
+        />
 
         <div className="grid gap-4 md:grid-cols-2">
-          <TextField label="City" value={resume.basics?.location?.city} onChange={(city) => updateLocation({ city })} />
-          <TextField label="Region" value={resume.basics?.location?.region} onChange={(region) => updateLocation({ region })} />
-          <TextField label="Postal code" value={resume.basics?.location?.postalCode} onChange={(postalCode) => updateLocation({ postalCode })} />
-          <TextField label="Country code" value={resume.basics?.location?.countryCode} onChange={(countryCode) => updateLocation({ countryCode })} />
+          <TextField
+            label="City"
+            value={resume.basics?.location?.city}
+            onChange={(city) => updateLocation({ city })}
+          />
+          <TextField
+            label="Region"
+            value={resume.basics?.location?.region}
+            onChange={(region) => updateLocation({ region })}
+          />
+          <TextField
+            label="Postal code"
+            value={resume.basics?.location?.postalCode}
+            onChange={(postalCode) => updateLocation({ postalCode })}
+          />
+          <TextField
+            label="Country code"
+            value={resume.basics?.location?.countryCode}
+            onChange={(countryCode) => updateLocation({ countryCode })}
+          />
         </div>
-        <TextField label="Address" multiline value={resume.basics?.location?.address} onChange={(address) => updateLocation({ address })} />
+        <TextField
+          label="Address"
+          multiline
+          value={resume.basics?.location?.address}
+          onChange={(address) => updateLocation({ address })}
+        />
 
         <ArraySection
           title="Profiles"
@@ -81,9 +135,22 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
           createItem={(): ResumeProfile => ({})}
           renderItem={(item, _index, update) => (
             <>
-              <TextField label="Network" value={item.network} onChange={(network) => update({ ...item, network })} />
-              <TextField label="Username" value={item.username} onChange={(username) => update({ ...item, username })} />
-              <TextField label="URL" type="url" value={item.url} onChange={(url) => update({ ...item, url })} />
+              <TextField
+                label="Network"
+                value={item.network}
+                onChange={(network) => update({ ...item, network })}
+              />
+              <TextField
+                label="Username"
+                value={item.username}
+                onChange={(username) => update({ ...item, username })}
+              />
+              <TextField
+                label="URL"
+                type="url"
+                value={item.url}
+                onChange={(url) => update({ ...item, url })}
+              />
             </>
           )}
         />
@@ -97,15 +164,56 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
           createItem={(): ResumeWork => ({ highlights: [] })}
           renderItem={(item, _index, update) => (
             <>
-              <TextField label="Company" value={item.name} onChange={(name) => update({ ...item, name })} />
-              <TextField label="Position" value={item.position} onChange={(position) => update({ ...item, position })} />
-              <TextField label="Location" value={item.location} onChange={(location) => update({ ...item, location })} />
-              <TextField label="URL" type="url" value={item.url} onChange={(url) => update({ ...item, url })} />
-              <IsoDateField label="Start date" value={item.startDate} onChange={(startDate) => update({ ...item, startDate })} />
-              <IsoDateField label="End date" value={item.endDate} onChange={(endDate) => update({ ...item, endDate })} />
-              <TextField label="Description" markdown="inline" value={item.description} onChange={(description) => update({ ...item, description })} />
-              <TextField label="Summary" markdown="block" multiline value={item.summary} onChange={(summary) => update({ ...item, summary })} />
-              <StringListField label="Highlight" markdown values={item.highlights} onChange={(highlights) => update({ ...item, highlights })} />
+              <TextField
+                label="Company"
+                value={item.name}
+                onChange={(name) => update({ ...item, name })}
+              />
+              <TextField
+                label="Position"
+                value={item.position}
+                onChange={(position) => update({ ...item, position })}
+              />
+              <TextField
+                label="Location"
+                value={item.location}
+                onChange={(location) => update({ ...item, location })}
+              />
+              <TextField
+                label="URL"
+                type="url"
+                value={item.url}
+                onChange={(url) => update({ ...item, url })}
+              />
+              <IsoDateField
+                label="Start date"
+                value={item.startDate}
+                onChange={(startDate) => update({ ...item, startDate })}
+              />
+              <IsoDateField
+                label="End date"
+                value={item.endDate}
+                onChange={(endDate) => update({ ...item, endDate })}
+              />
+              <TextField
+                label="Description"
+                markdown="inline"
+                value={item.description}
+                onChange={(description) => update({ ...item, description })}
+              />
+              <TextField
+                label="Summary"
+                markdown="block"
+                multiline
+                value={item.summary}
+                onChange={(summary) => update({ ...item, summary })}
+              />
+              <StringListField
+                label="Highlight"
+                markdown
+                values={item.highlights}
+                onChange={(highlights) => update({ ...item, highlights })}
+              />
             </>
           )}
         />
@@ -119,13 +227,45 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
           createItem={(): ResumeVolunteer => ({ highlights: [] })}
           renderItem={(item, _index, update) => (
             <>
-              <TextField label="Organization" value={item.organization} onChange={(organization) => update({ ...item, organization })} />
-              <TextField label="Position" value={item.position} onChange={(position) => update({ ...item, position })} />
-              <TextField label="URL" type="url" value={item.url} onChange={(url) => update({ ...item, url })} />
-              <IsoDateField label="Start date" value={item.startDate} onChange={(startDate) => update({ ...item, startDate })} />
-              <IsoDateField label="End date" value={item.endDate} onChange={(endDate) => update({ ...item, endDate })} />
-              <TextField label="Summary" markdown="block" multiline value={item.summary} onChange={(summary) => update({ ...item, summary })} />
-              <StringListField label="Highlight" markdown values={item.highlights} onChange={(highlights) => update({ ...item, highlights })} />
+              <TextField
+                label="Organization"
+                value={item.organization}
+                onChange={(organization) => update({ ...item, organization })}
+              />
+              <TextField
+                label="Position"
+                value={item.position}
+                onChange={(position) => update({ ...item, position })}
+              />
+              <TextField
+                label="URL"
+                type="url"
+                value={item.url}
+                onChange={(url) => update({ ...item, url })}
+              />
+              <IsoDateField
+                label="Start date"
+                value={item.startDate}
+                onChange={(startDate) => update({ ...item, startDate })}
+              />
+              <IsoDateField
+                label="End date"
+                value={item.endDate}
+                onChange={(endDate) => update({ ...item, endDate })}
+              />
+              <TextField
+                label="Summary"
+                markdown="block"
+                multiline
+                value={item.summary}
+                onChange={(summary) => update({ ...item, summary })}
+              />
+              <StringListField
+                label="Highlight"
+                markdown
+                values={item.highlights}
+                onChange={(highlights) => update({ ...item, highlights })}
+              />
             </>
           )}
         />
@@ -139,14 +279,47 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
           createItem={(): ResumeEducation => ({ courses: [] })}
           renderItem={(item, _index, update) => (
             <>
-              <TextField label="Institution" value={item.institution} onChange={(institution) => update({ ...item, institution })} />
-              <TextField label="Area" value={item.area} onChange={(area) => update({ ...item, area })} />
-              <TextField label="Study type" value={item.studyType} onChange={(studyType) => update({ ...item, studyType })} />
-              <TextField label="URL" type="url" value={item.url} onChange={(url) => update({ ...item, url })} />
-              <IsoDateField label="Start date" value={item.startDate} onChange={(startDate) => update({ ...item, startDate })} />
-              <IsoDateField label="End date" value={item.endDate} onChange={(endDate) => update({ ...item, endDate })} />
-              <TextField label="Score" value={item.score} onChange={(score) => update({ ...item, score })} />
-              <StringListField label="Course" values={item.courses} onChange={(courses) => update({ ...item, courses })} />
+              <TextField
+                label="Institution"
+                value={item.institution}
+                onChange={(institution) => update({ ...item, institution })}
+              />
+              <TextField
+                label="Area"
+                value={item.area}
+                onChange={(area) => update({ ...item, area })}
+              />
+              <TextField
+                label="Study type"
+                value={item.studyType}
+                onChange={(studyType) => update({ ...item, studyType })}
+              />
+              <TextField
+                label="URL"
+                type="url"
+                value={item.url}
+                onChange={(url) => update({ ...item, url })}
+              />
+              <IsoDateField
+                label="Start date"
+                value={item.startDate}
+                onChange={(startDate) => update({ ...item, startDate })}
+              />
+              <IsoDateField
+                label="End date"
+                value={item.endDate}
+                onChange={(endDate) => update({ ...item, endDate })}
+              />
+              <TextField
+                label="Score"
+                value={item.score}
+                onChange={(score) => update({ ...item, score })}
+              />
+              <StringListField
+                label="Course"
+                values={item.courses}
+                onChange={(courses) => update({ ...item, courses })}
+              />
             </>
           )}
         />
@@ -160,9 +333,21 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
           createItem={(): ResumeSkill => ({ keywords: [] })}
           renderItem={(item, _index, update) => (
             <>
-              <TextField label="Name" value={item.name} onChange={(name) => update({ ...item, name })} />
-              <TextField label="Level" value={item.level} onChange={(level) => update({ ...item, level })} />
-              <StringListField label="Keyword" values={item.keywords} onChange={(keywords) => update({ ...item, keywords })} />
+              <TextField
+                label="Name"
+                value={item.name}
+                onChange={(name) => update({ ...item, name })}
+              />
+              <TextField
+                label="Level"
+                value={item.level}
+                onChange={(level) => update({ ...item, level })}
+              />
+              <StringListField
+                label="Keyword"
+                values={item.keywords}
+                onChange={(keywords) => update({ ...item, keywords })}
+              />
             </>
           )}
         />
@@ -176,16 +361,60 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
           createItem={(): ResumeProject => ({ highlights: [], keywords: [], roles: [] })}
           renderItem={(item, _index, update) => (
             <>
-              <TextField label="Name" value={item.name} onChange={(name) => update({ ...item, name })} />
-              <TextField label="Description" markdown="block" multiline value={item.description} onChange={(description) => update({ ...item, description })} />
-              <TextField label="URL" type="url" value={item.url} onChange={(url) => update({ ...item, url })} />
-              <TextField label="Entity" value={item.entity} onChange={(entity) => update({ ...item, entity })} />
-              <TextField label="Type" value={item.type} onChange={(type) => update({ ...item, type })} />
-              <IsoDateField label="Start date" value={item.startDate} onChange={(startDate) => update({ ...item, startDate })} />
-              <IsoDateField label="End date" value={item.endDate} onChange={(endDate) => update({ ...item, endDate })} />
-              <StringListField label="Role" values={item.roles} onChange={(roles) => update({ ...item, roles })} />
-              <StringListField label="Keyword" values={item.keywords} onChange={(keywords) => update({ ...item, keywords })} />
-              <StringListField label="Highlight" markdown values={item.highlights} onChange={(highlights) => update({ ...item, highlights })} />
+              <TextField
+                label="Name"
+                value={item.name}
+                onChange={(name) => update({ ...item, name })}
+              />
+              <TextField
+                label="Description"
+                markdown="block"
+                multiline
+                value={item.description}
+                onChange={(description) => update({ ...item, description })}
+              />
+              <TextField
+                label="URL"
+                type="url"
+                value={item.url}
+                onChange={(url) => update({ ...item, url })}
+              />
+              <TextField
+                label="Entity"
+                value={item.entity}
+                onChange={(entity) => update({ ...item, entity })}
+              />
+              <TextField
+                label="Type"
+                value={item.type}
+                onChange={(type) => update({ ...item, type })}
+              />
+              <IsoDateField
+                label="Start date"
+                value={item.startDate}
+                onChange={(startDate) => update({ ...item, startDate })}
+              />
+              <IsoDateField
+                label="End date"
+                value={item.endDate}
+                onChange={(endDate) => update({ ...item, endDate })}
+              />
+              <StringListField
+                label="Role"
+                values={item.roles}
+                onChange={(roles) => update({ ...item, roles })}
+              />
+              <StringListField
+                label="Keyword"
+                values={item.keywords}
+                onChange={(keywords) => update({ ...item, keywords })}
+              />
+              <StringListField
+                label="Highlight"
+                markdown
+                values={item.highlights}
+                onChange={(highlights) => update({ ...item, highlights })}
+              />
             </>
           )}
         />
@@ -199,10 +428,28 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
           createItem={(): ResumeAward => ({})}
           renderItem={(item, _index, update) => (
             <>
-              <TextField label="Title" value={item.title} onChange={(title) => update({ ...item, title })} />
-              <IsoDateField label="Date" value={item.date} onChange={(date) => update({ ...item, date })} />
-              <TextField label="Awarder" value={item.awarder} onChange={(awarder) => update({ ...item, awarder })} />
-              <TextField label="Summary" markdown="block" multiline value={item.summary} onChange={(summary) => update({ ...item, summary })} />
+              <TextField
+                label="Title"
+                value={item.title}
+                onChange={(title) => update({ ...item, title })}
+              />
+              <IsoDateField
+                label="Date"
+                value={item.date}
+                onChange={(date) => update({ ...item, date })}
+              />
+              <TextField
+                label="Awarder"
+                value={item.awarder}
+                onChange={(awarder) => update({ ...item, awarder })}
+              />
+              <TextField
+                label="Summary"
+                markdown="block"
+                multiline
+                value={item.summary}
+                onChange={(summary) => update({ ...item, summary })}
+              />
             </>
           )}
         />
@@ -216,10 +463,27 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
           createItem={(): ResumeCertificate => ({})}
           renderItem={(item, _index, update) => (
             <>
-              <TextField label="Name" value={item.name} onChange={(name) => update({ ...item, name })} />
-              <IsoDateField label="Date" value={item.date} onChange={(date) => update({ ...item, date })} />
-              <TextField label="Issuer" value={item.issuer} onChange={(issuer) => update({ ...item, issuer })} />
-              <TextField label="URL" type="url" value={item.url} onChange={(url) => update({ ...item, url })} />
+              <TextField
+                label="Name"
+                value={item.name}
+                onChange={(name) => update({ ...item, name })}
+              />
+              <IsoDateField
+                label="Date"
+                value={item.date}
+                onChange={(date) => update({ ...item, date })}
+              />
+              <TextField
+                label="Issuer"
+                value={item.issuer}
+                onChange={(issuer) => update({ ...item, issuer })}
+              />
+              <TextField
+                label="URL"
+                type="url"
+                value={item.url}
+                onChange={(url) => update({ ...item, url })}
+              />
             </>
           )}
         />
@@ -233,11 +497,34 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
           createItem={(): ResumePublication => ({})}
           renderItem={(item, _index, update) => (
             <>
-              <TextField label="Name" value={item.name} onChange={(name) => update({ ...item, name })} />
-              <TextField label="Publisher" value={item.publisher} onChange={(publisher) => update({ ...item, publisher })} />
-              <IsoDateField label="Release date" value={item.releaseDate} onChange={(releaseDate) => update({ ...item, releaseDate })} />
-              <TextField label="URL" type="url" value={item.url} onChange={(url) => update({ ...item, url })} />
-              <TextField label="Summary" markdown="block" multiline value={item.summary} onChange={(summary) => update({ ...item, summary })} />
+              <TextField
+                label="Name"
+                value={item.name}
+                onChange={(name) => update({ ...item, name })}
+              />
+              <TextField
+                label="Publisher"
+                value={item.publisher}
+                onChange={(publisher) => update({ ...item, publisher })}
+              />
+              <IsoDateField
+                label="Release date"
+                value={item.releaseDate}
+                onChange={(releaseDate) => update({ ...item, releaseDate })}
+              />
+              <TextField
+                label="URL"
+                type="url"
+                value={item.url}
+                onChange={(url) => update({ ...item, url })}
+              />
+              <TextField
+                label="Summary"
+                markdown="block"
+                multiline
+                value={item.summary}
+                onChange={(summary) => update({ ...item, summary })}
+              />
             </>
           )}
         />
@@ -251,8 +538,16 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
           createItem={(): ResumeLanguage => ({})}
           renderItem={(item, _index, update) => (
             <>
-              <TextField label="Language" value={item.language} onChange={(language) => update({ ...item, language })} />
-              <TextField label="Fluency" value={item.fluency} onChange={(fluency) => update({ ...item, fluency })} />
+              <TextField
+                label="Language"
+                value={item.language}
+                onChange={(language) => update({ ...item, language })}
+              />
+              <TextField
+                label="Fluency"
+                value={item.fluency}
+                onChange={(fluency) => update({ ...item, fluency })}
+              />
             </>
           )}
         />
@@ -266,8 +561,16 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
           createItem={(): ResumeInterest => ({ keywords: [] })}
           renderItem={(item, _index, update) => (
             <>
-              <TextField label="Name" value={item.name} onChange={(name) => update({ ...item, name })} />
-              <StringListField label="Keyword" values={item.keywords} onChange={(keywords) => update({ ...item, keywords })} />
+              <TextField
+                label="Name"
+                value={item.name}
+                onChange={(name) => update({ ...item, name })}
+              />
+              <StringListField
+                label="Keyword"
+                values={item.keywords}
+                onChange={(keywords) => update({ ...item, keywords })}
+              />
             </>
           )}
         />
@@ -281,8 +584,18 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
           createItem={(): ResumeReference => ({})}
           renderItem={(item, _index, update) => (
             <>
-              <TextField label="Name" value={item.name} onChange={(name) => update({ ...item, name })} />
-              <TextField label="Reference" markdown="block" multiline value={item.reference} onChange={(reference) => update({ ...item, reference })} />
+              <TextField
+                label="Name"
+                value={item.name}
+                onChange={(name) => update({ ...item, name })}
+              />
+              <TextField
+                label="Reference"
+                markdown="block"
+                multiline
+                value={item.reference}
+                onChange={(reference) => update({ ...item, reference })}
+              />
             </>
           )}
         />

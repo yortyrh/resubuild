@@ -2,5 +2,7 @@
   "name": "@resumind/schemas",
   "version": "0.0.1",
   "private": true,
-  "files": ["resume.schema.json"]
+  "files": [
+    "resume.schema.json"
+  ]
 }

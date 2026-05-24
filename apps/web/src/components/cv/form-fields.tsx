@@ -79,7 +79,7 @@ export function StringListField({
       <Label>{label}</Label>
       <div className="space-y-3">
         {values.map((value, index) => (
-          <div key={index} className="flex gap-2 items-start">
+          <div key={index} className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
               {markdown ? (
                 <MarkdownEditor
@@ -88,10 +88,7 @@ export function StringListField({
                   variant="inline"
                 />
               ) : (
-                <Input
-                  value={value}
-                  onChange={(e) => updateItem(index, e.target.value)}
-                />
+                <Input value={value} onChange={(e) => updateItem(index, e.target.value)} />
               )}
             </div>
             <Button

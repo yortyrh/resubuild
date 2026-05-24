@@ -7,13 +7,7 @@ import { toast } from 'sonner';
 import type { CvRecord } from '@/lib/api';
 import { deleteCv, listCvs } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export function CvList() {
   const router = useRouter();
@@ -24,9 +18,7 @@ export function CvList() {
   const loadCvs = () =>
     listCvs()
       .then(setCvs)
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : 'Failed to load CVs'),
-      )
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load CVs'))
       .finally(() => setLoading(false));
 
   useEffect(() => {
@@ -78,9 +70,7 @@ export function CvList() {
         <Card key={cv.id}>
           <CardHeader>
             <CardTitle>{cv.title}</CardTitle>
-            <CardDescription>
-              Updated {new Date(cv.updated_at).toLocaleString()}
-            </CardDescription>
+            <CardDescription>Updated {new Date(cv.updated_at).toLocaleString()}</CardDescription>
           </CardHeader>
           <CardContent className="flex gap-2">
             <Button asChild>

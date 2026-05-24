@@ -16,9 +16,7 @@ export function EditCvPageClient({ cvId }: { cvId: string }) {
         setTitle(cv.title);
         setResume(cv.data as Resume);
       })
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : 'Failed to load CV'),
-      );
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load CV'));
   }, [cvId]);
 
   if (error) {

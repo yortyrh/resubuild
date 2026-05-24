@@ -37,8 +37,7 @@ async function getAccessToken(): Promise<string> {
   const expiresSoon = expiresAt * 1000 < Date.now() + 60_000;
 
   if (expiresSoon) {
-    const { data: refreshed, error: refreshError } =
-      await supabase.auth.refreshSession();
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
 
     if (refreshError || !refreshed.session?.access_token) {
       throw new Error('Session expired');
@@ -50,10 +49,7 @@ async function getAccessToken(): Promise<string> {
   return session.access_token;
 }
 
-async function apiFetch<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = await getAccessToken();
 
   const response = await fetch(`${apiUrl}${path}`, {
@@ -100,10 +96,7 @@ export function createCv(payload: { title?: string; data: Record<string, unknown
   });
 }
 
-export function updateCv(
-  id: string,
-  payload: { title?: string; data?: Record<string, unknown> },
-) {
+export function updateCv(id: string, payload: { title?: string; data?: Record<string, unknown> }) {
   return apiFetch<CvRecord>(`/cv/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),

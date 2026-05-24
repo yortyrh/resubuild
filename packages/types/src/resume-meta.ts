@@ -70,6 +70,7 @@ export function applyResumeMetaForUpdate(
 }
 
 export function stripResumeMetaFromEditor(resume: Resume): Resume {
-  const { meta: _meta, ...rest } = resume;
+  const { meta, ...rest } = resume;
+  void meta;
   return rest;
 }

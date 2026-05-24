@@ -10,7 +10,9 @@ const ISO_YEAR = /^([1-2]\d{3})$/;
 const ISO_MONTH = /^([1-2]\d{3})-(0[1-9]|1[0-2])$/;
 const ISO_DATE = /^([1-2]\d{3})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 
-export function parseIsoDate(value: string): (IsoDateParts & { precision: IsoDatePrecision }) | null {
+export function parseIsoDate(
+  value: string,
+): (IsoDateParts & { precision: IsoDatePrecision }) | null {
   const trimmed = value.trim();
   if (!trimmed) {
     return null;
@@ -46,10 +48,7 @@ export function parseIsoDate(value: string): (IsoDateParts & { precision: IsoDat
   return null;
 }
 
-export function formatIsoDate(
-  precision: IsoDatePrecision,
-  parts: IsoDateParts,
-): string {
+export function formatIsoDate(precision: IsoDatePrecision, parts: IsoDateParts): string {
   if (!parts.year) {
     return '';
   }
@@ -73,10 +72,7 @@ export function formatIsoDate(
   return parts.year;
 }
 
-export function convertIsoDatePrecision(
-  value: string,
-  precision: IsoDatePrecision,
-): string {
+export function convertIsoDatePrecision(value: string, precision: IsoDatePrecision): string {
   const parsed = parseIsoDate(value);
   if (!parsed) {
     return '';
@@ -85,10 +81,7 @@ export function convertIsoDatePrecision(
   return formatIsoDate(precision, parsed);
 }
 
-export function toNativeInputValue(
-  value: string,
-  precision: IsoDatePrecision,
-): string {
+export function toNativeInputValue(value: string, precision: IsoDatePrecision): string {
   const parsed = parseIsoDate(value);
   if (!parsed) {
     return '';
@@ -109,10 +102,7 @@ export function toNativeInputValue(
   return '';
 }
 
-export function fromNativeInputValue(
-  raw: string,
-  precision: IsoDatePrecision,
-): string {
+export function fromNativeInputValue(raw: string, precision: IsoDatePrecision): string {
   if (!raw) {
     return '';
   }

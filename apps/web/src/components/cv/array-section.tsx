@@ -7,12 +7,7 @@ interface ArraySectionProps<T> {
   items: T[];
   onChange: (items: T[]) => void;
   createItem: () => T;
-  renderItem: (
-    item: T,
-    index: number,
-    update: (next: T) => void,
-    remove: () => void,
-  ) => ReactNode;
+  renderItem: (item: T, index: number, update: (next: T) => void, remove: () => void) => ReactNode;
 }
 
 export function ArraySection<T>({
@@ -35,7 +30,7 @@ export function ArraySection<T>({
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">{title}</h3>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No entries yet.</p>
+        <p className="text-muted-foreground text-sm">No entries yet.</p>
       ) : (
         items.map((item, index) => (
           <Card key={index}>
@@ -53,8 +48,11 @@ export function ArraySection<T>({
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              {renderItem(item, index, (next) => updateItem(index, next), () =>
-                removeItem(index),
+              {renderItem(
+                item,
+                index,
+                (next) => updateItem(index, next),
+                () => removeItem(index),
               )}
             </CardContent>
           </Card>

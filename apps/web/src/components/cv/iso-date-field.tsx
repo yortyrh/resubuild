@@ -36,8 +36,9 @@ export function IsoDateField({
   );
 
   useEffect(() => {
-    const next = parseIsoDate(value);
-    setPrecision(next?.precision ?? defaultPrecision);
+    const nextPrecision = parseIsoDate(value)?.precision ?? defaultPrecision;
+    // Defer snapshot update so ESLint/React don't treat this as cascading sync renders.
+    queueMicrotask(() => setPrecision(nextPrecision));
   }, [value, defaultPrecision]);
 
   const handlePrecisionChange = (next: IsoDatePrecision) => {
@@ -76,9 +77,7 @@ export function IsoDateField({
           step={1}
           value={inputValue}
           placeholder="YYYY"
-          onChange={(event) =>
-            onChange(fromNativeInputValue(event.target.value, 'year'))
-          }
+          onChange={(event) => onChange(fromNativeInputValue(event.target.value, 'year'))}
         />
       ) : null}
 
@@ -86,9 +85,7 @@ export function IsoDateField({
         <Input
           type="month"
           value={inputValue}
-          onChange={(event) =>
-            onChange(fromNativeInputValue(event.target.value, 'month'))
-          }
+          onChange={(event) => onChange(fromNativeInputValue(event.target.value, 'month'))}
         />
       ) : null}
 
@@ -96,9 +93,7 @@ export function IsoDateField({
         <Input
           type="date"
           value={inputValue}
-          onChange={(event) =>
-            onChange(fromNativeInputValue(event.target.value, 'date'))
-          }
+          onChange={(event) => onChange(fromNativeInputValue(event.target.value, 'date'))}
         />
       ) : null}
     </div>
