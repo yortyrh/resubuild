@@ -1,0 +1,21 @@
+schema: spec-driven
+
+# Project context for AI-generated OpenSpec artifacts (proposal, design, tasks).
+context: |
+  Product: Resumind — monorepo for JSON Resume–based CVs ("Resumind").
+  Stack: Turborepo + pnpm workspaces; Node 20+ (CI uses Node 22).
+  apps/web: Next.js App Router under src/app/, Supabase Auth via @supabase/ssr,
+    client API helper in src/lib/api.ts calling the Nest API with Bearer tokens.
+  apps/api: NestJS 11, ConfigModule, global ValidationPipe (whitelist, transform,
+    forbidNonWhitelisted), CORS from CORS_ORIGIN, default port 3001.
+  packages/schemas: official JSON Resume JSON Schema; packages/types: shared TS + meta helpers.
+  Data: Supabase Postgres, public.cv table (id, user_id, title, data jsonb, timestamps);
+    RLS restricts rows to auth.uid() = user_id; migration in supabase/migrations/.
+  Testing: Vitest (web, types), Jest (api); root pnpm test (turbo); CI: format, lint, test, build.
+  Conventions: unit tests colocated beside source; ESLint + Prettier (+ tailwind class sort in web).
+
+rules:
+  proposal:
+    - Reference existing specs in openspec/specs/ when describing capabilities; prefer new change folders under openspec/changes/ for deltas.
+  tasks:
+    - Point to concrete paths (apps/web/src, apps/api/src, packages/*, supabase/migrations).
