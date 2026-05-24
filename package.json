@@ -1,5 +1,5 @@
 {
-  "name": "resumind-web",
+  "name": "resumind",
   "private": true,
   "scripts": {
     "dev": "turbo dev",
