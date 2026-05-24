@@ -1,7 +1,5 @@
 'use client';
 
-import { useRef, type ChangeEvent } from 'react';
-import { toast } from 'sonner';
 import type {
   Resume,
   ResumeAward,
@@ -18,80 +16,76 @@ import type {
   ResumeWork,
 } from '@resumind/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { CountryCodeField } from '@/components/cv/country-code-field';
-import { TextField, StringListField } from '@/components/cv/form-fields';
+import { TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
-import { ArraySection } from '@/components/cv/array-section';
-import { uploadResumeMedia } from '@/lib/api';
+import { TagsInput } from '@/components/cv/tags-input';
+import { ManagedArraySection } from '@/components/cv/managed-array-section';
+import { ManagedBasicsSection } from '@/components/cv/managed-basics-section';
+import { ManagedNestedStrings } from '@/components/cv/managed-nested-strings';
+import {
+  createCvProfile,
+  cvAwardApi,
+  cvCertificateApi,
+  cvEducationApi,
+  cvEducationCourseApi,
+  cvInterestApi,
+  cvLanguageApi,
+  cvProjectApi,
+  cvProjectHighlightApi,
+  cvPublicationApi,
+  cvReferenceApi,
+  cvSkillApi,
+  cvVolunteerApi,
+  cvVolunteerHighlightApi,
+  cvWorkApi,
+  cvWorkHighlightApi,
+  deleteCvProfile,
+  updateCvProfile,
+} from '@/lib/cv-item-api';
 
 interface CvSectionsProps {
+  cvId: string;
+  version: string | undefined;
+  onVersionChange: (version: string) => void;
   resume: Resume;
-  onChange: (resume: Resume) => void;
+  onResumeChange: (resume: Resume) => void;
 }
 
-export function CvSections({ resume, onChange }: CvSectionsProps) {
-  const profilePhotoInputRef = useRef<HTMLInputElement>(null);
+function formatDateRange(start?: string, end?: string): string {
+  if (!start && !end) {
+    return '';
+  }
+  if (!end) {
+    return start ?? '';
+  }
+  return `${start ?? ''} – ${end}`;
+}
 
-  const updateBasics = (patch: Partial<NonNullable<Resume['basics']>>) => {
-    onChange({ ...resume, basics: { ...resume.basics, ...patch } });
-  };
-
-  const updateLocation = (patch: Partial<NonNullable<Resume['basics']>['location']>) => {
-    onChange({
-      ...resume,
-      basics: {
-        ...resume.basics,
-        location: { ...resume.basics?.location, ...patch },
-      },
-    });
-  };
-
-  const handleProfilePhoto = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) {
-      return;
-    }
-    try {
-      const { url } = await uploadResumeMedia(file);
-      updateBasics({ image: url });
-      toast.success('Profile photo uploaded');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Photo upload failed');
-    }
-  };
-
-  const profileFields = (
-    <ArraySection
-      title="Social profiles"
-      items={resume.basics?.profiles ?? []}
-      onChange={(profiles) => updateBasics({ profiles })}
-      createItem={(): ResumeProfile => ({})}
-      renderItem={(item, _index, update) => (
-        <>
-          <TextField
-            label="Network"
-            value={item.network}
-            onChange={(network) => update({ ...item, network })}
-          />
-          <TextField
-            label="Username"
-            value={item.username}
-            onChange={(username) => update({ ...item, username })}
-          />
-          <TextField
-            label="URL"
-            type="url"
-            value={item.url}
-            onChange={(url) => update({ ...item, url })}
-          />
-        </>
-      )}
-    />
+function highlightBody(values?: string[]) {
+  if (!values?.length) {
+    return null;
+  }
+  return (
+    <ul className="list-disc space-y-1 pl-5 text-sm font-normal">
+      {values.map((value, index) => (
+        <li key={`${value}-${index}`}>{value}</li>
+      ))}
+    </ul>
   );
+}
+
+export function CvSections({
+  cvId,
+  version,
+  onVersionChange,
+  resume,
+  onResumeChange,
+}: CvSectionsProps) {
+  const profileApi = {
+    create: createCvProfile,
+    update: updateCvProfile,
+    delete: deleteCvProfile,
+  };
 
   return (
     <Tabs defaultValue="basics" className="w-full">
@@ -112,171 +106,151 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
       </TabsList>
 
       <TabsContent value="basics" className="space-y-4">
-        <TextField
-          label="Name"
-          value={resume.basics?.name}
-          onChange={(name) => updateBasics({ name })}
+        <ManagedBasicsSection
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
+          basics={resume.basics ?? {}}
+          onBasicsChange={(basics) => onResumeChange({ ...resume, basics })}
         />
-        <TextField
-          label="Label"
-          description='Your professional headline — e.g. "Senior Software Engineer" or "Marketing Specialist".'
-          value={resume.basics?.label}
-          onChange={(label) => updateBasics({ label })}
-        />
-        <TextField
-          label="Summary"
-          markdown="block"
-          multiline
-          value={resume.basics?.summary}
-          onChange={(summary) => updateBasics({ summary })}
-          placeholder="Who you are, what you excel at, and what you’re looking for — plain language is fine."
-        />
-        <TextField
-          label="Email"
-          type="email"
-          value={resume.basics?.email}
-          onChange={(email) => updateBasics({ email })}
-        />
-        <TextField
-          label="Phone"
-          value={resume.basics?.phone}
-          onChange={(phone) => updateBasics({ phone })}
-        />
-        <TextField
-          label="Website"
-          type="url"
-          value={resume.basics?.url}
-          onChange={(url) => updateBasics({ url })}
-        />
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <TextField
-            label="City"
-            value={resume.basics?.location?.city}
-            onChange={(city) => updateLocation({ city })}
-          />
-          <TextField
-            label="Region"
-            value={resume.basics?.location?.region}
-            onChange={(region) => updateLocation({ region })}
-          />
-          <TextField
-            label="Postal code"
-            value={resume.basics?.location?.postalCode}
-            onChange={(postalCode) => updateLocation({ postalCode })}
-          />
-          <CountryCodeField
-            value={resume.basics?.location?.countryCode}
-            onChange={(countryCode) => updateLocation({ countryCode })}
-          />
-        </div>
-        <TextField
-          label="Address"
-          description="Optional. Street number and street name (suite or unit if needed). Locality stays in City / Region / Postal code above."
-          value={resume.basics?.location?.address}
-          onChange={(address) => updateLocation({ address })}
-        />
-
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Label htmlFor="basics-image-url">Profile photo</Label>
-            <div className="flex gap-2">
-              <input
-                ref={profilePhotoInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                className="hidden"
-                onChange={handleProfilePhoto}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => profilePhotoInputRef.current?.click()}
-              >
-                Upload
-              </Button>
-            </div>
-          </div>
-          <p className="text-muted-foreground text-sm">
-            Upload a portrait or paste an HTTPS URL. Many résumés only need basic contact info
-            earlier—photo is optional.
-          </p>
-          <Input
-            id="basics-image-url"
-            type="url"
-            value={resume.basics?.image ?? ''}
-            placeholder="https://..."
-            onChange={(e) => updateBasics({ image: e.target.value })}
-          />
-        </div>
       </TabsContent>
 
       <TabsContent value="profiles" className="space-y-4">
-        {profileFields}
-      </TabsContent>
-
-      <TabsContent value="work">
-        <ArraySection
-          title="Work experience"
-          items={resume.work ?? []}
-          onChange={(work) => onChange({ ...resume, work })}
-          createItem={(): ResumeWork => ({ highlights: [] })}
-          renderItem={(item, _index, update) => (
+        <ManagedArraySection<ResumeProfile>
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
+          items={resume.basics?.profiles ?? []}
+          onItemsChange={(profiles) =>
+            onResumeChange({ ...resume, basics: { ...resume.basics, profiles } })
+          }
+          entityLabel="Profile"
+          addLabel="Add social profile"
+          createEmpty={() => ({})}
+          toPayload={(item) => item as Record<string, unknown>}
+          api={profileApi}
+          renderView={(item) => ({
+            title: (
+              <span>
+                {item.network || 'Network'}
+                {item.username ? ` — ${item.username}` : ''}
+              </span>
+            ),
+            body: item.url ? <p className="text-sm font-normal">{item.url}</p> : null,
+          })}
+          renderForm={(item, onChange) => (
             <>
               <TextField
-                label="Company"
-                value={item.name}
-                onChange={(name) => update({ ...item, name })}
+                label="Network"
+                value={item.network}
+                onChange={(network) => onChange({ ...item, network })}
               />
               <TextField
-                label="Position"
-                value={item.position}
-                onChange={(position) => update({ ...item, position })}
-              />
-              <TextField
-                label="Location"
-                value={item.location}
-                onChange={(location) => update({ ...item, location })}
+                label="Username"
+                value={item.username}
+                onChange={(username) => onChange({ ...item, username })}
               />
               <TextField
                 label="URL"
                 type="url"
                 value={item.url}
-                onChange={(url) => update({ ...item, url })}
+                onChange={(url) => onChange({ ...item, url })}
+              />
+            </>
+          )}
+        />
+      </TabsContent>
+
+      <TabsContent value="work">
+        <ManagedArraySection<ResumeWork>
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
+          items={resume.work ?? []}
+          onItemsChange={(work) => onResumeChange({ ...resume, work })}
+          entityLabel="Work entry"
+          addLabel="Add work experience"
+          createEmpty={() => ({ highlights: [] })}
+          toPayload={(item) => item as Record<string, unknown>}
+          api={cvWorkApi}
+          renderView={(item) => ({
+            title: (
+              <span>{[item.position, item.name].filter(Boolean).join(', ') || 'Work entry'}</span>
+            ),
+            meta: (
+              <div>
+                <div>{formatDateRange(item.startDate, item.endDate)}</div>
+                {item.location ? <div>{item.location}</div> : null}
+              </div>
+            ),
+            body: (
+              <>
+                {item.summary ? <p className="text-sm font-normal">{item.summary}</p> : null}
+                {highlightBody(item.highlights)}
+              </>
+            ),
+          })}
+          renderAfterView={(item, index, onItemChange) => (
+            <ManagedNestedStrings
+              cvId={cvId}
+              version={version}
+              onVersionChange={onVersionChange}
+              parentIndex={index}
+              values={item.highlights ?? []}
+              onValuesChange={(highlights) => onItemChange({ ...item, highlights })}
+              label="Highlight"
+              addLabel="Add highlight"
+              api={cvWorkHighlightApi}
+              markdown
+            />
+          )}
+          renderForm={(item, onChange) => (
+            <>
+              <TextField
+                label="Company"
+                value={item.name}
+                onChange={(name) => onChange({ ...item, name })}
+              />
+              <TextField
+                label="Position"
+                value={item.position}
+                onChange={(position) => onChange({ ...item, position })}
+              />
+              <TextField
+                label="Location"
+                value={item.location}
+                onChange={(location) => onChange({ ...item, location })}
+              />
+              <TextField
+                label="URL"
+                type="url"
+                value={item.url}
+                onChange={(url) => onChange({ ...item, url })}
               />
               <IsoDateField
                 label="Start date"
                 value={item.startDate}
-                onChange={(startDate) => update({ ...item, startDate })}
+                onChange={(startDate) => onChange({ ...item, startDate })}
               />
               <IsoDateField
                 label="End date"
                 value={item.endDate}
-                onChange={(endDate) => update({ ...item, endDate })}
+                onChange={(endDate) => onChange({ ...item, endDate })}
               />
               <TextField
                 label="Summary"
-                description="Acts as your professional elevator pitch for the specific job. Use 2–3 concise sentences to summarize your overall impact, key projects, and the scope of your responsibilities."
+                description="2–3 sentence elevator pitch for this role."
                 markdown="block"
                 multiline
                 value={item.summary}
-                onChange={(summary) => update({ ...item, summary })}
+                onChange={(summary) => onChange({ ...item, summary })}
               />
               <TextField
                 label="Description"
-                description="Provides a detailed paragraph diving into the day-to-day operations, leadership duties, and technologies used on the job."
                 markdown="block"
                 multiline
                 value={item.description}
-                onChange={(description) => update({ ...item, description })}
-              />
-              <StringListField
-                label="Highlight"
-                description="Best utilized as bullet points for your quantifiable achievements, metrics, and notable awards."
-                markdown
-                values={item.highlights}
-                onChange={(highlights) => update({ ...item, highlights })}
+                onChange={(description) => onChange({ ...item, description })}
               />
             </>
           )}
@@ -284,51 +258,79 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
       </TabsContent>
 
       <TabsContent value="volunteer">
-        <ArraySection
-          title="Volunteer"
+        <ManagedArraySection<ResumeVolunteer>
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
           items={resume.volunteer ?? []}
-          onChange={(volunteer) => onChange({ ...resume, volunteer })}
-          createItem={(): ResumeVolunteer => ({ highlights: [] })}
-          renderItem={(item, _index, update) => (
+          onItemsChange={(volunteer) => onResumeChange({ ...resume, volunteer })}
+          entityLabel="Volunteer entry"
+          addLabel="Add volunteer experience"
+          createEmpty={() => ({ highlights: [] })}
+          toPayload={(item) => item as Record<string, unknown>}
+          api={cvVolunteerApi}
+          renderView={(item) => ({
+            title: (
+              <span>
+                {[item.position, item.organization].filter(Boolean).join(', ') || 'Volunteer entry'}
+              </span>
+            ),
+            meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
+            body: (
+              <>
+                {item.summary ? <p className="text-sm font-normal">{item.summary}</p> : null}
+                {highlightBody(item.highlights)}
+              </>
+            ),
+          })}
+          renderAfterView={(item, index, onItemChange) => (
+            <ManagedNestedStrings
+              cvId={cvId}
+              version={version}
+              onVersionChange={onVersionChange}
+              parentIndex={index}
+              values={item.highlights ?? []}
+              onValuesChange={(highlights) => onItemChange({ ...item, highlights })}
+              label="Highlight"
+              addLabel="Add highlight"
+              api={cvVolunteerHighlightApi}
+              markdown
+            />
+          )}
+          renderForm={(item, onChange) => (
             <>
               <TextField
                 label="Organization"
                 value={item.organization}
-                onChange={(organization) => update({ ...item, organization })}
+                onChange={(organization) => onChange({ ...item, organization })}
               />
               <TextField
                 label="Position"
                 value={item.position}
-                onChange={(position) => update({ ...item, position })}
+                onChange={(position) => onChange({ ...item, position })}
               />
               <TextField
                 label="URL"
                 type="url"
                 value={item.url}
-                onChange={(url) => update({ ...item, url })}
+                onChange={(url) => onChange({ ...item, url })}
               />
               <IsoDateField
                 label="Start date"
                 value={item.startDate}
-                onChange={(startDate) => update({ ...item, startDate })}
+                onChange={(startDate) => onChange({ ...item, startDate })}
               />
               <IsoDateField
                 label="End date"
                 value={item.endDate}
-                onChange={(endDate) => update({ ...item, endDate })}
+                onChange={(endDate) => onChange({ ...item, endDate })}
               />
               <TextField
                 label="Summary"
                 markdown="block"
                 multiline
                 value={item.summary}
-                onChange={(summary) => update({ ...item, summary })}
-              />
-              <StringListField
-                label="Highlight"
-                markdown
-                values={item.highlights}
-                onChange={(highlights) => update({ ...item, highlights })}
+                onChange={(summary) => onChange({ ...item, summary })}
               />
             </>
           )}
@@ -336,55 +338,81 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
       </TabsContent>
 
       <TabsContent value="education">
-        <ArraySection
-          title="Education"
+        <ManagedArraySection<ResumeEducation>
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
           items={resume.education ?? []}
-          onChange={(education) => onChange({ ...resume, education })}
-          createItem={(): ResumeEducation => ({ courses: [] })}
-          renderItem={(item, _index, update) => (
+          onItemsChange={(education) => onResumeChange({ ...resume, education })}
+          entityLabel="Education entry"
+          addLabel="Add education"
+          createEmpty={() => ({ courses: [] })}
+          toPayload={(item) => item as Record<string, unknown>}
+          api={cvEducationApi}
+          renderView={(item) => ({
+            title: <span>{item.institution || 'Education entry'}</span>,
+            meta: (
+              <div>
+                <div>{formatDateRange(item.startDate, item.endDate)}</div>
+                {[item.studyType, item.area].filter(Boolean).join(' — ') ? (
+                  <div>{[item.studyType, item.area].filter(Boolean).join(' — ')}</div>
+                ) : null}
+              </div>
+            ),
+            body: highlightBody(item.courses),
+          })}
+          renderAfterView={(item, index, onItemChange) => (
+            <ManagedNestedStrings
+              cvId={cvId}
+              version={version}
+              onVersionChange={onVersionChange}
+              parentIndex={index}
+              values={item.courses ?? []}
+              onValuesChange={(courses) => onItemChange({ ...item, courses })}
+              label="Course"
+              addLabel="Add course"
+              api={cvEducationCourseApi}
+            />
+          )}
+          renderForm={(item, onChange) => (
             <>
               <TextField
                 label="Institution"
                 value={item.institution}
-                onChange={(institution) => update({ ...item, institution })}
+                onChange={(institution) => onChange({ ...item, institution })}
               />
               <TextField
                 label="Area"
-                description='Field or concentration — e.g. "Computer Science" or "Industrial Design".'
+                description='e.g. "Computer Science".'
                 value={item.area}
-                onChange={(area) => update({ ...item, area })}
+                onChange={(area) => onChange({ ...item, area })}
               />
               <TextField
                 label="Study type"
-                description='e.g. "Bachelor", "Master", "Certificate", "Associate".'
+                description='e.g. "Bachelor".'
                 value={item.studyType}
-                onChange={(studyType) => update({ ...item, studyType })}
+                onChange={(studyType) => onChange({ ...item, studyType })}
               />
               <TextField
                 label="URL"
                 type="url"
                 value={item.url}
-                onChange={(url) => update({ ...item, url })}
+                onChange={(url) => onChange({ ...item, url })}
               />
               <IsoDateField
                 label="Start date"
                 value={item.startDate}
-                onChange={(startDate) => update({ ...item, startDate })}
+                onChange={(startDate) => onChange({ ...item, startDate })}
               />
               <IsoDateField
                 label="End date"
                 value={item.endDate}
-                onChange={(endDate) => update({ ...item, endDate })}
+                onChange={(endDate) => onChange({ ...item, endDate })}
               />
               <TextField
                 label="Score"
                 value={item.score}
-                onChange={(score) => update({ ...item, score })}
-              />
-              <StringListField
-                label="Course"
-                values={item.courses}
-                onChange={(courses) => update({ ...item, courses })}
+                onChange={(score) => onChange({ ...item, score })}
               />
             </>
           )}
@@ -392,29 +420,45 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
       </TabsContent>
 
       <TabsContent value="skills">
-        <ArraySection
-          title="Skills"
+        <ManagedArraySection<ResumeSkill>
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
           items={resume.skills ?? []}
-          onChange={(skills) => onChange({ ...resume, skills })}
-          createItem={(): ResumeSkill => ({ keywords: [] })}
-          renderItem={(item, _index, update) => (
+          onItemsChange={(skills) => onResumeChange({ ...resume, skills })}
+          entityLabel="Skill"
+          addLabel="Add skill"
+          createEmpty={() => ({ keywords: [] })}
+          toPayload={(item) => item as Record<string, unknown>}
+          api={cvSkillApi}
+          renderView={(item) => ({
+            title: (
+              <span>
+                {item.name || 'Skill'}
+                {item.level ? `: ${item.level}` : ''}
+              </span>
+            ),
+            body: item.keywords?.length ? (
+              <p className="text-sm font-normal">{item.keywords.join(', ')}</p>
+            ) : null,
+          })}
+          renderForm={(item, onChange) => (
             <>
               <TextField
                 label="Name"
-                description='Skill or tooling name — e.g. "PostgreSQL", "Spanish", "Photoshop".'
                 value={item.name}
-                onChange={(name) => update({ ...item, name })}
+                onChange={(name) => onChange({ ...item, name })}
               />
               <TextField
                 label="Level"
-                description='Comfort or proficiency — free text scale (e.g. "Expert", "4/5").'
                 value={item.level}
-                onChange={(level) => update({ ...item, level })}
+                onChange={(level) => onChange({ ...item, level })}
               />
-              <StringListField
-                label="Keyword"
-                values={item.keywords}
-                onChange={(keywords) => update({ ...item, keywords })}
+              <TagsInput
+                label="Keywords"
+                description="Press Enter to add each keyword tag."
+                values={item.keywords ?? []}
+                onChange={(keywords) => onChange({ ...item, keywords })}
               />
             </>
           )}
@@ -422,70 +466,98 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
       </TabsContent>
 
       <TabsContent value="projects">
-        <ArraySection
-          title="Projects"
+        <ManagedArraySection<ResumeProject>
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
           items={resume.projects ?? []}
-          onChange={(projects) => onChange({ ...resume, projects })}
-          createItem={(): ResumeProject => ({ highlights: [], keywords: [], roles: [] })}
-          renderItem={(item, _index, update) => (
+          onItemsChange={(projects) => onResumeChange({ ...resume, projects })}
+          entityLabel="Project"
+          addLabel="Add project"
+          createEmpty={() => ({ highlights: [], keywords: [], roles: [] })}
+          toPayload={(item) => item as Record<string, unknown>}
+          api={cvProjectApi}
+          renderView={(item) => ({
+            title: <span>{item.name || 'Project'}</span>,
+            meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
+            body: (
+              <>
+                {item.description ? (
+                  <p className="text-sm font-normal">{item.description}</p>
+                ) : null}
+                {item.roles?.length ? (
+                  <p className="text-sm font-normal">Roles: {item.roles.join(', ')}</p>
+                ) : null}
+                {item.keywords?.length ? (
+                  <p className="text-sm font-normal">Keywords: {item.keywords.join(', ')}</p>
+                ) : null}
+                {highlightBody(item.highlights)}
+              </>
+            ),
+          })}
+          renderAfterView={(item, index, onItemChange) => (
+            <ManagedNestedStrings
+              cvId={cvId}
+              version={version}
+              onVersionChange={onVersionChange}
+              parentIndex={index}
+              values={item.highlights ?? []}
+              onValuesChange={(highlights) => onItemChange({ ...item, highlights })}
+              label="Highlight"
+              addLabel="Add highlight"
+              api={cvProjectHighlightApi}
+              markdown
+            />
+          )}
+          renderForm={(item, onChange) => (
             <>
               <TextField
                 label="Name"
                 value={item.name}
-                onChange={(name) => update({ ...item, name })}
+                onChange={(name) => onChange({ ...item, name })}
               />
               <TextField
                 label="Description"
                 markdown="block"
                 multiline
                 value={item.description}
-                onChange={(description) => update({ ...item, description })}
+                onChange={(description) => onChange({ ...item, description })}
               />
               <TextField
                 label="URL"
                 type="url"
                 value={item.url}
-                onChange={(url) => update({ ...item, url })}
+                onChange={(url) => onChange({ ...item, url })}
               />
               <TextField
                 label="Entity"
-                description="Company, OSS org, foundation, or team that stewards this project."
                 value={item.entity}
-                onChange={(entity) => update({ ...item, entity })}
+                onChange={(entity) => onChange({ ...item, entity })}
               />
               <TextField
                 label="Type"
-                description='e.g. "open source", "side project", "client work".'
                 value={item.type}
-                onChange={(type) => update({ ...item, type })}
+                onChange={(type) => onChange({ ...item, type })}
               />
               <IsoDateField
                 label="Start date"
                 value={item.startDate}
-                onChange={(startDate) => update({ ...item, startDate })}
+                onChange={(startDate) => onChange({ ...item, startDate })}
               />
               <IsoDateField
                 label="End date"
                 value={item.endDate}
-                onChange={(endDate) => update({ ...item, endDate })}
+                onChange={(endDate) => onChange({ ...item, endDate })}
               />
-              <StringListField
-                label="Role"
-                description='Your hats on the initiative — one per row (e.g. "Technical lead", "Solo founder").'
-                values={item.roles}
-                onChange={(roles) => update({ ...item, roles })}
+              <TagsInput
+                label="Roles"
+                values={item.roles ?? []}
+                onChange={(roles) => onChange({ ...item, roles })}
               />
-              <StringListField
-                label="Keyword"
-                values={item.keywords}
-                onChange={(keywords) => update({ ...item, keywords })}
-              />
-              <StringListField
-                label="Highlight"
-                description="Outcomes readers should notice — shipments, traction, migrations, KPIs."
-                markdown
-                values={item.highlights}
-                onChange={(highlights) => update({ ...item, highlights })}
+              <TagsInput
+                label="Keywords"
+                values={item.keywords ?? []}
+                onChange={(keywords) => onChange({ ...item, keywords })}
               />
             </>
           )}
@@ -493,37 +565,45 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
       </TabsContent>
 
       <TabsContent value="awards">
-        <ArraySection
-          title="Awards"
+        <ManagedArraySection<ResumeAward>
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
           items={resume.awards ?? []}
-          onChange={(awards) => onChange({ ...resume, awards })}
-          createItem={(): ResumeAward => ({})}
-          renderItem={(item, _index, update) => (
+          onItemsChange={(awards) => onResumeChange({ ...resume, awards })}
+          entityLabel="Award"
+          addLabel="Add award"
+          createEmpty={() => ({})}
+          toPayload={(item) => item as Record<string, unknown>}
+          api={cvAwardApi}
+          renderView={(item) => ({
+            title: <span>{item.title || 'Award'}</span>,
+            meta: item.date ? <div>{item.date}</div> : undefined,
+            body: item.summary ? <p className="text-sm font-normal">{item.summary}</p> : null,
+          })}
+          renderForm={(item, onChange) => (
             <>
               <TextField
                 label="Title"
-                description="Official award headline — matched to trophies, honours, nominations."
                 value={item.title}
-                onChange={(title) => update({ ...item, title })}
+                onChange={(title) => onChange({ ...item, title })}
               />
               <IsoDateField
                 label="Date"
                 value={item.date}
-                onChange={(date) => update({ ...item, date })}
+                onChange={(date) => onChange({ ...item, date })}
               />
               <TextField
                 label="Awarder"
-                description="Organization granting the accolade."
                 value={item.awarder}
-                onChange={(awarder) => update({ ...item, awarder })}
+                onChange={(awarder) => onChange({ ...item, awarder })}
               />
               <TextField
                 label="Summary"
                 markdown="block"
                 multiline
-                description="Short context explaining why this mattered."
                 value={item.summary}
-                onChange={(summary) => update({ ...item, summary })}
+                onChange={(summary) => onChange({ ...item, summary })}
               />
             </>
           )}
@@ -531,37 +611,44 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
       </TabsContent>
 
       <TabsContent value="certificates">
-        <ArraySection
-          title="Certificates"
+        <ManagedArraySection<ResumeCertificate>
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
           items={resume.certificates ?? []}
-          onChange={(certificates) => onChange({ ...resume, certificates })}
-          createItem={(): ResumeCertificate => ({})}
-          renderItem={(item, _index, update) => (
+          onItemsChange={(certificates) => onResumeChange({ ...resume, certificates })}
+          entityLabel="Certificate"
+          addLabel="Add certificate"
+          createEmpty={() => ({})}
+          toPayload={(item) => item as Record<string, unknown>}
+          api={cvCertificateApi}
+          renderView={(item) => ({
+            title: <span>{item.name || 'Certificate'}</span>,
+            meta: item.date ? <div>{item.date}</div> : undefined,
+            body: item.issuer ? <p className="text-sm font-normal">{item.issuer}</p> : null,
+          })}
+          renderForm={(item, onChange) => (
             <>
               <TextField
                 label="Name"
-                description="Credential title printed on certificate — keep vendor wording when possible."
                 value={item.name}
-                onChange={(name) => update({ ...item, name })}
+                onChange={(name) => onChange({ ...item, name })}
               />
               <IsoDateField
                 label="Date"
-                description="Earned/issue date exactly as issuer records it."
                 value={item.date}
-                onChange={(date) => update({ ...item, date })}
+                onChange={(date) => onChange({ ...item, date })}
               />
               <TextField
                 label="Issuer"
-                description="Vendor, awarding body, or learning platform issuing the credential."
                 value={item.issuer}
-                onChange={(issuer) => update({ ...item, issuer })}
+                onChange={(issuer) => onChange({ ...item, issuer })}
               />
               <TextField
                 label="URL"
                 type="url"
-                description="Public verification badge or Credly/cert link."
                 value={item.url}
-                onChange={(url) => update({ ...item, url })}
+                onChange={(url) => onChange({ ...item, url })}
               />
             </>
           )}
@@ -569,45 +656,51 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
       </TabsContent>
 
       <TabsContent value="publications">
-        <ArraySection
-          title="Publications"
+        <ManagedArraySection<ResumePublication>
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
           items={resume.publications ?? []}
-          onChange={(publications) => onChange({ ...resume, publications })}
-          createItem={(): ResumePublication => ({})}
-          renderItem={(item, _index, update) => (
+          onItemsChange={(publications) => onResumeChange({ ...resume, publications })}
+          entityLabel="Publication"
+          addLabel="Add publication"
+          createEmpty={() => ({})}
+          toPayload={(item) => item as Record<string, unknown>}
+          api={cvPublicationApi}
+          renderView={(item) => ({
+            title: <span>{item.name || 'Publication'}</span>,
+            meta: item.releaseDate ? <div>{item.releaseDate}</div> : undefined,
+            body: item.publisher ? <p className="text-sm font-normal">{item.publisher}</p> : null,
+          })}
+          renderForm={(item, onChange) => (
             <>
               <TextField
                 label="Name"
-                description="Article/book/talk title precisely as cited."
                 value={item.name}
-                onChange={(name) => update({ ...item, name })}
+                onChange={(name) => onChange({ ...item, name })}
               />
               <TextField
                 label="Publisher"
-                description="Publication channel, imprint, proceedings, venue, etc."
                 value={item.publisher}
-                onChange={(publisher) => update({ ...item, publisher })}
+                onChange={(publisher) => onChange({ ...item, publisher })}
               />
               <IsoDateField
                 label="Release date"
-                description="Release or presentation date aligned with bibliography."
                 value={item.releaseDate}
-                onChange={(releaseDate) => update({ ...item, releaseDate })}
+                onChange={(releaseDate) => onChange({ ...item, releaseDate })}
               />
               <TextField
                 label="URL"
                 type="url"
-                description="Canonical HTTPS link."
                 value={item.url}
-                onChange={(url) => update({ ...item, url })}
+                onChange={(url) => onChange({ ...item, url })}
               />
               <TextField
                 label="Summary"
                 markdown="block"
                 multiline
-                description="Elevator synopsis or impact statement about the publication."
                 value={item.summary}
-                onChange={(summary) => update({ ...item, summary })}
+                onChange={(summary) => onChange({ ...item, summary })}
               />
             </>
           )}
@@ -615,22 +708,32 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
       </TabsContent>
 
       <TabsContent value="languages">
-        <ArraySection
-          title="Languages"
+        <ManagedArraySection<ResumeLanguage>
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
           items={resume.languages ?? []}
-          onChange={(languages) => onChange({ ...resume, languages })}
-          createItem={(): ResumeLanguage => ({})}
-          renderItem={(item, _index, update) => (
+          onItemsChange={(languages) => onResumeChange({ ...resume, languages })}
+          entityLabel="Language"
+          addLabel="Add language"
+          createEmpty={() => ({})}
+          toPayload={(item) => item as Record<string, unknown>}
+          api={cvLanguageApi}
+          renderView={(item) => ({
+            title: <span>{item.language || 'Language'}</span>,
+            meta: item.fluency ? <div>{item.fluency}</div> : undefined,
+          })}
+          renderForm={(item, onChange) => (
             <>
               <TextField
                 label="Language"
                 value={item.language}
-                onChange={(language) => update({ ...item, language })}
+                onChange={(language) => onChange({ ...item, language })}
               />
               <TextField
                 label="Fluency"
                 value={item.fluency}
-                onChange={(fluency) => update({ ...item, fluency })}
+                onChange={(fluency) => onChange({ ...item, fluency })}
               />
             </>
           )}
@@ -638,24 +741,34 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
       </TabsContent>
 
       <TabsContent value="interests">
-        <ArraySection
-          title="Interests"
+        <ManagedArraySection<ResumeInterest>
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
           items={resume.interests ?? []}
-          onChange={(interests) => onChange({ ...resume, interests })}
-          createItem={(): ResumeInterest => ({ keywords: [] })}
-          renderItem={(item, _index, update) => (
+          onItemsChange={(interests) => onResumeChange({ ...resume, interests })}
+          entityLabel="Interest"
+          addLabel="Add interest"
+          createEmpty={() => ({ keywords: [] })}
+          toPayload={(item) => item as Record<string, unknown>}
+          api={cvInterestApi}
+          renderView={(item) => ({
+            title: <span>{item.name || 'Interest'}</span>,
+            body: item.keywords?.length ? (
+              <p className="text-sm font-normal">{item.keywords.join(', ')}</p>
+            ) : null,
+          })}
+          renderForm={(item, onChange) => (
             <>
               <TextField
                 label="Name"
-                description="Theme grouping — music, philanthropy, mentorship, athletics, reading, etc."
                 value={item.name}
-                onChange={(name) => update({ ...item, name })}
+                onChange={(name) => onChange({ ...item, name })}
               />
-              <StringListField
-                label="Keyword"
-                description="Specific topics you want hiring teams to resonate with."
-                values={item.keywords}
-                onChange={(keywords) => update({ ...item, keywords })}
+              <TagsInput
+                label="Keywords"
+                values={item.keywords ?? []}
+                onChange={(keywords) => onChange({ ...item, keywords })}
               />
             </>
           )}
@@ -663,26 +776,38 @@ export function CvSections({ resume, onChange }: CvSectionsProps) {
       </TabsContent>
 
       <TabsContent value="references">
-        <ArraySection
-          title="References"
+        <ManagedArraySection<ResumeReference>
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
           items={resume.references ?? []}
-          onChange={(references) => onChange({ ...resume, references })}
-          createItem={(): ResumeReference => ({})}
-          renderItem={(item, _index, update) => (
+          onItemsChange={(references) => onResumeChange({ ...resume, references })}
+          entityLabel="Reference"
+          addLabel="Add reference"
+          createEmpty={() => ({})}
+          toPayload={(item) => item as Record<string, unknown>}
+          api={cvReferenceApi}
+          renderView={(item) => ({
+            title: <span>{item.name || 'Reference'}</span>,
+            body: item.reference ? (
+              <p className="whitespace-pre-wrap text-sm font-normal">{item.reference}</p>
+            ) : null,
+          })}
+          renderForm={(item, onChange) => (
             <>
               <TextField
                 label="Name"
                 description="Reference full name."
                 value={item.name}
-                onChange={(name) => update({ ...item, name })}
+                onChange={(name) => onChange({ ...item, name })}
               />
               <TextField
                 label="Reference"
                 markdown="block"
                 multiline
-                description="Recommendation text, quoting relationship + contact guidance where appropriate."
+                description="Recommendation text."
                 value={item.reference}
-                onChange={(reference) => update({ ...item, reference })}
+                onChange={(reference) => onChange({ ...item, reference })}
               />
             </>
           )}

@@ -173,6 +173,31 @@ export class CvService {
     return data;
   }
 
+  async persistValidatedData(
+    user: AuthenticatedRequest['user'],
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<CvRecord> {
+    this.resumeValidator.validate(data);
+    const supabase = this.createUserClient(user.accessToken);
+    const { data: row, error } = await supabase
+      .from('cv')
+      .update({ data })
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      throw new BadRequestException(error.message);
+    }
+
+    if (!row) {
+      throw new NotFoundException('CV not found');
+    }
+
+    return row;
+  }
+
   async remove(user: AuthenticatedRequest['user'], id: string): Promise<void> {
     const supabase = this.createUserClient(user.accessToken);
     const { data, error } = await supabase

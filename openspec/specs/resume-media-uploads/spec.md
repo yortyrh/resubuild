@@ -1,8 +1,11 @@
 # resume-media-uploads Specification
 
 ## Purpose
+
 TBD - created by archiving change cv-editor-ui-simplification. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: The API MUST expose authenticated multipart upload guarded like CV mutations
 
 Nest SHALL provide **`POST /media/upload`** accepting multipart field **`file`**, scoped to bearer-authenticated callers via the same Supabase auth guard as `/cv`. Unauthorized requests SHALL receive `401`; invalid MIME, empty body, or oversize files SHALL yield `400` before persisting registry rows.
@@ -53,4 +56,3 @@ The web client SHALL upload via `uploadResumeMedia(file)` in `apps/web/src/lib/a
 
 - **WHEN** a signed-in user selects a file in the Basics photo control
 - **THEN** the client SHALL POST to `/media/upload` through the typed API helper and assign the returned `url` to `basics.image`
-
