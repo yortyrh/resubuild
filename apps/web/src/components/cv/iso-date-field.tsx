@@ -1,0 +1,106 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+  convertIsoDatePrecision,
+  fromNativeInputValue,
+  parseIsoDate,
+  toNativeInputValue,
+  type IsoDatePrecision,
+} from '@/lib/iso-date';
+
+interface IsoDateFieldProps {
+  label: string;
+  value?: string;
+  onChange: (value: string) => void;
+  defaultPrecision?: IsoDatePrecision;
+}
+
+const precisionLabels: Record<IsoDatePrecision, string> = {
+  year: 'Year',
+  month: 'Month',
+  date: 'Day',
+};
+
+export function IsoDateField({
+  label,
+  value = '',
+  onChange,
+  defaultPrecision = 'month',
+}: IsoDateFieldProps) {
+  const [precision, setPrecision] = useState<IsoDatePrecision>(
+    () => parseIsoDate(value)?.precision ?? defaultPrecision,
+  );
+
+  useEffect(() => {
+    const next = parseIsoDate(value);
+    setPrecision(next?.precision ?? defaultPrecision);
+  }, [value, defaultPrecision]);
+
+  const handlePrecisionChange = (next: IsoDatePrecision) => {
+    setPrecision(next);
+    if (value) {
+      onChange(convertIsoDatePrecision(value, next));
+    }
+  };
+
+  const inputValue = toNativeInputValue(value, precision);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Label>{label}</Label>
+        <div className="flex gap-1" role="group" aria-label={`${label} precision`}>
+          {(['year', 'month', 'date'] as const).map((option) => (
+            <Button
+              key={option}
+              type="button"
+              size="sm"
+              variant={precision === option ? 'default' : 'outline'}
+              onClick={() => handlePrecisionChange(option)}
+            >
+              {precisionLabels[option]}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {precision === 'year' ? (
+        <Input
+          type="number"
+          min={1000}
+          max={2999}
+          step={1}
+          value={inputValue}
+          placeholder="YYYY"
+          onChange={(event) =>
+            onChange(fromNativeInputValue(event.target.value, 'year'))
+          }
+        />
+      ) : null}
+
+      {precision === 'month' ? (
+        <Input
+          type="month"
+          value={inputValue}
+          onChange={(event) =>
+            onChange(fromNativeInputValue(event.target.value, 'month'))
+          }
+        />
+      ) : null}
+
+      {precision === 'date' ? (
+        <Input
+          type="date"
+          value={inputValue}
+          onChange={(event) =>
+            onChange(fromNativeInputValue(event.target.value, 'date'))
+          }
+        />
+      ) : null}
+    </div>
+  );
+}

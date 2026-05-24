@@ -1,0 +1,16 @@
+{
+  "name": "resumind-web",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "dev:web": "pnpm --filter @resumind/web dev",
+    "dev:api": "pnpm --filter @resumind/api dev",
+    "dev:types": "pnpm --filter @resumind/types dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4"
+  },
+  "packageManager": "pnpm@10.26.0"
+}
