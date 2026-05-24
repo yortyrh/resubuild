@@ -4,7 +4,7 @@ schema: spec-driven
 context: |
   Product: Resumind — monorepo for JSON Resume–based CVs ("Resumind").
   Stack: Turborepo + pnpm workspaces; Node 20+ (CI uses Node 22).
-  apps/web: Next.js App Router under src/app/, Supabase Auth via @supabase/ssr,
+  apps/web: Next.js App Router under src/app/, session tokens via sessionStorage / Nest REST with CORS,
     client API helper in src/lib/api.ts calling the Nest API with Bearer tokens.
   apps/api: NestJS 11, ConfigModule, global ValidationPipe (whitelist, transform,
     forbidNonWhitelisted), CORS from CORS_ORIGIN, default port 3001.

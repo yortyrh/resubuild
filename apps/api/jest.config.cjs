@@ -6,7 +6,15 @@ module.exports = {
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
-  collectCoverageFrom: ['**/*.(t|j)s', '!**/*.spec.ts', '!**/main.ts'],
+  collectCoverageFrom: ['**/*.(t|j)s', '!**/*.spec.ts', '!**/main.ts', '!**/*.module.ts'],
+  coverageThreshold: {
+    global: {
+      statements: 90,
+      branches: 85,
+      functions: 90,
+      lines: 90,
+    },
+  },
   coverageDirectory: '../coverage',
   testEnvironment: 'node',
 };

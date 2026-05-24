@@ -1,11 +1,11 @@
 # Resumind
 
-Monorepo for managing CVs with **Next.js** (UI + Supabase Auth), **NestJS** (REST API + schema validation), and **Supabase Postgres** (RLS-protected storage).
+Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authentication + schema validation), and **Supabase Postgres** (RLS-protected storage). Auth is **API-issued Bearer tokens** (JSON over CORS)—the web bundle does **not** embed Supabase client libraries.
 
 ## Stack
 
-- **apps/web** — Next.js App Router, shadcn-style UI, `@supabase/ssr`
-- **apps/api** — NestJS REST API, Supabase JWT guard, AJV validation against [JSON Resume schema](https://raw.githubusercontent.com/jsonresume/resume-schema/refs/heads/master/schema.json)
+- **apps/web** — Next.js App Router, shadcn-style UI, token session in `sessionStorage`, calls Nest at `NEXT_PUBLIC_API_URL`
+- **apps/api** — NestJS REST API, `/auth/*` issuance + JWT guard, AJV validation against [JSON Resume schema](https://raw.githubusercontent.com/jsonresume/resume-schema/refs/heads/master/schema.json)
 - **packages/schemas** — official resume JSON schema
 - **packages/types** — shared TypeScript resume types
 - **supabase/migrations** — `cv` table + RLS policies
@@ -50,16 +50,16 @@ psql "$DATABASE_URL" -f supabase/migrations/20260523000000_create_cv_table.sql
 ```
 
 5. Collect from **Project Settings → API**:
-   - Project URL → `SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL`
-   - anon public key → `SUPABASE_ANON_KEY` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - (`SUPABASE_JWT_SECRET` is optional — the API validates tokens via Supabase Auth, not the legacy JWT secret)
+   - Project URL → **`SUPABASE_URL`** (Nest only)
+   - anon public key → **`SUPABASE_ANON_KEY`** (Nest only; drives `/auth/*` plus `auth.getUser()` on guarded routes)
+   - (`SUPABASE_JWT_SECRET` is optional — validation uses Supabase Auth, not the legacy JWT secret alone)
 
 ## Troubleshooting
 
-| Error                                                      | Fix                                                                                                                                                                               |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Could not find the table 'public.cv' in the schema cache` | Run `supabase db push` (or apply the migration SQL manually).                                                                                                                     |
-| `Invalid or expired token`                                 | Sign out and sign in again. Ensure `SUPABASE_URL` and `SUPABASE_ANON_KEY` match between `apps/web` and `apps/api`. The API uses `auth.getUser()` — no legacy JWT secret required. |
+| Error                                                      | Fix                                                                                                                                                                                                                                         |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Could not find the table 'public.cv' in the schema cache` | Run `supabase db push` (or apply the migration SQL manually).                                                                                                                                                                               |
+| `Invalid or expired token`                                 | Sign out and sign in again. Tokens are issued/checked only on `apps/api`; ensure `SUPABASE_*` vars there match your Supabase project. List `NEXT_PUBLIC_API_URL`/web origin inside `apps/api` `CORS_ORIGIN` when using different hostnames. |
 
 ## 2. Environment variables
 
@@ -101,9 +101,9 @@ CI mirrors this with `.github/workflows/ci.yml` on pushes and pull requests to `
 3. Edit sections (Basics, Work, Education, …) and **Save**.
 4. Data is validated server-side against the JSON Resume schema before persisting.
 
-## API (authenticated)
+## API (`apps/api`)
 
-All routes require `Authorization: Bearer <supabase_access_token>`.
+Authenticate with Bearer tokens obtained from **`POST /auth/login`** / **`POST /auth/register`** (see `apps/api/README.md`). The UI stores tokens in **`sessionStorage`** and sends **`Authorization: Bearer <access_token>`** on `/cv*` calls (no cookie-based API auth).
 
 | Method | Path      | Description                |
 | ------ | --------- | -------------------------- |

@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { CvController } from './cv.controller';
 import { CvService } from './cv.service';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 
 @Module({
+  imports: [AuthModule],
   controllers: [CvController],
-  providers: [CvService, SupabaseAuthGuard, ResumeSchemaValidator],
+  providers: [CvService, ResumeSchemaValidator],
 })
 export class CvModule {}

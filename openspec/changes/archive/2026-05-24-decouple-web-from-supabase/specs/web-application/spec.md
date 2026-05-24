@@ -20,4 +20,3 @@ Authenticated requests to Nest CV endpoints SHALL send the short-lived **access 
 
 - **WHEN** the API returns a non-OK response
 - **THEN** `apiFetch` SHALL surface a clear error string, including concatenated validation messages when present and a specific message for HTTP 409 concurrency conflicts
-

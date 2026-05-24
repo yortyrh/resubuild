@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { clearSession, hasSession, saveSession, type AuthTokenPayload } from '@/lib/auth-session';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export function RegisterForm() {
   const router = useRouter();
@@ -17,32 +19,60 @@ export function RegisterForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (hasSession()) {
+      router.replace('/dashboard');
+    }
+  }, [router]);
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
     setError(null);
     setMessage(null);
 
-    const supabase = createClient();
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      const response = await fetch(`${apiUrl}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    setLoading(false);
+      const body = (await response.json().catch(() => ({}))) as {
+        message?: string | string[];
+        access_token?: string;
+      };
 
-    if (signUpError) {
-      setError(signUpError.message);
-      return;
+      setLoading(false);
+
+      if (!response.ok) {
+        const msg = Array.isArray(body.message)
+          ? body.message.join(', ')
+          : typeof body.message === 'string'
+            ? body.message
+            : 'Registration failed';
+        setError(msg);
+        clearSession();
+        return;
+      }
+
+      if ('access_token' in body && 'refresh_token' in body && body.access_token) {
+        saveSession(body as AuthTokenPayload);
+        router.push('/dashboard');
+        router.refresh();
+        return;
+      }
+
+      setMessage(
+        typeof body.message === 'string'
+          ? body.message
+          : 'Check your email to confirm your account.',
+      );
+    } catch {
+      setLoading(false);
+      setError('Registration failed. Try again.');
+      clearSession();
     }
-
-    if (data.session) {
-      router.push('/dashboard');
-      router.refresh();
-      return;
-    }
-
-    setMessage('Check your email to confirm your account, then sign in.');
   };
 
   return (

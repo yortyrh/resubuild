@@ -36,4 +36,3 @@ Neither `NEXT_PUBLIC_*` anon keys nor service-role-equivalent secrets required f
 
 - **WHEN** a developer inspects emitted browser JavaScript bundles for authenticated pages
 - **THEN** bundles MUST NOT statically embed Supabase service-role keys nor reference environment variables gated for exposing Supabase anon keys purely for SPA convenience
-

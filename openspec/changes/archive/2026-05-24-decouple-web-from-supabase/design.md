@@ -1,6 +1,6 @@
 ## Context
 
-Today `apps/web` uses `@supabase/ssr` (`createBrowserClient`) in `'use client'` modules for login, register, logout, and to read/refresh tokens in `src/lib/api.ts`. The Nest guard in `apps/api` already validates Supabase JWTs for CV routes—but auth *lifecycle* and token refresh live in the browser against Supabase, duplicating planes of control.
+Today `apps/web` uses `@supabase/ssr` (`createBrowserClient`) in `'use client'` modules for login, register, logout, and to read/refresh tokens in `src/lib/api.ts`. The Nest guard in `apps/api` already validates Supabase JWTs for CV routes—but auth _lifecycle_ and token refresh live in the browser against Supabase, duplicating planes of control.
 
 ## Goals / Non-Goals
 
@@ -19,7 +19,7 @@ Today `apps/web` uses `@supabase/ssr` (`createBrowserClient`) in `'use client'` 
 ## Decisions
 
 1. **API owns credential flows.** Nest exposes explicit auth routes (exact paths to be finalized in implementation: e.g. `POST /auth/login`, `POST /auth/register`, `POST /auth/logout`, `POST /auth/refresh`, `GET /auth/me`) that encapsulate validation, auditing hooks, error mapping, and calls to Supabase Auth **from the Node process only**.  
-   *Alternatives rejected:* Thin “proxy-only” Nest routes—still concentrates policy in Nest but hides Supabase URLs from the browser—the choice here is identical outcome with clearer ownership of validation DTOs in Nest.
+   _Alternatives rejected:_ Thin “proxy-only” Nest routes—still concentrates policy in Nest but hides Supabase URLs from the browser—the choice here is identical outcome with clearer ownership of validation DTOs in Nest.
 
 2. **Delivery of credentials to the browser (no cookies).** Auth responses **SHALL** return token material in JSON (for example short-lived **access token** plus **refresh token**, exact field names finalized in implementation). The SPA SHALL hold tokens in **`memory`/`sessionStorage` only**, send the access token as `Authorization: Bearer`, and exchange the refresh token on `POST /auth/refresh`; **cookies (including HttpOnly)** are **out of scope** for this architecture to keep cross-domain simple and avoid CSRF/token transport via `Set-Cookie`. Document the trade-off: XSS can exfiltrate refresh material—mitigate with **short access TTL**, **refresh rotation/revocation story as feasible**, **CSP**, and reduced `dangerouslySetInnerHTML`/unsanitized HTML.
 
@@ -48,4 +48,3 @@ Today `apps/web` uses `@supabase/ssr` (`createBrowserClient`) in `'use client'` 
 - Whether refresh tokens are **opaque server-stored** vs **JWT**, and rotation policy on refresh.
 - Whether `GET /auth/me` aggregates profile fields beyond JWT claims immediately or in a follow-up.
 - Throttle limits distinct per-route (`/auth/login` vs `/auth/register`).
-
