@@ -1,10 +1,15 @@
 import {
   BadRequestException,
+  Body,
   Controller,
+  Delete,
   Get,
   Header,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Req,
   StreamableFile,
@@ -16,6 +21,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { MediaService } from './media.service';
+import { CropRectDto } from './media-crop.dto';
 import { RESUME_UPLOAD_MAX_BYTES_DEFAULT } from './media-upload.types';
 
 @Controller('media')
@@ -38,6 +44,35 @@ export class MediaController {
     }
 
     return this.mediaService.uploadObject(req.user.id, file);
+  }
+
+  @Patch(':id/crop')
+  @UseGuards(SupabaseAuthGuard)
+  async crop(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: CropRectDto,
+  ) {
+    return this.mediaService.cropMedia(req.user.id, id, body);
+  }
+
+  @Delete(':id')
+  @UseGuards(SupabaseAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    await this.mediaService.deleteMedia(req.user.id, id);
+  }
+
+  @Get(':id/meta')
+  @UseGuards(SupabaseAuthGuard)
+  async meta(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.mediaService.getMediaMeta(req.user.id, id);
   }
 
   /**

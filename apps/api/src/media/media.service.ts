@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -9,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import sharp from 'sharp';
+import type { CropRect, MediaMetaDto } from './media-crop.dto';
 import {
   RESUME_UPLOAD_MAX_BYTES_DEFAULT,
   RESUME_UPLOAD_MIME_EXTENSIONS,
@@ -159,7 +162,7 @@ export class MediaService implements OnModuleInit {
 
     const { data: row, error: rowError } = await supabase
       .from('media')
-      .select('storage_path, content_type')
+      .select('storage_path, cropped_storage_path, content_type')
       .eq('id', mediaId)
       .maybeSingle();
 
@@ -171,9 +174,11 @@ export class MediaService implements OnModuleInit {
       throw new NotFoundException('Media not found');
     }
 
+    const servePath = row.cropped_storage_path || row.storage_path;
+
     const { data: blob, error: downloadError } = await supabase.storage
       .from(bucket)
-      .download(row.storage_path);
+      .download(servePath);
 
     if (downloadError || !blob) {
       this.logger.error(
@@ -189,5 +194,164 @@ export class MediaService implements OnModuleInit {
         : 'application/octet-stream';
 
     return { buffer: Buffer.from(ab), contentType };
+  }
+
+  /**
+   * Apply a crop rectangle to an existing media upload. Generates a cropped derivative
+   * using sharp, uploads it to Storage, and updates the media row.
+   */
+  async cropMedia(userId: string, mediaId: string, crop: CropRect): Promise<UploadMediaResultDto> {
+    const bucket = this.configService.get<string>('MEDIA_BUCKET');
+    if (!bucket) {
+      throw new ServiceUnavailableException('MEDIA_BUCKET is not set');
+    }
+
+    const supabase = this.ensureClient();
+
+    const { data: row, error: rowError } = await supabase
+      .from('media')
+      .select('user_id, storage_path, content_type, cropped_storage_path')
+      .eq('id', mediaId)
+      .maybeSingle();
+
+    if (rowError) {
+      this.logger.error(`Media lookup failed: ${rowError.message}`);
+      throw new BadRequestException(rowError.message);
+    }
+    if (!row) {
+      throw new NotFoundException('Media not found');
+    }
+    if (row.user_id !== userId) {
+      throw new ForbiddenException('Not the owner of this media');
+    }
+
+    const { data: blob, error: downloadError } = await supabase.storage
+      .from(bucket)
+      .download(row.storage_path);
+
+    if (downloadError || !blob) {
+      throw new NotFoundException('Media file unavailable');
+    }
+
+    const originalBuffer = Buffer.from(await blob.arrayBuffer());
+    const croppedBuffer = await sharp(originalBuffer)
+      .extract({ left: crop.x, top: crop.y, width: crop.width, height: crop.height })
+      .webp({ quality: 90 })
+      .toBuffer();
+
+    const croppedPath = row.storage_path.replace(/\.[^.]+$/, '_cropped.webp');
+
+    if (row.cropped_storage_path) {
+      await supabase.storage
+        .from(bucket)
+        .remove([row.cropped_storage_path])
+        .catch(() => {});
+    }
+
+    const { error: uploadErr } = await supabase.storage
+      .from(bucket)
+      .upload(croppedPath, croppedBuffer, {
+        contentType: 'image/webp',
+        upsert: true,
+      });
+
+    if (uploadErr) {
+      this.logger.error(`Cropped upload failed: ${uploadErr.message}`);
+      throw new BadRequestException(uploadErr.message);
+    }
+
+    const { error: updateErr } = await supabase
+      .from('media')
+      .update({
+        crop: { x: crop.x, y: crop.y, width: crop.width, height: crop.height },
+        cropped_storage_path: croppedPath,
+      })
+      .eq('id', mediaId);
+
+    if (updateErr) {
+      this.logger.error(`Media crop update failed: ${updateErr.message}`);
+      throw new BadRequestException(updateErr.message);
+    }
+
+    return {
+      id: mediaId,
+      url: this.viewerUrlForId(mediaId),
+      contentType: 'image/webp',
+    };
+  }
+
+  /** Delete a media entry and both storage objects (original + cropped). Owner-only. */
+  async deleteMedia(userId: string, mediaId: string): Promise<void> {
+    const bucket = this.configService.get<string>('MEDIA_BUCKET');
+    if (!bucket) {
+      throw new ServiceUnavailableException('MEDIA_BUCKET is not set');
+    }
+
+    const supabase = this.ensureClient();
+
+    const { data: row, error: rowError } = await supabase
+      .from('media')
+      .select('user_id, storage_path, cropped_storage_path')
+      .eq('id', mediaId)
+      .maybeSingle();
+
+    if (rowError) {
+      this.logger.error(`Media lookup failed: ${rowError.message}`);
+      throw new BadRequestException(rowError.message);
+    }
+    if (!row) {
+      throw new NotFoundException('Media not found');
+    }
+    if (row.user_id !== userId) {
+      throw new ForbiddenException('Not the owner of this media');
+    }
+
+    const pathsToRemove = [row.storage_path];
+    if (row.cropped_storage_path) {
+      pathsToRemove.push(row.cropped_storage_path);
+    }
+
+    await supabase.storage
+      .from(bucket)
+      .remove(pathsToRemove)
+      .catch((err) => {
+        this.logger.warn(`Storage cleanup failed: ${(err as Error).message}`);
+      });
+
+    const { error: deleteErr } = await supabase.from('media').delete().eq('id', mediaId);
+
+    if (deleteErr) {
+      this.logger.error(`Media row delete failed: ${deleteErr.message}`);
+      throw new BadRequestException(deleteErr.message);
+    }
+  }
+
+  /** Return crop metadata for the crop editor UI. Owner-only. */
+  async getMediaMeta(userId: string, mediaId: string): Promise<MediaMetaDto> {
+    const supabase = this.ensureClient();
+
+    const { data: row, error: rowError } = await supabase
+      .from('media')
+      .select('user_id, content_type, crop, cropped_storage_path')
+      .eq('id', mediaId)
+      .maybeSingle();
+
+    if (rowError) {
+      this.logger.error(`Media lookup failed: ${rowError.message}`);
+      throw new BadRequestException(rowError.message);
+    }
+    if (!row) {
+      throw new NotFoundException('Media not found');
+    }
+    if (row.user_id !== userId) {
+      throw new ForbiddenException('Not the owner of this media');
+    }
+
+    return {
+      id: mediaId,
+      contentType: row.content_type,
+      crop: row.crop ?? null,
+      hasCropped: !!row.cropped_storage_path,
+    };
   }
 }
