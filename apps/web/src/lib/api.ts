@@ -82,6 +82,48 @@ export async function uploadResumeMedia(file: File): Promise<MediaUploadResult> 
   return response.json() as Promise<MediaUploadResult>;
 }
 
+export interface CropRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface MediaMetaResult {
+  id: string;
+  contentType: string;
+  crop: CropRect | null;
+  hasCropped: boolean;
+}
+
+/** Apply a crop rectangle to an uploaded media file; returns updated media URL. */
+export function patchMediaCrop(id: string, crop: CropRect): Promise<MediaUploadResult> {
+  return apiFetch<MediaUploadResult>(`/media/${id}/crop`, {
+    method: 'PATCH',
+    body: JSON.stringify(crop),
+  });
+}
+
+/** Delete an owned media entry (original + cropped storage objects + registry row). */
+export function deleteMedia(id: string): Promise<void> {
+  return apiFetch<void>(`/media/${id}`, { method: 'DELETE' });
+}
+
+/** Load crop metadata for the edit-crop UI. Owner-only. */
+export function getMediaMeta(id: string): Promise<MediaMetaResult> {
+  return apiFetch<MediaMetaResult>(`/media/${id}/meta`);
+}
+
+/**
+ * Extract media UUID from a `/media/{uuid}` URL when it matches the API pattern.
+ * Returns `null` for external URLs.
+ */
+export function parseMediaIdFromImageUrl(url: string | undefined): string | null {
+  if (!url) return null;
+  const match = url.match(/\/media\/([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})(?:[/?#]|$)/i);
+  return match ? match[1] : null;
+}
+
 export function listCvs() {
   return apiFetch<CvRecord[]>('/cv');
 }

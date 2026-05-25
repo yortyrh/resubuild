@@ -6,11 +6,20 @@ import { toast } from 'sonner';
 import { CountryCodeField } from '@/components/cv/country-code-field';
 import { ResumeItemForm, ResumeItemRow } from '@/components/cv/cv-item-ui';
 import { TextField } from '@/components/cv/form-fields';
+import { ProfilePhotoCropDialog } from '@/components/cv/profile-photo-crop-dialog';
+import { ProfilePhotoThumbnail } from '@/components/cv/profile-photo-thumbnail';
 import { useCvItemMutation } from '@/components/cv/use-cv-item-mutation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { uploadResumeMedia } from '@/lib/api';
+import {
+  type CropRect,
+  deleteMedia,
+  getMediaMeta,
+  parseMediaIdFromImageUrl,
+  patchMediaCrop,
+  uploadResumeMedia,
+} from '@/lib/api';
 import { patchCvBasics } from '@/lib/cv-item-api';
 
 interface ManagedBasicsSectionProps {
@@ -42,6 +51,14 @@ export function ManagedBasicsSection({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(basics);
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
+  const editProfilePhotoInputRef = useRef<HTMLInputElement>(null);
+
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [cropImageUrl, setCropImageUrl] = useState('');
+  const [cropMediaId, setCropMediaId] = useState<string | null>(null);
+  const [cropInitial, setCropInitial] = useState<CropRect | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [cropApplying, setCropApplying] = useState(false);
 
   const startEdit = () => {
     setDraft({ ...basics, location: { ...basics.location } });
@@ -66,155 +83,264 @@ export function ManagedBasicsSection({
     );
   };
 
-  const handleProfilePhoto = async (event: ChangeEvent<HTMLInputElement>) => {
+  const isOwnedMedia = !!parseMediaIdFromImageUrl(basics.image);
+
+  const openCropForFile = (file: File) => {
+    setPendingFile(file);
+    setCropMediaId(null);
+    setCropInitial(null);
+    setCropImageUrl(URL.createObjectURL(file));
+    setCropDialogOpen(true);
+  };
+
+  const handleProfilePhotoSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file) {
-      return;
-    }
+    if (!file) return;
+    openCropForFile(file);
+  };
+
+  const handleCropConfirm = async (crop: CropRect) => {
+    setCropApplying(true);
     try {
-      const { url } = await uploadResumeMedia(file);
-      const next = { ...basics, image: url };
+      if (pendingFile) {
+        const { id, url } = await uploadResumeMedia(pendingFile);
+        await patchMediaCrop(id, crop);
+        const next = { ...basics, image: url };
+        await saveBasics(next);
+      } else if (cropMediaId) {
+        await patchMediaCrop(cropMediaId, crop);
+        toast.success('Crop updated');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Crop failed');
+    } finally {
+      setCropApplying(false);
+      setCropDialogOpen(false);
+      setPendingFile(null);
+      if (cropImageUrl.startsWith('blob:')) URL.revokeObjectURL(cropImageUrl);
+      setCropImageUrl('');
+    }
+  };
+
+  const handleCropCancel = () => {
+    setCropDialogOpen(false);
+    setPendingFile(null);
+    if (cropImageUrl.startsWith('blob:')) URL.revokeObjectURL(cropImageUrl);
+    setCropImageUrl('');
+  };
+
+  const handleEditCrop = async () => {
+    const mediaId = parseMediaIdFromImageUrl(basics.image);
+    if (!mediaId) return;
+    try {
+      const meta = await getMediaMeta(mediaId);
+      setCropMediaId(mediaId);
+      setCropInitial(meta.crop);
+      setCropImageUrl(basics.image!);
+      setCropDialogOpen(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load crop data');
+    }
+  };
+
+  const handleDeletePhoto = async () => {
+    const mediaId = parseMediaIdFromImageUrl(basics.image);
+    try {
+      if (mediaId) {
+        await deleteMedia(mediaId);
+      }
+      const next = { ...basics, image: '' };
       await saveBasics(next);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Photo upload failed');
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
     }
   };
 
-  const updateDraft = (patch: Partial<NonNullable<Resume['basics']>>) => {
-    setDraft((current) => ({ ...current, ...patch }));
+  const handleUploadClick = () => {
+    profilePhotoInputRef.current?.click();
   };
 
-  const updateLocation = (patch: Partial<NonNullable<Resume['basics']>['location']>) => {
-    setDraft((current) => ({
+  type Basics = NonNullable<Resume['basics']>;
+
+  const updateDraft = (patch: Partial<Basics>) => {
+    setDraft((current: Basics) => ({ ...current, ...patch }));
+  };
+
+  const updateLocation = (patch: Partial<NonNullable<Basics['location']>>) => {
+    setDraft((current: Basics) => ({
       ...current,
       location: { ...current.location, ...patch },
     }));
   };
 
+  const handleEditProfilePhoto = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    openCropForFile(file);
+  };
+
   if (editing) {
     return (
-      <ResumeItemForm
-        saving={saving}
-        error={error}
-        onSave={() => saveBasics(draft)}
-        onCancel={cancelEdit}
-      >
-        <TextField label="Name" value={draft.name} onChange={(name) => updateDraft({ name })} />
-        <TextField
-          label="Label"
-          description='Your professional headline — e.g. "Senior Software Engineer" or "Marketing Specialist".'
-          value={draft.label}
-          onChange={(label) => updateDraft({ label })}
-        />
-        <TextField
-          label="Summary"
-          markdown="block"
-          multiline
-          value={draft.summary}
-          onChange={(summary) => updateDraft({ summary })}
-        />
-        <TextField
-          label="Email"
-          type="email"
-          value={draft.email}
-          onChange={(email) => updateDraft({ email })}
-        />
-        <TextField label="Phone" value={draft.phone} onChange={(phone) => updateDraft({ phone })} />
-        <TextField
-          label="Website"
-          type="url"
-          value={draft.url}
-          onChange={(url) => updateDraft({ url })}
-        />
-        <div className="grid gap-4 md:grid-cols-2">
+      <>
+        <ResumeItemForm
+          saving={saving}
+          error={error}
+          onSave={() => saveBasics(draft)}
+          onCancel={cancelEdit}
+        >
+          <TextField label="Name" value={draft.name} onChange={(name) => updateDraft({ name })} />
           <TextField
-            label="City"
-            value={draft.location?.city}
-            onChange={(city) => updateLocation({ city })}
+            label="Label"
+            description='Your professional headline — e.g. "Senior Software Engineer" or "Marketing Specialist".'
+            value={draft.label}
+            onChange={(label) => updateDraft({ label })}
           />
           <TextField
-            label="Region"
-            value={draft.location?.region}
-            onChange={(region) => updateLocation({ region })}
+            label="Summary"
+            markdown="block"
+            multiline
+            value={draft.summary}
+            onChange={(summary) => updateDraft({ summary })}
           />
           <TextField
-            label="Postal code"
-            value={draft.location?.postalCode}
-            onChange={(postalCode) => updateLocation({ postalCode })}
+            label="Email"
+            type="email"
+            value={draft.email}
+            onChange={(email) => updateDraft({ email })}
           />
-          <CountryCodeField
-            value={draft.location?.countryCode}
-            onChange={(countryCode) => updateLocation({ countryCode })}
-          />
-        </div>
-        <TextField
-          label="Address"
-          description="Optional. Street number and street name (suite or unit if needed)."
-          value={draft.location?.address}
-          onChange={(address) => updateLocation({ address })}
-        />
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Label htmlFor="basics-image-url">Profile photo</Label>
-            <div className="flex gap-2">
-              <input
-                ref={profilePhotoInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                className="hidden"
-                onChange={handleProfilePhoto}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => profilePhotoInputRef.current?.click()}
-              >
-                Upload
-              </Button>
-            </div>
-          </div>
-          <Input
-            id="basics-image-url"
+          <TextField label="Phone" value={draft.phone} onChange={(phone) => updateDraft({ phone })} />
+          <TextField
+            label="Website"
             type="url"
-            value={draft.image ?? ''}
-            placeholder="https://..."
-            onChange={(e) => updateDraft({ image: e.target.value })}
+            value={draft.url}
+            onChange={(url) => updateDraft({ url })}
           />
-        </div>
-      </ResumeItemForm>
+          <div className="grid gap-4 md:grid-cols-2">
+            <TextField
+              label="City"
+              value={draft.location?.city}
+              onChange={(city) => updateLocation({ city })}
+            />
+            <TextField
+              label="Region"
+              value={draft.location?.region}
+              onChange={(region) => updateLocation({ region })}
+            />
+            <TextField
+              label="Postal code"
+              value={draft.location?.postalCode}
+              onChange={(postalCode) => updateLocation({ postalCode })}
+            />
+            <CountryCodeField
+              value={draft.location?.countryCode}
+              onChange={(countryCode) => updateLocation({ countryCode })}
+            />
+          </div>
+          <TextField
+            label="Address"
+            description="Optional. Street number and street name (suite or unit if needed)."
+            value={draft.location?.address}
+            onChange={(address) => updateLocation({ address })}
+          />
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label htmlFor="basics-image-url">Profile photo</Label>
+              <div className="flex gap-2">
+                <input
+                  ref={editProfilePhotoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleEditProfilePhoto}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => editProfilePhotoInputRef.current?.click()}
+                >
+                  Upload
+                </Button>
+              </div>
+            </div>
+            <Input
+              id="basics-image-url"
+              type="url"
+              value={draft.image ?? ''}
+              placeholder="https://..."
+              onChange={(e) => updateDraft({ image: e.target.value })}
+            />
+          </div>
+        </ResumeItemForm>
+        <ProfilePhotoCropDialog
+          open={cropDialogOpen}
+          imageUrl={cropImageUrl}
+          initialCrop={cropInitial}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+          confirming={cropApplying}
+        />
+      </>
     );
   }
 
-  const contact = [basics.email, basics.phone, basics.url].filter(Boolean).join(' • ');
-  const location = formatBasicsLocation(basics);
+  const contactParts = [
+    basics.email,
+    basics.phone,
+    basics.url,
+    formatBasicsLocation(basics),
+    basics.location?.address,
+  ].filter(Boolean);
+  const contact = contactParts.join(' • ');
 
   return (
-    <ResumeItemRow
-      title={
-        <div className="space-y-1">
-          <div className="text-xl">{basics.name || 'Untitled'}</div>
-          {basics.label ? (
-            <div className="text-muted-foreground font-normal">{basics.label}</div>
-          ) : null}
-        </div>
-      }
-      meta={
-        <div className="space-y-1">
-          {location ? <div>{location}</div> : null}
-          {basics.location?.address ? <div>{basics.location.address}</div> : null}
-        </div>
-      }
-      onEdit={startEdit}
-    >
-      <div className="space-y-2 text-sm">
-        {contact ? <p>{contact}</p> : null}
-        {basics.summary ? <p className="whitespace-pre-wrap">{basics.summary}</p> : null}
-        {basics.image ? (
-          <p className="text-muted-foreground truncate">Photo: {basics.image}</p>
+    <>
+      <input
+        ref={profilePhotoInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        className="hidden"
+        onChange={handleProfilePhotoSelect}
+      />
+      <ResumeItemRow
+        title={
+          <div className="flex gap-4">
+            <ProfilePhotoThumbnail
+              src={basics.image || undefined}
+              isOwnedMedia={isOwnedMedia}
+              onUpload={handleUploadClick}
+              onEditCrop={isOwnedMedia ? handleEditCrop : undefined}
+              onDelete={handleDeletePhoto}
+            />
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="text-xl">{basics.name || 'Untitled'}</div>
+              {basics.label ? (
+                <div className="text-muted-foreground font-normal">{basics.label}</div>
+              ) : null}
+              {contact ? (
+                <p className="text-muted-foreground text-sm font-normal">{contact}</p>
+              ) : null}
+            </div>
+          </div>
+        }
+        onEdit={startEdit}
+      >
+        {basics.summary ? (
+          <div className="space-y-2 text-sm">
+            <p className="whitespace-pre-wrap">{basics.summary}</p>
+          </div>
         ) : null}
-      </div>
-    </ResumeItemRow>
+      </ResumeItemRow>
+      <ProfilePhotoCropDialog
+        open={cropDialogOpen}
+        imageUrl={cropImageUrl}
+        initialCrop={cropInitial}
+        onConfirm={handleCropConfirm}
+        onCancel={handleCropCancel}
+        confirming={cropApplying}
+      />
+    </>
   );
 }

@@ -3,9 +3,17 @@ jest.mock('node:crypto', () => ({
   ...jest.requireActual<typeof import('node:crypto')>('node:crypto'),
   randomUUID: jest.fn(() => 'aef8297a-2786-4575-9d6c-52d5c93c4c4c'),
 }));
+jest.mock('sharp', () => {
+  const extractFn = jest.fn().mockReturnThis();
+  const webpFn = jest.fn().mockReturnThis();
+  const toBufferFn = jest.fn().mockResolvedValue(Buffer.from([99]));
+  const mockSharp = jest.fn(() => ({ extract: extractFn, webp: webpFn, toBuffer: toBufferFn }));
+  return { __esModule: true, default: mockSharp };
+});
 
 import {
   BadRequestException,
+  ForbiddenException,
   Logger,
   NotFoundException,
   ServiceUnavailableException,
@@ -26,6 +34,8 @@ describe('MediaService', () => {
   const removeFn = jest.fn().mockResolvedValue({ error: null });
   const downloadFn = jest.fn();
   const maybeSingleFn = jest.fn();
+  const updateFn = jest.fn();
+  const deleteFn = jest.fn();
 
   async function bootstrapModule(
     mode: boolean | 'bucket-only',
@@ -36,14 +46,24 @@ describe('MediaService', () => {
     insertFn.mockImplementation(() => Promise.resolve({ error: null }));
     downloadFn.mockReset();
     maybeSingleFn.mockReset();
+    updateFn.mockReset();
+    deleteFn.mockReset();
     maybeSingleFn.mockResolvedValue({
-      data: { storage_path: `user-123/${FIXED_MEDIA_ID}.png`, content_type: 'image/png' },
+      data: {
+        storage_path: `user-123/${FIXED_MEDIA_ID}.png`,
+        content_type: 'image/png',
+        user_id: 'user-123',
+        crop: null,
+        cropped_storage_path: null,
+      },
       error: null,
     });
     downloadFn.mockResolvedValue({
       data: { arrayBuffer: async () => new Uint8Array([7, 8]) },
       error: null,
     });
+    updateFn.mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
+    deleteFn.mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
 
     mockedCreateClient.mockReset();
     if (mode === true) {
@@ -52,6 +72,8 @@ describe('MediaService', () => {
           if (table === 'media') {
             return {
               insert: insertFn,
+              update: updateFn,
+              delete: deleteFn,
               select: jest.fn().mockReturnValue({
                 eq: jest.fn().mockReturnValue({
                   maybeSingle: maybeSingleFn,
@@ -466,5 +488,131 @@ describe('MediaService', () => {
     expect(() => service.onModuleInit()).toThrow(/uploads are required in production/);
 
     process.env.NODE_ENV = prevEnv;
+  });
+
+  it('loadMediaPayload prefers cropped_storage_path when set', async () => {
+    const { service, moduleRef } = await bootstrapModule(true);
+    maybeSingleFn.mockResolvedValueOnce({
+      data: {
+        storage_path: `user-123/${FIXED_MEDIA_ID}.png`,
+        cropped_storage_path: `user-123/${FIXED_MEDIA_ID}_cropped.webp`,
+        content_type: 'image/png',
+      },
+      error: null,
+    });
+    await service.loadMediaPayload(FIXED_MEDIA_ID);
+    expect(downloadFn).toHaveBeenCalledWith(`user-123/${FIXED_MEDIA_ID}_cropped.webp`);
+    await moduleRef.close();
+  });
+
+  describe('cropMedia', () => {
+    const crop = { x: 10, y: 20, width: 100, height: 100 };
+
+    it('generates cropped derivative and updates row', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      const result = await service.cropMedia('user-123', FIXED_MEDIA_ID, crop);
+      expect(result).toEqual({
+        id: FIXED_MEDIA_ID,
+        url: `http://localhost:3001/media/${FIXED_MEDIA_ID}`,
+        contentType: 'image/webp',
+      });
+      expect(uploadFn).toHaveBeenCalledWith(
+        `user-123/${FIXED_MEDIA_ID}_cropped.webp`,
+        expect.any(Buffer),
+        expect.objectContaining({ contentType: 'image/webp', upsert: true }),
+      );
+      await moduleRef.close();
+    });
+
+    it('rejects non-owner crop', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      await expect(service.cropMedia('other-user', FIXED_MEDIA_ID, crop)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws NotFound for missing media', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({ data: null, error: null });
+      await expect(service.cropMedia('user-123', FIXED_MEDIA_ID, crop)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      await moduleRef.close();
+    });
+  });
+
+  describe('deleteMedia', () => {
+    it('removes storage objects and row', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      await service.deleteMedia('user-123', FIXED_MEDIA_ID);
+      expect(removeFn).toHaveBeenCalledWith([`user-123/${FIXED_MEDIA_ID}.png`]);
+      await moduleRef.close();
+    });
+
+    it('removes cropped object when present', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({
+        data: {
+          user_id: 'user-123',
+          storage_path: `user-123/${FIXED_MEDIA_ID}.png`,
+          cropped_storage_path: `user-123/${FIXED_MEDIA_ID}_cropped.webp`,
+        },
+        error: null,
+      });
+      await service.deleteMedia('user-123', FIXED_MEDIA_ID);
+      expect(removeFn).toHaveBeenCalledWith([
+        `user-123/${FIXED_MEDIA_ID}.png`,
+        `user-123/${FIXED_MEDIA_ID}_cropped.webp`,
+      ]);
+      await moduleRef.close();
+    });
+
+    it('rejects non-owner delete', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      await expect(service.deleteMedia('other-user', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      await moduleRef.close();
+    });
+  });
+
+  describe('getMediaMeta', () => {
+    it('returns crop metadata for owner', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({
+        data: {
+          user_id: 'user-123',
+          content_type: 'image/png',
+          crop: { x: 0, y: 0, width: 50, height: 50 },
+          cropped_storage_path: `user-123/${FIXED_MEDIA_ID}_cropped.webp`,
+        },
+        error: null,
+      });
+      const meta = await service.getMediaMeta('user-123', FIXED_MEDIA_ID);
+      expect(meta).toEqual({
+        id: FIXED_MEDIA_ID,
+        contentType: 'image/png',
+        crop: { x: 0, y: 0, width: 50, height: 50 },
+        hasCropped: true,
+      });
+      await moduleRef.close();
+    });
+
+    it('returns null crop when not set', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      const meta = await service.getMediaMeta('user-123', FIXED_MEDIA_ID);
+      expect(meta.crop).toBeNull();
+      expect(meta.hasCropped).toBe(false);
+      await moduleRef.close();
+    });
+
+    it('rejects non-owner', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      await expect(service.getMediaMeta('other-user', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      await moduleRef.close();
+    });
   });
 });

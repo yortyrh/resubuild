@@ -26,7 +26,10 @@
   "packageManager": "pnpm@10.26.0",
   "pnpm": {
     "onlyBuiltDependencies": [
-      "lefthook"
+      "lefthook",
+      "sharp",
+      "esbuild",
+      "@nestjs/core"
     ]
   }
 }
