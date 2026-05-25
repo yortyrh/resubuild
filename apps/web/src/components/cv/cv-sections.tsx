@@ -218,6 +218,7 @@ function SectionContent({
               <div>
                 <div>{formatDateRange(item.startDate, item.endDate)}</div>
                 {item.location ? <div>{item.location}</div> : null}
+                {item.url ? <div className="truncate">{item.url}</div> : null}
               </div>
             ),
             body: (
@@ -319,7 +320,12 @@ function SectionContent({
                 {[item.position, item.organization].filter(Boolean).join(', ') || 'Volunteer entry'}
               </span>
             ),
-            meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
+            meta: (
+              <div>
+                <div>{formatDateRange(item.startDate, item.endDate)}</div>
+                {item.url ? <div className="truncate">{item.url}</div> : null}
+              </div>
+            ),
             body: (
               <>
                 {item.url ? (
@@ -407,6 +413,8 @@ function SectionContent({
                 {[item.studyType, item.area].filter(Boolean).join(' — ') ? (
                   <div>{[item.studyType, item.area].filter(Boolean).join(' — ')}</div>
                 ) : null}
+                {item.score ? <div>Score: {item.score}</div> : null}
+                {item.url ? <div className="truncate">{item.url}</div> : null}
               </div>
             ),
             body: highlightBody(item.courses),
@@ -531,7 +539,14 @@ function SectionContent({
           api={cvProjectApi}
           renderView={(item) => ({
             title: <span>{item.name || 'Project'}</span>,
-            meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
+            meta: (
+              <div>
+                <div>{formatDateRange(item.startDate, item.endDate)}</div>
+                {item.entity ? <div>Entity: {item.entity}</div> : null}
+                {item.type ? <div>Type: {item.type}</div> : null}
+                {item.url ? <div className="truncate">{item.url}</div> : null}
+              </div>
+            ),
             body: (
               <>
                 {item.url ? (
@@ -634,7 +649,12 @@ function SectionContent({
           api={cvAwardApi}
           renderView={(item) => ({
             title: <span>{item.title || 'Award'}</span>,
-            meta: item.date ? <div>{item.date}</div> : undefined,
+            meta: (
+              <div>
+                {item.date ? <div>{item.date}</div> : null}
+                {item.awarder ? <div>{item.awarder}</div> : null}
+              </div>
+            ),
             body: <MarkdownView value={item.summary} variant="block" />,
           })}
           renderForm={(item, onChange) => (
@@ -682,7 +702,12 @@ function SectionContent({
           renderView={(item) => ({
             title: <span>{item.name || 'Certificate'}</span>,
             meta: item.date ? <div>{item.date}</div> : undefined,
-            body: item.issuer ? <p className="text-sm font-normal">{item.issuer}</p> : null,
+            body: (
+              <>
+                {item.issuer ? <p className="text-sm font-normal">{item.issuer}</p> : null}
+                {item.url ? <p className="truncate text-sm font-normal">{item.url}</p> : null}
+              </>
+            ),
           })}
           renderForm={(item, onChange) => (
             <>
