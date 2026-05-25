@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 import type { Resume } from '@resumind/types';
 import { cleanup, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { CvSectionSlug } from './cv-section-nav';
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/dashboard/cv/cv-1/work',
 }));
 
 function stubApi() {
@@ -17,14 +21,10 @@ vi.mock('@/lib/cv-item-api', () => ({
   updateCvProfile: vi.fn(),
   deleteCvProfile: vi.fn(),
   cvWorkApi: stubApi(),
-  cvWorkHighlightApi: stubApi(),
   cvVolunteerApi: stubApi(),
-  cvVolunteerHighlightApi: stubApi(),
   cvEducationApi: stubApi(),
-  cvEducationCourseApi: stubApi(),
   cvSkillApi: stubApi(),
   cvProjectApi: stubApi(),
-  cvProjectHighlightApi: stubApi(),
   cvAwardApi: stubApi(),
   cvCertificateApi: stubApi(),
   cvPublicationApi: stubApi(),
@@ -148,10 +148,8 @@ const defaultProps = {
   onResumeChange: vi.fn(),
 };
 
-async function switchTab(tabName: string) {
-  const user = userEvent.setup();
-  const trigger = screen.getByRole('tab', { name: tabName });
-  await user.click(trigger);
+function renderSection(activeSection: CvSectionSlug, resume: Resume) {
+  render(<CvSections {...defaultProps} activeSection={activeSection} resume={resume} />);
 }
 
 describe('CvSections field coverage', () => {
@@ -160,25 +158,23 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Work view', () => {
-    it('shows all fields when populated', async () => {
+    it('shows all fields when populated', () => {
       const resume = fullyPopulatedResume();
-      render(<CvSections {...defaultProps} resume={resume} />);
-      await switchTab('Work');
+      renderSection('work', resume);
 
       expect(screen.getByText(/Staff Engineer, Acme Corp/)).toBeInTheDocument();
       expect(screen.getByText('Remote')).toBeInTheDocument();
-      expect(screen.getByText('https://acme.example.com')).toBeInTheDocument();
+      expect(screen.getAllByText('https://acme.example.com').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/2020-01/)).toBeInTheDocument();
       expect(screen.getByText('Led platform team.')).toBeInTheDocument();
       expect(screen.getByText('Full-stack platform engineering.')).toBeInTheDocument();
       expect(screen.getAllByText('Scaled to 10M users').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('omits empty optional fields', async () => {
+    it('omits empty optional fields', () => {
       const resume = fullyPopulatedResume();
       resume.work = [{ position: 'Dev', name: 'Co' }];
-      render(<CvSections {...defaultProps} resume={resume} />);
-      await switchTab('Work');
+      renderSection('work', resume);
 
       expect(screen.getByText(/Dev, Co/)).toBeInTheDocument();
       expect(screen.queryByText('https://')).not.toBeInTheDocument();
@@ -186,22 +182,20 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Volunteer view', () => {
-    it('shows url when populated', async () => {
+    it('shows url when populated', () => {
       const resume = fullyPopulatedResume();
-      render(<CvSections {...defaultProps} resume={resume} />);
-      await switchTab('Volunteer');
+      renderSection('volunteer', resume);
 
       expect(screen.getByText(/Mentor, Code for Good/)).toBeInTheDocument();
-      expect(screen.getByText('https://codeforgood.org')).toBeInTheDocument();
+      expect(screen.getAllByText('https://codeforgood.org').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Mentored junior devs.')).toBeInTheDocument();
     });
   });
 
   describe('Education view', () => {
-    it('shows url and score when populated', async () => {
+    it('shows url and score when populated', () => {
       const resume = fullyPopulatedResume();
-      render(<CvSections {...defaultProps} resume={resume} />);
-      await switchTab('Education');
+      renderSection('education', resume);
 
       expect(screen.getByText('MIT')).toBeInTheDocument();
       expect(screen.getByText(/Bachelor — Computer Science/)).toBeInTheDocument();
@@ -211,24 +205,22 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Projects view', () => {
-    it('shows url, entity, and type when populated', async () => {
+    it('shows url, entity, and type when populated', () => {
       const resume = fullyPopulatedResume();
-      render(<CvSections {...defaultProps} resume={resume} />);
-      await switchTab('Projects');
+      renderSection('projects', resume);
 
       expect(screen.getByText('Resume Builder')).toBeInTheDocument();
       expect(screen.getByText('Entity: Open Source')).toBeInTheDocument();
       expect(screen.getByText('Type: Application')).toBeInTheDocument();
-      expect(screen.getByText('https://resume.example.com')).toBeInTheDocument();
+      expect(screen.getAllByText('https://resume.example.com').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Open source resume tool.')).toBeInTheDocument();
     });
   });
 
   describe('Awards view', () => {
-    it('shows awarder when populated', async () => {
+    it('shows awarder when populated', () => {
       const resume = fullyPopulatedResume();
-      render(<CvSections {...defaultProps} resume={resume} />);
-      await switchTab('Awards');
+      renderSection('awards', resume);
 
       expect(screen.getByText('Best Paper')).toBeInTheDocument();
       expect(screen.getByText('2023-06')).toBeInTheDocument();
@@ -238,10 +230,9 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Certificates view', () => {
-    it('shows url when populated', async () => {
+    it('shows url when populated', () => {
       const resume = fullyPopulatedResume();
-      render(<CvSections {...defaultProps} resume={resume} />);
-      await switchTab('Certificates');
+      renderSection('certificates', resume);
 
       expect(screen.getByText('AWS Certified')).toBeInTheDocument();
       expect(screen.getByText('Amazon')).toBeInTheDocument();
@@ -250,10 +241,9 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Publications view', () => {
-    it('shows url and summary when populated', async () => {
+    it('shows url and summary when populated', () => {
       const resume = fullyPopulatedResume();
-      render(<CvSections {...defaultProps} resume={resume} />);
-      await switchTab('Publications');
+      renderSection('publications', resume);
 
       expect(screen.getByText('Scaling Microservices')).toBeInTheDocument();
       expect(screen.getByText("O'Reilly")).toBeInTheDocument();

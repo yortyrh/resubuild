@@ -16,11 +16,10 @@ import type {
   ResumeWork,
 } from '@resumind/types';
 import { ExternalLink } from '@/components/cv/external-link';
-import { TextField } from '@/components/cv/form-fields';
+import { StringListField, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { ManagedBasicsSection } from '@/components/cv/managed-basics-section';
-import { ManagedNestedStrings } from '@/components/cv/managed-nested-strings';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { TagsInput } from '@/components/cv/tags-input';
 import {
@@ -28,18 +27,14 @@ import {
   cvAwardApi,
   cvCertificateApi,
   cvEducationApi,
-  cvEducationCourseApi,
   cvInterestApi,
   cvLanguageApi,
   cvProjectApi,
-  cvProjectHighlightApi,
   cvPublicationApi,
   cvReferenceApi,
   cvSkillApi,
   cvVolunteerApi,
-  cvVolunteerHighlightApi,
   cvWorkApi,
-  cvWorkHighlightApi,
   deleteCvProfile,
   updateCvProfile,
 } from '@/lib/cv-item-api';
@@ -63,6 +58,10 @@ function formatDateRange(start?: string, end?: string): string {
     return start ?? '';
   }
   return `${start ?? ''} – ${end}`;
+}
+
+function trimStringList(values?: string[]): string[] {
+  return (values ?? []).map((value) => value.trim()).filter(Boolean);
 }
 
 function highlightBody(values?: string[]) {
@@ -208,7 +207,10 @@ function SectionContent({
           entityLabel="Work entry"
           addLabel="Add work experience"
           createEmpty={() => ({ highlights: [] })}
-          toPayload={(item) => item as Record<string, unknown>}
+          toPayload={(item) => ({
+            ...(item as Record<string, unknown>),
+            highlights: trimStringList(item.highlights),
+          })}
           api={cvWorkApi}
           renderView={(item) => ({
             title: (
@@ -234,20 +236,6 @@ function SectionContent({
               </>
             ),
           })}
-          renderAfterView={(item, index, onItemChange) => (
-            <ManagedNestedStrings
-              cvId={cvId}
-              version={version}
-              onVersionChange={onVersionChange}
-              parentIndex={index}
-              values={item.highlights ?? []}
-              onValuesChange={(highlights) => onItemChange({ ...item, highlights })}
-              label="Highlight"
-              addLabel="Add highlight"
-              api={cvWorkHighlightApi}
-              markdown
-            />
-          )}
           renderForm={(item, onChange) => (
             <>
               <TextField
@@ -296,6 +284,13 @@ function SectionContent({
                 value={item.description}
                 onChange={(description) => onChange({ ...item, description })}
               />
+              <StringListField
+                label="Highlights"
+                description="Quantifiable achievement bullets saved with this entry on Save."
+                markdown
+                values={item.highlights ?? []}
+                onChange={(highlights) => onChange({ ...item, highlights })}
+              />
             </>
           )}
         />
@@ -312,7 +307,10 @@ function SectionContent({
           entityLabel="Volunteer entry"
           addLabel="Add volunteer experience"
           createEmpty={() => ({ highlights: [] })}
-          toPayload={(item) => item as Record<string, unknown>}
+          toPayload={(item) => ({
+            ...(item as Record<string, unknown>),
+            highlights: trimStringList(item.highlights),
+          })}
           api={cvVolunteerApi}
           renderView={(item) => ({
             title: (
@@ -338,20 +336,6 @@ function SectionContent({
               </>
             ),
           })}
-          renderAfterView={(item, index, onItemChange) => (
-            <ManagedNestedStrings
-              cvId={cvId}
-              version={version}
-              onVersionChange={onVersionChange}
-              parentIndex={index}
-              values={item.highlights ?? []}
-              onValuesChange={(highlights) => onItemChange({ ...item, highlights })}
-              label="Highlight"
-              addLabel="Add highlight"
-              api={cvVolunteerHighlightApi}
-              markdown
-            />
-          )}
           renderForm={(item, onChange) => (
             <>
               <TextField
@@ -387,6 +371,13 @@ function SectionContent({
                 value={item.summary}
                 onChange={(summary) => onChange({ ...item, summary })}
               />
+              <StringListField
+                label="Highlights"
+                description="Quantifiable achievement bullets saved with this entry on Save."
+                markdown
+                values={item.highlights ?? []}
+                onChange={(highlights) => onChange({ ...item, highlights })}
+              />
             </>
           )}
         />
@@ -403,7 +394,10 @@ function SectionContent({
           entityLabel="Education entry"
           addLabel="Add education"
           createEmpty={() => ({ courses: [] })}
-          toPayload={(item) => item as Record<string, unknown>}
+          toPayload={(item) => ({
+            ...(item as Record<string, unknown>),
+            courses: trimStringList(item.courses),
+          })}
           api={cvEducationApi}
           renderView={(item) => ({
             title: <span>{item.institution || 'Education entry'}</span>,
@@ -419,19 +413,6 @@ function SectionContent({
             ),
             body: highlightBody(item.courses),
           })}
-          renderAfterView={(item, index, onItemChange) => (
-            <ManagedNestedStrings
-              cvId={cvId}
-              version={version}
-              onVersionChange={onVersionChange}
-              parentIndex={index}
-              values={item.courses ?? []}
-              onValuesChange={(courses) => onItemChange({ ...item, courses })}
-              label="Course"
-              addLabel="Add course"
-              api={cvEducationCourseApi}
-            />
-          )}
           renderForm={(item, onChange) => (
             <>
               <TextField
@@ -471,6 +452,12 @@ function SectionContent({
                 label="Score"
                 value={item.score}
                 onChange={(score) => onChange({ ...item, score })}
+              />
+              <StringListField
+                label="Courses"
+                description="Notable courses saved with this entry on Save."
+                values={item.courses ?? []}
+                onChange={(courses) => onChange({ ...item, courses })}
               />
             </>
           )}
@@ -535,7 +522,10 @@ function SectionContent({
           entityLabel="Project"
           addLabel="Add project"
           createEmpty={() => ({ highlights: [], keywords: [], roles: [] })}
-          toPayload={(item) => item as Record<string, unknown>}
+          toPayload={(item) => ({
+            ...(item as Record<string, unknown>),
+            highlights: trimStringList(item.highlights),
+          })}
           api={cvProjectApi}
           renderView={(item) => ({
             title: <span>{item.name || 'Project'}</span>,
@@ -565,20 +555,6 @@ function SectionContent({
               </>
             ),
           })}
-          renderAfterView={(item, index, onItemChange) => (
-            <ManagedNestedStrings
-              cvId={cvId}
-              version={version}
-              onVersionChange={onVersionChange}
-              parentIndex={index}
-              values={item.highlights ?? []}
-              onValuesChange={(highlights) => onItemChange({ ...item, highlights })}
-              label="Highlight"
-              addLabel="Add highlight"
-              api={cvProjectHighlightApi}
-              markdown
-            />
-          )}
           renderForm={(item, onChange) => (
             <>
               <TextField
@@ -628,6 +604,13 @@ function SectionContent({
                 label="Keywords"
                 values={item.keywords ?? []}
                 onChange={(keywords) => onChange({ ...item, keywords })}
+              />
+              <StringListField
+                label="Highlights"
+                description="Quantifiable achievement bullets saved with this entry on Save."
+                markdown
+                values={item.highlights ?? []}
+                onChange={(highlights) => onChange({ ...item, highlights })}
               />
             </>
           )}
