@@ -151,19 +151,26 @@ describe('CvService', () => {
       const insertedRow: CvRecord = {
         id: 'fresh-id',
         user_id: user.id,
-        title: 'Starter',
+        title: 'Untitled CV',
         data: {},
         created_at: 'c',
         updated_at: 'c',
       };
 
       let persistedDocument: Record<string, unknown> | undefined;
+      let persistedTitle: string | undefined;
       let hit = 0;
       const single = jest.fn().mockImplementation(async () => {
         hit += 1;
         if (hit === 1) return { data: insertedRow, error: null };
         return {
-          data: persistedDocument ? { ...insertedRow, data: persistedDocument } : insertedRow,
+          data: persistedDocument
+            ? {
+                ...insertedRow,
+                data: persistedDocument,
+                title: persistedTitle ?? insertedRow.title,
+              }
+            : insertedRow,
           error: null,
         };
       });
@@ -173,8 +180,9 @@ describe('CvService', () => {
           insert: jest.fn(() => ({
             select: jest.fn(() => ({ single })),
           })),
-          update: jest.fn((payload: { data?: Record<string, unknown> }) => {
+          update: jest.fn((payload: { data?: Record<string, unknown>; title?: string }) => {
             persistedDocument = payload.data;
+            persistedTitle = payload.title;
             return {
               eq: jest.fn(() => ({
                 select: jest.fn(() => ({
@@ -196,6 +204,7 @@ describe('CvService', () => {
         }),
       );
       expect(result.data.meta).toEqual(persistedDocument?.meta);
+      expect(persistedTitle).toBe('Untitled CV');
 
       mockedCreateClient.mock.calls.forEach(([, anon, cfg]) => {
         expect(cfg).toEqual(
@@ -205,6 +214,47 @@ describe('CvService', () => {
         );
         expect(anon).toBe('anon-key');
       });
+    });
+
+    it('derives title from basics name and label on create', async () => {
+      const insertedRow: CvRecord = {
+        id: 'fresh-id',
+        user_id: user.id,
+        title: 'Untitled CV',
+        data: {},
+        created_at: 'c',
+        updated_at: 'c',
+      };
+
+      let persistedTitle: string | undefined;
+      let hit = 0;
+      const single = jest.fn().mockImplementation(async () => {
+        hit += 1;
+        if (hit === 1) return { data: insertedRow, error: null };
+        return { data: { ...insertedRow, title: persistedTitle }, error: null };
+      });
+
+      mockedCreateClient.mockReturnValue({
+        from: jest.fn(() => ({
+          insert: jest.fn(() => ({
+            select: jest.fn(() => ({ single })),
+          })),
+          update: jest.fn((payload: { title?: string }) => {
+            persistedTitle = payload.title;
+            return {
+              eq: jest.fn(() => ({
+                select: jest.fn(() => ({ single })),
+              })),
+            };
+          }),
+        })),
+      } as never);
+
+      await service.create(user, {
+        data: { basics: { name: 'Jane Doe', label: 'Software Engineer' } },
+      });
+
+      expect(persistedTitle).toBe('Jane Doe — Software Engineer');
     });
 
     it('fails BAD_REQUEST during insert.single', async () => {
@@ -404,22 +454,50 @@ describe('CvService', () => {
 
     it('Scenario: Persist after matching meta token versions', async () => {
       const row = canonicalRow('v10.2.7');
-      stubTwoStepFindThenPatch(row, {
-        data: {
-          ...row,
-          title: row.title,
-        },
-        error: null,
-      });
+      let patchPayload: Record<string, unknown> | undefined;
+      let invocation = 0;
+      mockedCreateClient.mockImplementation(
+        () =>
+          ({
+            from: jest.fn(() => {
+              invocation += 1;
+              if (invocation === 1) {
+                return {
+                  select: jest.fn(() => ({
+                    eq: jest.fn(() => ({
+                      maybeSingle: jest.fn().mockResolvedValue({ data: row, error: null }),
+                    })),
+                  })),
+                };
+              }
+              return {
+                update: jest.fn((payload: Record<string, unknown>) => {
+                  patchPayload = payload;
+                  return {
+                    eq: jest.fn(() => ({
+                      select: jest.fn(() => ({
+                        maybeSingle: jest.fn().mockResolvedValue({
+                          data: { ...row, ...payload },
+                          error: null,
+                        }),
+                      })),
+                    })),
+                  };
+                }),
+              };
+            }),
+          }) as unknown as ReturnType<typeof createClient>,
+      );
 
       const out = await service.update(user, 'cid', {
         data: {
-          basics: {},
+          basics: { name: 'Jane Doe', label: 'Developer' },
           meta: row.data.meta,
         },
       });
 
       expect(out.id).toBe('cid');
+      expect(patchPayload?.title).toBe('Jane Doe — Developer');
       expect(mockedCreateClient).toHaveBeenCalledTimes(2);
       expect(typeof getResumeMetaVersion(out.data)).toBe('string');
     });
@@ -445,6 +523,43 @@ describe('CvService', () => {
         NotFoundException,
       );
       expect(mockedCreateClient).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('persistValidatedData', () => {
+    it('derives and persists title alongside validated data', async () => {
+      let patchPayload: Record<string, unknown> | undefined;
+      mockedCreateClient.mockReturnValue({
+        from: jest.fn(() => ({
+          update: jest.fn((payload: Record<string, unknown>) => {
+            patchPayload = payload;
+            return {
+              eq: jest.fn(() => ({
+                select: jest.fn(() => ({
+                  maybeSingle: jest.fn().mockResolvedValue({
+                    data: {
+                      id: 'cid',
+                      user_id: user.id,
+                      title: payload.title,
+                      data: payload.data,
+                      created_at: 'c',
+                      updated_at: 'u',
+                    },
+                    error: null,
+                  }),
+                })),
+              })),
+            };
+          }),
+        })),
+      } as never);
+
+      const result = await service.persistValidatedData(user, 'cid', {
+        basics: { name: 'Ada Lovelace', label: 'Mathematician' },
+      });
+
+      expect(patchPayload?.title).toBe('Ada Lovelace — Mathematician');
+      expect(result.title).toBe('Ada Lovelace — Mathematician');
     });
   });
 

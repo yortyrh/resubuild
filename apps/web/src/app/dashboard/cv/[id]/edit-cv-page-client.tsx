@@ -7,14 +7,12 @@ import type { CvSectionSlug } from '@/components/cv/cv-section-nav';
 import { getCv } from '@/lib/api';
 
 export function EditCvPageClient({ cvId, section }: { cvId: string; section?: CvSectionSlug }) {
-  const [title, setTitle] = useState<string>();
   const [resume, setResume] = useState<Resume>();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getCv(cvId)
       .then((cv) => {
-        setTitle(cv.title);
         setResume(cv.data as Resume);
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load CV'));
@@ -24,7 +22,7 @@ export function EditCvPageClient({ cvId, section }: { cvId: string; section?: Cv
     return <p className="text-destructive">{error}</p>;
   }
 
-  if (!title || !resume) {
+  if (!resume) {
     return <p className="text-muted-foreground">Loading CV…</p>;
   }
 
@@ -34,7 +32,7 @@ export function EditCvPageClient({ cvId, section }: { cvId: string; section?: Cv
         <h1 className="text-3xl font-bold tracking-tight">Edit CV</h1>
         <p className="text-muted-foreground">Update your CV.</p>
       </div>
-      <CvEditor cvId={cvId} initialTitle={title} initialResume={resume} section={section} />
+      <CvEditor cvId={cvId} initialResume={resume} section={section} />
     </div>
   );
 }

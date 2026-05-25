@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   applyResumeMetaForCreate,
   applyResumeMetaForUpdate,
+  deriveCvTitleFromBasics,
   getResumeMetaVersion,
 } from '@resumind/types';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -85,6 +86,14 @@ export class CvService {
     );
   }
 
+  private deriveTitleFromData(data: Record<string, unknown>): string {
+    const basics = data.basics;
+    if (!basics || typeof basics !== 'object') {
+      return deriveCvTitleFromBasics(undefined);
+    }
+    return deriveCvTitleFromBasics(basics as { name?: string; label?: string });
+  }
+
   async create(user: AuthenticatedRequest['user'], dto: CreateCvDto): Promise<CvRecord> {
     const supabase = this.createUserClient(user.accessToken);
     const baseUrl = this.appBaseUrl();
@@ -93,7 +102,7 @@ export class CvService {
       .from('cv')
       .insert({
         user_id: user.id,
-        title: dto.title ?? 'Untitled CV',
+        title: 'Untitled CV',
         data: {},
       })
       .select('*')
@@ -108,10 +117,11 @@ export class CvService {
       baseUrl,
     });
     this.resumeValidator.validate(dataWithMeta);
+    const title = this.deriveTitleFromData(dataWithMeta);
 
     const { data, error } = await supabase
       .from('cv')
-      .update({ data: dataWithMeta })
+      .update({ data: dataWithMeta, title })
       .eq('id', inserted.id)
       .select('*')
       .single();
@@ -153,6 +163,7 @@ export class CvService {
       });
       this.resumeValidator.validate(dataWithMeta);
       payload.data = dataWithMeta;
+      payload.title = this.deriveTitleFromData(dataWithMeta);
     }
 
     const { data, error } = await supabase
@@ -179,10 +190,11 @@ export class CvService {
     data: Record<string, unknown>,
   ): Promise<CvRecord> {
     this.resumeValidator.validate(data);
+    const title = this.deriveTitleFromData(data);
     const supabase = this.createUserClient(user.accessToken);
     const { data: row, error } = await supabase
       .from('cv')
-      .update({ data })
+      .update({ data, title })
       .eq('id', id)
       .select('*')
       .maybeSingle();

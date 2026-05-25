@@ -25,14 +25,18 @@ describe('CreateCvForm', () => {
     expect(mockUploadResumeMedia).not.toHaveBeenCalled();
   });
 
-  it('invokes onSave with title and basics payload when Save is clicked', async () => {
+  it('does not render a separate CV title field', () => {
+    render(<CreateCvForm onSave={mockOnSave} onCancel={mockOnCancel} />);
+    expect(screen.queryByPlaceholderText('Untitled CV')).not.toBeInTheDocument();
+  });
+
+  it('invokes onSave with basics payload when Save is clicked', async () => {
     mockOnSave.mockResolvedValue(undefined);
     const user = userEvent.setup();
     render(<CreateCvForm onSave={mockOnSave} onCancel={mockOnCancel} />);
 
-    await user.type(screen.getByPlaceholderText('Untitled CV'), 'My CV');
     const textboxes = screen.getAllByRole('textbox');
-    await user.type(textboxes[1], 'Jane Doe');
+    await user.type(textboxes[0], 'Jane Doe');
     const emailInput = document.querySelector('input[type="email"]');
     expect(emailInput).toBeTruthy();
     await user.type(emailInput!, 'jane@example.com');
@@ -42,7 +46,6 @@ describe('CreateCvForm', () => {
       expect(mockOnSave).toHaveBeenCalledTimes(1);
     });
     expect(mockOnSave).toHaveBeenCalledWith({
-      title: 'My CV',
       basics: expect.objectContaining({
         name: 'Jane Doe',
         email: 'jane@example.com',
