@@ -1,5 +1,5 @@
 name: Setup monorepo
-description: Checkout, install toolchain, and restore cached node_modules
+description: Install toolchain and restore cached node_modules (run actions/checkout first)
 
 inputs:
   fail-on-cache-miss:
@@ -10,8 +10,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v6
-
     - uses: pnpm/action-setup@v6
 
     - uses: actions/setup-node@v6

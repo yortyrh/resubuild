@@ -23,6 +23,7 @@ jobs:
     name: Install dependencies
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-monorepo
       - run: pnpm install --frozen-lockfile
       - uses: ./.github/actions/save-node-modules
@@ -32,6 +33,7 @@ jobs:
     needs: install
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-monorepo
         with:
           fail-on-cache-miss: 'true'
@@ -42,6 +44,7 @@ jobs:
     needs: install
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-monorepo
         with:
           fail-on-cache-miss: 'true'
@@ -52,6 +55,7 @@ jobs:
     needs: install
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-monorepo
         with:
           fail-on-cache-miss: 'true'
@@ -64,6 +68,7 @@ jobs:
     needs: install
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-monorepo
         with:
           fail-on-cache-miss: 'true'
@@ -76,6 +81,7 @@ jobs:
     needs: install
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-monorepo
         with:
           fail-on-cache-miss: 'true'
