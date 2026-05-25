@@ -1,0 +1,14 @@
+name: Save node_modules
+description: Cache node_modules for downstream jobs
+
+runs:
+  using: composite
+  steps:
+    - name: Save node_modules
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          node_modules
+          apps/*/node_modules
+          packages/*/node_modules
+        key: pnpm-node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
