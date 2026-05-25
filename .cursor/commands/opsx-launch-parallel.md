@@ -55,29 +55,16 @@ Execute the parallel-execution plan from `.cursor/agents/state/parallel-plan.jso
 
 5. **For each batch (sequentially)**
 
-   a. **Create worktrees in parallel** (cheap, no model calls). Run these as one Bash subagent invocation or one Shell call:
+   a. **Create worktrees in parallel** (cheap, no model calls). Run these as one Bash subagent invocation or one Shell call.
+
+   **Important:** Cursor sandbox shells often start with a stripped `PATH` (`git`, `grep`, `date` not found). Always use `.cursor/scripts/worktree-add.sh` (sources `.cursor/scripts/env.sh` and resolves an absolute `git` path) — do not call bare `git`.
 
    ```bash
    set -euo pipefail
+   base_ref="<baseRef from plan>"
    for entry in <batch members>; do
-     name="$entry"
-     branch="opsx/$name"
-     path=".worktrees/$name"
-
-     # Skip if worktree already there for this branch
-     if git worktree list --porcelain | awk '/^worktree / {p=$2} /^branch / {b=$2} /^$/ {if (b=="refs/heads/'"$branch"'") print p}' | grep -qx "$(pwd)/$path"; then
-       echo "REUSE: $path"
-       continue
-     fi
-
-     # Create branch off baseRef if it doesn't exist; otherwise check out existing branch
-     if git show-ref --verify --quiet "refs/heads/$branch"; then
-       git worktree add "$path" "$branch"
-     else
-       git worktree add -b "$branch" "$path" "<baseRef from plan>"
-     fi
+     .cursor/scripts/worktree-add.sh "$entry" "$base_ref"
    done
-   git worktree list
    ```
 
    b. **Spawn implementer subagents in parallel**
