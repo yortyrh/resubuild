@@ -427,21 +427,6 @@ In Basics **view** mode (non-editing), the editor SHALL render email, phone, web
 - **WHEN** a user views Basics with structured location but no email, phone, or website
 - **THEN** the contact line SHALL still render showing formatted location (and address if present) under the name
 
-### Requirement: Basics view mode SHALL place Edit in the header top-right
-
-In Basics **view** mode, the Edit action MUST render in the top-right of the Basics preview row, vertically aligned with the name/label header block. The Edit button MUST NOT render in the bottom action bar for Basics view rows.
-
-#### Scenario: Edit visible beside name
-
-- **WHEN** a user views the Basics tab in view mode
-- **THEN** the Edit button SHALL appear top-right on the same header row as the name
-- **AND** SHALL NOT appear below the summary or photo line
-
-#### Scenario: Other sections unchanged
-
-- **WHEN** a user views Work or another repeatable section in view mode
-- **THEN** Edit actions SHALL remain in the bottom action bar per existing section row behavior
-
 ### Requirement: Basics view mode SHALL display profile photo beside identity block
 
 When `basics.image` is set, Basics view mode SHALL render a profile photo thumbnail to the **left** of the name/label and contact line within the row title area. The raw photo URL MUST NOT appear as body text below the summary.

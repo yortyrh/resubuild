@@ -64,44 +64,28 @@ interface ResumeItemRowProps {
   children?: ReactNode;
   onEdit: () => void;
   onDelete?: () => void;
-  actionsPlacement?: 'bottom' | 'header';
 }
 
-export function ResumeItemRow({
-  title,
-  meta,
-  children,
-  onEdit,
-  onDelete,
-  actionsPlacement = 'bottom',
-}: ResumeItemRowProps) {
-  const editButton = (
-    <Button type="button" variant="outline" size="sm" onClick={onEdit}>
-      Edit
-    </Button>
-  );
-
+export function ResumeItemRow({ title, meta, children, onEdit, onDelete }: ResumeItemRowProps) {
   return (
     <div className="border-b py-4 last:border-b-0">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1 font-semibold">{title}</div>
-        {actionsPlacement === 'header' ? (
-          <div className="shrink-0">{editButton}</div>
-        ) : meta ? (
+        {meta ? (
           <div className="text-muted-foreground shrink-0 text-right text-sm">{meta}</div>
         ) : null}
       </div>
       {children ? <div className="mt-2">{children}</div> : null}
-      {actionsPlacement === 'bottom' ? (
-        <div className="mt-3 flex gap-2">
-          {editButton}
-          {onDelete ? (
-            <Button type="button" variant="destructive" size="sm" onClick={onDelete}>
-              Delete
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
+      <div className="mt-3 flex gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+          Edit
+        </Button>
+        {onDelete ? (
+          <Button type="button" variant="destructive" size="sm" onClick={onDelete}>
+            Delete
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }
