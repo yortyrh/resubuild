@@ -8,6 +8,7 @@ import {
   SectionCreateForm,
 } from '@/components/cv/cv-item-ui';
 import { TextField } from '@/components/cv/form-fields';
+import { MarkdownView } from '@/components/cv/markdown-view';
 import { useCvItemMutation } from '@/components/cv/use-cv-item-mutation';
 import { Button } from '@/components/ui/button';
 import type { CvItemMutationResponse } from '@/lib/cv-item-api';
@@ -130,7 +131,9 @@ export function ManagedNestedStrings({
     values.length > 0 ? (
       <ul className="list-disc space-y-1 pl-5 text-sm">
         {values.map((value, index) => (
-          <li key={`${value}-${index}`}>{value}</li>
+          <li key={`${value}-${index}`}>
+            {markdown ? <MarkdownView value={value} variant="inline" /> : value}
+          </li>
         ))}
       </ul>
     ) : null;
@@ -158,7 +161,15 @@ export function ManagedNestedStrings({
         ) : (
           <ResumeItemRow
             key={index}
-            title={<span className="font-normal">{value}</span>}
+            title={
+              markdown ? (
+                <span className="font-normal">
+                  <MarkdownView value={value} variant="inline" />
+                </span>
+              ) : (
+                <span className="font-normal">{value}</span>
+              )
+            }
             onEdit={() => {
               setCreating(false);
               setEditingIndex(index);

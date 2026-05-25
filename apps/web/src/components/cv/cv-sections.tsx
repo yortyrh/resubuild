@@ -20,6 +20,7 @@ import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { ManagedBasicsSection } from '@/components/cv/managed-basics-section';
 import { ManagedNestedStrings } from '@/components/cv/managed-nested-strings';
+import { MarkdownView } from '@/components/cv/markdown-view';
 import { TagsInput } from '@/components/cv/tags-input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -68,7 +69,9 @@ function highlightBody(values?: string[]) {
   return (
     <ul className="list-disc space-y-1 pl-5 text-sm font-normal">
       {values.map((value, index) => (
-        <li key={`${value}-${index}`}>{value}</li>
+        <li key={`${value}-${index}`}>
+          <MarkdownView value={value} variant="inline" />
+        </li>
       ))}
     </ul>
   );
@@ -185,7 +188,8 @@ export function CvSections({
             ),
             body: (
               <>
-                {item.summary ? <p className="text-sm font-normal">{item.summary}</p> : null}
+                <MarkdownView value={item.summary} variant="block" />
+                <MarkdownView value={item.description} variant="block" />
                 {highlightBody(item.highlights)}
               </>
             ),
@@ -278,7 +282,7 @@ export function CvSections({
             meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
             body: (
               <>
-                {item.summary ? <p className="text-sm font-normal">{item.summary}</p> : null}
+                <MarkdownView value={item.summary} variant="block" />
                 {highlightBody(item.highlights)}
               </>
             ),
@@ -482,9 +486,7 @@ export function CvSections({
             meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
             body: (
               <>
-                {item.description ? (
-                  <p className="text-sm font-normal">{item.description}</p>
-                ) : null}
+                <MarkdownView value={item.description} variant="block" />
                 {item.roles?.length ? (
                   <p className="text-sm font-normal">Roles: {item.roles.join(', ')}</p>
                 ) : null}
@@ -579,7 +581,7 @@ export function CvSections({
           renderView={(item) => ({
             title: <span>{item.title || 'Award'}</span>,
             meta: item.date ? <div>{item.date}</div> : undefined,
-            body: item.summary ? <p className="text-sm font-normal">{item.summary}</p> : null,
+            body: <MarkdownView value={item.summary} variant="block" />,
           })}
           renderForm={(item, onChange) => (
             <>
@@ -670,7 +672,12 @@ export function CvSections({
           renderView={(item) => ({
             title: <span>{item.name || 'Publication'}</span>,
             meta: item.releaseDate ? <div>{item.releaseDate}</div> : undefined,
-            body: item.publisher ? <p className="text-sm font-normal">{item.publisher}</p> : null,
+            body: (
+              <>
+                {item.publisher ? <p className="text-sm font-normal">{item.publisher}</p> : null}
+                <MarkdownView value={item.summary} variant="block" />
+              </>
+            ),
           })}
           renderForm={(item, onChange) => (
             <>
@@ -789,9 +796,7 @@ export function CvSections({
           api={cvReferenceApi}
           renderView={(item) => ({
             title: <span>{item.name || 'Reference'}</span>,
-            body: item.reference ? (
-              <p className="whitespace-pre-wrap text-sm font-normal">{item.reference}</p>
-            ) : null,
+            body: <MarkdownView value={item.reference} variant="block" />,
           })}
           renderForm={(item, onChange) => (
             <>
