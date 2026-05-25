@@ -18,6 +18,7 @@ import type {
 import { ExternalLink } from '@/components/cv/external-link';
 import { StringListField, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
+import { LanguageField } from '@/components/cv/language-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { ManagedBasicsSection } from '@/components/cv/managed-basics-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
@@ -802,7 +803,7 @@ function SectionContent({
           })}
           renderForm={(item, onChange) => (
             <>
-              <TextField
+              <LanguageField
                 label="Language"
                 value={item.language}
                 onChange={(language) => onChange({ ...item, language })}
