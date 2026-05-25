@@ -15,6 +15,7 @@ import type {
   ResumeVolunteer,
   ResumeWork,
 } from '@resumind/types';
+import { ExternalLink } from '@/components/cv/external-link';
 import { TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
@@ -139,7 +140,11 @@ export function CvSections({
                 {item.username ? ` — ${item.username}` : ''}
               </span>
             ),
-            body: item.url ? <p className="text-sm font-normal">{item.url}</p> : null,
+            body: item.url ? (
+              <p className="text-sm font-normal">
+                <ExternalLink href={item.url} />
+              </p>
+            ) : null,
           })}
           renderForm={(item, onChange) => (
             <>
@@ -188,6 +193,11 @@ export function CvSections({
             ),
             body: (
               <>
+                {item.url ? (
+                  <p className="text-sm font-normal">
+                    <ExternalLink href={item.url} />
+                  </p>
+                ) : null}
                 <MarkdownView value={item.summary} variant="block" />
                 <MarkdownView value={item.description} variant="block" />
                 {highlightBody(item.highlights)}
@@ -282,6 +292,11 @@ export function CvSections({
             meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
             body: (
               <>
+                {item.url ? (
+                  <p className="text-sm font-normal">
+                    <ExternalLink href={item.url} />
+                  </p>
+                ) : null}
                 <MarkdownView value={item.summary} variant="block" />
                 {highlightBody(item.highlights)}
               </>
@@ -363,7 +378,16 @@ export function CvSections({
                 ) : null}
               </div>
             ),
-            body: highlightBody(item.courses),
+            body: (
+              <>
+                {item.url ? (
+                  <p className="text-sm font-normal">
+                    <ExternalLink href={item.url} />
+                  </p>
+                ) : null}
+                {highlightBody(item.courses)}
+              </>
+            ),
           })}
           renderAfterView={(item, index, onItemChange) => (
             <ManagedNestedStrings
@@ -486,6 +510,11 @@ export function CvSections({
             meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
             body: (
               <>
+                {item.url ? (
+                  <p className="text-sm font-normal">
+                    <ExternalLink href={item.url} />
+                  </p>
+                ) : null}
                 <MarkdownView value={item.description} variant="block" />
                 {item.roles?.length ? (
                   <p className="text-sm font-normal">Roles: {item.roles.join(', ')}</p>
@@ -627,7 +656,16 @@ export function CvSections({
           renderView={(item) => ({
             title: <span>{item.name || 'Certificate'}</span>,
             meta: item.date ? <div>{item.date}</div> : undefined,
-            body: item.issuer ? <p className="text-sm font-normal">{item.issuer}</p> : null,
+            body: (
+              <>
+                {item.issuer ? <p className="text-sm font-normal">{item.issuer}</p> : null}
+                {item.url ? (
+                  <p className="text-sm font-normal">
+                    <ExternalLink href={item.url} />
+                  </p>
+                ) : null}
+              </>
+            ),
           })}
           renderForm={(item, onChange) => (
             <>
@@ -675,6 +713,11 @@ export function CvSections({
             body: (
               <>
                 {item.publisher ? <p className="text-sm font-normal">{item.publisher}</p> : null}
+                {item.url ? (
+                  <p className="text-sm font-normal">
+                    <ExternalLink href={item.url} />
+                  </p>
+                ) : null}
                 <MarkdownView value={item.summary} variant="block" />
               </>
             ),

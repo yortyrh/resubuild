@@ -5,6 +5,7 @@ import { type ChangeEvent, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { CountryCodeField } from '@/components/cv/country-code-field';
 import { ResumeItemForm, ResumeItemRow } from '@/components/cv/cv-item-ui';
+import { ExternalLink } from '@/components/cv/external-link';
 import { TextField } from '@/components/cv/form-fields';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useCvItemMutation } from '@/components/cv/use-cv-item-mutation';
@@ -188,7 +189,11 @@ export function ManagedBasicsSection({
     );
   }
 
-  const contact = [basics.email, basics.phone, basics.url].filter(Boolean).join(' • ');
+  const contactSegments: React.ReactNode[] = [];
+  if (basics.email) contactSegments.push(basics.email);
+  if (basics.phone) contactSegments.push(basics.phone);
+  if (basics.url) contactSegments.push(<ExternalLink key="url" href={basics.url} />);
+
   const location = formatBasicsLocation(basics);
 
   return (
@@ -210,7 +215,16 @@ export function ManagedBasicsSection({
       onEdit={startEdit}
     >
       <div className="space-y-2 text-sm">
-        {contact ? <p>{contact}</p> : null}
+        {contactSegments.length > 0 ? (
+          <p className="flex flex-wrap items-center gap-x-1">
+            {contactSegments.map((segment, i) => (
+              <span key={typeof segment === 'string' ? segment : `seg-${i}`}>
+                {i > 0 ? ' • ' : ''}
+                {segment}
+              </span>
+            ))}
+          </p>
+        ) : null}
         <MarkdownView value={basics.summary} variant="block" />
         {basics.image ? (
           <p className="text-muted-foreground truncate">Photo: {basics.image}</p>
