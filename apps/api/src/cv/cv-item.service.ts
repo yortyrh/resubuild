@@ -4,10 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import { applyResumeMetaForUpdate, getResumeMetaVersion } from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
-import type { CvService } from './cv.service';
+import { CvService } from './cv.service';
 import type { CvItemMutationResponse } from './cv-item.types';
 
 type ResumeData = Record<string, unknown>;

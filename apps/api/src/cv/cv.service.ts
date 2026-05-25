@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import {
   applyResumeMetaForCreate,
   applyResumeMetaForUpdate,
@@ -12,7 +12,7 @@ import {
 } from '@resumind/types';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
-import type { ResumeSchemaValidator } from '../validation/resume-schema.validator';
+import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 import type { CreateCvDto, UpdateCvDto } from './dto/cv.dto';
 
 export interface CvRecord {

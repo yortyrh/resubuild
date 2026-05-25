@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
-import type { AuthService } from './auth.service';
+import { AuthService } from './auth.service';
 import type { LoginDto, RefreshDto, RegisterDto } from './dto/auth.dto';
 import type { AuthMeResponse, AuthTokenResponse } from './session.types';
 import { type AuthenticatedRequest, SupabaseAuthGuard } from './supabase-auth.guard';

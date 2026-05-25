@@ -7,7 +7,7 @@ import {
   type OnModuleInit,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import type { ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
   RESUME_UPLOAD_MAX_BYTES_DEFAULT,

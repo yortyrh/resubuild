@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import type { CvItemService } from './cv-item.service';
+import { CvItemService } from './cv-item.service';
 import type {
   AwardItemDto,
   BasicsItemDto,
