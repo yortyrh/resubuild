@@ -25,8 +25,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-monorepo
+        id: setup-monorepo
       - run: pnpm install --frozen-lockfile
       - uses: ./.github/actions/save-node-modules
+        if: steps.setup-monorepo.outputs.node-modules-cache-hit != 'true'
 
   prettier:
     name: Prettier check
