@@ -541,26 +541,24 @@ function SectionContent({
           renderView={(item) => {
             const projectLabel = item.name || 'Project';
             return {
-              title: (
-                <span>{linkedEntityLabel(projectLabel, item.url) ?? projectLabel}</span>
+              title: <span>{linkedEntityLabel(projectLabel, item.url) ?? projectLabel}</span>,
+              meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
+              body: (
+                <>
+                  <MarkdownView value={item.description} variant="block" />
+                  {item.entity ? (
+                    <p className="text-sm font-normal">Entity: {item.entity}</p>
+                  ) : null}
+                  {item.type ? <p className="text-sm font-normal">Type: {item.type}</p> : null}
+                  {item.roles?.length ? (
+                    <p className="text-sm font-normal">Roles: {item.roles.join(', ')}</p>
+                  ) : null}
+                  {item.keywords?.length ? (
+                    <p className="text-sm font-normal">Keywords: {item.keywords.join(', ')}</p>
+                  ) : null}
+                  {highlightBody(item.highlights)}
+                </>
               ),
-            meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
-            body: (
-              <>
-                <MarkdownView value={item.description} variant="block" />
-                {item.entity ? (
-                  <p className="text-sm font-normal">Entity: {item.entity}</p>
-                ) : null}
-                {item.type ? <p className="text-sm font-normal">Type: {item.type}</p> : null}
-                {item.roles?.length ? (
-                  <p className="text-sm font-normal">Roles: {item.roles.join(', ')}</p>
-                ) : null}
-                {item.keywords?.length ? (
-                  <p className="text-sm font-normal">Keywords: {item.keywords.join(', ')}</p>
-                ) : null}
-                {highlightBody(item.highlights)}
-              </>
-            ),
             };
           }}
           renderForm={(item, onChange) => (
