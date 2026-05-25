@@ -3,7 +3,7 @@
   "vcs": {
     "enabled": true,
     "clientKind": "git",
-    "useIgnoreFile": true
+    "useIgnoreFile": true,
   },
   "files": {
     "ignoreUnknown": false,
@@ -18,58 +18,59 @@
       "!supabase/.temp",
       "!**/next-env.d.ts",
       "!**/*.css",
-      "!**/*.md"
-    ]
+      "!**/*.md",
+    ],
   },
   "formatter": {
-    "enabled": false
+    "enabled": false,
   },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
       "correctness": {
-        "useExhaustiveDependencies": "warn"
+        "useExhaustiveDependencies": "warn",
       },
       "style": {
-        "noNonNullAssertion": "off"
+        "noNonNullAssertion": "off",
       },
       "suspicious": {
-        "noArrayIndexKey": "off"
+        "noArrayIndexKey": "off",
       },
       "a11y": {
         "useFocusableInteractive": "warn",
         "noNoninteractiveElementToInteractiveRole": "warn",
-        "useSemanticElements": "warn"
-      }
-    }
+        "useSemanticElements": "warn",
+      },
+    },
   },
   "assist": {
     "enabled": true,
     "actions": {
       "source": {
-        "organizeImports": "on"
-      }
-    }
+        "organizeImports": "on",
+      },
+    },
   },
   "overrides": [
     {
       "includes": ["apps/api/**"],
       "javascript": {
         "parser": {
-          "unsafeParameterDecoratorsEnabled": true
-        }
+          "unsafeParameterDecoratorsEnabled": true,
+        },
       },
       "linter": {
         "rules": {
           "correctness": {
-            "noUnusedFunctionParameters": "off"
+            "noUnusedFunctionParameters": "off",
           },
           "style": {
-            "useImportType": "off"
-          }
-        }
-      }
-    }
-  ]
+            // Nest emitDecoratorMetadata: DTOs in @Body() need value imports, not import type.
+            "useImportType": "off",
+          },
+        },
+      },
+    },
+  ],
 }

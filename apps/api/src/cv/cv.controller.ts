@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CvService } from './cv.service';
-import type { CreateCvDto, UpdateCvDto } from './dto/cv.dto';
+import { CreateCvDto, UpdateCvDto } from './dto/cv.dto';
 
 @Controller('cv')
 @UseGuards(SupabaseAuthGuard)
