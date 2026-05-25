@@ -180,6 +180,25 @@ describe('CvSections field coverage', () => {
       expect(screen.getAllByText('Scaled to 10M users').length).toBeGreaterThanOrEqual(1);
     });
 
+    it('renders markdown highlights as formatted output', () => {
+      const resume = fullyPopulatedResume();
+      resume.work = [
+        {
+          position: 'Staff Engineer',
+          name: 'Acme Corp',
+          highlights: ['**Reduced API latency by 40%**'],
+        },
+      ];
+      const { container } = render(
+        <CvSections {...defaultProps} activeSection="work" resume={resume} />,
+      );
+
+      const strong = container.querySelector('strong');
+      expect(strong).not.toBeNull();
+      expect(strong?.textContent).toBe('Reduced API latency by 40%');
+      expect(container.textContent).not.toContain('**');
+    });
+
     it('omits empty optional fields', () => {
       const resume = fullyPopulatedResume();
       resume.work = [{ position: 'Dev', name: 'Co' }];
