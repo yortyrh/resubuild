@@ -1,9 +1,9 @@
 name: Setup monorepo
-description: Install toolchain and restore cached node_modules (run actions/checkout first)
+description: Install toolchain and optionally restore cached node_modules (run actions/checkout first)
 
 inputs:
-  fail-on-cache-miss:
-    description: Fail the job if the node_modules cache is missing
+  restore-node-modules:
+    description: Restore node_modules from cache before install
     required: false
     default: 'false'
 
@@ -23,6 +23,7 @@ runs:
         cache: 'pnpm'
 
     - name: Restore node_modules
+      if: inputs.restore-node-modules == 'true'
       id: restore-node-modules
       uses: actions/cache/restore@v5
       with:
@@ -31,4 +32,3 @@ runs:
           apps/*/node_modules
           packages/*/node_modules
         key: pnpm-node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-        fail-on-cache-miss: ${{ inputs.fail-on-cache-miss == 'true' }}

@@ -19,74 +19,58 @@ env:
   NEXT_PUBLIC_API_URL: http://localhost:3001
 
 jobs:
-  install:
-    name: Install dependencies
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-monorepo
-        id: setup-monorepo
-      - run: pnpm install --frozen-lockfile
-      - uses: ./.github/actions/save-node-modules
-        if: steps.setup-monorepo.outputs.node-modules-cache-hit != 'true'
-
   prettier:
     name: Prettier check
-    needs: install
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-monorepo
-        with:
-          fail-on-cache-miss: 'true'
+      - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
 
   biome:
     name: Biome lint
-    needs: install
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-monorepo
-        with:
-          fail-on-cache-miss: 'true'
+      - run: pnpm install --frozen-lockfile
       - run: pnpm lint
 
   typecheck:
     name: Typecheck
-    needs: install
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-monorepo
-        with:
-          fail-on-cache-miss: 'true'
+      - run: pnpm install --frozen-lockfile
       - name: Cache for Turbo
         uses: rharkor/caching-for-turbo@v2.3.12
       - run: pnpm typecheck
 
   test:
     name: Unit tests (coverage)
-    needs: install
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-monorepo
-        with:
-          fail-on-cache-miss: 'true'
+      - run: pnpm install --frozen-lockfile
       - name: Cache for Turbo
         uses: rharkor/caching-for-turbo@v2.3.12
       - run: pnpm test
 
   build:
     name: Build
-    needs: install
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-monorepo
+        id: setup-monorepo
         with:
-          fail-on-cache-miss: 'true'
+          restore-node-modules: 'true'
+      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/save-node-modules
+        if: steps.setup-monorepo.outputs.node-modules-cache-hit != 'true'
       - name: Cache for Turbo
         uses: rharkor/caching-for-turbo@v2.3.12
       - run: pnpm build
