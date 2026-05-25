@@ -67,14 +67,17 @@ function trimStringList(values?: string[]): string[] {
   return (values ?? []).map((value) => value.trim()).filter(Boolean);
 }
 
-function highlightBody(values?: string[]) {
+export function highlightBody(values?: string[], options?: { markdown?: boolean }) {
   if (!values?.length) {
     return null;
   }
+  const useMarkdown = options?.markdown ?? false;
   return (
     <ul className="list-disc space-y-1 pl-5 text-sm font-normal">
       {values.map((value, index) => (
-        <li key={`${value}-${index}`}>{value}</li>
+        <li key={`${value}-${index}`}>
+          {useMarkdown ? <MarkdownView value={value} variant="inline" /> : value}
+        </li>
       ))}
     </ul>
   );
@@ -250,7 +253,7 @@ function SectionContent({
               <>
                 <MarkdownView value={item.summary} variant="block" />
                 <MarkdownView value={item.description} variant="block" />
-                {highlightBody(item.highlights)}
+                {highlightBody(item.highlights, { markdown: true })}
               </>
             ),
           })}
@@ -341,7 +344,7 @@ function SectionContent({
             body: (
               <>
                 <MarkdownView value={item.summary} variant="block" />
-                {highlightBody(item.highlights)}
+                {highlightBody(item.highlights, { markdown: true })}
               </>
             ),
           })}
@@ -553,7 +556,7 @@ function SectionContent({
                     <p className="text-sm font-normal">Roles: {item.roles.join(', ')}</p>
                   ) : null}
                   <TagsList values={item.keywords ?? []} />
-                  {highlightBody(item.highlights)}
+                  {highlightBody(item.highlights, { markdown: true })}
                 </>
               ),
             };
