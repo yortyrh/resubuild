@@ -13,39 +13,79 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: anon-ci-placeholder-key
+  NEXT_PUBLIC_API_URL: http://localhost:3001
+
 jobs:
-  verify:
+  prettier:
+    name: Prettier check
     runs-on: ubuntu-latest
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: anon-ci-placeholder-key
-      NEXT_PUBLIC_API_URL: http://localhost:3001
-
     steps:
-      # Use action majors pinned to Node 24 runners (avoid Node 20 action-runtime deprecation).
       - uses: actions/checkout@v6
-
       - uses: pnpm/action-setup@v6
-
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+  biome:
+    name: Biome lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
 
-      - name: Prettier check
-        run: pnpm format:check
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Cache for Turbo
+        uses: rharkor/caching-for-turbo@v2.3.12
+      - run: pnpm typecheck
 
-      - name: Biome lint
-        run: pnpm lint
+  test:
+    name: Unit tests (coverage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Cache for Turbo
+        uses: rharkor/caching-for-turbo@v2.3.12
+      - run: pnpm test
 
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Unit tests (coverage)
-        run: pnpm test
-
-      - name: Build
-        run: pnpm build
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Cache for Turbo
+        uses: rharkor/caching-for-turbo@v2.3.12
+      - run: pnpm build
