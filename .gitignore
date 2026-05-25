@@ -11,3 +11,8 @@ coverage
 
 # Supabase CLI local link state (may include project refs / URLs)
 supabase/.temp/
+
+# Parallel OpenSpec worktrees and ephemeral planner state
+# (Created by /opsx-plan-parallel and /opsx-launch-parallel — see .cursor/agents/README.md)
+.worktrees/
+.cursor/agents/state/
