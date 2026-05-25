@@ -181,11 +181,15 @@ export function CvSections({
               <div>
                 <div>{formatDateRange(item.startDate, item.endDate)}</div>
                 {item.location ? <div>{item.location}</div> : null}
+                {item.url ? <div className="truncate">{item.url}</div> : null}
               </div>
             ),
             body: (
               <>
                 {item.summary ? <p className="text-sm font-normal">{item.summary}</p> : null}
+                {item.description ? (
+                  <p className="text-sm font-normal">{item.description}</p>
+                ) : null}
                 {highlightBody(item.highlights)}
               </>
             ),
@@ -275,7 +279,12 @@ export function CvSections({
                 {[item.position, item.organization].filter(Boolean).join(', ') || 'Volunteer entry'}
               </span>
             ),
-            meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
+            meta: (
+              <div>
+                <div>{formatDateRange(item.startDate, item.endDate)}</div>
+                {item.url ? <div className="truncate">{item.url}</div> : null}
+              </div>
+            ),
             body: (
               <>
                 {item.summary ? <p className="text-sm font-normal">{item.summary}</p> : null}
@@ -357,6 +366,8 @@ export function CvSections({
                 {[item.studyType, item.area].filter(Boolean).join(' — ') ? (
                   <div>{[item.studyType, item.area].filter(Boolean).join(' — ')}</div>
                 ) : null}
+                {item.score ? <div>Score: {item.score}</div> : null}
+                {item.url ? <div className="truncate">{item.url}</div> : null}
               </div>
             ),
             body: highlightBody(item.courses),
@@ -479,7 +490,14 @@ export function CvSections({
           api={cvProjectApi}
           renderView={(item) => ({
             title: <span>{item.name || 'Project'}</span>,
-            meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
+            meta: (
+              <div>
+                <div>{formatDateRange(item.startDate, item.endDate)}</div>
+                {item.entity ? <div>Entity: {item.entity}</div> : null}
+                {item.type ? <div>Type: {item.type}</div> : null}
+                {item.url ? <div className="truncate">{item.url}</div> : null}
+              </div>
+            ),
             body: (
               <>
                 {item.description ? (
@@ -578,7 +596,12 @@ export function CvSections({
           api={cvAwardApi}
           renderView={(item) => ({
             title: <span>{item.title || 'Award'}</span>,
-            meta: item.date ? <div>{item.date}</div> : undefined,
+            meta: (
+              <div>
+                {item.date ? <div>{item.date}</div> : null}
+                {item.awarder ? <div>{item.awarder}</div> : null}
+              </div>
+            ),
             body: item.summary ? <p className="text-sm font-normal">{item.summary}</p> : null,
           })}
           renderForm={(item, onChange) => (
@@ -625,7 +648,14 @@ export function CvSections({
           renderView={(item) => ({
             title: <span>{item.name || 'Certificate'}</span>,
             meta: item.date ? <div>{item.date}</div> : undefined,
-            body: item.issuer ? <p className="text-sm font-normal">{item.issuer}</p> : null,
+            body: (
+              <>
+                {item.issuer ? <p className="text-sm font-normal">{item.issuer}</p> : null}
+                {item.url ? (
+                  <p className="text-sm font-normal truncate">{item.url}</p>
+                ) : null}
+              </>
+            ),
           })}
           renderForm={(item, onChange) => (
             <>
@@ -670,7 +700,15 @@ export function CvSections({
           renderView={(item) => ({
             title: <span>{item.name || 'Publication'}</span>,
             meta: item.releaseDate ? <div>{item.releaseDate}</div> : undefined,
-            body: item.publisher ? <p className="text-sm font-normal">{item.publisher}</p> : null,
+            body: (
+              <>
+                {item.publisher ? <p className="text-sm font-normal">{item.publisher}</p> : null}
+                {item.url ? (
+                  <p className="text-sm font-normal truncate">{item.url}</p>
+                ) : null}
+                {item.summary ? <p className="text-sm font-normal">{item.summary}</p> : null}
+              </>
+            ),
           })}
           renderForm={(item, onChange) => (
             <>
