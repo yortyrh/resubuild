@@ -99,7 +99,7 @@ Git hooks (Lefthook, installed via `pnpm install`):
 - **pre-commit** — Biome lint fixes on staged code, then Prettier on staged files (including Markdown)
 - **pre-push** — full `pnpm verify` pipeline
 
-CI mirrors this with `.github/workflows/ci.yml` on pushes and pull requests to `main`.
+CI mirrors `pnpm verify` via `.github/workflows/ci.yml` on pushes and pull requests to `main`: five parallel jobs (Prettier, Biome, typecheck, tests, build). Each job restores cached `node_modules` when the lockfile is unchanged (see `.github/actions/setup-monorepo`); only the **Build** job saves the cache after a fresh install.
 
 ## Usage
 

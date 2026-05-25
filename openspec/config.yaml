@@ -11,8 +11,10 @@ context: |
   packages/schemas: official JSON Resume JSON Schema; packages/types: shared TS + meta helpers.
   Data: Supabase Postgres, public.cv table (id, user_id, title, data jsonb, timestamps);
     RLS restricts rows to auth.uid() = user_id; migration in supabase/migrations/.
-  Testing: Vitest (web, types), Jest (api); root pnpm test (turbo); CI: format, lint, test, build.
-  Conventions: unit tests colocated beside source; ESLint + Prettier (+ tailwind class sort in web).
+  Testing: Vitest (web, types), Jest (api); root pnpm test (turbo); CI: parallel jobs for format:check,
+    Biome lint, typecheck, test, build (see openspec/specs/monorepo-and-toolchain/spec.md).
+  Conventions: unit tests colocated beside source; Biome + Prettier (+ tailwind class sort via Prettier);
+    Lefthook pre-commit (Biome, Prettier on staged files) and pre-push (pnpm verify).
 
 rules:
   proposal:
