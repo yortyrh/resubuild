@@ -68,7 +68,7 @@ interface ResumeItemRowProps {
 
 export function ResumeItemRow({ title, meta, children, onEdit, onDelete }: ResumeItemRowProps) {
   return (
-    <div className="border-b py-4 last:border-b-0">
+    <div className="border-b pb-4 pt-0 last:border-b-0">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1 font-semibold">{title}</div>
         {meta ? (
@@ -106,10 +106,10 @@ export function ResumeItemForm({
   onCancel,
 }: ResumeItemFormProps) {
   return (
-    <div className="border-b py-4 last:border-b-0">
+    <div className="border-b last:border-b-0">
       <div className="space-y-4">{children}</div>
       {error ? <p className="text-destructive mt-3 text-sm">{error}</p> : null}
-      <div className="mt-4 flex gap-2">
+      <div className="my-2 flex gap-2">
         <Button type="button" onClick={onSave} disabled={saving}>
           {saving ? 'Saving…' : 'Save'}
         </Button>
