@@ -4,8 +4,10 @@ export default function NewCvPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">New CV</h1>
-        <p className="text-muted-foreground">Setting up your CV editor…</p>
+        <h1 className="text-3xl font-bold tracking-tight">Create a new CV</h1>
+        <p className="text-muted-foreground">
+          Enter a title and your basic details. Your CV is created only when you click Save.
+        </p>
       </div>
       <NewCvPageClient />
     </div>

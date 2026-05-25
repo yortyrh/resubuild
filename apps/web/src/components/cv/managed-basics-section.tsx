@@ -3,17 +3,13 @@
 import type { Resume } from '@resumind/types';
 import { type ChangeEvent, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { CountryCodeField } from '@/components/cv/country-code-field';
+import { BasicsFormFields } from '@/components/cv/basics-form-fields';
 import { ResumeItemForm, ResumeItemRow } from '@/components/cv/cv-item-ui';
 import { ExternalLink } from '@/components/cv/external-link';
-import { TextField } from '@/components/cv/form-fields';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { ProfilePhotoCropDialog } from '@/components/cv/profile-photo-crop-dialog';
 import { ProfilePhotoThumbnail } from '@/components/cv/profile-photo-thumbnail';
 import { useCvItemMutation } from '@/components/cv/use-cv-item-mutation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   type CropRect,
   deleteMedia,
@@ -53,7 +49,6 @@ export function ManagedBasicsSection({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(basics);
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
-  const editProfilePhotoInputRef = useRef<HTMLInputElement>(null);
 
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [cropImageUrl, setCropImageUrl] = useState('');
@@ -163,26 +158,6 @@ export function ManagedBasicsSection({
     profilePhotoInputRef.current?.click();
   };
 
-  type Basics = NonNullable<Resume['basics']>;
-
-  const updateDraft = (patch: Partial<Basics>) => {
-    setDraft((current: Basics) => ({ ...current, ...patch }));
-  };
-
-  const updateLocation = (patch: Partial<NonNullable<Basics['location']>>) => {
-    setDraft((current: Basics) => ({
-      ...current,
-      location: { ...current.location, ...patch },
-    }));
-  };
-
-  const handleEditProfilePhoto = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    openCropForFile(file);
-  };
-
   if (editing) {
     return (
       <>
@@ -192,93 +167,11 @@ export function ManagedBasicsSection({
           onSave={() => saveBasics(draft)}
           onCancel={cancelEdit}
         >
-          <TextField label="Name" value={draft.name} onChange={(name) => updateDraft({ name })} />
-          <TextField
-            label="Label"
-            description='Your professional headline — e.g. "Senior Software Engineer" or "Marketing Specialist".'
-            value={draft.label}
-            onChange={(label) => updateDraft({ label })}
+          <BasicsFormFields
+            value={draft}
+            onChange={setDraft}
+            onProfilePhotoFileSelect={openCropForFile}
           />
-          <TextField
-            label="Summary"
-            markdown="block"
-            multiline
-            value={draft.summary}
-            onChange={(summary) => updateDraft({ summary })}
-          />
-          <TextField
-            label="Email"
-            type="email"
-            value={draft.email}
-            onChange={(email) => updateDraft({ email })}
-          />
-          <TextField
-            label="Phone"
-            value={draft.phone}
-            onChange={(phone) => updateDraft({ phone })}
-          />
-          <TextField
-            label="Website"
-            type="url"
-            value={draft.url}
-            onChange={(url) => updateDraft({ url })}
-          />
-          <div className="grid gap-4 md:grid-cols-2">
-            <TextField
-              label="City"
-              value={draft.location?.city}
-              onChange={(city) => updateLocation({ city })}
-            />
-            <TextField
-              label="Region"
-              value={draft.location?.region}
-              onChange={(region) => updateLocation({ region })}
-            />
-            <TextField
-              label="Postal code"
-              value={draft.location?.postalCode}
-              onChange={(postalCode) => updateLocation({ postalCode })}
-            />
-            <CountryCodeField
-              value={draft.location?.countryCode}
-              onChange={(countryCode) => updateLocation({ countryCode })}
-            />
-          </div>
-          <TextField
-            label="Address"
-            description="Optional. Street number and street name (suite or unit if needed)."
-            value={draft.location?.address}
-            onChange={(address) => updateLocation({ address })}
-          />
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Label htmlFor="basics-image-url">Profile photo</Label>
-              <div className="flex gap-2">
-                <input
-                  ref={editProfilePhotoInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif"
-                  className="hidden"
-                  onChange={handleEditProfilePhoto}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => editProfilePhotoInputRef.current?.click()}
-                >
-                  Upload
-                </Button>
-              </div>
-            </div>
-            <Input
-              id="basics-image-url"
-              type="url"
-              value={draft.image ?? ''}
-              placeholder="https://..."
-              onChange={(e) => updateDraft({ image: e.target.value })}
-            />
-          </div>
         </ResumeItemForm>
         <ProfilePhotoCropDialog
           open={cropDialogOpen}

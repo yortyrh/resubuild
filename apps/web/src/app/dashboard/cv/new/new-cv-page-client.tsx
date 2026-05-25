@@ -2,26 +2,25 @@
 
 import { createEmptyResume } from '@resumind/types';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { CreateCvForm } from '@/components/cv/create-cv-form';
 import { createCv } from '@/lib/api';
 
 export function NewCvPageClient() {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    createCv({ title: 'Untitled CV', data: createEmptyResume() as Record<string, unknown> })
-      .then((created) => {
-        router.replace(`/dashboard/cv/${created.id}`);
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to create CV');
-      });
-  }, [router]);
+  const handleSave = async ({
+    title,
+    basics,
+  }: {
+    title: string;
+    basics: NonNullable<ReturnType<typeof createEmptyResume>['basics']>;
+  }) => {
+    const created = await createCv({
+      title: title.trim() || 'Untitled CV',
+      data: { ...createEmptyResume(), basics } as Record<string, unknown>,
+    });
+    router.replace(`/dashboard/cv/${created.id}`);
+  };
 
-  if (error) {
-    return <p className="text-destructive">{error}</p>;
-  }
-
-  return <p className="text-muted-foreground">Creating your CV…</p>;
+  return <CreateCvForm onSave={handleSave} onCancel={() => router.push('/dashboard')} />;
 }
