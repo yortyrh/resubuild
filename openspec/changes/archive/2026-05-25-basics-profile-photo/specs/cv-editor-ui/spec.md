@@ -1,26 +1,5 @@
 ## ADDED Requirements
 
-### Requirement: Basics view mode SHALL group location with contact details under the name
-
-In Basics **view** mode (non-editing), the editor SHALL render email, phone, website URL, formatted structured location (`city`, `region`, `postalCode`, `countryCode`), and optional `location.address` in a single bullet-separated contact line directly beneath the name/label block. Structured location and street address MUST NOT appear in the right-aligned `meta` column for Basics rows.
-
-#### Scenario: Location appears with email and phone
-
-- **WHEN** a user views Basics with name, email, phone, and structured location populated
-- **THEN** email, phone, and formatted location SHALL appear on one contact line under the name separated by bullet characters
-- **AND** the right-aligned meta column SHALL NOT display location for Basics
-
-#### Scenario: Street address included in contact line
-
-- **WHEN** a user views Basics with optional `location.address` populated
-- **THEN** the street address SHALL appear in the same bullet-separated contact line as other contact fields
-- **AND** SHALL NOT render in the Basics meta column
-
-#### Scenario: Contact line with location only
-
-- **WHEN** a user views Basics with structured location but no email, phone, or website
-- **THEN** the contact line SHALL still render showing formatted location (and address if present) under the name
-
 ### Requirement: Basics view mode SHALL display profile photo beside identity block
 
 When `basics.image` is set, Basics view mode SHALL render a profile photo thumbnail to the **left** of the name/label and contact line within the row title area. The raw photo URL MUST NOT appear as body text below the summary.

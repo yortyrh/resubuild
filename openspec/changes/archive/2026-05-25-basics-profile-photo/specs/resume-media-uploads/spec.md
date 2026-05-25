@@ -56,9 +56,9 @@ Nest SHALL provide **`DELETE /media/:id`** (Bearer required, owner-only) that re
 - **WHEN** a client calls `DELETE /media/{id}` without authorization
 - **THEN** the handler SHALL respond with HTTP 401
 
-### Requirement: The API SHOULD expose authenticated media metadata for crop editing
+### Requirement: The API SHALL expose authenticated media metadata for crop editing
 
-Nest SHOULD provide **`GET /media/:id/meta`** (Bearer required, owner-only) returning `{ id, contentType, crop, hasCropped }` so the SPA can initialize the crop editor without downloading processing hints from Storage.
+Nest SHALL provide **`GET /media/:id/meta`** (Bearer required, owner-only) returning `{ id, contentType, crop, hasCropped }` so the SPA can initialize the crop editor without downloading processing hints from Storage.
 
 #### Scenario: Load crop params for edit
 
