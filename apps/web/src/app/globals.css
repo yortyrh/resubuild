@@ -97,3 +97,109 @@ body {
   padding-block: 0;
   line-height: 1.4;
 }
+
+/* Markdown view – read-only rendered markdown in resume-preview rows */
+.markdown-view {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.markdown-view p {
+  margin-block: 0.25em;
+}
+
+.markdown-view p:first-child {
+  margin-block-start: 0;
+}
+
+.markdown-view p:last-child {
+  margin-block-end: 0;
+}
+
+.markdown-view ul,
+.markdown-view ol {
+  padding-inline-start: 1.25em;
+  margin-block: 0.25em;
+}
+
+.markdown-view ul {
+  list-style-type: disc;
+}
+
+.markdown-view ol {
+  list-style-type: decimal;
+}
+
+.markdown-view li {
+  margin-block: 0.125em;
+}
+
+.markdown-view a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-view blockquote {
+  border-inline-start: 3px solid hsl(var(--border));
+  padding-inline-start: 0.75em;
+  margin-inline: 0;
+  margin-block: 0.5em;
+  color: hsl(var(--muted-foreground));
+}
+
+.markdown-view table {
+  border-collapse: collapse;
+  margin-block: 0.5em;
+  font-size: 0.8125rem;
+}
+
+.markdown-view th,
+.markdown-view td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.25em 0.5em;
+}
+
+.markdown-view th {
+  font-weight: 600;
+  background: hsl(var(--muted));
+}
+
+.markdown-view code {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8125rem;
+  background: hsl(var(--muted));
+  padding: 0.125em 0.25em;
+  border-radius: 0.25em;
+}
+
+.markdown-view pre {
+  background: hsl(var(--muted));
+  padding: 0.5em 0.75em;
+  border-radius: 0.375em;
+  overflow-x: auto;
+  margin-block: 0.5em;
+}
+
+.markdown-view pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Inline variant – tighter for highlight bullets */
+.markdown-view--inline {
+  display: inline;
+}
+
+.markdown-view--inline p {
+  display: inline;
+  margin: 0;
+}
+
+.markdown-view--inline ul,
+.markdown-view--inline ol,
+.markdown-view--inline blockquote,
+.markdown-view--inline table,
+.markdown-view--inline pre {
+  display: none;
+}

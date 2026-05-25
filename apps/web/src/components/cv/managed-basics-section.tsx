@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { CountryCodeField } from '@/components/cv/country-code-field';
 import { ResumeItemForm, ResumeItemRow } from '@/components/cv/cv-item-ui';
 import { TextField } from '@/components/cv/form-fields';
+import { MarkdownView } from '@/components/cv/markdown-view';
 import { useCvItemMutation } from '@/components/cv/use-cv-item-mutation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -210,7 +211,7 @@ export function ManagedBasicsSection({
     >
       <div className="space-y-2 text-sm">
         {contact ? <p>{contact}</p> : null}
-        {basics.summary ? <p className="whitespace-pre-wrap">{basics.summary}</p> : null}
+        <MarkdownView value={basics.summary} variant="block" />
         {basics.image ? (
           <p className="text-muted-foreground truncate">Photo: {basics.image}</p>
         ) : null}
