@@ -113,6 +113,14 @@ Execute the parallel-execution plan from `.cursor/agents/state/parallel-plan.jso
 
    Use the AskUserQuestion tool. If the user declines, stop and tell them to resume via `/opsx-launch-parallel --batch <next>`.
 
+   e. **Optional: integrate completed changes before next batch**
+
+   After a batch completes, ask whether to land changes now:
+   - **Merge loop:** `/opsx-parallel-integrate --next --mode merge` for each completed change in the batch (rebases remaining worktrees onto `main` before batch 2 starts)
+   - **PR loop:** `/opsx-parallel-integrate --change <name> --mode pr` for review-first workflow
+
+   If the user skips integration, remind them that later batches may hit avoidable merge conflicts until siblings are rebased.
+
 6. **Final report**
 
    After all selected batches finish (or the user stops), print:
@@ -132,9 +140,11 @@ Execute the parallel-execution plan from `.cursor/agents/state/parallel-plan.jso
    - language-select-filter: <pauseReason>
 
    ### Next steps
-   - Review a branch: `git -C .worktrees/<name> log --stat`
-   - Merge into main: `git checkout main && git merge --no-ff opsx/<name>`
-   - Or run `/opsx-parallel-status` for live status across worktrees
+   - Check readiness: `/opsx-parallel-status`
+   - **Integrate one change at a time** (merge to main + rebase siblings, or open documented PR):
+     `/opsx-parallel-integrate --next --mode merge`
+     or `/opsx-parallel-integrate --change <name> --mode pr`
+   - Review a branch manually: `git -C .worktrees/<name> log --stat`
    - Clean up finished worktrees: `/opsx-parallel-cleanup`
    ```
 

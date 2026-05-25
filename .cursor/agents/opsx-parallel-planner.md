@@ -145,6 +145,7 @@ Return a Markdown summary in this exact shape:
 
 Plan written to `.cursor/agents/state/parallel-plan.json`.
 Run `/opsx-launch-parallel` to execute, or `/opsx-launch-parallel --batch 1` to run only the first batch.
+After each batch completes, run `/opsx-parallel-integrate --next --mode merge` to land changes one at a time and rebase remaining worktrees onto `main` (or `--mode pr` for a documented PR).
 ```
 
 ## Guardrails

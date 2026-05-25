@@ -1,6 +1,6 @@
 ---
 name: opsx-change-implementer
-description: Background worker that implements one OpenSpec change inside its dedicated git worktree. Spawned in parallel by /opsx-launch-parallel. Each invocation owns exactly one change and one branch and commits locally without pushing.
+description: Background worker that implements one OpenSpec change inside its dedicated git worktree. Spawned in parallel by /opsx-launch-parallel. Each invocation owns exactly one change and one branch and commits locally without pushing. After completion, /opsx-parallel-integrate merges to main or opens a documented PR.
 model: inherit
 readonly: false
 is_background: true

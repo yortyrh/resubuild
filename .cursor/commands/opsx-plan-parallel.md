@@ -56,6 +56,7 @@ Analyze active OpenSpec changes and produce a parallel-execution plan partitione
 
    > Plan written to `.cursor/agents/state/parallel-plan.json`.
    > Next: `/opsx-launch-parallel` to run all batches, or `/opsx-launch-parallel --batch 1` for the first batch only.
+   > After each batch: `/opsx-parallel-integrate --next --mode merge` (land one change, rebase siblings) or `--mode pr` (documented PR with diagrams).
 
 **Guardrails**
 
