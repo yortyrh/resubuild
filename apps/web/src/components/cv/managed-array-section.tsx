@@ -36,7 +36,12 @@ interface ManagedArraySectionProps<T> {
   addLabel: string;
   createEmpty: () => T;
   toPayload: (item: T) => Record<string, unknown>;
-  renderView: (item: T) => { title: ReactNode; meta?: ReactNode; body?: ReactNode };
+  renderView: (item: T) => {
+    title: ReactNode;
+    subtitle?: ReactNode;
+    meta?: ReactNode;
+    body?: ReactNode;
+  };
   renderForm: (item: T, onChange: (next: T) => void) => ReactNode;
   renderAfterView?: (item: T, index: number, onItemChange: (next: T) => void) => ReactNode;
   api: ArraySectionApi;
@@ -162,14 +167,20 @@ export function ManagedArraySection<T>({
           </ResumeItemForm>
         ) : (
           <div key={index}>
-            <ResumeItemRow
-              title={renderView(item).title}
-              meta={renderView(item).meta}
-              onEdit={() => startEdit(index)}
-              onDelete={() => setDeleteIndex(index)}
-            >
-              {renderView(item).body}
-            </ResumeItemRow>
+            {(() => {
+              const view = renderView(item);
+              return (
+                <ResumeItemRow
+                  title={view.title}
+                  subtitle={view.subtitle}
+                  meta={view.meta}
+                  onEdit={() => startEdit(index)}
+                  onDelete={() => setDeleteIndex(index)}
+                >
+                  {view.body}
+                </ResumeItemRow>
+              );
+            })()}
             {renderAfterView?.(item, index, (next) => {
               const updated = [...items];
               updated[index] = next;

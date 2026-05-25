@@ -152,6 +152,13 @@ function renderSection(activeSection: CvSectionSlug, resume: Resume) {
   render(<CvSections {...defaultProps} activeSection={activeSection} resume={resume} />);
 }
 
+function expectLinkedTitle(label: string, href: string) {
+  const link = screen.getByRole('link', { name: label });
+  expect(link).toHaveAttribute('href', href);
+  expect(link).toHaveAttribute('target', '_blank');
+  expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+}
+
 describe('CvSections field coverage', () => {
   afterEach(() => {
     cleanup();
@@ -162,9 +169,10 @@ describe('CvSections field coverage', () => {
       const resume = fullyPopulatedResume();
       renderSection('work', resume);
 
-      expect(screen.getByText(/Staff Engineer, Acme Corp/)).toBeInTheDocument();
+      expect(screen.getByText(/Staff Engineer/)).toBeInTheDocument();
+      expectLinkedTitle('Acme Corp', 'https://acme.example.com');
       expect(screen.getByText('Remote')).toBeInTheDocument();
-      expect(screen.getAllByText('https://acme.example.com').length).toBeGreaterThanOrEqual(1);
+      expect(screen.queryByText('https://acme.example.com')).not.toBeInTheDocument();
       expect(screen.getByText(/2020-01/)).toBeInTheDocument();
       expect(screen.getByText('Led platform team.')).toBeInTheDocument();
       expect(screen.getByText('Full-stack platform engineering.')).toBeInTheDocument();
@@ -182,43 +190,43 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Volunteer view', () => {
-    it('shows url when populated', () => {
+    it('links organization in title when url is populated', () => {
       const resume = fullyPopulatedResume();
       renderSection('volunteer', resume);
 
-      expect(screen.getByText(/Mentor, Code for Good/)).toBeInTheDocument();
-      expect(screen.getAllByText('https://codeforgood.org').length).toBeGreaterThanOrEqual(1);
+      expectLinkedTitle('Code for Good', 'https://codeforgood.org');
+      expect(screen.queryByText('https://codeforgood.org')).not.toBeInTheDocument();
       expect(screen.getByText('Mentored junior devs.')).toBeInTheDocument();
     });
   });
 
   describe('Education view', () => {
-    it('shows url and score when populated', () => {
+    it('links institution and shows study type as subtitle', () => {
       const resume = fullyPopulatedResume();
       renderSection('education', resume);
 
-      expect(screen.getByText('MIT')).toBeInTheDocument();
+      expectLinkedTitle('MIT', 'https://mit.edu');
       expect(screen.getByText(/Bachelor — Computer Science/)).toBeInTheDocument();
       expect(screen.getByText('Score: 3.9')).toBeInTheDocument();
-      expect(screen.getByText('https://mit.edu')).toBeInTheDocument();
+      expect(screen.queryByText('https://mit.edu')).not.toBeInTheDocument();
     });
   });
 
   describe('Projects view', () => {
-    it('shows url, entity, and type when populated', () => {
+    it('links name and shows entity and type in body', () => {
       const resume = fullyPopulatedResume();
       renderSection('projects', resume);
 
-      expect(screen.getByText('Resume Builder')).toBeInTheDocument();
+      expectLinkedTitle('Resume Builder', 'https://resume.example.com');
       expect(screen.getByText('Entity: Open Source')).toBeInTheDocument();
       expect(screen.getByText('Type: Application')).toBeInTheDocument();
-      expect(screen.getAllByText('https://resume.example.com').length).toBeGreaterThanOrEqual(1);
+      expect(screen.queryByText('https://resume.example.com')).not.toBeInTheDocument();
       expect(screen.getByText('Open source resume tool.')).toBeInTheDocument();
     });
   });
 
   describe('Awards view', () => {
-    it('shows awarder when populated', () => {
+    it('shows awarder as subtitle when populated', () => {
       const resume = fullyPopulatedResume();
       renderSection('awards', resume);
 
@@ -230,25 +238,35 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Certificates view', () => {
-    it('shows url when populated', () => {
+    it('links certificate name without raw url in body', () => {
       const resume = fullyPopulatedResume();
       renderSection('certificates', resume);
 
-      expect(screen.getByText('AWS Certified')).toBeInTheDocument();
+      expectLinkedTitle('AWS Certified', 'https://aws.amazon.com/cert/123');
       expect(screen.getByText('Amazon')).toBeInTheDocument();
-      expect(screen.getByText('https://aws.amazon.com/cert/123')).toBeInTheDocument();
+      expect(screen.queryByText('https://aws.amazon.com/cert/123')).not.toBeInTheDocument();
     });
   });
 
   describe('Publications view', () => {
-    it('shows url and summary when populated', () => {
+    it('links publication name without raw url in body', () => {
       const resume = fullyPopulatedResume();
       renderSection('publications', resume);
 
-      expect(screen.getByText('Scaling Microservices')).toBeInTheDocument();
+      expectLinkedTitle('Scaling Microservices', 'https://oreilly.com/scaling');
       expect(screen.getByText("O'Reilly")).toBeInTheDocument();
-      expect(screen.getByText('https://oreilly.com/scaling')).toBeInTheDocument();
+      expect(screen.queryByText('https://oreilly.com/scaling')).not.toBeInTheDocument();
       expect(screen.getByText('A guide to scaling microservices.')).toBeInTheDocument();
+    });
+  });
+
+  describe('Languages view', () => {
+    it('shows fluency as subtitle', () => {
+      const resume = fullyPopulatedResume();
+      renderSection('languages', resume);
+
+      expect(screen.getByText('English')).toBeInTheDocument();
+      expect(screen.getByText('Native')).toBeInTheDocument();
     });
   });
 });

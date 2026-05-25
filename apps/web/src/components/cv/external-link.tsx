@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 const SAFE_SCHEMES = ['http:', 'https:', 'mailto:', 'tel:'];
 
 /**
@@ -50,5 +52,19 @@ export function ExternalLink({ href, children, className }: ExternalLinkProps) {
     >
       {label}
     </a>
+  );
+}
+
+const TITLE_LINK_CLASS = 'underline-offset-2 hover:underline';
+
+/** Entity label in a row title — plain text when URL is missing or unsafe. */
+export function linkedEntityLabel(label: string, url?: string | null): ReactNode {
+  if (!label) return null;
+  const normalized = normalizeResumeUrl(url);
+  if (!normalized) return label;
+  return (
+    <ExternalLink href={url} className={TITLE_LINK_CLASS}>
+      {label}
+    </ExternalLink>
   );
 }
