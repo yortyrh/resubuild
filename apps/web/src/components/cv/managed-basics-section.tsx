@@ -187,8 +187,15 @@ export function ManagedBasicsSection({
     );
   }
 
-  const contact = [basics.email, basics.phone, basics.url].filter(Boolean).join(' • ');
-  const location = formatBasicsLocation(basics);
+  const contact = [
+    basics.email,
+    basics.phone,
+    basics.url,
+    formatBasicsLocation(basics),
+    basics.location?.address,
+  ]
+    .filter(Boolean)
+    .join(' • ');
 
   return (
     <ResumeItemRow
@@ -200,12 +207,7 @@ export function ManagedBasicsSection({
           ) : null}
         </div>
       }
-      meta={
-        <div className="space-y-1">
-          {location ? <div>{location}</div> : null}
-          {basics.location?.address ? <div>{basics.location.address}</div> : null}
-        </div>
-      }
+      actionsPlacement="header"
       onEdit={startEdit}
     >
       <div className="space-y-2 text-sm">
