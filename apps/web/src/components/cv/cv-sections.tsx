@@ -23,7 +23,6 @@ import { ManagedBasicsSection } from '@/components/cv/managed-basics-section';
 import { ManagedNestedStrings } from '@/components/cv/managed-nested-strings';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { TagsInput } from '@/components/cv/tags-input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   createCvProfile,
   cvAwardApi,
@@ -44,6 +43,8 @@ import {
   deleteCvProfile,
   updateCvProfile,
 } from '@/lib/cv-item-api';
+import { CvSectionLayout } from './cv-section-layout';
+import type { CvSectionSlug } from './cv-section-nav';
 
 interface CvSectionsProps {
   cvId: string;
@@ -51,6 +52,7 @@ interface CvSectionsProps {
   onVersionChange: (version: string) => void;
   resume: Resume;
   onResumeChange: (resume: Resume) => void;
+  activeSection: CvSectionSlug;
 }
 
 function formatDateRange(start?: string, end?: string): string {
@@ -70,9 +72,7 @@ function highlightBody(values?: string[]) {
   return (
     <ul className="list-disc space-y-1 pl-5 text-sm font-normal">
       {values.map((value, index) => (
-        <li key={`${value}-${index}`}>
-          <MarkdownView value={value} variant="inline" />
-        </li>
+        <li key={`${value}-${index}`}>{value}</li>
       ))}
     </ul>
   );
@@ -84,6 +84,7 @@ export function CvSections({
   onVersionChange,
   resume,
   onResumeChange,
+  activeSection,
 }: CvSectionsProps) {
   const profileApi = {
     create: createCvProfile,
@@ -92,84 +93,112 @@ export function CvSections({
   };
 
   return (
-    <Tabs defaultValue="basics" className="w-full">
-      <TabsList className="h-auto max-w-full flex-wrap justify-start gap-1">
-        <TabsTrigger value="basics">Basics</TabsTrigger>
-        <TabsTrigger value="profiles">Social profiles</TabsTrigger>
-        <TabsTrigger value="work">Work</TabsTrigger>
-        <TabsTrigger value="volunteer">Volunteer</TabsTrigger>
-        <TabsTrigger value="education">Education</TabsTrigger>
-        <TabsTrigger value="skills">Skills</TabsTrigger>
-        <TabsTrigger value="projects">Projects</TabsTrigger>
-        <TabsTrigger value="awards">Awards</TabsTrigger>
-        <TabsTrigger value="certificates">Certificates</TabsTrigger>
-        <TabsTrigger value="publications">Publications</TabsTrigger>
-        <TabsTrigger value="languages">Languages</TabsTrigger>
-        <TabsTrigger value="interests">Interests</TabsTrigger>
-        <TabsTrigger value="references">References</TabsTrigger>
-      </TabsList>
+    <CvSectionLayout cvId={cvId}>
+      <SectionContent
+        activeSection={activeSection}
+        cvId={cvId}
+        version={version}
+        onVersionChange={onVersionChange}
+        resume={resume}
+        onResumeChange={onResumeChange}
+        profileApi={profileApi}
+      />
+    </CvSectionLayout>
+  );
+}
 
-      <TabsContent value="basics" className="space-y-4">
-        <ManagedBasicsSection
-          cvId={cvId}
-          version={version}
-          onVersionChange={onVersionChange}
-          basics={resume.basics ?? {}}
-          onBasicsChange={(basics) => onResumeChange({ ...resume, basics })}
-        />
-      </TabsContent>
+interface SectionContentProps {
+  activeSection: CvSectionSlug;
+  cvId: string;
+  version: string | undefined;
+  onVersionChange: (version: string) => void;
+  resume: Resume;
+  onResumeChange: (resume: Resume) => void;
+  profileApi: {
+    create: typeof createCvProfile;
+    update: typeof updateCvProfile;
+    delete: typeof deleteCvProfile;
+  };
+}
 
-      <TabsContent value="profiles" className="space-y-4">
-        <ManagedArraySection<ResumeProfile>
-          cvId={cvId}
-          version={version}
-          onVersionChange={onVersionChange}
-          items={resume.basics?.profiles ?? []}
-          onItemsChange={(profiles) =>
-            onResumeChange({ ...resume, basics: { ...resume.basics, profiles } })
-          }
-          entityLabel="Profile"
-          addLabel="Add social profile"
-          createEmpty={() => ({})}
-          toPayload={(item) => item as Record<string, unknown>}
-          api={profileApi}
-          renderView={(item) => ({
-            title: (
-              <span>
-                {item.network || 'Network'}
-                {item.username ? ` — ${item.username}` : ''}
-              </span>
-            ),
-            body: item.url ? (
-              <p className="text-sm font-normal">
-                <ExternalLink href={item.url} />
-              </p>
-            ) : null,
-          })}
-          renderForm={(item, onChange) => (
-            <>
-              <TextField
-                label="Network"
-                value={item.network}
-                onChange={(network) => onChange({ ...item, network })}
-              />
-              <TextField
-                label="Username"
-                value={item.username}
-                onChange={(username) => onChange({ ...item, username })}
-              />
-              <TextField
-                label="URL"
-                type="url"
-                value={item.url}
-                onChange={(url) => onChange({ ...item, url })}
-              />
-            </>
-          )}
-        />
-      </TabsContent>
+function SectionContent({
+  activeSection,
+  cvId,
+  version,
+  onVersionChange,
+  resume,
+  onResumeChange,
+  profileApi,
+}: SectionContentProps) {
+  switch (activeSection) {
+    case 'basics':
+      return (
+        <div className="space-y-4">
+          <ManagedBasicsSection
+            cvId={cvId}
+            version={version}
+            onVersionChange={onVersionChange}
+            basics={resume.basics ?? {}}
+            onBasicsChange={(basics) => onResumeChange({ ...resume, basics })}
+          />
+        </div>
+      );
 
-      <TabsContent value="work">
+    case 'profiles':
+      return (
+        <div className="space-y-4">
+          <ManagedArraySection<ResumeProfile>
+            cvId={cvId}
+            version={version}
+            onVersionChange={onVersionChange}
+            items={resume.basics?.profiles ?? []}
+            onItemsChange={(profiles) =>
+              onResumeChange({ ...resume, basics: { ...resume.basics, profiles } })
+            }
+            entityLabel="Profile"
+            addLabel="Add social profile"
+            createEmpty={() => ({})}
+            toPayload={(item) => item as Record<string, unknown>}
+            api={profileApi}
+            renderView={(item) => ({
+              title: (
+                <span>
+                  {item.network || 'Network'}
+                  {item.username ? ` — ${item.username}` : ''}
+                </span>
+              ),
+              body: item.url ? (
+                <p className="text-sm font-normal">
+                  <ExternalLink href={item.url} />
+                </p>
+              ) : null,
+            })}
+            renderForm={(item, onChange) => (
+              <>
+                <TextField
+                  label="Network"
+                  value={item.network}
+                  onChange={(network) => onChange({ ...item, network })}
+                />
+                <TextField
+                  label="Username"
+                  value={item.username}
+                  onChange={(username) => onChange({ ...item, username })}
+                />
+                <TextField
+                  label="URL"
+                  type="url"
+                  value={item.url}
+                  onChange={(url) => onChange({ ...item, url })}
+                />
+              </>
+            )}
+          />
+        </div>
+      );
+
+    case 'work':
+      return (
         <ManagedArraySection<ResumeWork>
           cvId={cvId}
           version={version}
@@ -269,9 +298,10 @@ export function CvSections({
             </>
           )}
         />
-      </TabsContent>
+      );
 
-      <TabsContent value="volunteer">
+    case 'volunteer':
+      return (
         <ManagedArraySection<ResumeVolunteer>
           cvId={cvId}
           version={version}
@@ -354,9 +384,10 @@ export function CvSections({
             </>
           )}
         />
-      </TabsContent>
+      );
 
-      <TabsContent value="education">
+    case 'education':
+      return (
         <ManagedArraySection<ResumeEducation>
           cvId={cvId}
           version={version}
@@ -378,16 +409,7 @@ export function CvSections({
                 ) : null}
               </div>
             ),
-            body: (
-              <>
-                {item.url ? (
-                  <p className="text-sm font-normal">
-                    <ExternalLink href={item.url} />
-                  </p>
-                ) : null}
-                {highlightBody(item.courses)}
-              </>
-            ),
+            body: highlightBody(item.courses),
           })}
           renderAfterView={(item, index, onItemChange) => (
             <ManagedNestedStrings
@@ -445,9 +467,10 @@ export function CvSections({
             </>
           )}
         />
-      </TabsContent>
+      );
 
-      <TabsContent value="skills">
+    case 'skills':
+      return (
         <ManagedArraySection<ResumeSkill>
           cvId={cvId}
           version={version}
@@ -491,9 +514,10 @@ export function CvSections({
             </>
           )}
         />
-      </TabsContent>
+      );
 
-      <TabsContent value="projects">
+    case 'projects':
+      return (
         <ManagedArraySection<ResumeProject>
           cvId={cvId}
           version={version}
@@ -593,9 +617,10 @@ export function CvSections({
             </>
           )}
         />
-      </TabsContent>
+      );
 
-      <TabsContent value="awards">
+    case 'awards':
+      return (
         <ManagedArraySection<ResumeAward>
           cvId={cvId}
           version={version}
@@ -639,9 +664,10 @@ export function CvSections({
             </>
           )}
         />
-      </TabsContent>
+      );
 
-      <TabsContent value="certificates">
+    case 'certificates':
+      return (
         <ManagedArraySection<ResumeCertificate>
           cvId={cvId}
           version={version}
@@ -656,16 +682,7 @@ export function CvSections({
           renderView={(item) => ({
             title: <span>{item.name || 'Certificate'}</span>,
             meta: item.date ? <div>{item.date}</div> : undefined,
-            body: (
-              <>
-                {item.issuer ? <p className="text-sm font-normal">{item.issuer}</p> : null}
-                {item.url ? (
-                  <p className="text-sm font-normal">
-                    <ExternalLink href={item.url} />
-                  </p>
-                ) : null}
-              </>
-            ),
+            body: item.issuer ? <p className="text-sm font-normal">{item.issuer}</p> : null,
           })}
           renderForm={(item, onChange) => (
             <>
@@ -693,9 +710,10 @@ export function CvSections({
             </>
           )}
         />
-      </TabsContent>
+      );
 
-      <TabsContent value="publications">
+    case 'publications':
+      return (
         <ManagedArraySection<ResumePublication>
           cvId={cvId}
           version={version}
@@ -755,9 +773,10 @@ export function CvSections({
             </>
           )}
         />
-      </TabsContent>
+      );
 
-      <TabsContent value="languages">
+    case 'languages':
+      return (
         <ManagedArraySection<ResumeLanguage>
           cvId={cvId}
           version={version}
@@ -788,9 +807,10 @@ export function CvSections({
             </>
           )}
         />
-      </TabsContent>
+      );
 
-      <TabsContent value="interests">
+    case 'interests':
+      return (
         <ManagedArraySection<ResumeInterest>
           cvId={cvId}
           version={version}
@@ -823,9 +843,10 @@ export function CvSections({
             </>
           )}
         />
-      </TabsContent>
+      );
 
-      <TabsContent value="references">
+    case 'references':
+      return (
         <ManagedArraySection<ResumeReference>
           cvId={cvId}
           version={version}
@@ -860,7 +881,11 @@ export function CvSections({
             </>
           )}
         />
-      </TabsContent>
-    </Tabs>
-  );
+      );
+
+    default: {
+      const _exhaustive: never = activeSection;
+      return null;
+    }
+  }
 }
