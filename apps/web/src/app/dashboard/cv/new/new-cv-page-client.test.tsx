@@ -54,22 +54,23 @@ describe('NewCvPageClient', () => {
     const user = userEvent.setup();
     render(<NewCvPageClient />);
 
-    await user.type(screen.getByPlaceholderText('Untitled CV'), 'Engineering CV');
     const textboxes = screen.getAllByRole('textbox');
-    await user.type(textboxes[1], 'Alex Smith');
+    await user.type(textboxes[0], 'Alex Smith');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
       expect(mockCreateCv).toHaveBeenCalledTimes(1);
     });
     expect(mockCreateCv).toHaveBeenCalledWith({
-      title: 'Engineering CV',
       data: expect.objectContaining({
         basics: expect.objectContaining({ name: 'Alex Smith' }),
         work: [],
         education: [],
       }),
     });
+    expect(mockCreateCv).toHaveBeenCalledWith(
+      expect.not.objectContaining({ title: expect.anything() }),
+    );
     expect(mockReplace).toHaveBeenCalledWith('/dashboard/cv/cv-new-1');
   });
 });

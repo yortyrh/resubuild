@@ -9,14 +9,11 @@ export function NewCvPageClient() {
   const router = useRouter();
 
   const handleSave = async ({
-    title,
     basics,
   }: {
-    title: string;
     basics: NonNullable<ReturnType<typeof createEmptyResume>['basics']>;
   }) => {
     const created = await createCv({
-      title: title.trim() || 'Untitled CV',
       data: { ...createEmptyResume(), basics } as Record<string, unknown>,
     });
     router.replace(`/dashboard/cv/${created.id}`);

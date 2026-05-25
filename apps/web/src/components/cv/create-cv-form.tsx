@@ -3,14 +3,13 @@
 import type { Resume } from '@resumind/types';
 import { useState } from 'react';
 import { BasicsFormFields } from '@/components/cv/basics-form-fields';
-import { TextField } from '@/components/cv/form-fields';
 import { Button } from '@/components/ui/button';
 import { uploadResumeMedia } from '@/lib/api';
 
 type Basics = NonNullable<Resume['basics']>;
 
 export interface CreateCvFormProps {
-  onSave: (payload: { title: string; basics: Basics }) => Promise<void>;
+  onSave: (payload: { basics: Basics }) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -19,7 +18,6 @@ function createEmptyBasics(): Basics {
 }
 
 export function CreateCvForm({ onSave, onCancel }: CreateCvFormProps) {
-  const [title, setTitle] = useState('');
   const [basics, setBasics] = useState<Basics>(createEmptyBasics);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -29,7 +27,7 @@ export function CreateCvForm({ onSave, onCancel }: CreateCvFormProps) {
     setSaving(true);
     setError(null);
     try {
-      await onSave({ title, basics });
+      await onSave({ basics });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create CV');
       setSaving(false);
@@ -53,7 +51,6 @@ export function CreateCvForm({ onSave, onCancel }: CreateCvFormProps) {
 
   return (
     <div className="space-y-6">
-      <TextField label="CV title" placeholder="Untitled CV" value={title} onChange={setTitle} />
       <BasicsFormFields
         value={basics}
         onChange={setBasics}
