@@ -39,6 +39,7 @@ vi.mock('@/lib/api', () => ({
 }));
 
 import { CvSections } from './cv-sections';
+import { tagPillClassName } from './tags-input';
 
 function fullyPopulatedResume(): Resume {
   return {
@@ -222,6 +223,49 @@ describe('CvSections field coverage', () => {
       expect(screen.getByText('Type: Application')).toBeInTheDocument();
       expect(screen.queryByText('https://resume.example.com')).not.toBeInTheDocument();
       expect(screen.getByText('Open source resume tool.')).toBeInTheDocument();
+    });
+
+    it('renders keywords as tag pills without comma-separated prefix', () => {
+      const resume = fullyPopulatedResume();
+      const { container } = render(
+        <CvSections {...defaultProps} activeSection="projects" resume={resume} />,
+      );
+
+      expect(screen.getByText('React')).toBeInTheDocument();
+      expect(screen.queryByText('Keywords: React')).not.toBeInTheDocument();
+      expect(screen.queryByText('React,')).not.toBeInTheDocument();
+
+      const reactPill = screen.getByText('React').closest('span');
+      expect(reactPill).toHaveClass(...tagPillClassName.split(' '));
+      expect(container.querySelector('button[aria-label^="Remove"]')).toBeNull();
+    });
+  });
+
+  describe('Skills view', () => {
+    it('renders keywords as tag pills', () => {
+      const resume = fullyPopulatedResume();
+      renderSection('skills', resume);
+
+      expect(screen.getByText('TS')).toBeInTheDocument();
+      expect(screen.getByText('JS')).toBeInTheDocument();
+      expect(screen.queryByText('TS, JS')).not.toBeInTheDocument();
+
+      const tsPill = screen.getByText('TS').closest('span');
+      expect(tsPill).toHaveClass(...tagPillClassName.split(' '));
+    });
+  });
+
+  describe('Interests view', () => {
+    it('renders keywords as tag pills', () => {
+      const resume = fullyPopulatedResume();
+      renderSection('interests', resume);
+
+      expect(screen.getByText('outdoors')).toBeInTheDocument();
+      expect(screen.getByText('nature')).toBeInTheDocument();
+      expect(screen.queryByText('outdoors, nature')).not.toBeInTheDocument();
+
+      const outdoorsPill = screen.getByText('outdoors').closest('span');
+      expect(outdoorsPill).toHaveClass(...tagPillClassName.split(' '));
     });
   });
 

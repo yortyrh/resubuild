@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
+export const tagPillClassName = 'bg-muted rounded-md px-2 py-1 text-sm';
+
 interface TagsInputProps {
   label: string;
   description?: string;
@@ -46,7 +48,7 @@ export function TagsInput({
         {values.map((tag, index) => (
           <span
             key={`${tag}-${index}`}
-            className="bg-muted inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm"
+            className={cn(tagPillClassName, 'inline-flex items-center gap-1')}
           >
             {tag}
             <button
