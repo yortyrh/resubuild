@@ -15,7 +15,8 @@ import type {
   ResumeVolunteer,
   ResumeWork,
 } from '@resumind/types';
-import { ExternalLink } from '@/components/cv/external-link';
+import type { ReactNode } from 'react';
+import { ExternalLink, linkedEntityLabel } from '@/components/cv/external-link';
 import { StringListField, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { LanguageField } from '@/components/cv/language-field';
@@ -76,6 +77,29 @@ function highlightBody(values?: string[]) {
       ))}
     </ul>
   );
+}
+
+function positionEntityTitle(
+  position: string | undefined,
+  entity: string | undefined,
+  url: string | undefined,
+  fallback: string,
+): ReactNode {
+  const linkedEntity = entity ? linkedEntityLabel(entity, url) : null;
+  if (position && linkedEntity) {
+    return (
+      <span>
+        {position}, {linkedEntity}
+      </span>
+    );
+  }
+  if (position) {
+    return <span>{position}</span>;
+  }
+  if (linkedEntity) {
+    return <span>{linkedEntity}</span>;
+  }
+  return <span>{fallback}</span>;
 }
 
 export function CvSections({
@@ -214,23 +238,15 @@ function SectionContent({
           })}
           api={cvWorkApi}
           renderView={(item) => ({
-            title: (
-              <span>{[item.position, item.name].filter(Boolean).join(', ') || 'Work entry'}</span>
-            ),
+            title: positionEntityTitle(item.position, item.name, item.url, 'Work entry'),
             meta: (
               <div>
                 <div>{formatDateRange(item.startDate, item.endDate)}</div>
                 {item.location ? <div>{item.location}</div> : null}
-                {item.url ? <div className="truncate">{item.url}</div> : null}
               </div>
             ),
             body: (
               <>
-                {item.url ? (
-                  <p className="text-sm font-normal">
-                    <ExternalLink href={item.url} />
-                  </p>
-                ) : null}
                 <MarkdownView value={item.summary} variant="block" />
                 <MarkdownView value={item.description} variant="block" />
                 {highlightBody(item.highlights)}
@@ -314,24 +330,15 @@ function SectionContent({
           })}
           api={cvVolunteerApi}
           renderView={(item) => ({
-            title: (
-              <span>
-                {[item.position, item.organization].filter(Boolean).join(', ') || 'Volunteer entry'}
-              </span>
+            title: positionEntityTitle(
+              item.position,
+              item.organization,
+              item.url,
+              'Volunteer entry',
             ),
-            meta: (
-              <div>
-                <div>{formatDateRange(item.startDate, item.endDate)}</div>
-                {item.url ? <div className="truncate">{item.url}</div> : null}
-              </div>
-            ),
+            meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
             body: (
               <>
-                {item.url ? (
-                  <p className="text-sm font-normal">
-                    <ExternalLink href={item.url} />
-                  </p>
-                ) : null}
                 <MarkdownView value={item.summary} variant="block" />
                 {highlightBody(item.highlights)}
               </>
@@ -400,20 +407,23 @@ function SectionContent({
             courses: trimStringList(item.courses),
           })}
           api={cvEducationApi}
-          renderView={(item) => ({
-            title: <span>{item.institution || 'Education entry'}</span>,
-            meta: (
-              <div>
-                <div>{formatDateRange(item.startDate, item.endDate)}</div>
-                {[item.studyType, item.area].filter(Boolean).join(' — ') ? (
-                  <div>{[item.studyType, item.area].filter(Boolean).join(' — ')}</div>
-                ) : null}
-                {item.score ? <div>Score: {item.score}</div> : null}
-                {item.url ? <div className="truncate">{item.url}</div> : null}
-              </div>
-            ),
-            body: highlightBody(item.courses),
-          })}
+          renderView={(item) => {
+            const institutionLabel = item.institution || 'Education entry';
+            const subtitle = [item.studyType, item.area].filter(Boolean).join(' — ');
+            return {
+              title: (
+                <span>{linkedEntityLabel(institutionLabel, item.url) ?? institutionLabel}</span>
+              ),
+              subtitle: subtitle || undefined,
+              meta: (
+                <div>
+                  <div>{formatDateRange(item.startDate, item.endDate)}</div>
+                  {item.score ? <div>Score: {item.score}</div> : null}
+                </div>
+              ),
+              body: highlightBody(item.courses),
+            };
+          }}
           renderForm={(item, onChange) => (
             <>
               <TextField
@@ -528,24 +538,20 @@ function SectionContent({
             highlights: trimStringList(item.highlights),
           })}
           api={cvProjectApi}
-          renderView={(item) => ({
-            title: <span>{item.name || 'Project'}</span>,
-            meta: (
-              <div>
-                <div>{formatDateRange(item.startDate, item.endDate)}</div>
-                {item.entity ? <div>Entity: {item.entity}</div> : null}
-                {item.type ? <div>Type: {item.type}</div> : null}
-                {item.url ? <div className="truncate">{item.url}</div> : null}
-              </div>
-            ),
+          renderView={(item) => {
+            const projectLabel = item.name || 'Project';
+            return {
+              title: (
+                <span>{linkedEntityLabel(projectLabel, item.url) ?? projectLabel}</span>
+              ),
+            meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
             body: (
               <>
-                {item.url ? (
-                  <p className="text-sm font-normal">
-                    <ExternalLink href={item.url} />
-                  </p>
-                ) : null}
                 <MarkdownView value={item.description} variant="block" />
+                {item.entity ? (
+                  <p className="text-sm font-normal">Entity: {item.entity}</p>
+                ) : null}
+                {item.type ? <p className="text-sm font-normal">Type: {item.type}</p> : null}
                 {item.roles?.length ? (
                   <p className="text-sm font-normal">Roles: {item.roles.join(', ')}</p>
                 ) : null}
@@ -555,7 +561,8 @@ function SectionContent({
                 {highlightBody(item.highlights)}
               </>
             ),
-          })}
+            };
+          }}
           renderForm={(item, onChange) => (
             <>
               <TextField
@@ -633,12 +640,8 @@ function SectionContent({
           api={cvAwardApi}
           renderView={(item) => ({
             title: <span>{item.title || 'Award'}</span>,
-            meta: (
-              <div>
-                {item.date ? <div>{item.date}</div> : null}
-                {item.awarder ? <div>{item.awarder}</div> : null}
-              </div>
-            ),
+            subtitle: item.awarder || undefined,
+            meta: item.date ? <div>{item.date}</div> : undefined,
             body: <MarkdownView value={item.summary} variant="block" />,
           })}
           renderForm={(item, onChange) => (
@@ -683,16 +686,16 @@ function SectionContent({
           createEmpty={() => ({})}
           toPayload={(item) => item as Record<string, unknown>}
           api={cvCertificateApi}
-          renderView={(item) => ({
-            title: <span>{item.name || 'Certificate'}</span>,
-            meta: item.date ? <div>{item.date}</div> : undefined,
-            body: (
-              <>
-                {item.issuer ? <p className="text-sm font-normal">{item.issuer}</p> : null}
-                {item.url ? <p className="truncate text-sm font-normal">{item.url}</p> : null}
-              </>
-            ),
-          })}
+          renderView={(item) => {
+            const certificateLabel = item.name || 'Certificate';
+            return {
+              title: (
+                <span>{linkedEntityLabel(certificateLabel, item.url) ?? certificateLabel}</span>
+              ),
+              meta: item.date ? <div>{item.date}</div> : undefined,
+              body: item.issuer ? <p className="text-sm font-normal">{item.issuer}</p> : null,
+            };
+          }}
           renderForm={(item, onChange) => (
             <>
               <TextField
@@ -734,21 +737,21 @@ function SectionContent({
           createEmpty={() => ({})}
           toPayload={(item) => item as Record<string, unknown>}
           api={cvPublicationApi}
-          renderView={(item) => ({
-            title: <span>{item.name || 'Publication'}</span>,
-            meta: item.releaseDate ? <div>{item.releaseDate}</div> : undefined,
-            body: (
-              <>
-                {item.publisher ? <p className="text-sm font-normal">{item.publisher}</p> : null}
-                {item.url ? (
-                  <p className="text-sm font-normal">
-                    <ExternalLink href={item.url} />
-                  </p>
-                ) : null}
-                <MarkdownView value={item.summary} variant="block" />
-              </>
-            ),
-          })}
+          renderView={(item) => {
+            const publicationLabel = item.name || 'Publication';
+            return {
+              title: (
+                <span>{linkedEntityLabel(publicationLabel, item.url) ?? publicationLabel}</span>
+              ),
+              meta: item.releaseDate ? <div>{item.releaseDate}</div> : undefined,
+              body: (
+                <>
+                  {item.publisher ? <p className="text-sm font-normal">{item.publisher}</p> : null}
+                  <MarkdownView value={item.summary} variant="block" />
+                </>
+              ),
+            };
+          }}
           renderForm={(item, onChange) => (
             <>
               <TextField
@@ -799,7 +802,7 @@ function SectionContent({
           api={cvLanguageApi}
           renderView={(item) => ({
             title: <span>{item.language || 'Language'}</span>,
-            meta: item.fluency ? <div>{item.fluency}</div> : undefined,
+            subtitle: item.fluency || undefined,
           })}
           renderForm={(item, onChange) => (
             <>

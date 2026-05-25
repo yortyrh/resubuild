@@ -60,17 +60,30 @@ export function DeleteItemDialog({
 
 interface ResumeItemRowProps {
   title: ReactNode;
+  subtitle?: ReactNode;
   meta?: ReactNode;
   children?: ReactNode;
   onEdit: () => void;
   onDelete?: () => void;
 }
 
-export function ResumeItemRow({ title, meta, children, onEdit, onDelete }: ResumeItemRowProps) {
+export function ResumeItemRow({
+  title,
+  subtitle,
+  meta,
+  children,
+  onEdit,
+  onDelete,
+}: ResumeItemRowProps) {
   return (
     <div className="border-b pb-4 pt-0 last:border-b-0">
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1 font-semibold">{title}</div>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold">{title}</div>
+          {subtitle ? (
+            <div className="text-muted-foreground mt-0.5 text-sm font-normal">{subtitle}</div>
+          ) : null}
+        </div>
         {meta ? (
           <div className="text-muted-foreground shrink-0 text-right text-sm">{meta}</div>
         ) : null}
