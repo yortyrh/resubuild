@@ -111,16 +111,24 @@ export function ProfilePhotoCropDialog({
         Drag to adjust the crop area. The photo will be displayed as a square.
       </p>
       <div className="mt-4 flex justify-center">
-        <ReactCrop crop={crop} onChange={(c) => setCrop(c)} aspect={1} minWidth={32} minHeight={32}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            ref={imgRef}
-            src={imageUrl}
-            alt="Crop preview"
-            className="max-h-80"
-            onLoad={onImageLoad}
-          />
-        </ReactCrop>
+        {imageUrl ? (
+          <ReactCrop
+            crop={crop}
+            onChange={(c) => setCrop(c)}
+            aspect={1}
+            minWidth={32}
+            minHeight={32}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={imgRef}
+              src={imageUrl}
+              alt="Crop preview"
+              className="max-h-80"
+              onLoad={onImageLoad}
+            />
+          </ReactCrop>
+        ) : null}
       </div>
       <div className="mt-6 flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={confirming}>
