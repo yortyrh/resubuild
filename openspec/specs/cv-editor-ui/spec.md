@@ -90,7 +90,7 @@ Block editor content area (`[data-slate-editor='true']`) SHALL use `1rem` paddin
 
 ### Requirement: Sparse categorical fields MUST receive contextual hints
 
-The editor SHALL augment field bindings with succinct helper/description lines on **view and form** states where applicable. Hints remain required for Work (Summary, Description, Highlights), Education (Area, Study type), Skills (Name, Level), Projects (Entity, Type, Highlights), Awards, Certificates, Publications, Interests (Name), and References (Name, Reference text). TagsInput fields for keywords and roles SHOULD include brief guidance that values are comma-separated tags saved with the parent entry.
+The editor SHALL augment field bindings with succinct helper/description lines on **view and form** states where applicable. Hints remain required for Work (Summary, Description, Highlights), Education (Area, Study type, Courses), Skills (Name, Level), Projects (Entity, Type, Highlights), Awards, Certificates, Publications, Interests (Name), and References (Name, Reference text). TagsInput fields for keywords and roles SHOULD include brief guidance that values are comma-separated tags saved with the parent entry. Highlights `StringListField` on Work, Volunteer, and Projects SHALL include helper copy in form mode clarifying bullet achievements for that entry.
 
 #### Scenario: Work summary clarity
 
@@ -101,6 +101,11 @@ The editor SHALL augment field bindings with succinct helper/description lines o
 
 - **WHEN** a user focuses Skill level in edit form
 - **THEN** surfaced hint SHOULD communicate meaningful scale cues without implying enum lock-in contradictory to schema
+
+#### Scenario: Work highlights hint in inline list
+
+- **WHEN** a user focuses Highlights in a work entry edit form
+- **THEN** helper copy SHALL clarify these are achievement bullets saved with the work entry on Save
 
 ### Requirement: CV section tabs SHALL use resume-preview rows for listed entity types
 
@@ -501,3 +506,64 @@ Uploading a profile photo SHALL open a crop dialog before the photo is assigned 
 - **WHEN** `basics.image` is an external URL not matching owned media
 - **THEN** edit-crop SHALL NOT be offered
 - **AND** upload and delete-from-CV actions MAY still be offered
+
+### Requirement: Highlights and courses SHALL be edited inline in parent create/edit forms
+
+For Work, Volunteer, and Projects, `highlights` SHALL be edited with the shared `StringListField` inside the parent entry create/edit form, using inline markdown rich text per row. For Education, `courses` SHALL be edited with `StringListField` inside the parent create/edit form using plain text inputs per row. The editor MUST NOT render separate nested item rows (`ManagedNestedStrings` or equivalent) beneath view-mode parent entries for these fields.
+
+#### Scenario: Editing work highlights in parent form
+
+- **WHEN** a user clicks Edit on a work entry or starts creating a new work entry
+- **THEN** the form SHALL include a Highlights `StringListField` with inline markdown editors for each highlight
+- **AND** the view row beneath the title block SHALL NOT show separate Edit/Delete controls per highlight
+
+#### Scenario: Editing education courses in parent form
+
+- **WHEN** a user clicks Edit on an education entry or starts creating a new education entry
+- **THEN** the form SHALL include a Courses `StringListField` with plain text inputs for each course
+- **AND** the view row SHALL NOT show separate Edit/Delete controls per course
+
+#### Scenario: Volunteer and project highlights match work pattern
+
+- **WHEN** a user edits a volunteer or project entry in form mode
+- **THEN** highlights SHALL use the same inline `StringListField` markdown pattern as Work
+- **AND** SHALL NOT use nested per-highlight CRUD UI below the view row
+
+#### Scenario: View mode still shows bullet lists
+
+- **WHEN** a user views a saved work, volunteer, project, or education entry without editing
+- **THEN** highlights or courses SHALL render as bulleted lists in the resume-preview row body unchanged
+
+### Requirement: Languages tab language field MUST use a searchable combobox
+
+The Languages section edit form SHALL replace the free-text Language input with an accessible filterable combobox (button trigger, searchable dropdown, keyboard navigation, click-outside dismiss) consistent with the Basics country picker interaction model. Options SHALL be drawn from a canonical ISO 639-1 aligned list (English display names). The control SHALL persist the selected **language name** string to `resume.languages[].language` per JSON Resume schema.
+
+#### Scenario: Selecting English from picker
+
+- **WHEN** a user edits a language entry and selects "English" from the combobox
+- **THEN** `language` SHALL equal `"English"` after save roundtrip
+- **AND** the Languages view row SHALL display "English" as the title
+
+#### Scenario: Filtering by typed query
+
+- **WHEN** a user opens the language combobox and types `spa` in the search field
+- **THEN** the option list SHALL narrow to matching languages (e.g. Spanish)
+- **AND** the user SHALL be able to select a match via click or Enter
+
+#### Scenario: Keyboard navigation
+
+- **WHEN** the language combobox dropdown is open
+- **THEN** ArrowDown and ArrowUp SHALL move highlight among filtered options
+- **AND** Enter SHALL select the highlighted option and close the dropdown
+- **AND** Escape SHALL close the dropdown without changing the value
+
+#### Scenario: Legacy custom language value preserved
+
+- **WHEN** a language entry has `language` set to a string not present in the canonical list (e.g. imported CV data)
+- **THEN** the combobox trigger SHALL display that stored string as the current selection
+- **AND** the user SHALL still be able to search and pick a canonical name to replace it
+
+#### Scenario: Fluency field unchanged
+
+- **WHEN** a user edits a language entry
+- **THEN** Fluency SHALL remain a free-text field separate from the language combobox
