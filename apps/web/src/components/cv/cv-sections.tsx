@@ -24,6 +24,7 @@ import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { ManagedBasicsSection } from '@/components/cv/managed-basics-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { TagsInput } from '@/components/cv/tags-input';
+import { TagsList } from '@/components/cv/tags-list';
 import {
   createCvProfile,
   cvAwardApi,
@@ -495,9 +496,7 @@ function SectionContent({
                 {item.level ? `: ${item.level}` : ''}
               </span>
             ),
-            body: item.keywords?.length ? (
-              <p className="text-sm font-normal">{item.keywords.join(', ')}</p>
-            ) : null,
+            body: <TagsList values={item.keywords ?? []} />,
           })}
           renderForm={(item, onChange) => (
             <>
@@ -553,9 +552,7 @@ function SectionContent({
                   {item.roles?.length ? (
                     <p className="text-sm font-normal">Roles: {item.roles.join(', ')}</p>
                   ) : null}
-                  {item.keywords?.length ? (
-                    <p className="text-sm font-normal">Keywords: {item.keywords.join(', ')}</p>
-                  ) : null}
+                  <TagsList values={item.keywords ?? []} />
                   {highlightBody(item.highlights)}
                 </>
               ),
@@ -834,9 +831,7 @@ function SectionContent({
           api={cvInterestApi}
           renderView={(item) => ({
             title: <span>{item.name || 'Interest'}</span>,
-            body: item.keywords?.length ? (
-              <p className="text-sm font-normal">{item.keywords.join(', ')}</p>
-            ) : null,
+            body: <TagsList values={item.keywords ?? []} />,
           })}
           renderForm={(item, onChange) => (
             <>
