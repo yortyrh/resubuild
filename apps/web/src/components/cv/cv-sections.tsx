@@ -15,13 +15,13 @@ import type {
   ResumeVolunteer,
   ResumeWork,
 } from '@resumind/types';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
-import { TagsInput } from '@/components/cv/tags-input';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { ManagedBasicsSection } from '@/components/cv/managed-basics-section';
 import { ManagedNestedStrings } from '@/components/cv/managed-nested-strings';
+import { TagsInput } from '@/components/cv/tags-input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   createCvProfile,
   cvAwardApi,

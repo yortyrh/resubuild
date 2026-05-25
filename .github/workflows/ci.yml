@@ -38,8 +38,11 @@ jobs:
       - name: Prettier check
         run: pnpm format:check
 
-      - name: ESLint
+      - name: Biome lint
         run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
 
       - name: Unit tests (coverage)
         run: pnpm test

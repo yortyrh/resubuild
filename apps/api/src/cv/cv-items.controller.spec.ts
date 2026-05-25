@@ -1,5 +1,5 @@
-import { CvItemsController } from './cv-items.controller';
 import type { CvItemService } from './cv-item.service';
+import { CvItemsController } from './cv-items.controller';
 
 type ControllerHandler = (...args: unknown[]) => unknown;
 

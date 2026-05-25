@@ -14,8 +14,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -98,7 +98,7 @@ function parseFrontmatter(content: string): { frontmatter: RuleFrontmatter | nul
 
   return {
     frontmatter: frontmatter as RuleFrontmatter,
-    body: body.trim()
+    body: body.trim(),
   };
 }
 
@@ -118,8 +118,7 @@ function readMetadata(): any {
 
 function readRules(): Rule[] {
   const rulesDir = path.join(__dirname, '..', 'rules');
-  const files = fs.readdirSync(rulesDir)
-    .filter(f => f.endsWith('.md') && !f.startsWith('_'));
+  const files = fs.readdirSync(rulesDir).filter((f) => f.endsWith('.md') && !f.startsWith('_'));
 
   const rules: Rule[] = [];
 
@@ -144,7 +143,7 @@ function readRules(): Rule[] {
       frontmatter,
       content: body,
       category: category.name,
-      categorySection: category.section
+      categorySection: category.section,
     });
   }
 

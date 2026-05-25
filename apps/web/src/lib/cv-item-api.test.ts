@@ -1,10 +1,10 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/auth-session', () => ({
   getValidAccessToken: vi.fn().mockResolvedValue('token'),
 }));
 
-import { patchCvBasics, cvWorkApi } from '@/lib/cv-item-api';
+import { cvWorkApi, patchCvBasics } from '@/lib/cv-item-api';
 
 describe('cv-item-api', () => {
   beforeEach(() => {

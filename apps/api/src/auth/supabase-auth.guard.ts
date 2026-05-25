@@ -1,7 +1,12 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import {
+  type CanActivate,
+  type ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import type { ConfigService } from '@nestjs/config';
 import { createClient } from '@supabase/supabase-js';
-import { Request } from 'express';
+import type { Request } from 'express';
 
 export interface AuthenticatedRequest extends Request {
   user: {

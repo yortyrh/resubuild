@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import type { CvRecord } from '@/lib/api';
-import { deleteCv, listCvs } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import type { CvRecord } from '@/lib/api';
+import { deleteCv, listCvs } from '@/lib/api';
 
 export function CvList() {
   const router = useRouter();
@@ -23,7 +23,7 @@ export function CvList() {
 
   useEffect(() => {
     loadCvs();
-  }, []);
+  }, [loadCvs]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this CV?')) {

@@ -3,7 +3,9 @@
 ## Purpose
 
 Specify the NestJS HTTP surface for listing, reading, creating, updating, and deleting CVs, including request validation, optimistic concurrency hints, and integration with Supabase for persistence.
+
 ## Requirements
+
 ### Requirement: All `/cv` routes MUST require authentication
 
 The `CvController` SHALL apply the Supabase auth guard to every handler so unauthenticated requests never reach service logic.
@@ -110,4 +112,3 @@ Successful item create and update responses SHALL include the affected entity, i
 
 - **WHEN** a client successfully patches a work highlight
 - **THEN** the response SHALL include the highlight value, parent work index, highlight index, and updated `meta.version`
-

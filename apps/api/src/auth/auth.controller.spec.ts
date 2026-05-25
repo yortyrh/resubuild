@@ -1,10 +1,10 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import type { AuthTokenResponse } from './session.types';
 import type { AuthenticatedRequest } from './supabase-auth.guard';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
-import type { AuthTokenResponse } from './session.types';
 
 describe('AuthController', () => {
   let controller: AuthController;

@@ -3,7 +3,9 @@
 ## Purpose
 
 Capture how the Resumind frontend authenticates users via the Nest API, calls CV endpoints with Bearer tokens, and exposes CV editing flows aligned with the API and Supabase-backed tokens (validated server-side).
+
 ## Requirements
+
 ### Requirement: The web app MUST use backend-owned HTTP endpoints for authentication and authenticated Nest API access
 
 Interactive client bundles (`'use client'` modules and hooks) SHALL NOT import `@supabase/ssr`, `@supabase/supabase-js`, or environment variables scoped for Supabase browser clients for authentication. Session establishment, credential verification, logout, renewal, and user resolution for SPA purposes SHALL occur exclusively through documented HTTP endpoints on the Nest API origin identified by `NEXT_PUBLIC_API_URL`. The API origin **MAY differ** from the web origin; Nest **SHALL** enable **CORS** allowing the web origin and required methods and headers (including `Authorization` and `Content-Type`) for these calls. Next.js Route Handlers are **not required** for credential transport and SHOULD NOT duplicate auth business logic.
@@ -66,4 +68,3 @@ The editor MAY retain a title field with its own save path via `PATCH /cv/:id` (
 
 - **WHEN** a user edits and saves multiple work entries in sequence
 - **THEN** each save SHALL persist independently and the UI SHALL NOT require clicking Save CV to commit those work changes
-

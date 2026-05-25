@@ -1,8 +1,11 @@
 # cv-item-crud Specification
 
 ## Purpose
+
 TBD - created by archiving change cv-granular-item-management. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Each listed resume entity type SHALL support immediate create, update, and delete persistence
 
 The system SHALL treat the following as independently persistable items, each invoking the Nest API on successful user confirmation (save or delete), without requiring a document-level Save CV action for resume body content:
@@ -89,4 +92,3 @@ When an item create, update, or delete API call fails (including HTTP 409 versio
 
 - **WHEN** the API returns 409 during an item update because `meta.version` is stale
 - **THEN** the client SHALL show the concurrency message and SHALL NOT update local state as if the save succeeded
-

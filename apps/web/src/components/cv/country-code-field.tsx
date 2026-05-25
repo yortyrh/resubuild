@@ -186,7 +186,6 @@ export function CountryCodeField({
             ) : null}
             <ul
               id={`${listId}-listbox`}
-              role="listbox"
               aria-label={`${label} options`}
               className="border-border bg-popover max-h-60 overflow-y-auto rounded-md border py-1 [scrollbar-gutter:stable]"
               style={{ contain: 'paint' }}

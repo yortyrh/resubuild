@@ -1,14 +1,14 @@
+import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   Injectable,
   Logger,
   NotFoundException,
-  OnModuleInit,
+  type OnModuleInit,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'node:crypto';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { ConfigService } from '@nestjs/config';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
   RESUME_UPLOAD_MAX_BYTES_DEFAULT,
   RESUME_UPLOAD_MIME_EXTENSIONS,

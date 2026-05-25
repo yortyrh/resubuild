@@ -2,9 +2,9 @@
 
 const PREFIX = 'resumind.';
 export const STORAGE_KEYS = {
-  access_token: PREFIX + 'access_token',
-  refresh_token: PREFIX + 'refresh_token',
-  expires_at: PREFIX + 'expires_at',
+  access_token: `${PREFIX}access_token`,
+  refresh_token: `${PREFIX}refresh_token`,
+  expires_at: `${PREFIX}expires_at`,
 } as const;
 
 /** Shape returned by Nest `POST /auth/login`, `POST /auth/register`, and `POST /auth/refresh` */

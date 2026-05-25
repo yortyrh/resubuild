@@ -1,8 +1,8 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { BadRequestException, Injectable } from '@nestjs/common';
-import Ajv, { ErrorObject } from 'ajv';
+import Ajv, { type ErrorObject } from 'ajv';
 import addFormats from 'ajv-formats';
-import * as path from 'path';
-import * as fs from 'fs';
 
 @Injectable()
 export class ResumeSchemaValidator {

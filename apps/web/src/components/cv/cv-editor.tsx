@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { toast } from 'sonner';
 import type { Resume } from '@resumind/types';
 import { createEmptyResume, stripResumeMetaFromEditor } from '@resumind/types';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { CvSections } from '@/components/cv/cv-sections';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CvSections } from '@/components/cv/cv-sections';
 import { updateCv } from '@/lib/api';
 
 interface CvEditorProps {

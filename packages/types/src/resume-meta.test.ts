@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   applyResumeMetaForCreate,
   applyResumeMetaForUpdate,
+  buildResumeCanonicalUrl,
   bumpResumeMetaVersion,
   formatResumeLastModified,
-  buildResumeCanonicalUrl,
   getResumeMetaVersion,
   stripResumeMetaFromEditor,
 } from './resume-meta';

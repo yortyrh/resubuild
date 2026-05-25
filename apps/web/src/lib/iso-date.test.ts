@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  parseIsoDate,
-  formatIsoDate,
   convertIsoDatePrecision,
-  toNativeInputValue,
+  formatIsoDate,
   fromNativeInputValue,
+  parseIsoDate,
+  toNativeInputValue,
 } from './iso-date';
 
 describe('iso-date helpers', () => {
@@ -51,7 +51,7 @@ describe('iso-date helpers', () => {
     });
 
     it('returns empty without year', () => {
-      expect(formatIsoDate('month', {})).toBe('');
+      expect(formatIsoDate('month', { year: '' })).toBe('');
     });
   });
 

@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import type { Resume } from '@resumind/types';
-import { getCv } from '@/lib/api';
+import { useEffect, useState } from 'react';
 import { CvEditor } from '@/components/cv/cv-editor';
+import { getCv } from '@/lib/api';
 
 export function EditCvPageClient({ cvId }: { cvId: string }) {
   const [title, setTitle] = useState<string>();

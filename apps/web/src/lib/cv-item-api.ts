@@ -117,7 +117,7 @@ export const cvLanguageApi = arrayCrud('languages', 'language');
 export const cvInterestApi = arrayCrud('interests', 'interest');
 export const cvReferenceApi = arrayCrud('references', 'reference');
 
-function nestedStringCrud(parentSegment: string, parentIndexParam: string, childSegment: string) {
+function nestedStringCrud(parentSegment: string, _parentIndexParam: string, childSegment: string) {
   return {
     create(cvId: string, parentIndex: number, value: string, version?: string) {
       return itemFetch<CvItemMutationResponse>(

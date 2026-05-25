@@ -1,8 +1,8 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { ConfigService } from '@nestjs/config';
 import type { Session } from '@supabase/supabase-js';
-import { LoginDto, RefreshDto, RegisterDto } from './dto/auth.dto';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { LoginDto, RefreshDto, RegisterDto } from './dto/auth.dto';
 import type { AuthTokenResponse } from './session.types';
 
 @Injectable()

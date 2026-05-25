@@ -4,9 +4,9 @@
 
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { type CvRecord, CvService } from './cv.service';
 import { CvItemService } from './cv-item.service';
-import { CvRecord, CvService } from './cv.service';
 
 describe('CvItemService', () => {
   let service: CvItemService;

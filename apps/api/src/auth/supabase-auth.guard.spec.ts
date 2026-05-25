@@ -5,7 +5,7 @@
 import type { ExecutionContext } from '@nestjs/common';
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { createClient } from '@supabase/supabase-js';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
 

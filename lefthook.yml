@@ -1,0 +1,21 @@
+# https://lefthook.dev/configuration/
+pre-commit:
+  piped: true
+  commands:
+    biome:
+      glob: '*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}'
+      run: pnpm exec biome check --write --no-errors-on-unmatched --files-ignore-unknown=true --colors=off {staged_files}
+      stage_fixed: true
+    prettier:
+      glob: '*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc,md,yml,yaml}'
+      run: pnpm exec prettier --write --ignore-unknown {staged_files}
+      stage_fixed: true
+
+pre-push:
+  commands:
+    verify:
+      env:
+        NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: anon-ci-placeholder-key
+        NEXT_PUBLIC_API_URL: http://localhost:3001
+      run: pnpm verify

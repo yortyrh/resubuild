@@ -1,9 +1,14 @@
-import { BadRequestException, CanActivate, ExecutionContext, StreamableFile } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
+import {
+  BadRequestException,
+  type CanActivate,
+  type ExecutionContext,
+  StreamableFile,
+} from '@nestjs/common';
+import { Test, type TestingModule } from '@nestjs/testing';
+import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 
 describe('MediaController', () => {
   let controller: MediaController;

@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
-import { CvController } from './cv.controller';
-import { CvItemsController } from './cv-items.controller';
-import { CvItemService } from './cv-item.service';
-import { CvService } from './cv.service';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
+import { CvController } from './cv.controller';
+import { CvService } from './cv.service';
+import { CvItemService } from './cv-item.service';
+import { CvItemsController } from './cv-items.controller';
 
 @Module({
   imports: [AuthModule],

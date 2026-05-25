@@ -4,11 +4,11 @@
 
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Test, TestingModule } from '@nestjs/testing';
-import { createClient } from '@supabase/supabase-js';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getResumeMetaVersion } from '@resumind/types';
-import { CvService, type CvRecord } from './cv.service';
+import { createClient } from '@supabase/supabase-js';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
+import { type CvRecord, CvService } from './cv.service';
 
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(),

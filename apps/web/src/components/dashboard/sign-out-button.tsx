@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { clearSession } from '@/lib/auth-session';
 import { Button } from '@/components/ui/button';
+import { clearSession } from '@/lib/auth-session';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 

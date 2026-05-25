@@ -3,7 +3,9 @@
 ## Purpose
 
 TBD - created by archiving change cv-editor-ui-simplification. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Basics SHALL present Label before Summary with guiding microcopy for job titles
 
 The Basics tab SHALL render `basics.label` immediately before `basics.summary` and SHALL expose an inline description under the Label control containing at least examples equivalent to `"Senior Software Engineer"` and `"Marketing Specialist"`.
@@ -131,4 +133,3 @@ Skills keywords, Interests keywords, Projects keywords, and Projects roles SHALL
 
 - **WHEN** a user edits a project in form mode
 - **THEN** roles and keywords fields SHALL both use TagsInput with appropriate labels
-

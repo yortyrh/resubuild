@@ -1,8 +1,8 @@
 import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
-import { AuthenticatedRequest, SupabaseAuthGuard } from './supabase-auth.guard';
-import { AuthService } from './auth.service';
-import { LoginDto, RefreshDto, RegisterDto } from './dto/auth.dto';
+import type { AuthService } from './auth.service';
+import type { LoginDto, RefreshDto, RegisterDto } from './dto/auth.dto';
 import type { AuthMeResponse, AuthTokenResponse } from './session.types';
+import { type AuthenticatedRequest, SupabaseAuthGuard } from './supabase-auth.guard';
 
 @Controller('auth')
 export class AuthController {

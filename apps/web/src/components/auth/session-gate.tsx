@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { startTransition, useEffect, type ReactNode, useState } from 'react';
+import { type ReactNode, startTransition, useEffect, useState } from 'react';
 import { hasSession } from '@/lib/auth-session';
 
 export function SessionGate({ children }: { children: ReactNode }) {

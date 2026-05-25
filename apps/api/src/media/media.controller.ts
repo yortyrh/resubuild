@@ -14,9 +14,9 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import type { MediaService } from './media.service';
 import { RESUME_UPLOAD_MAX_BYTES_DEFAULT } from './media-upload.types';
-import { MediaService } from './media.service';
 
 @Controller('media')
 export class MediaController {

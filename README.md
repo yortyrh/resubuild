@@ -88,9 +88,16 @@ pnpm dev:web   # Next.js on http://localhost:3000
 
 From the repo root:
 
-- **`pnpm format`** / **`pnpm format:check`** — Prettier (`prettier-plugin-tailwindcss` for class sorting in the web app)
-- **`pnpm lint`** — Turborepo runs ESLint in each workspace that defines a `lint` script
+- **`pnpm format`** / **`pnpm format:check`** — Prettier (`prettier-plugin-tailwindcss` for class sorting; includes Markdown)
+- **`pnpm lint`** / **`pnpm lint:fix`** — Biome (lint and import organization only)
+- **`pnpm typecheck`** — fast TypeScript compile check across all packages
+- **`pnpm verify`** — same checks as CI (Prettier, Biome, typecheck, tests, build); runs automatically on `git push` via Lefthook
 - **`pnpm test`** — unit tests with coverage (Vitest in `packages/types` and `apps/web`, Jest in `apps/api`)
+
+Git hooks (Lefthook, installed via `pnpm install`):
+
+- **pre-commit** — Biome lint fixes on staged code, then Prettier on staged files (including Markdown)
+- **pre-push** — full `pnpm verify` pipeline
 
 CI mirrors this with `.github/workflows/ci.yml` on pushes and pull requests to `main`.
 

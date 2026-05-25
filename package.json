@@ -4,19 +4,29 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "lint": "turbo lint",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "prepare": "lefthook install",
     "dev:web": "pnpm --filter @resumind/web dev",
     "dev:api": "pnpm --filter @resumind/api dev",
     "dev:types": "pnpm --filter @resumind/types dev"
   },
   "devDependencies": {
-    "eslint-config-prettier": "^10.1.1",
+    "@biomejs/biome": "^2.4.15",
+    "lefthook": "^2.1.8",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "turbo": "^2.5.4"
   },
-  "packageManager": "pnpm@10.26.0"
+  "packageManager": "pnpm@10.26.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "lefthook"
+    ]
+  }
 }

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  STORAGE_KEYS,
   clearSession,
   getValidAccessToken,
   hasSession,
+  STORAGE_KEYS,
   saveSession,
 } from './auth-session';
 
