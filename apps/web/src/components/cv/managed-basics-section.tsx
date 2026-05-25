@@ -337,6 +337,7 @@ export function ManagedBasicsSection({
             </div>
           </div>
         }
+        actionsPlacement="header"
         onEdit={startEdit}
       >
         <MarkdownView value={basics.summary} variant="block" />
