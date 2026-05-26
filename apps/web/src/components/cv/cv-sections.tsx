@@ -51,7 +51,8 @@ import {
   deleteCvProfile,
   updateCvProfile,
 } from '@/lib/cv-item-api';
-import { CvSectionLayout } from './cv-section-layout';
+import { CvSectionContent } from './cv-section-content';
+import { CvSectionLayout, CvSectionNavToggle } from './cv-section-layout';
 import type { CvSectionSlug } from './cv-section-nav';
 
 interface CvSectionsProps {
@@ -138,16 +139,26 @@ export function CvSections({
   return (
     <CvSectionLayout cvId={cvId}>
       <div className="space-y-6">
-        <CvEditorBreadcrumb cvId={cvId} basics={resume.basics} activeSection={activeSection} />
-        <SectionContent
-          activeSection={activeSection}
-          cvId={cvId}
-          version={version}
-          onVersionChange={onVersionChange}
-          resume={resume}
-          onResumeChange={onResumeChange}
-          profileApi={profileApi}
-        />
+        <div className="mt-2 flex items-center gap-x-0">
+          <CvSectionNavToggle />
+          <CvEditorBreadcrumb
+            cvId={cvId}
+            basics={resume.basics}
+            activeSection={activeSection}
+            className="mt-0 min-w-0 flex-1"
+          />
+        </div>
+        <CvSectionContent>
+          <SectionContent
+            activeSection={activeSection}
+            cvId={cvId}
+            version={version}
+            onVersionChange={onVersionChange}
+            resume={resume}
+            onResumeChange={onResumeChange}
+            profileApi={profileApi}
+          />
+        </CvSectionContent>
       </div>
     </CvSectionLayout>
   );
@@ -179,68 +190,64 @@ function SectionContent({
   switch (activeSection) {
     case 'basics':
       return (
-        <div className="space-y-4">
-          <ManagedBasicsSection
-            cvId={cvId}
-            version={version}
-            onVersionChange={onVersionChange}
-            basics={resume.basics ?? {}}
-            onBasicsChange={(basics) => onResumeChange({ ...resume, basics })}
-          />
-        </div>
+        <ManagedBasicsSection
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
+          basics={resume.basics ?? {}}
+          onBasicsChange={(basics) => onResumeChange({ ...resume, basics })}
+        />
       );
 
     case 'profiles':
       return (
-        <div className="space-y-4">
-          <ManagedArraySection<ResumeProfile>
-            cvId={cvId}
-            version={version}
-            onVersionChange={onVersionChange}
-            items={resume.basics?.profiles ?? []}
-            onItemsChange={(profiles) =>
-              onResumeChange({ ...resume, basics: { ...resume.basics, profiles } })
-            }
-            entityLabel="Profile"
-            addLabel="Add social profile"
-            createEmpty={() => ({})}
-            toPayload={(item) => item as Record<string, unknown>}
-            api={profileApi}
-            renderView={(item) => ({
-              title: (
-                <span>
-                  {item.network || 'Network'}
-                  {item.username ? ` — ${item.username}` : ''}
-                </span>
-              ),
-              body: item.url ? (
-                <p className="text-sm font-normal">
-                  <ExternalLink href={item.url} />
-                </p>
-              ) : null,
-            })}
-            renderForm={(item, onChange) => (
-              <>
-                <TextField
-                  label="Network"
-                  value={item.network}
-                  onChange={(network) => onChange({ ...item, network })}
-                />
-                <TextField
-                  label="Username"
-                  value={item.username}
-                  onChange={(username) => onChange({ ...item, username })}
-                />
-                <TextField
-                  label="URL"
-                  type="url"
-                  value={item.url}
-                  onChange={(url) => onChange({ ...item, url })}
-                />
-              </>
-            )}
-          />
-        </div>
+        <ManagedArraySection<ResumeProfile>
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
+          items={resume.basics?.profiles ?? []}
+          onItemsChange={(profiles) =>
+            onResumeChange({ ...resume, basics: { ...resume.basics, profiles } })
+          }
+          entityLabel="Profile"
+          addLabel="Add social profile"
+          createEmpty={() => ({})}
+          toPayload={(item) => item as Record<string, unknown>}
+          api={profileApi}
+          renderView={(item) => ({
+            title: (
+              <span>
+                {item.network || 'Network'}
+                {item.username ? ` — ${item.username}` : ''}
+              </span>
+            ),
+            body: item.url ? (
+              <p className="text-sm font-normal">
+                <ExternalLink href={item.url} />
+              </p>
+            ) : null,
+          })}
+          renderForm={(item, onChange) => (
+            <>
+              <TextField
+                label="Network"
+                value={item.network}
+                onChange={(network) => onChange({ ...item, network })}
+              />
+              <TextField
+                label="Username"
+                value={item.username}
+                onChange={(username) => onChange({ ...item, username })}
+              />
+              <TextField
+                label="URL"
+                type="url"
+                value={item.url}
+                onChange={(url) => onChange({ ...item, url })}
+              />
+            </>
+          )}
+        />
       );
 
     case 'work':

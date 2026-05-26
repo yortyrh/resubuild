@@ -1,0 +1,165 @@
+{
+  "$schema": "https://githubusercontent.com",
+  "basics": {
+    "name": "Jane Doe",
+    "label": "Senior Software Engineer",
+    "image": "https://example.com",
+    "email": "jane.doe@example.com",
+    "phone": "(+1) 555-123-4567",
+    "url": "https://janedoe.com",
+    "summary": "Innovative Software Engineer with 8+ years of experience building scalable, high-performance web applications. Passionate about clean code, open-source contribution, and mentoring junior developers.",
+    "location": {
+      "address": "123 Tech Boulevard",
+      "postalCode": "L8J 1A1",
+      "city": "Hamilton",
+      "countryCode": "CA",
+      "region": "Ontario"
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "username": "janedoe",
+        "url": "https://linkedin.com"
+      },
+      {
+        "network": "GitHub",
+        "username": "janedoe-dev",
+        "url": "https://github.com"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "Tech Innovators Inc.",
+      "position": "Lead Full Stack Developer",
+      "url": "https://techinnovators.com",
+      "startDate": "2021-06-15",
+      "endDate": "2026-02-28",
+      "summary": "Led a team of 8 engineers in the migration of legacy architecture to a microservices-based system, improving application speed by 45%.",
+      "highlights": [
+        "Architected and deployed a highly scalable event-driven system using Node.js and Kafka.",
+        "Reduced cloud hosting costs by 25% by optimizing resource allocation and database indexing.",
+        "Mentored junior developers and established automated CI/CD pipelines using GitHub Actions."
+      ]
+    },
+    {
+      "name": "StartUp Labs",
+      "position": "Software Engineer",
+      "url": "https://startuplabs.com",
+      "startDate": "2018-09-01",
+      "endDate": "2021-05-31",
+      "summary": "Developed and maintained core features for a fintech SaaS product targeting SMBs.",
+      "highlights": [
+        "Implemented secure payment gateway integrations utilizing Stripe APIs.",
+        "Created comprehensive test suites (Jest, Cypress) leading to a 50% drop in production bugs."
+      ]
+    }
+  ],
+  "volunteer": [
+    {
+      "organization": "Code the Future",
+      "position": "Technical Mentor",
+      "url": "https://codethefuture.org",
+      "startDate": "2022-01-10",
+      "endDate": "2025-12-31",
+      "summary": "Volunteered weekly to teach basic programming concepts to underprivileged youths.",
+      "highlights": [
+        "Designed curriculum for introductory JavaScript and Python workshops.",
+        "Facilitated group projects resulting in 15+ student-built web applications."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "University of Toronto",
+      "area": "Computer Science",
+      "studyType": "Bachelor of Science",
+      "startDate": "2014-09-01",
+      "endDate": "2018-05-30",
+      "score": "3.8 GPA",
+      "courses": [
+        "CS401: Advanced Algorithms",
+        "CS402: Distributed Systems",
+        "CS305: Database Design"
+      ]
+    }
+  ],
+  "awards": [
+    {
+      "title": "Innovator of the Year",
+      "date": "2024-11-15",
+      "awarder": "TechInnovators Inc.",
+      "summary": "Awarded for exceptional leadership in delivering the company's Q3 major product rollout ahead of schedule."
+    }
+  ],
+  "publications": [
+    {
+      "name": "Building Scalable Microservices",
+      "publisher": "Medium - Towards Data Science",
+      "releaseDate": "2025-03-10",
+      "url": "https://example.com",
+      "summary": "A deep dive into strategies for preventing data consistency issues in distributed systems."
+    }
+  ],
+  "skills": [
+    {
+      "name": "Frontend Development",
+      "level": "Master",
+      "keywords": ["React.js", "Next.js", "TypeScript", "Tailwind CSS", "Redux"]
+    },
+    {
+      "name": "Backend Development",
+      "level": "Senior",
+      "keywords": ["Node.js", "Python", "Express", "Django", "GraphQL"]
+    },
+    {
+      "name": "Database & DevOps",
+      "level": "Competent",
+      "keywords": ["PostgreSQL", "MongoDB", "Docker", "AWS", "Kubernetes"]
+    }
+  ],
+  "languages": [
+    {
+      "language": "English",
+      "fluency": "Native"
+    },
+    {
+      "language": "French",
+      "fluency": "Conversational"
+    }
+  ],
+  "interests": [
+    {
+      "name": "Open Source Contributions",
+      "keywords": ["React Libraries", "Developer Tools"]
+    },
+    {
+      "name": "Bouldering",
+      "keywords": ["Climbing", "Outdoor Activities"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Resume Builder CLI",
+      "startDate": "2025-01-05",
+      "endDate": "2025-03-20",
+      "description": "An open-source command-line tool that parses JSON resume files to automatically generate beautifully formatted markdown and PDF outputs.",
+      "highlights": [
+        "Utilized Node.js and Inquirer.js for interactive CLI prompts.",
+        "Integrated with the Puppeteer library to export styled HTML pages into high-quality PDFs."
+      ],
+      "url": "https://github.com/resume-builder-cli"
+    }
+  ],
+  "references": [
+    {
+      "name": "John Smith",
+      "reference": "Jane is an exceptional engineer. Her ability to break down complex architectural problems and deliver scalable solutions is truly top-tier. Highly recommended."
+    }
+  ],
+  "meta": {
+    "canonical": "https://githubusercontent.com",
+    "version": "1.0.0",
+    "lastModified": "2026-05-26"
+  }
+}

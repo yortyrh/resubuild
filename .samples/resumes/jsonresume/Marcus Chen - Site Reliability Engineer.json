@@ -1,0 +1,199 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+  "basics": {
+    "name": "Marcus Chen",
+    "label": "Site Reliability Engineer",
+    "image": "https://example.com/avatars/marcus-chen.jpg",
+    "email": "marcus.chen@example.com",
+    "phone": "415-555-0142",
+    "url": "https://marcuschen.dev",
+    "summary": "SRE with a passion for observability, incident response, and building platforms that stay up when everything else is on fire. Former backend engineer turned reliability advocate.",
+    "location": {
+      "address": "880 Harrison Street, Apt 12",
+      "postalCode": "94107",
+      "city": "San Francisco",
+      "countryCode": "US",
+      "region": "California"
+    },
+    "profiles": [
+      {
+        "network": "GitHub",
+        "username": "mchen-sre",
+        "url": "https://github.com/mchen-sre"
+      },
+      {
+        "network": "Bluesky",
+        "username": "marcus.sre.bsky.social",
+        "url": "https://bsky.app/profile/marcus.sre.bsky.social"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "StreamVault",
+      "location": "Remote (US)",
+      "description": "Video infrastructure SaaS serving 2B+ monthly API requests",
+      "position": "Staff Site Reliability Engineer",
+      "url": "https://streamvault.example.com",
+      "startDate": "2022-01",
+      "summary": "Own reliability for core ingestion pipeline and global CDN edge configuration.",
+      "highlights": [
+        "Cut P99 latency 38% by redesigning autoscaling policies on Kubernetes.",
+        "Introduced SLO/error-budget culture; reduced customer-facing incidents by 52% YoY.",
+        "Led postmortem program adopted company-wide with blameless review templates."
+      ]
+    },
+    {
+      "name": "DataPipe Inc.",
+      "location": "Austin, TX",
+      "description": "Enterprise ETL and data pipeline platform",
+      "position": "Platform Engineer",
+      "url": "https://datapipe.example.com",
+      "startDate": "2018-06-01",
+      "endDate": "2021-12-31",
+      "summary": "Built internal developer platform on AWS EKS with Terraform and Helm.",
+      "highlights": [
+        "Migrated 40+ microservices from EC2 to EKS with zero planned downtime windows.",
+        "Implemented OpenTelemetry tracing across 100% of production services."
+      ]
+    }
+  ],
+  "volunteer": [
+    {
+      "organization": "DevOpsDays SF",
+      "position": "Program Committee Volunteer",
+      "url": "https://devopsdays.org/events/2025-san-francisco",
+      "startDate": "2024-09",
+      "endDate": "2025-03",
+      "summary": "Reviewed talk proposals and curated reliability track sessions.",
+      "highlights": [
+        "Selected 18 talks from 200+ submissions.",
+        "Moderated opening keynote panel on AI-assisted incident response."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Georgia Institute of Technology",
+      "url": "https://gatech.edu",
+      "area": "Computer Science",
+      "studyType": "Master of Science",
+      "startDate": "2016",
+      "endDate": "2018",
+      "score": "3.9/4.0",
+      "courses": [
+        "CS 6210: Advanced Operating Systems",
+        "CS 6476: Computer Vision",
+        "CS 8803: Cloud Computing"
+      ]
+    }
+  ],
+  "awards": [
+    {
+      "title": "Golden SLO Award",
+      "date": "2025",
+      "awarder": "StreamVault Engineering",
+      "summary": "Awarded for achieving 99.99% availability across ingestion tier for four consecutive quarters."
+    }
+  ],
+  "certificates": [
+    {
+      "name": "Certified Kubernetes Administrator",
+      "date": "2023-08-20",
+      "url": "https://example.com/certs/cka-mchen",
+      "issuer": "Cloud Native Computing Foundation"
+    },
+    {
+      "name": "AWS Certified Solutions Architect – Professional",
+      "date": "2022-04",
+      "url": "https://example.com/certs/aws-sap",
+      "issuer": "Amazon Web Services"
+    },
+    {
+      "name": "HashiCorp Terraform Associate",
+      "date": "2021",
+      "url": "https://example.com/certs/terraform",
+      "issuer": "HashiCorp"
+    }
+  ],
+  "publications": [
+    {
+      "name": "Error Budgets That Engineers Actually Use",
+      "publisher": "SRE Weekly",
+      "releaseDate": "2024-11-05",
+      "url": "https://example.com/pub/error-budgets",
+      "summary": "Practical patterns for tying product priorities to reliability investment without dashboard fatigue."
+    }
+  ],
+  "skills": [
+    {
+      "name": "Observability",
+      "level": "Master",
+      "keywords": ["Prometheus", "Grafana", "Datadog", "OpenTelemetry", "Loki"]
+    },
+    {
+      "name": "Infrastructure as Code",
+      "level": "Master",
+      "keywords": ["Terraform", "Pulumi", "Helm", "Crossplane"]
+    },
+    {
+      "name": "Incident Management",
+      "level": "Senior",
+      "keywords": ["PagerDuty", "Statuspage", "Blameless postmortems", "Chaos engineering"]
+    }
+  ],
+  "languages": [
+    { "language": "English", "fluency": "Native" },
+    { "language": "Mandarin", "fluency": "Conversational" }
+  ],
+  "interests": [
+    {
+      "name": "Mechanical Keyboards",
+      "keywords": ["Custom builds", "Ergo layouts", "Soldering"]
+    },
+    {
+      "name": "Trail Running",
+      "keywords": ["Ultra distances", "Marin Headlands", "Elevation training"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "OnCall Roulette",
+      "description": "Fair rotation scheduler with timezone-aware handoffs and PTO blackout support.",
+      "highlights": [
+        "Used by 30+ teams at StreamVault.",
+        "Exports iCal feeds and Slack reminders."
+      ],
+      "keywords": ["Go", "Slack API", "Scheduling", "SRE tooling"],
+      "startDate": "2023-01-10",
+      "endDate": "2023-06",
+      "url": "https://github.com/mchen-sre/oncall-roulette",
+      "roles": ["Author", "Maintainer"],
+      "entity": "StreamVault (internal open source)",
+      "type": "application"
+    },
+    {
+      "name": "SLO Burn Talk",
+      "description": "Conference talk on multi-window burn-rate alerting for tier-1 services.",
+      "highlights": ["Presented at SREcon Americas 2025.", "Slides downloaded 8,000+ times."],
+      "keywords": ["SLO", "Alerting", "Reliability"],
+      "startDate": "2025-03",
+      "endDate": "2025-03",
+      "url": "https://example.com/talks/slo-burn",
+      "roles": ["Speaker", "Writer"],
+      "entity": "USENIX",
+      "type": "conference"
+    }
+  ],
+  "references": [
+    {
+      "name": "Lisa Park",
+      "reference": "Marcus turned our reliability culture from reactive firefighting into measurable engineering discipline. He is exceptional at teaching SLO thinking to product teams."
+    }
+  ],
+  "meta": {
+    "canonical": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+    "version": "1.0.0",
+    "lastModified": "2026-05-26T10:15:00"
+  }
+}

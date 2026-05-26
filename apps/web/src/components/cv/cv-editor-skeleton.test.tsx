@@ -24,7 +24,6 @@ describe('CvEditorSkeleton', () => {
   it('renders a generic section card for non-basics routes', () => {
     const { container } = render(<CvEditorSkeleton section="projects" />);
 
-    expect(container.querySelectorAll('.mt-2 > *')).toHaveLength(5);
-    expect(container.querySelector('.surface-soft')).toBeInTheDocument();
+    expect(container.querySelector('.pl-4 .surface-soft')).toBeInTheDocument();
   });
 });

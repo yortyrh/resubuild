@@ -6,7 +6,7 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/dashboard/cv/cv-1/projects',
 }));
 
-import { CvSectionLayout } from './cv-section-layout';
+import { CvSectionLayout, CvSectionNavToggle } from './cv-section-layout';
 
 function mockViewport(isDesktop: boolean) {
   Object.defineProperty(window, 'matchMedia', {
@@ -34,6 +34,7 @@ describe('CvSectionLayout', () => {
   it('renders section labels when expanded on desktop', () => {
     render(
       <CvSectionLayout cvId="cv-1">
+        <CvSectionNavToggle />
         <div>Editor content</div>
       </CvSectionLayout>,
     );
@@ -45,6 +46,7 @@ describe('CvSectionLayout', () => {
   it('collapses to icons only and restores labels on expand', () => {
     render(
       <CvSectionLayout cvId="cv-1">
+        <CvSectionNavToggle />
         <div>Editor content</div>
       </CvSectionLayout>,
     );
@@ -66,6 +68,7 @@ describe('CvSectionLayout', () => {
 
     render(
       <CvSectionLayout cvId="cv-1">
+        <CvSectionNavToggle />
         <div>Editor content</div>
       </CvSectionLayout>,
     );

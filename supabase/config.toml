@@ -1,4 +1,4 @@
-project_id = "resumind-web"
+project_id = "resumind"
 
 [api]
 enabled = true
@@ -19,3 +19,30 @@ additional_redirect_urls = ["http://localhost:3000"]
 [auth.email]
 enable_signup = true
 enable_confirmations = false
+
+[realtime]
+enabled = false
+
+[storage]
+enabled = true
+file_size_limit = "10MiB"
+
+[storage.s3_protocol]
+enabled = true
+
+[storage.buckets.media]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["image/png", "image/jpeg", "image/webp", "image/gif"]
+
+[inbucket]
+enabled = false
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false
+
+[db.pooler]
+enabled = false

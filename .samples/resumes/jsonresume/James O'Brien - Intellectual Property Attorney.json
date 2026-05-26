@@ -1,0 +1,226 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+  "basics": {
+    "name": "James O'Brien",
+    "label": "Intellectual Property Attorney",
+    "image": "https://example.com/avatars/james-obrien.jpg",
+    "email": "james.obrien@example.com",
+    "phone": "+1-617-555-0198",
+    "url": "https://jobrien-law.example.com",
+    "summary": "Technology-focused IP counsel advising startups and Fortune 500 clients on patent strategy, software licensing, and M&A due diligence. Admitted to practice in Massachusetts and before the USPTO.",
+    "location": {
+      "address": "75 State Street, Suite 2400",
+      "postalCode": "02109",
+      "city": "Boston",
+      "countryCode": "US",
+      "region": "Massachusetts"
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "username": "james-obrien-ip",
+        "url": "https://linkedin.com/in/james-obrien-ip"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "Halcyon & Partners LLP",
+      "location": "Boston, MA",
+      "description": "AmLaw 100 full-service law firm",
+      "position": "Partner, Technology & IP Practice",
+      "url": "https://halcyonpartners.example.com",
+      "startDate": "2019-01",
+      "summary": "Lead counsel for venture-backed SaaS and biotech clients on IP portfolio development and litigation avoidance.",
+      "highlights": [
+        "Negotiated 40+ enterprise software license agreements exceeding $500M aggregate value.",
+        "Managed patent prosecution docket of 200+ applications across AI, cybersecurity, and med-device.",
+        "Led IP diligence for 12 acquisitions; flagged material risks in 3 deals pre-close."
+      ]
+    },
+    {
+      "name": "USPTO",
+      "location": "Alexandria, VA",
+      "description": "United States Patent and Trademark Office",
+      "position": "Patent Examiner (Art Unit 2129)",
+      "url": "https://uspto.gov",
+      "startDate": "2012-08-01",
+      "endDate": "2018-12-31",
+      "summary": "Examined software and business method applications; authored office actions and interviews.",
+      "highlights": [
+        "Consistently exceeded production and quality metrics.",
+        "Trained new examiners on 101 subject matter eligibility guidelines."
+      ]
+    }
+  ],
+  "volunteer": [
+    {
+      "organization": "Boston Patent Law Association Pro Bono Clinic",
+      "position": "Volunteer Patent Attorney",
+      "url": "https://bpla.example.org/pro-bono",
+      "startDate": "2020-03",
+      "summary": "Provide pro bono patent advice to individual inventors and university spin-outs.",
+      "highlights": [
+        "Counselled 25 inventors on provisional application strategy.",
+        "Drafted two issued patents for nonprofit medical device innovators."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Boston University School of Law",
+      "url": "https://bu.edu/law",
+      "area": "Law",
+      "studyType": "Juris Doctor",
+      "startDate": "2009",
+      "endDate": "2012",
+      "score": "cum laude",
+      "courses": [
+        "Intellectual Property Law",
+        "Patent Law",
+        "Technology Transactions",
+        "Antitrust and IP"
+      ]
+    },
+    {
+      "institution": "MIT",
+      "url": "https://mit.edu",
+      "area": "Electrical Engineering and Computer Science",
+      "studyType": "Bachelor of Science",
+      "startDate": "2005-09-01",
+      "endDate": "2009-06",
+      "score": "3.7 GPA",
+      "courses": [
+        "6.033: Computer Systems Engineering",
+        "6.170: Software Studio",
+        "18.06: Linear Algebra"
+      ]
+    }
+  ],
+  "awards": [
+    {
+      "title": "IAM Patent 1000 – Recommended Individual",
+      "date": "2025",
+      "awarder": "Intellectual Asset Management",
+      "summary": "Recognized among leading patent practitioners in Massachusetts for software and AI technologies."
+    },
+    {
+      "title": "BU Law Alumni Public Service Award",
+      "date": "2023-04-12",
+      "awarder": "Boston University School of Law",
+      "summary": "Honoured for sustained pro bono patent clinic work supporting underserved inventors."
+    }
+  ],
+  "certificates": [
+    {
+      "name": "USPTO Registration Number 72,451",
+      "date": "2012-11",
+      "url": "https://example.com/certs/uspto-reg",
+      "issuer": "United States Patent and Trademark Office"
+    },
+    {
+      "name": "Massachusetts Bar Admission",
+      "date": "2012-11-15",
+      "url": "https://example.com/certs/mass-bar",
+      "issuer": "Massachusetts Board of Bar Examiners"
+    }
+  ],
+  "publications": [
+    {
+      "name": "Open Source Compliance in Enterprise Acquisitions",
+      "publisher": "IP Law360",
+      "releaseDate": "2024-07-22",
+      "url": "https://example.com/pub/oss-ma",
+      "summary": "Checklist framework for identifying copyleft exposure during technical due diligence."
+    },
+    {
+      "name": "AI Inventorship After Thaler",
+      "publisher": "Boston University Journal of Science & Technology Law",
+      "releaseDate": "2023",
+      "url": "https://example.com/pub/ai-inventorship",
+      "summary": "Analysis of US and EU approaches to patent eligibility for AI-generated inventions."
+    }
+  ],
+  "skills": [
+    {
+      "name": "Patent Prosecution",
+      "level": "Master",
+      "keywords": [
+        "Software patents",
+        "Continuation strategy",
+        "Office action responses",
+        "Appeals"
+      ]
+    },
+    {
+      "name": "Transactions",
+      "level": "Senior",
+      "keywords": ["IP due diligence", "License drafting", "Escrow", "Indemnification"]
+    },
+    {
+      "name": "Technical Fluency",
+      "level": "Advanced",
+      "keywords": ["Distributed systems", "Machine learning", "API design", "Cloud architecture"]
+    }
+  ],
+  "languages": [
+    { "language": "English", "fluency": "Native" },
+    { "language": "Irish Gaelic", "fluency": "Conversational" }
+  ],
+  "interests": [
+    {
+      "name": "Historical Legal Documents",
+      "keywords": ["Manuscripts", "Archives", "Colonial-era contracts"]
+    },
+    {
+      "name": "Sailing",
+      "keywords": ["Boston Harbor", "Cruising", "Navigation"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Patent Claim Chart Generator",
+      "description": "Internal tool automating claim chart assembly from prosecution history PDFs.",
+      "highlights": [
+        "Reduced associate prep time by 60% on invalidity opinions.",
+        "Uses Python and pdfplumber with custom NLP pipeline."
+      ],
+      "keywords": ["Python", "Legal tech", "Patents", "Automation"],
+      "startDate": "2022-06",
+      "endDate": "2023-02",
+      "url": "https://github.com/example/claim-chart-gen",
+      "roles": ["Product owner", "Technical advisor"],
+      "entity": "Halcyon & Partners LLP",
+      "type": "application"
+    },
+    {
+      "name": "Licensing 101 for Founders",
+      "description": "Quarterly workshop series for accelerator cohorts on IP basics and cap table-safe licensing.",
+      "highlights": [
+        "Delivered to 300+ founders across MassChallenge and Techstars.",
+        "Materials published under CC BY-SA license."
+      ],
+      "keywords": ["Education", "Startups", "IP strategy"],
+      "startDate": "2021",
+      "url": "https://example.com/workshops/licensing-101",
+      "roles": ["Speaker", "Author"],
+      "entity": "MassChallenge",
+      "type": "talk"
+    }
+  ],
+  "references": [
+    {
+      "name": "Victoria Chen, General Counsel",
+      "reference": "James is the rare attorney who reads the code and the claims with equal rigour. He saved our Series C round from a material OSS liability we would have missed."
+    },
+    {
+      "name": "Robert Walsh, Managing Partner",
+      "reference": "Clients trust James because he translates complex IP risk into business decisions. He has grown our tech practice significantly since making partner."
+    }
+  ],
+  "meta": {
+    "canonical": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+    "version": "1.0.0",
+    "lastModified": "2026-05-26T12:00:00"
+  }
+}

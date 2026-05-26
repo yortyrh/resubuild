@@ -91,22 +91,29 @@ body {
   }
 }
 
-.rich-text-editor .rounded-md.border {
+.rich-text-editor > .border {
   font-size: 0.8125rem;
   line-height: 1.25rem;
 }
 
-.rich-text-editor--inline .rounded-md.border {
+.rich-text-editor--inline > .border {
   font-size: 0.6875rem;
 }
 
-/* Wysimark toolbar — em-based sizing inherits from `.rounded-md.border` above. */
-.rich-text-editor .rounded-md.border > div > div:first-child > div {
-  height: calc(2.35em + 1px) !important;
+/* Wysimark editor shell — square corners, no inner rounding when focused. */
+.rich-text-editor > .border > div {
+  border-radius: 0 !important;
 }
 
-.rich-text-editor--inline .rounded-md.border > div > div:first-child > div {
+/* Wysimark toolbar — em-based sizing inherits from `> .border` above. */
+.rich-text-editor:not(.rich-text-editor--inline) > .border > div > div:first-child {
+  height: 30px !important;
+  margin-bottom: 0 !important;
+}
+
+.rich-text-editor--inline > .border > div > div:first-child {
   height: calc(1.9em + 1px) !important;
+  margin-bottom: 0 !important;
 }
 
 .rich-text-editor [data-item-type='button'] {

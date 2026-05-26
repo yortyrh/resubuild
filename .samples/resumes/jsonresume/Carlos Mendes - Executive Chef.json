@@ -1,0 +1,221 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+  "basics": {
+    "name": "Carlos Mendes",
+    "label": "Executive Chef",
+    "image": "https://example.com/avatars/carlos-mendes.jpg",
+    "email": "carlos.mendes@example.com",
+    "phone": "+351 912 345 678",
+    "url": "https://carlosmendes.kitchen",
+    "summary": "Executive chef specializing in modern Portuguese cuisine with Mediterranean influences. Fifteen years leading brigades in Michelin-starred kitchens and boutique hotel restaurants.",
+    "location": {
+      "address": "Rua das Flores 42",
+      "postalCode": "4050-416",
+      "city": "Porto",
+      "countryCode": "PT",
+      "region": "Porto District"
+    },
+    "profiles": [
+      {
+        "network": "Instagram",
+        "username": "chef_carlos_mendes",
+        "url": "https://instagram.com/chef_carlos_mendes"
+      },
+      {
+        "network": "LinkedIn",
+        "username": "carlos-mendes-chef",
+        "url": "https://linkedin.com/in/carlos-mendes-chef"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "Quinta do Atlântico",
+      "location": "Viana do Castelo, Portugal",
+      "description": "Luxury boutique hotel with 40-seat tasting-menu restaurant",
+      "position": "Executive Chef",
+      "url": "https://quintaatlantico.example.pt",
+      "startDate": "2019-03",
+      "summary": "Lead kitchen brigade of 14; responsible for menu, suppliers, food cost, and HACCP compliance.",
+      "highlights": [
+        "Earned first Michelin star in 2023; retained in 2024 and 2025.",
+        "Reduced food waste 35% through root-to-leaf programme and compost partnership.",
+        "Curated wine pairing programme with 120-label cellar focusing on Douro and Vinho Verde."
+      ]
+    },
+    {
+      "name": "Restaurante Maré Alta",
+      "location": "Lisbon, Portugal",
+      "description": "Seafood-focused fine dining on the Tagus waterfront",
+      "position": "Sous Chef",
+      "url": "https://marealta.example.pt",
+      "startDate": "2014-06-01",
+      "endDate": "2019-02-28",
+      "summary": "Second-in-command; ran hot line during service and managed fish butchery.",
+      "highlights": [
+        "Developed signature octopus confit dish featured in national food press.",
+        "Trained 8 commis chefs through Escola de Hotelaria partnership."
+      ]
+    },
+    {
+      "name": "Hotel InterContinental Porto",
+      "location": "Porto, Portugal",
+      "description": "Four-star hotel banquet and à la carte operations",
+      "position": "Chef de Partie – Garde Manger",
+      "url": "https://ihg.com",
+      "startDate": "2011",
+      "endDate": "2014-05",
+      "summary": "Managed cold kitchen, charcuterie, and banquet plating for events up to 300 guests.",
+      "highlights": [
+        "Standardized mise en place reducing banquet setup time 20%.",
+        "Introduced local cheese board programme sourcing from Minho producers."
+      ]
+    }
+  ],
+  "volunteer": [
+    {
+      "organization": "Refettorio Porto",
+      "position": "Volunteer Chef",
+      "url": "https://refettorio.example.org/porto",
+      "startDate": "2020-06",
+      "summary": "Prepare weekly meals from surplus ingredients for community dining programme.",
+      "highlights": [
+        "Served 4,000+ meals since programme launch.",
+        "Mentored culinary students on zero-waste cooking techniques."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Escola de Hotelaria e Turismo do Porto",
+      "url": "https://ehtporto.example.pt",
+      "area": "Culinary Arts",
+      "studyType": "Professional Certificate",
+      "startDate": "2009-09",
+      "endDate": "2011-06",
+      "score": "Distinction",
+      "courses": [
+        "Classic French Techniques",
+        "Pastry Fundamentals",
+        "Food Safety and HACCP",
+        "Restaurant Service Integration"
+      ]
+    }
+  ],
+  "awards": [
+    {
+      "title": "Michelin Star – Quinta do Atlântico",
+      "date": "2023-11",
+      "awarder": "Michelin Guide Portugal",
+      "summary": "One star: High quality cooking, worth a stop."
+    },
+    {
+      "title": "Chef of the Year – Norte Region",
+      "date": "2024-05-18",
+      "awarder": "Revista de Vinhos",
+      "summary": "Voted best emerging chef in Northern Portugal by panel of critics and sommeliers."
+    }
+  ],
+  "certificates": [
+    {
+      "name": "HACCP Level 3 – Food Safety Management",
+      "date": "2024-01-10",
+      "url": "https://example.com/certs/haccp-carlos",
+      "issuer": "ASAE Portugal"
+    },
+    {
+      "name": "WSET Level 2 Award in Wines",
+      "date": "2022-09",
+      "url": "https://example.com/certs/wset2",
+      "issuer": "Wine & Spirit Education Trust"
+    },
+    {
+      "name": "ServSafe Manager Certification",
+      "date": "2018",
+      "url": "https://example.com/certs/servsafe",
+      "issuer": "National Restaurant Association"
+    }
+  ],
+  "publications": [
+    {
+      "name": "Atlantic Ingredients: A Chef's Guide to Minho Produce",
+      "publisher": "Assírio & Alvim",
+      "releaseDate": "2025-01-20",
+      "url": "https://example.com/books/atlantic-ingredients",
+      "summary": "200-page cookbook and supplier guide celebrating coastal and mountain ingredients of northern Portugal."
+    }
+  ],
+  "skills": [
+    {
+      "name": "Cuisine",
+      "level": "Master",
+      "keywords": ["Modern Portuguese", "Seafood", "Charcuterie", "Fermentation", "Live fire"]
+    },
+    {
+      "name": "Kitchen Management",
+      "level": "Master",
+      "keywords": ["Brigade leadership", "Food costing", "Menu engineering", "Supplier relations"]
+    },
+    {
+      "name": "Pastry",
+      "level": "Competent",
+      "keywords": ["Petit fours", "Ice creams", "Plated desserts"]
+    }
+  ],
+  "languages": [
+    { "language": "Portuguese", "fluency": "Native" },
+    { "language": "Spanish", "fluency": "Fluent" },
+    { "language": "English", "fluency": "Professional" },
+    { "language": "French", "fluency": "Basic" }
+  ],
+  "interests": [
+    {
+      "name": "Foraging",
+      "keywords": ["Wild mushrooms", "Coastal herbs", "Seasonal menus"]
+    },
+    {
+      "name": "Fado Music",
+      "keywords": ["Live performance", "Portuguese guitar", "Cultural heritage"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Chef's Table Documentary Series",
+      "description": "Six-episode web series following suppliers from boat to plate along the Minho coast.",
+      "highlights": [
+        "500k views on YouTube in first season.",
+        "Featured on RTP2 culinary programme."
+      ],
+      "keywords": ["Documentary", "Food media", "Sustainability"],
+      "startDate": "2024-03",
+      "endDate": "2024-09",
+      "url": "https://example.com/series/chefs-table-minho",
+      "roles": ["Host", "Creative director"],
+      "entity": "Quinta do Atlântico",
+      "type": "presentation"
+    },
+    {
+      "name": "Pop-up Collaboration – Lisbon Wine Week",
+      "description": "Five-course collaborative dinner with three Portuguese winemakers.",
+      "highlights": ["Sold out 120 seats in 48 hours.", "Raised €8,000 for Refettorio Porto."],
+      "keywords": ["Pop-up", "Wine pairing", "Charity"],
+      "startDate": "2025-05-10",
+      "endDate": "2025-05-12",
+      "url": "https://example.com/events/lisbon-wine-week-2025",
+      "roles": ["Executive chef", "Menu designer"],
+      "entity": "Lisbon Wine Week",
+      "type": "volunteering"
+    }
+  ],
+  "references": [
+    {
+      "name": "Ana Ribeiro, General Manager",
+      "reference": "Carlos transformed our restaurant into a destination. His leadership, creativity, and respect for local producers define everything we serve."
+    }
+  ],
+  "meta": {
+    "canonical": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+    "version": "1.0.0",
+    "lastModified": "2026-05-26T15:00:00"
+  }
+}

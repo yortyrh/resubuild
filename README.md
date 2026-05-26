@@ -14,19 +14,63 @@ Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authenti
 
 - Node.js 20+
 - pnpm 10+
-- [Supabase CLI](https://supabase.com/docs/guides/cli) (recommended for migrations)
-- A Supabase project (cloud or local CLI)
+- [Supabase CLI](https://supabase.com/docs/guides/cli) (for local development)
 
-## 1. Supabase setup
+## Local development (Supabase CLI)
+
+For day-to-day work on your machine, use the local Supabase stack and the seed script. No cloud project required.
+
+### Setup
+
+From the repo root:
+
+```bash
+pnpm install
+supabase start
+pnpm setup:env      # writes apps/api/.env and apps/web/.env from supabase status
+pnpm samples:seed   # creates dev + E2E accounts, sample CVs, and media (no API needed)
+```
+
+On first seed, **unique passwords are generated for your machine** and saved to `.samples/local-credentials.json` (gitignored). The seed prints them to the terminal. To show them again later:
+
+```bash
+pnpm local:credentials
+```
+
+**Developer sign-in** (use this in the browser):
+
+- Email: `developer@resumind.local`
+- Password: run `pnpm local:credentials` (not committed to git)
+
+### Run the app
+
+```bash
+pnpm dev            # web :3000 + api :3001
+```
+
+Open http://localhost:3000, sign in with the developer account, and you should see 10 sample CVs on the dashboard.
+
+### Optional — verify the stack
+
+E2E tests boot Nest in-process (no separate `pnpm dev:api` needed) and use the dedicated E2E account from `local-credentials.json`:
+
+```bash
+pnpm test:e2e       # 11 integration tests against local Supabase
+```
+
+Re-run `pnpm samples:seed` after resetting Supabase (`supabase db reset`) or to refresh sample data. Passwords stay the same unless you delete `.samples/local-credentials.json`.
+
+---
+
+## Cloud Supabase setup
+
+For deployment or a shared remote database:
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. Enable **Email** auth (Authentication → Providers).
-3. For local dev, you can disable email confirmation: Authentication → Providers → Email → disable “Confirm email”.
-4. Apply the database migration (creates `public.cv`, RLS policies, and triggers).
+3. Apply the database migration (creates `public.cv`, RLS policies, and triggers).
 
 **Recommended — Supabase CLI**
-
-Install the [Supabase CLI](https://supabase.com/docs/guides/cli), log in, then from the repo root:
 
 ```bash
 supabase login
@@ -34,83 +78,49 @@ supabase link --project-ref <your-project-ref>
 supabase db push
 ```
 
-`<your-project-ref>` is the ID in your project URL: `https://<project-ref>.supabase.co`  
-(e.g. for `https://cakaoffudwbphihxkehq.supabase.co`, use `cakaoffudwbphihxkehq`).
-
-`db push` applies all files in `supabase/migrations/`. Re-run it after adding new migrations.
+`<your-project-ref>` is the ID in your project URL: `https://<project-ref>.supabase.co`.
 
 **Alternative — SQL editor**
 
-Paste and run `supabase/migrations/20260523000000_create_cv_table.sql` in Supabase → **SQL Editor**.
+Paste and run migrations from `supabase/migrations/` in Supabase → **SQL Editor**.
 
-**Alternative — psql**
+Collect from **Project Settings → API**:
 
-```bash
-psql "$DATABASE_URL" -f supabase/migrations/20260523000000_create_cv_table.sql
-```
+- Project URL → **`SUPABASE_URL`**
+- anon public key → **`SUPABASE_ANON_KEY`**
 
-5. Collect from **Project Settings → API**:
-   - Project URL → **`SUPABASE_URL`** (Nest only)
-   - anon public key → **`SUPABASE_ANON_KEY`** (Nest only; drives `/auth/*` plus `auth.getUser()` on guarded routes)
-   - (`SUPABASE_JWT_SECRET` is optional — validation uses Supabase Auth, not the legacy JWT secret alone)
-
-## Troubleshooting
-
-| Error                                                      | Fix                                                                                                                                                                                                                                         |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Could not find the table 'public.cv' in the schema cache` | Run `supabase db push` (or apply the migration SQL manually).                                                                                                                                                                               |
-| `Invalid or expired token`                                 | Sign out and sign in again. Tokens are issued/checked only on `apps/api`; ensure `SUPABASE_*` vars there match your Supabase project. List `NEXT_PUBLIC_API_URL`/web origin inside `apps/api` `CORS_ORIGIN` when using different hostnames. |
-
-## 2. Environment variables
+Then configure env files:
 
 ```bash
 cp apps/web/.env.example apps/web/.env.local
 cp apps/api/.env.example apps/api/.env
 ```
 
-Fill in your Supabase values. The API listens on port **3001** by default; the web app on **3000**.
-
-## 3. Install & run
-
-```bash
-pnpm install
-pnpm dev
-```
-
-Or run apps separately:
-
-```bash
-pnpm dev:api   # NestJS on http://localhost:3001
-pnpm dev:web   # Next.js on http://localhost:3000
-```
-
-### Quality checks
+## Quality checks
 
 From the repo root:
 
-- **`pnpm format`** / **`pnpm format:check`** — Prettier (`prettier-plugin-tailwindcss` for class sorting; includes Markdown)
-- **`pnpm lint`** / **`pnpm lint:fix`** — Biome (lint and import organization only)
-- **`pnpm typecheck`** — fast TypeScript compile check across all packages
-- **`pnpm verify`** — same checks as CI (Prettier, Biome, typecheck, tests, build); runs automatically on `git push` via Lefthook
-- **`pnpm test`** — unit tests with coverage (Vitest in `packages/types` and `apps/web`, Jest in `apps/api`)
+- **`pnpm format`** / **`pnpm format:check`** — Prettier
+- **`pnpm lint`** / **`pnpm lint:fix`** — Biome
+- **`pnpm typecheck`** — TypeScript across all packages
+- **`pnpm verify`** — full CI pipeline locally (Prettier, Biome, typecheck, unit tests, build)
+- **`pnpm test`** — unit tests (Vitest + Jest)
+- **`pnpm test:e2e`** — integration tests against local Supabase (requires setup above)
+- **`pnpm local:credentials`** — show local dev and E2E login details for this machine
 
-Git hooks (Lefthook, installed via `pnpm install`):
+Git hooks (Lefthook): **pre-commit** (Biome + Prettier on staged files), **pre-push** (`pnpm verify`).
 
-- **pre-commit** — Biome lint fixes on staged code, then Prettier on staged files (including Markdown)
-- **pre-push** — full `pnpm verify` pipeline
+## Troubleshooting
 
-CI mirrors `pnpm verify` via `.github/workflows/ci.yml` on pushes and pull requests to `main`: five parallel jobs (Prettier, Biome, typecheck, tests, build). Each job restores cached `node_modules` when the lockfile is unchanged (see `.github/actions/setup-monorepo`); only the **Build** job saves the cache after a fresh install.
-
-## Usage
-
-1. Open http://localhost:3000 and **register** / **sign in**.
-2. Go to **Dashboard → New CV**.
-3. Edit sections (Basics, Work, Education, …) and **Save**.
-4. Data is validated server-side against the JSON Resume schema before persisting.
+| Error                                                      | Fix                                                                                                   |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `Could not find the table 'public.cv' in the schema cache` | Run `supabase db push` or `supabase start` with migrations applied.                                   |
+| `Invalid or expired token`                                 | Sign out and sign in again. Ensure `SUPABASE_*` vars in `apps/api/.env` match your Supabase instance. |
+| Forgot local dev password                                  | Run `pnpm local:credentials`.                                                                         |
 
 ## API (`apps/api`)
 
-Authenticate with Bearer tokens obtained from **`POST /auth/login`** / **`POST /auth/register`** (see `apps/api/README.md`). The UI stores tokens in **`sessionStorage`** and sends **`Authorization: Bearer <access_token>`** on `/cv*` calls (no cookie-based API auth).
+Authenticate with Bearer tokens from **`POST /auth/login`** / **`POST /auth/register`**. The UI stores tokens in **`sessionStorage`**.
 
 | Method | Path      | Description                |
 | ------ | --------- | -------------------------- |
@@ -123,7 +133,7 @@ Authenticate with Bearer tokens obtained from **`POST /auth/login`** / **`POST /
 ## Security
 
 - Row Level Security on `public.cv`: users only access their own rows (`auth.uid() = user_id`).
-- Nest validates Supabase access tokens via `auth.getUser()` (works with current JWT signing keys) and forwards the user token to Supabase so RLS applies.
+- Nest validates Supabase access tokens via `auth.getUser()` and forwards the user token to Supabase so RLS applies.
 
 ## Project structure
 
@@ -136,4 +146,5 @@ packages/
   types/        shared Resume types
 supabase/
   migrations/   database schema
+.samples/       seed fixture (CVs, media, local credentials)
 ```

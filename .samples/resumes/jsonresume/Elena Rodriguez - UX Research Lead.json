@@ -1,0 +1,218 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+  "basics": {
+    "name": "Elena Rodriguez",
+    "label": "UX Research Lead",
+    "image": "https://example.com/avatars/elena-rodriguez.jpg",
+    "email": "elena.rodriguez@example.com",
+    "phone": "+34 612 345 678",
+    "url": "https://elenarodriguez.design",
+    "summary": "Mixed-methods researcher helping product teams ship inclusive, evidence-based experiences. Specialist in fintech onboarding, accessibility audits, and longitudinal diary studies.",
+    "location": {
+      "address": "Carrer de Mallorca 401",
+      "postalCode": "08013",
+      "city": "Barcelona",
+      "countryCode": "ES",
+      "region": "Catalonia"
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "username": "elena-rodriguez-ux",
+        "url": "https://linkedin.com/in/elena-rodriguez-ux"
+      },
+      {
+        "network": "Dribbble",
+        "username": "elenar",
+        "url": "https://dribbble.com/elenar"
+      },
+      {
+        "network": "Mastodon",
+        "username": "elena@design.social",
+        "url": "https://design.social/@elena"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "PayFlow Europe",
+      "location": "Barcelona, Spain",
+      "description": "Neobank serving 4M retail customers across Iberia",
+      "position": "Lead UX Researcher",
+      "url": "https://payflow.example.eu",
+      "startDate": "2021-04-01",
+      "endDate": "2026-05",
+      "summary": "Built and scaled a four-person research practice embedded in squads.",
+      "highlights": [
+        "Reduced KYC drop-off 27% after redesign informed by contextual inquiry.",
+        "Established research ops: repository, consent templates, and incentive workflow.",
+        "Partnered with legal on WCAG 2.2 AA compliance roadmap for mobile app."
+      ]
+    },
+    {
+      "name": "Design Studio Nova",
+      "location": "Madrid, Spain",
+      "description": "Boutique UX consultancy for health and gov clients",
+      "position": "Senior UX Researcher",
+      "url": "https://novadesign.example.es",
+      "startDate": "2017",
+      "endDate": "2021-03",
+      "summary": "Led discovery and usability testing for public-sector digital services.",
+      "highlights": [
+        "Conducted 120+ moderated sessions for national healthcare portal redesign.",
+        "Introduced service blueprinting workshops adopted by three ministries."
+      ]
+    }
+  ],
+  "volunteer": [
+    {
+      "organization": "Ladies That UX Barcelona",
+      "position": "Mentorship Coordinator",
+      "url": "https://ladiesthatux.com/barcelona",
+      "startDate": "2019-06",
+      "endDate": "2025-12",
+      "summary": "Matched early-career designers with industry mentors for portfolio and research critiques.",
+      "highlights": [
+        "Supported 85 mentees across 6 cohort cycles.",
+        "Organized quarterly research methods lightning talks."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Universitat Pompeu Fabra",
+      "url": "https://upf.edu",
+      "area": "Human-Computer Interaction",
+      "studyType": "Master",
+      "startDate": "2015-09",
+      "endDate": "2017-06",
+      "score": "9.2/10",
+      "courses": [
+        "Qualitative Methods in HCI",
+        "Accessibility and Inclusive Design",
+        "Cognitive Ergonomics"
+      ]
+    },
+    {
+      "institution": "Universidad de Sevilla",
+      "url": "https://us.es",
+      "area": "Psychology",
+      "studyType": "Bachelor",
+      "startDate": "2011",
+      "endDate": "2015",
+      "courses": ["Experimental Psychology", "Statistics", "Perception and Attention"]
+    }
+  ],
+  "awards": [
+    {
+      "title": "Research Impact Award",
+      "date": "2024-09-18",
+      "awarder": "PayFlow Europe",
+      "summary": "Honoured for research program that directly influenced three major product launches in 2024."
+    }
+  ],
+  "certificates": [
+    {
+      "name": "CPACC – Certified Professional in Accessibility Core Competencies",
+      "date": "2023-05",
+      "url": "https://example.com/certs/cpacc-elena",
+      "issuer": "IAAP"
+    },
+    {
+      "name": "NN/g UX Certification",
+      "date": "2020-02-14",
+      "url": "https://example.com/certs/nng-ux",
+      "issuer": "Nielsen Norman Group"
+    }
+  ],
+  "publications": [
+    {
+      "name": "Diary Studies at Scale in Regulated Industries",
+      "publisher": "UX Collective",
+      "releaseDate": "2025-01",
+      "url": "https://example.com/pub/diary-studies-fintech",
+      "summary": "How to run asynchronous longitudinal research without compromising participant privacy."
+    }
+  ],
+  "skills": [
+    {
+      "name": "Research Methods",
+      "level": "Master",
+      "keywords": [
+        "Contextual inquiry",
+        "Diary studies",
+        "Tree testing",
+        "Card sorting",
+        "Usability testing"
+      ]
+    },
+    {
+      "name": "Research Ops",
+      "level": "Senior",
+      "keywords": ["Dovetail", "Optimal Workshop", "Consent management", "Incentive platforms"]
+    },
+    {
+      "name": "Facilitation",
+      "level": "Senior",
+      "keywords": ["Workshops", "Journey mapping", "Stakeholder alignment", "Design sprints"]
+    }
+  ],
+  "languages": [
+    { "language": "Spanish", "fluency": "Native" },
+    { "language": "Catalan", "fluency": "Professional" },
+    { "language": "English", "fluency": "Fluent" },
+    { "language": "Portuguese", "fluency": "Beginner" }
+  ],
+  "interests": [
+    {
+      "name": "Ceramics",
+      "keywords": ["Wheel throwing", "Glazing", "Studio pottery"]
+    },
+    {
+      "name": "Urban Sketching",
+      "keywords": ["Watercolour", "Architecture", "Plein air"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Inclusive Forms Pattern Library",
+      "description": "Open pattern library documenting accessible form components with research citations.",
+      "highlights": [
+        "500+ GitHub stars within six months.",
+        "Referenced in PayFlow design system v3."
+      ],
+      "keywords": ["Accessibility", "Design systems", "Forms", "WCAG"],
+      "startDate": "2022-08",
+      "endDate": "2023-11",
+      "url": "https://github.com/example/inclusive-forms",
+      "roles": ["Research lead", "Writer", "Facilitator"],
+      "entity": "PayFlow Europe / open source",
+      "type": "application"
+    },
+    {
+      "name": "Euro UX Research Meetup",
+      "description": "Monthly meetup series featuring practitioner talks on research in product orgs.",
+      "highlights": [
+        "Hosted 24 events with 150 average attendance.",
+        "Sponsored by three local design agencies."
+      ],
+      "keywords": ["Community", "UX research", "Networking"],
+      "startDate": "2020-01",
+      "url": "https://example.com/meetups/euro-ux-research",
+      "roles": ["Organizer", "Host"],
+      "entity": "Ladies That UX Barcelona",
+      "type": "presentation"
+    }
+  ],
+  "references": [
+    {
+      "name": "Miguel Santos",
+      "reference": "Elena elevates every product conversation with clear, actionable insights. Her research practice is a model for embedding UX in agile fintech teams."
+    }
+  ],
+  "meta": {
+    "canonical": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+    "version": "1.0.0",
+    "lastModified": "2026-05-26T11:30:00"
+  }
+}

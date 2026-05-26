@@ -124,7 +124,7 @@ export function MarkdownEditorImpl({
         className,
       )}
     >
-      <div className="border-input bg-background rounded-md border">
+      <div className="border-input bg-background rounded-none border">
         <Editable
           editor={editor}
           value={value}

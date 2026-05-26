@@ -1,0 +1,205 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+  "basics": {
+    "name": "Tomoko Sato",
+    "label": "Senior Product Manager",
+    "image": "https://example.com/avatars/tomoko-sato.jpg",
+    "email": "tomoko.sato@example.com",
+    "phone": "03-5550-8821",
+    "url": "https://tomokosato.pm",
+    "summary": "B2B product leader with 9 years shipping developer tools and collaboration software. Known for crisp PRDs, ruthless prioritization, and building trust across engineering and go-to-market.",
+    "location": {
+      "address": "2-24-12 Shibuya",
+      "postalCode": "150-0002",
+      "city": "Tokyo",
+      "countryCode": "JP",
+      "region": "Tokyo"
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "username": "tomoko-sato-pm",
+        "url": "https://linkedin.com/in/tomoko-sato-pm"
+      },
+      {
+        "network": "note",
+        "username": "tomoko_pm",
+        "url": "https://note.com/tomoko_pm"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "Nimbus Works",
+      "location": "Tokyo, Japan",
+      "description": "Async collaboration platform for distributed engineering teams",
+      "position": "Senior Product Manager, Core Platform",
+      "url": "https://nimbusworks.example.jp",
+      "startDate": "2020-10-01",
+      "summary": "Own roadmap for permissions, integrations, and enterprise admin console.",
+      "highlights": [
+        "Launched SCIM provisioning increasing enterprise win rate 22%.",
+        "Reduced time-to-first-value 40% via guided onboarding redesign.",
+        "Grew MAU from 80k to 310k over three years."
+      ]
+    },
+    {
+      "name": "Rakuten Symphony",
+      "location": "Tokyo, Japan",
+      "description": "Cloud and telecom infrastructure division",
+      "position": "Product Manager, API Platform",
+      "url": "https://rakuten.com",
+      "startDate": "2016-04",
+      "endDate": "2020-09",
+      "summary": "Managed public API lifecycle for partner developers and internal microservices.",
+      "highlights": [
+        "Shipped developer portal with OpenAPI docs and sandbox environments.",
+        "Defined deprecation policy adopted across 200+ internal APIs."
+      ]
+    },
+    {
+      "name": "Accenture",
+      "location": "Osaka, Japan",
+      "description": "Management consulting and technology services",
+      "position": "Business Analyst",
+      "url": "https://accenture.com",
+      "startDate": "2014",
+      "endDate": "2016-03",
+      "summary": "Supported digital transformation projects for retail and financial clients.",
+      "highlights": [
+        "Facilitated requirements workshops for ERP migration program.",
+        "Built ROI models for mobile banking feature prioritization."
+      ]
+    }
+  ],
+  "volunteer": [
+    {
+      "organization": "Product Tank Tokyo",
+      "position": "Co-organizer",
+      "url": "https://producttanktokyo.example.jp",
+      "startDate": "2019-01",
+      "summary": "Organize monthly product management meetups with 200+ attendees.",
+      "highlights": [
+        "Secured sponsorship from five local tech companies.",
+        "Launched mentorship matching program for junior PMs."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Keio University",
+      "url": "https://keio.ac.jp",
+      "area": "Policy Management",
+      "studyType": "Bachelor of Arts",
+      "startDate": "2010-04",
+      "endDate": "2014-03",
+      "score": "GPA 3.6/4.0",
+      "courses": [
+        "Technology and Innovation Policy",
+        "Statistics for Social Sciences",
+        "Organizational Behavior"
+      ]
+    }
+  ],
+  "awards": [
+    {
+      "title": "Product Excellence Award",
+      "date": "2024-12",
+      "awarder": "Nimbus Works",
+      "summary": "Recognized for leading enterprise admin console launch that unlocked $4M ARR in first quarter."
+    }
+  ],
+  "certificates": [
+    {
+      "name": "Certified Scrum Product Owner",
+      "date": "2018-05-20",
+      "url": "https://example.com/certs/cspo-tomoko",
+      "issuer": "Scrum Alliance"
+    },
+    {
+      "name": "Pragmatic Institute Certified – Foundations",
+      "date": "2017-11",
+      "url": "https://example.com/certs/pragmatic",
+      "issuer": "Pragmatic Institute"
+    }
+  ],
+  "publications": [
+    {
+      "name": "Prioritization Frameworks That Survive Executive Reviews",
+      "publisher": "Mind the Product",
+      "releaseDate": "2025-02-14",
+      "url": "https://example.com/pub/prioritization-frameworks",
+      "summary": "Combining RICE, opportunity scoring, and strategic bets for platform PMs."
+    }
+  ],
+  "skills": [
+    {
+      "name": "Product Strategy",
+      "level": "Master",
+      "keywords": ["Roadmapping", "OKRs", "Pricing", "Competitive analysis", "Vision docs"]
+    },
+    {
+      "name": "Discovery",
+      "level": "Senior",
+      "keywords": ["User interviews", "Jobs-to-be-done", "Prototype testing", "Analytics"]
+    },
+    {
+      "name": "Tools",
+      "level": "Senior",
+      "keywords": ["Jira", "Linear", "Amplitude", "Figma", "Notion"]
+    }
+  ],
+  "languages": [
+    { "language": "Japanese", "fluency": "Native" },
+    { "language": "English", "fluency": "Professional" }
+  ],
+  "interests": [
+    {
+      "name": "Specialty Coffee",
+      "keywords": ["Pour-over", "Single origin", "Tokyo roasters"]
+    },
+    {
+      "name": "Indie Games",
+      "keywords": ["Narrative design", "Pixel art", "Game jams"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "PM Interview Prep JP",
+      "description": "Bilingual resource site with case studies and mock interview rubrics for Japanese PM candidates.",
+      "highlights": [
+        "10,000 monthly visitors within first year.",
+        "Community-contributed case library with 45 scenarios."
+      ],
+      "keywords": ["Product management", "Education", "Career"],
+      "startDate": "2022-05",
+      "url": "https://example.com/pm-interview-jp",
+      "roles": ["Founder", "Editor", "Writer"],
+      "entity": "Personal project",
+      "type": "application"
+    },
+    {
+      "name": "Enterprise Ready Checklist",
+      "description": "Internal checklist template for B2B SaaS features targeting SOC2 and SSO buyers.",
+      "highlights": ["Downloaded by 200+ Nimbus employees.", "Integrated into PRD template v4."],
+      "keywords": ["Enterprise", "B2B", "Checklist", "Compliance"],
+      "startDate": "2023-08",
+      "endDate": "2023-10",
+      "url": "https://example.com/checklists/enterprise-ready",
+      "roles": ["Author", "Facilitator"],
+      "entity": "Nimbus Works",
+      "type": "presentation"
+    }
+  ],
+  "references": [
+    {
+      "name": "Kenji Yamamoto",
+      "reference": "Tomoko brings clarity to ambiguous platform problems. She earns engineering respect because she understands technical constraints without pretending to write the code herself."
+    }
+  ],
+  "meta": {
+    "canonical": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+    "version": "1.0.0",
+    "lastModified": "2026-05-26T14:20:00"
+  }
+}

@@ -14,13 +14,20 @@
     "prepare": "lefthook install",
     "dev:web": "pnpm --filter @resumind/web dev",
     "dev:api": "pnpm --filter @resumind/api dev",
-    "dev:types": "pnpm --filter @resumind/types dev"
+    "dev:types": "pnpm --filter @resumind/types dev",
+    "setup:env": "bash scripts/setup-local-env.sh",
+    "samples:pdf": "node scripts/generate-sample-pdfs.mjs",
+    "samples:seed": "node scripts/seed-e2e-fixture.mjs",
+    "local:credentials": "node scripts/show-local-credentials.mjs",
+    "test:e2e": "pnpm --filter @resumind/api test:e2e"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
+    "@supabase/supabase-js": "^2.50.0",
     "lefthook": "^2.1.8",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
+    "puppeteer": "^25.1.0",
     "turbo": "^2.5.4"
   },
   "packageManager": "pnpm@10.26.0",

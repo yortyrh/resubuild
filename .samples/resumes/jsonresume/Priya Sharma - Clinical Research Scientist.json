@@ -1,0 +1,191 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+  "basics": {
+    "name": "Priya Sharma",
+    "label": "Clinical Research Scientist",
+    "image": "https://example.com/avatars/priya-sharma.jpg",
+    "email": "priya.sharma@example.com",
+    "phone": "+44 20 7946 0958",
+    "url": "https://priyasharma-research.example.com",
+    "summary": "PhD-trained clinical researcher specializing in oncology trial design, biomarker validation, and regulatory submission packages. Ten years bridging bench science and phase II/III clinical operations.",
+    "location": {
+      "address": "14 Cambridge Heath Road\nFlat 3B",
+      "postalCode": "E2 9DA",
+      "city": "London",
+      "countryCode": "GB",
+      "region": "England"
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "username": "priyasharma-cr",
+        "url": "https://linkedin.com/in/priyasharma-cr"
+      },
+      {
+        "network": "ORCID",
+        "username": "0000-0002-1825-0097",
+        "url": "https://orcid.org/0000-0002-1825-0097"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "Helix Therapeutics",
+      "location": "Cambridge, UK",
+      "description": "Biopharmaceutical company focused on precision oncology",
+      "position": "Principal Clinical Scientist",
+      "url": "https://helixtherapeutics.example.com",
+      "startDate": "2020-03",
+      "endDate": "2026-05",
+      "summary": "Lead scientist for two immuno-oncology trials across EU and North American sites.",
+      "highlights": [
+        "Authored investigator brochures and clinical study reports for EMA and FDA review.",
+        "Reduced protocol deviation rate by 31% through centralized monitoring dashboards.",
+        "Co-chaired data safety monitoring board preparation for a phase II basket trial."
+      ]
+    },
+    {
+      "name": "National Cancer Research Institute",
+      "location": "London, UK",
+      "description": "Government-funded translational research centre",
+      "position": "Postdoctoral Research Fellow",
+      "url": "https://ncri.example.org",
+      "startDate": "2016-09-01",
+      "endDate": "2020-02-28",
+      "summary": "Conducted biomarker discovery studies supporting early-phase trial cohort selection.",
+      "highlights": [
+        "Published findings linking PD-L1 expression patterns to treatment response stratification.",
+        "Managed biobank sample logistics for 400+ participant longitudinal study."
+      ]
+    }
+  ],
+  "volunteer": [
+    {
+      "organization": "Science Oxford",
+      "position": "STEM Outreach Volunteer",
+      "url": "https://scienceoxford.example.com",
+      "startDate": "2018",
+      "endDate": "2024",
+      "summary": "Delivered hands-on workshops introducing clinical trials to secondary school students.",
+      "highlights": [
+        "Reached 1,200 students across underserved boroughs in Greater London.",
+        "Designed a mock trial activity explaining randomization and blinding."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Imperial College London",
+      "url": "https://imperial.ac.uk",
+      "area": "Translational Medicine",
+      "studyType": "PhD",
+      "startDate": "2013-10",
+      "endDate": "2016-08",
+      "score": "Pass with no corrections",
+      "courses": [
+        "Advanced Biostatistics for Clinical Trials",
+        "Regulatory Affairs in Drug Development",
+        "Immunology of Cancer"
+      ]
+    },
+    {
+      "institution": "University of Manchester",
+      "url": "https://manchester.ac.uk",
+      "area": "Biomedical Sciences",
+      "studyType": "Bachelor of Science",
+      "startDate": "2009",
+      "endDate": "2013",
+      "score": "First Class Honours",
+      "courses": ["Molecular Biology", "Pharmacology", "Research Methods"]
+    }
+  ],
+  "awards": [
+    {
+      "title": "Early Career Investigator Award",
+      "date": "2023-06",
+      "awarder": "European Society for Medical Oncology",
+      "summary": "Recognized for outstanding contribution to biomarker-driven trial design in solid tumours."
+    }
+  ],
+  "certificates": [
+    {
+      "name": "Good Clinical Practice (GCP)",
+      "date": "2024-01-15",
+      "url": "https://example.com/certs/gcp-priya",
+      "issuer": "TransCelerate BioPharma"
+    },
+    {
+      "name": "Certified Clinical Research Professional",
+      "date": "2021-11",
+      "url": "https://example.com/certs/ccrp",
+      "issuer": "Society of Clinical Research Associates"
+    }
+  ],
+  "publications": [
+    {
+      "name": "Predictive Biomarkers in Checkpoint Inhibitor Therapy",
+      "publisher": "The Lancet Oncology",
+      "releaseDate": "2025-02-20",
+      "url": "https://example.com/pub/biomarkers-2025",
+      "summary": "Multi-centre retrospective analysis of 890 patients treated with anti-PD-1 agents."
+    },
+    {
+      "name": "Adaptive Trial Designs in Rare Cancers",
+      "publisher": "Journal of Clinical Oncology",
+      "releaseDate": "2022-09",
+      "url": "https://example.com/pub/adaptive-rare",
+      "summary": "Framework for Bayesian adaptive enrichment in ultra-rare tumour populations."
+    }
+  ],
+  "skills": [
+    {
+      "name": "Clinical Operations",
+      "level": "Master",
+      "keywords": ["Protocol writing", "CTMS", "Medidata Rave", "Risk-based monitoring"]
+    },
+    {
+      "name": "Biostatistics",
+      "level": "Advanced",
+      "keywords": ["SAS", "R", "Survival analysis", "Sample size calculation"]
+    }
+  ],
+  "languages": [
+    { "language": "English", "fluency": "Native" },
+    { "language": "Hindi", "fluency": "Native" },
+    { "language": "French", "fluency": "Intermediate" }
+  ],
+  "interests": [
+    {
+      "name": "Classical Indian Dance",
+      "keywords": ["Bharatanatyam", "Performance", "Cultural heritage"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "TrialTrack Open Dashboard",
+      "description": "Open-source dashboard visualizing enrollment velocity and deviation trends for academic trial sites.",
+      "highlights": [
+        "Adopted by 12 NHS trusts for internal monitoring.",
+        "Built with Python, FastAPI, and Plotly."
+      ],
+      "keywords": ["Python", "FastAPI", "Clinical trials", "Open source"],
+      "startDate": "2023-04",
+      "endDate": "2024-01",
+      "url": "https://github.com/example/trialtrack",
+      "roles": ["Lead developer", "Maintainer"],
+      "entity": "Helix Therapeutics / NCRI alumni network",
+      "type": "application"
+    }
+  ],
+  "references": [
+    {
+      "name": "Dr. Helen Marsh",
+      "reference": "Priya combines rigorous scientific thinking with pragmatic trial execution. She is the researcher you want leading complex, multi-site oncology studies."
+    }
+  ],
+  "meta": {
+    "canonical": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+    "version": "1.0.0",
+    "lastModified": "2026-05-26T09:00:00"
+  }
+}

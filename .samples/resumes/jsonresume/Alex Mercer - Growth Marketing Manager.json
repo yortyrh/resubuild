@@ -1,0 +1,165 @@
+{
+  "$schema": "https://githubusercontent.com",
+  "basics": {
+    "name": "Alex Mercer",
+    "label": "Growth Marketing Manager",
+    "image": "https://example.com",
+    "email": "alex.mercer@example.com",
+    "phone": "(+1) 555-987-6543",
+    "url": "https://alexmercer.marketing",
+    "summary": "Data-driven Growth Marketer with 6+ years of experience scaling B2B SaaS startups. Expert in customer acquisition, funnel optimization, and high-budget performance marketing strategies.",
+    "location": {
+      "address": "456 Market Street",
+      "postalCode": "94103",
+      "city": "San Francisco",
+      "countryCode": "US",
+      "region": "California"
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "username": "alexmercer-growth",
+        "url": "https://linkedin.com"
+      },
+      {
+        "network": "X",
+        "username": "alex_markets",
+        "url": "https://x.com"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "SaaSify Metrics",
+      "position": "Growth Marketing Manager",
+      "url": "https://saasifymetrics.com",
+      "startDate": "2023-02-10",
+      "endDate": "2026-05-15",
+      "summary": "Owned the user acquisition pipeline, scaling monthly recurring revenue (MRR) from $50k to $250k within two years.",
+      "highlights": [
+        "Managed a $40k/month paid advertising budget across Google, LinkedIn, and Meta platforms.",
+        "Designed and executed A/B conversion tests that lifted landing page signups by 34%.",
+        "Deployed HubSpot automated workflows to nurture leads, decreasing checkout abandonment by 18%."
+      ]
+    },
+    {
+      "name": "Pixel Craft Agency",
+      "position": "Digital Marketing Specialist",
+      "url": "https://pixelcraft.agency",
+      "startDate": "2020-05-01",
+      "endDate": "2023-01-31",
+      "summary": "Executed omni-channel digital marketing campaigns for various e-commerce and tech clients.",
+      "highlights": [
+        "Built SEO content strategies that increased organic search traffic by 120% for top-tier accounts.",
+        "Analyzed weekly campaign performance metrics using Google Analytics 4 and Tableau."
+      ]
+    }
+  ],
+  "volunteer": [
+    {
+      "organization": "Green Earth Initiative",
+      "position": "Pro-Bono Marketing Consultant",
+      "url": "https://greenearthinitiative.org",
+      "startDate": "2021-09-01",
+      "endDate": "2024-06-30",
+      "summary": "Assisted a local environmental non-profit with their annual fundraising digital strategy.",
+      "highlights": [
+        "Optimized Google Ad Grants program, capturing $10,000/month in free search advertising.",
+        "Increased online donations by 40% year-over-year through targeted email campaigns."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "San Francisco State University",
+      "area": "Business Administration (Marketing)",
+      "studyType": "Bachelor of Science",
+      "startDate": "2016-09-01",
+      "endDate": "2020-05-15",
+      "score": "3.7 GPA",
+      "courses": [
+        "MKT600: Consumer Behavior",
+        "MKT605: Digital Marketing Analytics",
+        "BUS410: Strategic Management"
+      ]
+    }
+  ],
+  "awards": [
+    {
+      "title": "Top 30 Under 30 Marketers",
+      "date": "2025-10-05",
+      "awarder": "Bay Area Marketing Association",
+      "summary": "Recognized for exceptional growth achievements and innovative campaign execution in the SaaS sector."
+    }
+  ],
+  "publications": [
+    {
+      "name": "The Blueprint for B2B Funnel Optimization",
+      "publisher": "GrowthHackers",
+      "releaseDate": "2024-08-14",
+      "url": "https://example.com",
+      "summary": "A comprehensive tactical guide on mapping, tracking, and fixing leaky marketing funnels."
+    }
+  ],
+  "skills": [
+    {
+      "name": "Paid Acquisition",
+      "level": "Master",
+      "keywords": ["Google Ads", "Meta Ads Manager", "LinkedIn Campaign Manager", "Retargeting"]
+    },
+    {
+      "name": "Analytics & Data",
+      "level": "Senior",
+      "keywords": ["Google Analytics 4", "Tableau", "SQL", "Hotjar", "A/B Testing"]
+    },
+    {
+      "name": "Marketing Automation",
+      "level": "Senior",
+      "keywords": ["HubSpot", "Marketo", "Zapier", "Mailchimp"]
+    }
+  ],
+  "languages": [
+    {
+      "language": "English",
+      "fluency": "Native"
+    },
+    {
+      "language": "Spanish",
+      "fluency": "Professional Working"
+    }
+  ],
+  "interests": [
+    {
+      "name": "Podcasting",
+      "keywords": ["Audio Editing", "Tech Trends Interviews"]
+    },
+    {
+      "name": "Marathons",
+      "keywords": ["Endurance Training", "Running"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Growth Hacking Checklist",
+      "startDate": "2024-01-10",
+      "endDate": "2024-02-28",
+      "description": "An interactive web app that helps early-stage founders audit their marketing strategies and discover growth opportunities.",
+      "highlights": [
+        "Built using Webflow and integrated with Airtable for data storage.",
+        "Generated over 5,000 organic leads within the first month of launching on Product Hunt."
+      ],
+      "url": "https://github.com"
+    }
+  ],
+  "references": [
+    {
+      "name": "Sarah Jenkins",
+      "reference": "Alex has a rare mix of deep analytical skills and creative problem-solving. He completely transformed our acquisition framework and consistently hit our CAC goals."
+    }
+  ],
+  "meta": {
+    "canonical": "https://githubusercontent.com",
+    "version": "1.0.0",
+    "lastModified": "2026-05-26"
+  }
+}

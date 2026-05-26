@@ -11,8 +11,10 @@ context: |
   packages/schemas: official JSON Resume JSON Schema; packages/types: shared TS + meta helpers.
   Data: Supabase Postgres, public.cv table (id, user_id, title, data jsonb, timestamps);
     RLS restricts rows to auth.uid() = user_id; migration in supabase/migrations/.
-  Testing: Vitest (web, types), Jest (api); root pnpm test (turbo); CI: parallel jobs for format:check,
-    Biome lint, typecheck, test, build (see openspec/specs/monorepo-and-toolchain/spec.md).
+  Testing: Vitest (web, types), Jest (api unit + e2e); root pnpm test (turbo, unit only); pnpm test:e2e
+    requires local Supabase + pnpm samples:seed (see openspec/specs/e2e-testing/spec.md).
+    CI: parallel jobs for format:check, Biome lint, typecheck, test, build
+    (see openspec/specs/monorepo-and-toolchain/spec.md).
   Conventions: unit tests colocated beside source; Biome + Prettier (+ tailwind class sort via Prettier);
     Lefthook pre-commit (Biome, Prettier on staged files) and pre-push (pnpm verify).
 
@@ -21,3 +23,5 @@ rules:
     - Reference existing specs in openspec/specs/ when describing capabilities; prefer new change folders under openspec/changes/ for deltas.
   tasks:
     - Point to concrete paths (apps/web/src, apps/api/src, packages/*, supabase/migrations).
+    - Include an **E2E test impact** section (must pass unchanged / update required / add) per
+      openspec/specs/e2e-testing/spec.md — do not edit unrelated E2E specs to force green builds.

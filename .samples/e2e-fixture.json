@@ -1,0 +1,58 @@
+{
+  "version": 2,
+  "description": "Local seed fixture. Run `pnpm samples:seed` after `supabase start` and `pnpm setup:env` (no API required).",
+  "developerUser": {
+    "email": "developer@resumind.local"
+  },
+  "e2eUser": {
+    "email": "e2e-fixture@resumind.local"
+  },
+  "resumesDir": "resumes/jsonresume",
+  "mediaDir": "media",
+  "cvProfilePhotos": {
+    "Alex Mercer - Growth Marketing Manager.json": "profile-02-marketing-man.png",
+    "Carlos Mendes - Executive Chef.json": "profile-09-chef-man.png",
+    "Elena Rodriguez - UX Research Lead.json": "profile-05-designer-woman.png",
+    "Fatima Al-Hassan - Machine Learning Engineer.json": "profile-07-data-woman.png",
+    "James O'Brien - Intellectual Property Attorney.json": "profile-06-lawyer-man.png",
+    "Jane Doe - Senior Software Engineer.json": "profile-01-engineer-woman.png",
+    "Marcus Chen - Site Reliability Engineer.json": "profile-04-tech-man.png",
+    "Priya Sharma - Clinical Research Scientist.json": "profile-03-scientist-woman.png",
+    "Rachel Kim - Family Nurse Practitioner.json": "profile-10-nurse-woman.png",
+    "Tomoko Sato - Senior Product Manager.json": "profile-08-product-woman.png"
+  },
+  "resumes": [
+    "Alex Mercer - Growth Marketing Manager.json",
+    "Carlos Mendes - Executive Chef.json",
+    "Elena Rodriguez - UX Research Lead.json",
+    "Fatima Al-Hassan - Machine Learning Engineer.json",
+    "James O'Brien - Intellectual Property Attorney.json",
+    "Jane Doe - Senior Software Engineer.json",
+    "Marcus Chen - Site Reliability Engineer.json",
+    "Priya Sharma - Clinical Research Scientist.json",
+    "Rachel Kim - Family Nurse Practitioner.json",
+    "Tomoko Sato - Senior Product Manager.json"
+  ],
+  "media": [
+    "profile-01-engineer-woman.png",
+    "profile-02-marketing-man.png",
+    "profile-03-scientist-woman.png",
+    "profile-04-tech-man.png",
+    "profile-05-designer-woman.png",
+    "profile-06-lawyer-man.png",
+    "profile-07-data-woman.png",
+    "profile-08-product-woman.png",
+    "profile-09-chef-man.png",
+    "profile-10-nurse-woman.png",
+    "profile-11-graduate-man.png",
+    "profile-12-professor-woman.png",
+    "profile-13-remote-man.png",
+    "profile-14-architect-woman.png",
+    "profile-15-teacher-man.jpg",
+    "profile-16-designer-neutral.jpg",
+    "profile-17-finance-man.webp",
+    "profile-18-sales-woman.webp",
+    "profile-19-hr-woman.gif",
+    "profile-20-consultant-man.png"
+  ]
+}

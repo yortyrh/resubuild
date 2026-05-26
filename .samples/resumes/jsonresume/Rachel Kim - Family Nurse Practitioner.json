@@ -1,0 +1,233 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+  "basics": {
+    "name": "Rachel Kim",
+    "label": "Family Nurse Practitioner",
+    "image": "https://example.com/avatars/rachel-kim.jpg",
+    "email": "rachel.kim@example.com",
+    "phone": "(312) 555-0173",
+    "url": "https://rachelkimnp.example.com",
+    "summary": "Board-certified FNP providing primary care and chronic disease management in underserved communities. Passionate about preventive health, patient education, and team-based care models.",
+    "location": {
+      "address": "2847 W Peterson Avenue\nUnit 2",
+      "postalCode": "60659",
+      "city": "Chicago",
+      "countryCode": "US",
+      "region": "Illinois"
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "username": "rachel-kim-fnp",
+        "url": "https://linkedin.com/in/rachel-kim-fnp"
+      },
+      {
+        "network": "Doximity",
+        "username": "rachelkimnp",
+        "url": "https://doximity.com/rachelkimnp"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "Community Health Partners",
+      "location": "Chicago, IL",
+      "description": "Federally qualified health center serving 25,000 patients annually",
+      "position": "Family Nurse Practitioner",
+      "url": "https://communityhealthpartners.example.org",
+      "startDate": "2019-08-01",
+      "summary": "Full-scope primary care panel of 900 patients across pediatrics, adult, and geriatric populations.",
+      "highlights": [
+        "Improved diabetes HbA1c control rate 18% through group visit programme.",
+        "Implemented telehealth workflows during COVID-19 serving 200 visits/week at peak.",
+        "Precepts 4 NP students annually; 100% pass board certification on first attempt."
+      ]
+    },
+    {
+      "name": "Northwestern Memorial Hospital",
+      "location": "Chicago, IL",
+      "description": "Academic medical centre – urgent care division",
+      "position": "Registered Nurse – Emergency Department",
+      "url": "https://nm.org",
+      "startDate": "2012-07",
+      "endDate": "2016-08",
+      "summary": "Level I trauma centre RN with charge nurse responsibilities on night shift.",
+      "highlights": [
+        "Earned CEN certification within first year.",
+        "Served on unit council improving sepsis bundle compliance to 94%."
+      ]
+    }
+  ],
+  "volunteer": [
+    {
+      "organization": "Chicago Cares Mobile Clinic",
+      "position": "Volunteer NP – Street Medicine",
+      "url": "https://chicagocares.example.org/mobile",
+      "startDate": "2020-01",
+      "summary": "Provide basic primary care and referrals at weekly pop-up clinics for unhoused residents.",
+      "highlights": [
+        "Conducted 1,500+ patient encounters since programme inception.",
+        "Coordinated vaccine drives reaching 800 individuals during flu seasons."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "University of Illinois Chicago",
+      "url": "https://uic.edu",
+      "area": "Nursing – Family Nurse Practitioner",
+      "studyType": "Doctor of Nursing Practice",
+      "startDate": "2016-09",
+      "endDate": "2019-05-15",
+      "score": "4.0 GPA",
+      "courses": [
+        "Advanced Pathophysiology",
+        "Pharmacology for Advanced Practice",
+        "Primary Care of Families",
+        "Health Policy and Advocacy"
+      ]
+    },
+    {
+      "institution": "DePaul University",
+      "url": "https://depaul.edu",
+      "area": "Nursing",
+      "studyType": "Bachelor of Science",
+      "startDate": "2008",
+      "endDate": "2012",
+      "score": "Summa cum laude",
+      "courses": ["Medical-Surgical Nursing", "Community Health Nursing", "Research Methods"]
+    }
+  ],
+  "awards": [
+    {
+      "title": "Excellence in Primary Care",
+      "date": "2024-10-30",
+      "awarder": "Illinois Nurses Association",
+      "summary": "Recognized for outstanding chronic disease management outcomes in FQHC setting."
+    },
+    {
+      "title": "DAISY Award for Extraordinary Nurses",
+      "date": "2015-03",
+      "awarder": "Northwestern Memorial Hospital",
+      "summary": "Nominated by patient family for compassionate emergency department care."
+    }
+  ],
+  "certificates": [
+    {
+      "name": "Family Nurse Practitioner – Board Certified (FNP-BC)",
+      "date": "2019-06-20",
+      "url": "https://example.com/certs/fnp-bc-rachel",
+      "issuer": "American Nurses Credentialing Center"
+    },
+    {
+      "name": "Basic Life Support (BLS) Provider",
+      "date": "2025-02",
+      "url": "https://example.com/certs/bls",
+      "issuer": "American Heart Association"
+    },
+    {
+      "name": "Certified Emergency Nurse (CEN)",
+      "date": "2013-11-08",
+      "url": "https://example.com/certs/cen",
+      "issuer": "Board of Certification for Emergency Nursing"
+    },
+    {
+      "name": "Illinois APRN License",
+      "date": "2019-07-01",
+      "url": "https://example.com/certs/il-aprn",
+      "issuer": "Illinois Department of Financial and Professional Regulation"
+    }
+  ],
+  "publications": [
+    {
+      "name": "Group Visits for Type 2 Diabetes in FQHC Settings",
+      "publisher": "Journal of the American Association of Nurse Practitioners",
+      "releaseDate": "2023-08-15",
+      "url": "https://example.com/pub/group-visits-diabetes",
+      "summary": "Retrospective cohort study of 180 patients showing improved adherence and glycemic control."
+    }
+  ],
+  "skills": [
+    {
+      "name": "Primary Care",
+      "level": "Master",
+      "keywords": [
+        "Chronic disease management",
+        "Preventive care",
+        "Women's health",
+        "Pediatric well visits"
+      ]
+    },
+    {
+      "name": "Clinical Procedures",
+      "level": "Senior",
+      "keywords": ["Joint injections", "Skin biopsies", "IUD placement", "Suturing"]
+    },
+    {
+      "name": "Health IT",
+      "level": "Competent",
+      "keywords": ["Epic", "Telehealth platforms", "Population health dashboards", "eConsults"]
+    }
+  ],
+  "languages": [
+    { "language": "English", "fluency": "Native" },
+    { "language": "Korean", "fluency": "Fluent" },
+    { "language": "Spanish", "fluency": "Conversational" }
+  ],
+  "interests": [
+    {
+      "name": "Community Gardening",
+      "keywords": ["Nutrition education", "Urban agriculture", "Food access"]
+    },
+    {
+      "name": "Running",
+      "keywords": ["Chicago Marathon", "Half marathons", "Charity runs"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Diabetes Group Visit Curriculum",
+      "description": "Structured 12-week shared medical appointment curriculum for Type 2 diabetes.",
+      "highlights": [
+        "Adopted by three CHP clinic sites.",
+        "Available in English, Spanish, and Korean patient handouts."
+      ],
+      "keywords": ["Diabetes", "Patient education", "Group visits", "FQHC"],
+      "startDate": "2021-03",
+      "endDate": "2022-01",
+      "url": "https://example.com/curriculum/diabetes-group-visits",
+      "roles": ["Author", "Facilitator", "Evaluator"],
+      "entity": "Community Health Partners",
+      "type": "application"
+    },
+    {
+      "name": "NP Preceptor Toolkit",
+      "description": "Resource pack for clinical preceptors including evaluation rubrics and case log templates.",
+      "highlights": [
+        "Shared with UIC College of Nursing preceptor network.",
+        "Downloaded 300+ times."
+      ],
+      "keywords": ["Nursing education", "Preceptorship", "Clinical training"],
+      "startDate": "2020",
+      "url": "https://example.com/toolkit/np-preceptor",
+      "roles": ["Writer", "Contributor"],
+      "entity": "University of Illinois Chicago",
+      "type": "talk"
+    }
+  ],
+  "references": [
+    {
+      "name": "Dr. Sandra Ortiz, MD – Medical Director",
+      "reference": "Rachel is the backbone of our primary care team. Her patients trust her, her students learn from her, and her outcomes speak for themselves."
+    },
+    {
+      "name": "Michael Torres, RN – Clinic Manager",
+      "reference": "She advocates fiercely for underserved patients while keeping our workflows efficient. An exceptional clinician and colleague."
+    }
+  ],
+  "meta": {
+    "canonical": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+    "version": "1.0.0",
+    "lastModified": "2026-05-26T16:30:00"
+  }
+}

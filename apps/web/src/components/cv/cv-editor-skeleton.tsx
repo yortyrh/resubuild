@@ -1,3 +1,4 @@
+import { CvSectionContent } from '@/components/cv/cv-section-content';
 import { CV_SECTIONS, type CvSectionSlug } from '@/components/cv/cv-section-nav';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -51,7 +52,10 @@ function CvEditorBreadcrumbSkeleton({ section }: { section: CvSectionSlug }) {
   const showSectionSegment = section !== 'basics';
 
   return (
-    <div aria-hidden="true" className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2.5">
+    <div
+      aria-hidden="true"
+      className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 sm:gap-2.5"
+    >
       <Skeleton className="h-4 w-16" />
       <Skeleton className="size-3.5 shrink-0 rounded-sm" />
       <Skeleton className="h-4 w-36 max-w-[45vw] sm:w-56" />
@@ -113,21 +117,25 @@ export function CvEditorSkeleton({ section = 'basics' }: CvEditorSkeletonProps) 
   );
 
   return (
-    <div className="flex gap-4 md:gap-6" role="status" aria-busy="true" aria-label="Loading CV">
+    <div className="flex gap-2" role="status" aria-busy="true" aria-label="Loading CV">
       <aside
         aria-hidden="true"
         className="w-12 shrink-0 transition-[width] duration-200 ease-in-out md:w-48"
       >
         <div className="sticky top-6 flex flex-col gap-1">
-          <Skeleton className="mx-auto size-9 shrink-0 rounded-md md:mx-0" />
           <CvSectionNavSkeleton activeIndex={activeIndex} />
         </div>
       </aside>
 
       <div className="min-w-0 flex-1">
         <div className="space-y-6">
-          <CvEditorBreadcrumbSkeleton section={section} />
-          {section === 'basics' ? <CvBasicsSectionSkeleton /> : <CvGenericSectionSkeleton />}
+          <div className="mt-2 flex items-center gap-x-0">
+            <Skeleton className="size-9 shrink-0 rounded-md" />
+            <CvEditorBreadcrumbSkeleton section={section} />
+          </div>
+          <CvSectionContent>
+            {section === 'basics' ? <CvBasicsSectionSkeleton /> : <CvGenericSectionSkeleton />}
+          </CvSectionContent>
         </div>
       </div>
     </div>

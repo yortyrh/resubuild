@@ -1,0 +1,208 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+  "basics": {
+    "name": "Fatima Al-Hassan",
+    "label": "Machine Learning Engineer",
+    "image": "https://example.com/avatars/fatima-al-hassan.jpg",
+    "email": "fatima.alhassan@example.com",
+    "phone": "+971 50 123 4567",
+    "url": "https://fatimaml.example.com",
+    "summary": "ML engineer building production recommendation and ranking systems at scale. Experienced in feature stores, model monitoring, and responsible AI guardrails for consumer platforms.",
+    "location": {
+      "address": "Dubai Internet City, Building 12",
+      "postalCode": "502828",
+      "city": "Dubai",
+      "countryCode": "AE",
+      "region": "Dubai"
+    },
+    "profiles": [
+      {
+        "network": "GitHub",
+        "username": "falhassan-ml",
+        "url": "https://github.com/falhassan-ml"
+      },
+      {
+        "network": "LinkedIn",
+        "username": "fatima-al-hassan-ml",
+        "url": "https://linkedin.com/in/fatima-al-hassan-ml"
+      },
+      {
+        "network": "Kaggle",
+        "username": "fatimaml",
+        "url": "https://kaggle.com/fatimaml"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "GulfStream Media",
+      "location": "Dubai, UAE",
+      "description": "Regional streaming platform with 18M subscribers",
+      "position": "Senior Machine Learning Engineer",
+      "url": "https://gulfstreammedia.example.com",
+      "startDate": "2021-07",
+      "summary": "Own the home feed ranking stack serving 200M daily impressions.",
+      "highlights": [
+        "Shipped two-tower retrieval model improving click-through rate 19%.",
+        "Built feature store on Feast reducing training-serving skew incidents to zero.",
+        "Implemented bias audits and explainability reports for editorial compliance."
+      ]
+    },
+    {
+      "name": "CareConnect Health",
+      "location": "Abu Dhabi, UAE",
+      "description": "Digital health platform for appointment scheduling and triage",
+      "position": "Data Scientist",
+      "url": "https://careconnect.example.ae",
+      "startDate": "2018-02",
+      "endDate": "2021-06-30",
+      "summary": "Developed NLP models for patient intake classification and no-show prediction.",
+      "highlights": [
+        "Reduced clinic no-show rate 14% via SMS timing optimization model.",
+        "Deployed BERT-based triage assistant with human-in-the-loop review."
+      ]
+    }
+  ],
+  "volunteer": [
+    {
+      "organization": "Women in AI Middle East",
+      "position": "Workshop Lead",
+      "url": "https://womeninai-me.example.org",
+      "startDate": "2020",
+      "endDate": "2025",
+      "summary": "Teach introductory ML workshops for university students and career switchers.",
+      "highlights": [
+        "Mentored 60 participants through first Kaggle competitions.",
+        "Co-authored Arabic-language PyTorch tutorial series."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Khalifa University",
+      "url": "https://ku.ac.ae",
+      "area": "Computer Science",
+      "studyType": "Master of Science",
+      "startDate": "2016-09",
+      "endDate": "2018-01",
+      "score": "3.95/4.0",
+      "courses": ["Deep Learning", "Statistical Machine Learning", "Big Data Analytics"]
+    },
+    {
+      "institution": "American University of Sharjah",
+      "url": "https://aus.edu",
+      "area": "Computer Engineering",
+      "studyType": "Bachelor of Science",
+      "startDate": "2012",
+      "endDate": "2016",
+      "score": "Magna cum laude",
+      "courses": ["Algorithms", "Linear Algebra", "Probability and Statistics"]
+    }
+  ],
+  "awards": [
+    {
+      "title": "Kaggle Notebooks Expert",
+      "date": "2024-03",
+      "awarder": "Kaggle",
+      "summary": "Achieved Expert tier for consistently published reproducible ML notebooks with high community engagement."
+    }
+  ],
+  "certificates": [
+    {
+      "name": "TensorFlow Developer Certificate",
+      "date": "2023-09-10",
+      "url": "https://example.com/certs/tf-dev-fatima",
+      "issuer": "Google"
+    },
+    {
+      "name": "AWS Machine Learning Specialty",
+      "date": "2022-06",
+      "url": "https://example.com/certs/aws-ml",
+      "issuer": "Amazon Web Services"
+    }
+  ],
+  "publications": [
+    {
+      "name": "Fairness Constraints in Feed Ranking",
+      "publisher": "ML Ops Community",
+      "releaseDate": "2025-04-08",
+      "url": "https://example.com/pub/fairness-ranking",
+      "summary": "Practical techniques for demographic parity monitoring without sacrificing engagement metrics."
+    }
+  ],
+  "skills": [
+    {
+      "name": "Machine Learning",
+      "level": "Master",
+      "keywords": ["PyTorch", "TensorFlow", "XGBoost", "Two-tower models", "Bandits"]
+    },
+    {
+      "name": "MLOps",
+      "level": "Senior",
+      "keywords": ["MLflow", "Feast", "Kubeflow", "SageMaker", "Evidently AI"]
+    },
+    {
+      "name": "Data Engineering",
+      "level": "Competent",
+      "keywords": ["Spark", "dbt", "Airflow", "BigQuery", "Delta Lake"]
+    }
+  ],
+  "languages": [
+    { "language": "Arabic", "fluency": "Native" },
+    { "language": "English", "fluency": "Fluent" },
+    { "language": "French", "fluency": "Intermediate" }
+  ],
+  "interests": [
+    {
+      "name": "Generative Art",
+      "keywords": ["Diffusion models", "Processing", "Exhibitions"]
+    },
+    {
+      "name": "Desert Photography",
+      "keywords": ["Astrophotography", "Liwa Oasis", "Long exposure"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "RecSys Eval Harness",
+      "description": "Benchmark suite comparing ranking metrics offline vs online A/B outcomes.",
+      "highlights": [
+        "Adopted by GulfStream ML platform team as standard pre-launch gate.",
+        "Supports NDCG, MAP, diversity, and exposure fairness metrics."
+      ],
+      "keywords": ["Recommendation systems", "Evaluation", "Python"],
+      "startDate": "2023-03-01",
+      "endDate": "2024-05",
+      "url": "https://github.com/falhassan-ml/recsys-eval",
+      "roles": ["Creator", "Maintainer"],
+      "entity": "GulfStream Media",
+      "type": "application"
+    },
+    {
+      "name": "Arabic NLP for Healthcare",
+      "description": "Volunteer research collaboration annotating clinical notes for dialect-aware NER.",
+      "highlights": [
+        "Released 12k labelled sentences under research license.",
+        "Presented poster at EMNLP 2024 workshop."
+      ],
+      "keywords": ["NLP", "Arabic", "Healthcare", "NER"],
+      "startDate": "2023",
+      "endDate": "2024-11",
+      "url": "https://example.com/projects/arabic-clinical-ner",
+      "roles": ["Research collaborator", "Speaker"],
+      "entity": "CareConnect Health / Khalifa University",
+      "type": "volunteering"
+    }
+  ],
+  "references": [
+    {
+      "name": "Omar Khalid",
+      "reference": "Fatima ships models that survive production traffic. Her feature store work eliminated an entire class of bugs our team had fought for years."
+    }
+  ],
+  "meta": {
+    "canonical": "https://raw.githubusercontent.com/jsonresume/resume-schema/master/schema.json",
+    "version": "1.0.0",
+    "lastModified": "2026-05-26T13:45:00"
+  }
+}
