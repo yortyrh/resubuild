@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -36,160 +36,402 @@
     </style>
   </head>
   <body class="min-h-screen bg-neutral-100 print:bg-white">
-    <article class="max-w-[8.5in] mx-auto my-6 print:my-0 bg-white text-neutral-900 font-resume text-[11pt] leading-snug shadow-sm print:shadow-none p-[0.5in] print:p-0 text-pretty">
-      <header class="text-center border-b border-neutral-300 pb-3">
-    <h1 class="text-2xl font-bold tracking-tight text-neutral-950">Marcus Chen</h1>
-    <p class="text-sm text-neutral-700 mt-0.5">Site Reliability Engineer</p>
-    <div class="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-neutral-800"><a class="inline-flex items-center gap-1 no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="mailto:marcus.chen@example.com">marcus.chen@example.com</a><span class="inline-flex items-center gap-1">415-555-0142</span><span class="inline-flex items-center gap-1">San Francisco, California, US</span><a class="inline-flex items-center gap-1 no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="https://marcuschen.dev" rel="noopener noreferrer">marcuschen.dev</a></div>
-    <div class="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-neutral-800"><a class="inline-flex items-center gap-1 no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="https://github.com/mchen-sre" rel="noopener noreferrer">GitHub</a><a class="inline-flex items-center gap-1 no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="https://bsky.app/profile/marcus.sre.bsky.social" rel="noopener noreferrer">Bluesky</a></div>
-  </header>
-<section class="mt-4" aria-labelledby="summary-heading">
-    <h2 id="summary-heading" class="sr-only">Summary</h2>
-    <p class="text-neutral-800 text-justify">SRE with a passion for observability, incident response, and building platforms that stay up when everything else is on fire. Former backend engineer turned reliability advocate.</p>
-  </section>
-<section class="mt-5" aria-labelledby="experience-heading">
-    <h2 id="experience-heading" class="text-xs font-bold uppercase tracking-widest text-neutral-600 border-b border-neutral-300 pb-0.5">Experience</h2>
-    <div class="mt-3 space-y-4"><div>
-        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-    <h3 class="font-semibold text-neutral-950">Staff Site Reliability Engineer</h3>
-    <p class="text-sm text-neutral-600 whitespace-nowrap">Jan 2022 – Present</p>
-  </div>
-        <p class="text-sm font-medium text-neutral-800"><a class="no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="https://streamvault.example.com" rel="noopener noreferrer">StreamVault</a> · Remote (US)</p>
-        <p class="italic text-neutral-800 mt-1">Own reliability for core ingestion pipeline and global CDN edge configuration.</p>
-        <ul class="mt-1 list-disc pl-5 space-y-0.5 text-neutral-900"><li>Cut P99 latency 38% by redesigning autoscaling policies on Kubernetes.</li><li>Introduced SLO/error-budget culture; reduced customer-facing incidents by 52% YoY.</li><li>Led postmortem program adopted company-wide with blameless review templates.</li></ul>
-      </div><div>
-        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-    <h3 class="font-semibold text-neutral-950">Platform Engineer</h3>
-    <p class="text-sm text-neutral-600 whitespace-nowrap">Jun 2018 – Dec 2021</p>
-  </div>
-        <p class="text-sm font-medium text-neutral-800"><a class="no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="https://datapipe.example.com" rel="noopener noreferrer">DataPipe Inc.</a> · Austin, TX</p>
-        <p class="italic text-neutral-800 mt-1">Built internal developer platform on AWS EKS with Terraform and Helm.</p>
-        <ul class="mt-1 list-disc pl-5 space-y-0.5 text-neutral-900"><li>Migrated 40+ microservices from EC2 to EKS with zero planned downtime windows.</li><li>Implemented OpenTelemetry tracing across 100% of production services.</li></ul>
-      </div></div>
-  </section>
-<section class="mt-5" aria-labelledby="volunteer-heading">
-    <h2 id="volunteer-heading" class="text-xs font-bold uppercase tracking-widest text-neutral-600 border-b border-neutral-300 pb-0.5">Volunteer</h2>
-    <div class="mt-3 space-y-4"><div>
-        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-    <h3 class="font-semibold text-neutral-950">Program Committee Volunteer</h3>
-    <p class="text-sm text-neutral-600 whitespace-nowrap">Sep 2024 – Mar 2025</p>
-  </div>
-        <p class="text-sm font-medium text-neutral-800"><a class="no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="https://devopsdays.org/events/2025-san-francisco" rel="noopener noreferrer">DevOpsDays SF</a></p>
-        <p class="italic text-neutral-800 mt-1">Reviewed talk proposals and curated reliability track sessions.</p>
-        <ul class="mt-1 list-disc pl-5 space-y-0.5 text-neutral-900"><li>Selected 18 talks from 200+ submissions.</li><li>Moderated opening keynote panel on AI-assisted incident response.</li></ul>
-      </div></div>
-  </section>
-<section class="mt-5" aria-labelledby="education-heading">
-    <h2 id="education-heading" class="text-xs font-bold uppercase tracking-widest text-neutral-600 border-b border-neutral-300 pb-0.5">Education</h2>
-    <div class="mt-3 space-y-3"><div>
-        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-    <h3 class="font-semibold text-neutral-950"><a class="no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="https://gatech.edu" rel="noopener noreferrer">Georgia Institute of Technology</a></h3>
-    <p class="text-sm text-neutral-600 whitespace-nowrap">2016 – 2018</p>
-  </div>
-        <p class="text-sm text-neutral-800">Master of Science, Computer Science · 3.9/4.0</p>
-        <ul class="mt-1 list-disc pl-5 space-y-0.5 text-neutral-900"><li>CS 6210: Advanced Operating Systems</li><li>CS 6476: Computer Vision</li><li>CS 8803: Cloud Computing</li></ul>
-      </div></div>
-  </section>
-<section class="mt-5" aria-labelledby="projects-heading">
-    <h2 id="projects-heading" class="text-xs font-bold uppercase tracking-widest text-neutral-600 border-b border-neutral-300 pb-0.5">Projects</h2>
-    <div class="mt-3 space-y-4"><div>
-        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-    <h3 class="font-semibold text-neutral-950"><a class="no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="https://github.com/mchen-sre/oncall-roulette" rel="noopener noreferrer">OnCall Roulette</a></h3>
-    <p class="text-sm text-neutral-600 whitespace-nowrap">Jan 2023 – Jun 2023</p>
-  </div>
-        <p class="text-sm font-medium text-neutral-800">StreamVault (internal open source) · application · Author, Maintainer</p>
-        <p class="italic text-neutral-800 mt-1">Fair rotation scheduler with timezone-aware handoffs and PTO blackout support.</p>
-        <p class="text-sm text-neutral-800 mt-1">Go, Slack API, Scheduling, SRE tooling</p>
-        <ul class="mt-1 list-disc pl-5 space-y-0.5 text-neutral-900"><li>Used by 30+ teams at StreamVault.</li><li>Exports iCal feeds and Slack reminders.</li></ul>
-      </div><div>
-        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-    <h3 class="font-semibold text-neutral-950"><a class="no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="https://example.com/talks/slo-burn" rel="noopener noreferrer">SLO Burn Talk</a></h3>
-    <p class="text-sm text-neutral-600 whitespace-nowrap">Mar 2025 – Mar 2025</p>
-  </div>
-        <p class="text-sm font-medium text-neutral-800">USENIX · conference · Speaker, Writer</p>
-        <p class="italic text-neutral-800 mt-1">Conference talk on multi-window burn-rate alerting for tier-1 services.</p>
-        <p class="text-sm text-neutral-800 mt-1">SLO, Alerting, Reliability</p>
-        <ul class="mt-1 list-disc pl-5 space-y-0.5 text-neutral-900"><li>Presented at SREcon Americas 2025.</li><li>Slides downloaded 8,000+ times.</li></ul>
-      </div></div>
-  </section>
-<section class="mt-5" aria-labelledby="skills-heading">
-    <h2 id="skills-heading" class="text-xs font-bold uppercase tracking-widest text-neutral-600 border-b border-neutral-300 pb-0.5">Skills</h2>
-    <dl class="mt-3 space-y-2"><div>
-        <dt class="font-semibold text-neutral-950">Observability</dt>
-        <dd class="text-neutral-800">Master — Prometheus, Grafana, Datadog, OpenTelemetry, Loki</dd>
-      </div><div>
-        <dt class="font-semibold text-neutral-950">Infrastructure as Code</dt>
-        <dd class="text-neutral-800">Master — Terraform, Pulumi, Helm, Crossplane</dd>
-      </div><div>
-        <dt class="font-semibold text-neutral-950">Incident Management</dt>
-        <dd class="text-neutral-800">Senior — PagerDuty, Statuspage, Blameless postmortems, Chaos engineering</dd>
-      </div></dl>
-  </section>
-<section class="mt-5" aria-labelledby="awards-heading">
-    <h2 id="awards-heading" class="text-xs font-bold uppercase tracking-widest text-neutral-600 border-b border-neutral-300 pb-0.5">Awards</h2>
-    <div class="mt-3 space-y-3"><div>
-        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-    <h3 class="font-semibold text-neutral-950">Golden SLO Award</h3>
-    <p class="text-sm text-neutral-600 whitespace-nowrap">2025</p>
-  </div>
-        <p class="text-sm font-medium text-neutral-800">StreamVault Engineering</p>
-        <p class="text-neutral-800 mt-1">Awarded for achieving 99.99% availability across ingestion tier for four consecutive quarters.</p>
-      </div></div>
-  </section>
-<section class="mt-5" aria-labelledby="certificates-heading">
-    <h2 id="certificates-heading" class="text-xs font-bold uppercase tracking-widest text-neutral-600 border-b border-neutral-300 pb-0.5">Certificates</h2>
-    <div class="mt-3 space-y-3"><div>
-        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-    <h3 class="font-semibold text-neutral-950"><a class="no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="https://example.com/certs/cka-mchen" rel="noopener noreferrer">Certified Kubernetes Administrator</a></h3>
-    <p class="text-sm text-neutral-600 whitespace-nowrap">Aug 2023</p>
-  </div>
-        <p class="text-sm font-medium text-neutral-800">Cloud Native Computing Foundation</p>
-      </div><div>
-        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-    <h3 class="font-semibold text-neutral-950"><a class="no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="https://example.com/certs/aws-sap" rel="noopener noreferrer">AWS Certified Solutions Architect – Professional</a></h3>
-    <p class="text-sm text-neutral-600 whitespace-nowrap">Apr 2022</p>
-  </div>
-        <p class="text-sm font-medium text-neutral-800">Amazon Web Services</p>
-      </div><div>
-        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-    <h3 class="font-semibold text-neutral-950"><a class="no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="https://example.com/certs/terraform" rel="noopener noreferrer">HashiCorp Terraform Associate</a></h3>
-    <p class="text-sm text-neutral-600 whitespace-nowrap">2021</p>
-  </div>
-        <p class="text-sm font-medium text-neutral-800">HashiCorp</p>
-      </div></div>
-  </section>
-<section class="mt-5" aria-labelledby="publications-heading">
-    <h2 id="publications-heading" class="text-xs font-bold uppercase tracking-widest text-neutral-600 border-b border-neutral-300 pb-0.5">Publications</h2>
-    <div class="mt-3 space-y-3"><div>
-        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-    <h3 class="font-semibold text-neutral-950"><a class="no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="https://example.com/pub/error-budgets" rel="noopener noreferrer">Error Budgets That Engineers Actually Use</a></h3>
-    <p class="text-sm text-neutral-600 whitespace-nowrap">Nov 2024</p>
-  </div>
-        <p class="text-sm font-medium text-neutral-800">SRE Weekly</p>
-        <p class="text-neutral-800 mt-1">Practical patterns for tying product priorities to reliability investment without dashboard fatigue.</p>
-      </div></div>
-  </section>
-<section class="mt-5" aria-labelledby="languages-heading">
-    <h2 id="languages-heading" class="text-xs font-bold uppercase tracking-widest text-neutral-600 border-b border-neutral-300 pb-0.5">Languages</h2>
-    <ul class="mt-3 list-none space-y-0.5 pl-0 text-neutral-800"><li><span class="font-semibold text-neutral-950">English</span> — Native</li><li><span class="font-semibold text-neutral-950">Mandarin</span> — Conversational</li></ul>
-  </section>
-<section class="mt-5" aria-labelledby="interests-heading">
-    <h2 id="interests-heading" class="text-xs font-bold uppercase tracking-widest text-neutral-600 border-b border-neutral-300 pb-0.5">Interests</h2>
-    <dl class="mt-3 space-y-2"><div>
-        <dt class="font-semibold text-neutral-950">Mechanical Keyboards</dt>
-        <dd class="text-neutral-800">Custom builds, Ergo layouts, Soldering</dd>
-      </div><div>
-        <dt class="font-semibold text-neutral-950">Trail Running</dt>
-        <dd class="text-neutral-800">Ultra distances, Marin Headlands, Elevation training</dd>
-      </div></dl>
-  </section>
-<section class="mt-5" aria-labelledby="references-heading">
-    <h2 id="references-heading" class="text-xs font-bold uppercase tracking-widest text-neutral-600 border-b border-neutral-300 pb-0.5">References</h2>
-    <div class="mt-3 space-y-3"><div>
-        <h3 class="font-semibold text-neutral-950">Lisa Park</h3>
-        <p class="text-neutral-800 mt-1">Marcus turned our reliability culture from reactive firefighting into measurable engineering discipline. He is exceptional at teaching SLO thinking to product teams.</p>
-      </div></div>
-  </section>
+    <article
+      class="font-resume mx-auto my-6 max-w-[8.5in] text-pretty bg-white p-[0.5in] text-[11pt] leading-snug text-neutral-900 shadow-sm print:my-0 print:p-0 print:shadow-none"
+    >
+      <header class="border-b border-neutral-300 pb-3 text-center">
+        <h1 class="text-2xl font-bold tracking-tight text-neutral-950">Marcus Chen</h1>
+        <p class="mt-0.5 text-sm text-neutral-700">Site Reliability Engineer</p>
+        <div
+          class="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-neutral-800"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+            href="mailto:marcus.chen@example.com"
+            >marcus.chen@example.com</a
+          ><span class="inline-flex items-center gap-1">415-555-0142</span
+          ><span class="inline-flex items-center gap-1">San Francisco, California, US</span
+          ><a
+            class="inline-flex items-center gap-1 text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+            href="https://marcuschen.dev"
+            rel="noopener noreferrer"
+            >marcuschen.dev</a
+          >
+        </div>
+        <div
+          class="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-neutral-800"
+        >
+          <a
+            class="inline-flex items-center gap-1 text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+            href="https://github.com/mchen-sre"
+            rel="noopener noreferrer"
+            >GitHub</a
+          ><a
+            class="inline-flex items-center gap-1 text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+            href="https://bsky.app/profile/marcus.sre.bsky.social"
+            rel="noopener noreferrer"
+            >Bluesky</a
+          >
+        </div>
+      </header>
+      <section class="mt-4" aria-labelledby="summary-heading">
+        <h2 id="summary-heading" class="sr-only">Summary</h2>
+        <p class="text-justify text-neutral-800">
+          SRE with a passion for observability, incident response, and building platforms that stay
+          up when everything else is on fire. Former backend engineer turned reliability advocate.
+        </p>
+      </section>
+      <section class="mt-5" aria-labelledby="experience-heading">
+        <h2
+          id="experience-heading"
+          class="border-b border-neutral-300 pb-0.5 text-xs font-bold uppercase tracking-widest text-neutral-600"
+        >
+          Experience
+        </h2>
+        <div class="mt-3 space-y-4">
+          <div>
+            <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 class="font-semibold text-neutral-950">Staff Site Reliability Engineer</h3>
+              <p class="whitespace-nowrap text-sm text-neutral-600">Jan 2022 – Present</p>
+            </div>
+            <p class="text-sm font-medium text-neutral-800">
+              <a
+                class="text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+                href="https://streamvault.example.com"
+                rel="noopener noreferrer"
+                >StreamVault</a
+              >
+              · Remote (US)
+            </p>
+            <p class="mt-1 italic text-neutral-800">
+              Own reliability for core ingestion pipeline and global CDN edge configuration.
+            </p>
+            <ul class="mt-1 list-disc space-y-0.5 pl-5 text-neutral-900">
+              <li>Cut P99 latency 38% by redesigning autoscaling policies on Kubernetes.</li>
+              <li>
+                Introduced SLO/error-budget culture; reduced customer-facing incidents by 52% YoY.
+              </li>
+              <li>Led postmortem program adopted company-wide with blameless review templates.</li>
+            </ul>
+          </div>
+          <div>
+            <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 class="font-semibold text-neutral-950">Platform Engineer</h3>
+              <p class="whitespace-nowrap text-sm text-neutral-600">Jun 2018 – Dec 2021</p>
+            </div>
+            <p class="text-sm font-medium text-neutral-800">
+              <a
+                class="text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+                href="https://datapipe.example.com"
+                rel="noopener noreferrer"
+                >DataPipe Inc.</a
+              >
+              · Austin, TX
+            </p>
+            <p class="mt-1 italic text-neutral-800">
+              Built internal developer platform on AWS EKS with Terraform and Helm.
+            </p>
+            <ul class="mt-1 list-disc space-y-0.5 pl-5 text-neutral-900">
+              <li>
+                Migrated 40+ microservices from EC2 to EKS with zero planned downtime windows.
+              </li>
+              <li>Implemented OpenTelemetry tracing across 100% of production services.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      <section class="mt-5" aria-labelledby="volunteer-heading">
+        <h2
+          id="volunteer-heading"
+          class="border-b border-neutral-300 pb-0.5 text-xs font-bold uppercase tracking-widest text-neutral-600"
+        >
+          Volunteer
+        </h2>
+        <div class="mt-3 space-y-4">
+          <div>
+            <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 class="font-semibold text-neutral-950">Program Committee Volunteer</h3>
+              <p class="whitespace-nowrap text-sm text-neutral-600">Sep 2024 – Mar 2025</p>
+            </div>
+            <p class="text-sm font-medium text-neutral-800">
+              <a
+                class="text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+                href="https://devopsdays.org/events/2025-san-francisco"
+                rel="noopener noreferrer"
+                >DevOpsDays SF</a
+              >
+            </p>
+            <p class="mt-1 italic text-neutral-800">
+              Reviewed talk proposals and curated reliability track sessions.
+            </p>
+            <ul class="mt-1 list-disc space-y-0.5 pl-5 text-neutral-900">
+              <li>Selected 18 talks from 200+ submissions.</li>
+              <li>Moderated opening keynote panel on AI-assisted incident response.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      <section class="mt-5" aria-labelledby="education-heading">
+        <h2
+          id="education-heading"
+          class="border-b border-neutral-300 pb-0.5 text-xs font-bold uppercase tracking-widest text-neutral-600"
+        >
+          Education
+        </h2>
+        <div class="mt-3 space-y-3">
+          <div>
+            <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 class="font-semibold text-neutral-950">
+                <a
+                  class="text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+                  href="https://gatech.edu"
+                  rel="noopener noreferrer"
+                  >Georgia Institute of Technology</a
+                >
+              </h3>
+              <p class="whitespace-nowrap text-sm text-neutral-600">2016 – 2018</p>
+            </div>
+            <p class="text-sm text-neutral-800">Master of Science, Computer Science · 3.9/4.0</p>
+            <ul class="mt-1 list-disc space-y-0.5 pl-5 text-neutral-900">
+              <li>CS 6210: Advanced Operating Systems</li>
+              <li>CS 6476: Computer Vision</li>
+              <li>CS 8803: Cloud Computing</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      <section class="mt-5" aria-labelledby="projects-heading">
+        <h2
+          id="projects-heading"
+          class="border-b border-neutral-300 pb-0.5 text-xs font-bold uppercase tracking-widest text-neutral-600"
+        >
+          Projects
+        </h2>
+        <div class="mt-3 space-y-4">
+          <div>
+            <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 class="font-semibold text-neutral-950">
+                <a
+                  class="text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+                  href="https://github.com/mchen-sre/oncall-roulette"
+                  rel="noopener noreferrer"
+                  >OnCall Roulette</a
+                >
+              </h3>
+              <p class="whitespace-nowrap text-sm text-neutral-600">Jan 2023 – Jun 2023</p>
+            </div>
+            <p class="text-sm font-medium text-neutral-800">
+              StreamVault (internal open source) · application · Author, Maintainer
+            </p>
+            <p class="mt-1 italic text-neutral-800">
+              Fair rotation scheduler with timezone-aware handoffs and PTO blackout support.
+            </p>
+            <p class="mt-1 text-sm text-neutral-800">Go, Slack API, Scheduling, SRE tooling</p>
+            <ul class="mt-1 list-disc space-y-0.5 pl-5 text-neutral-900">
+              <li>Used by 30+ teams at StreamVault.</li>
+              <li>Exports iCal feeds and Slack reminders.</li>
+            </ul>
+          </div>
+          <div>
+            <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 class="font-semibold text-neutral-950">
+                <a
+                  class="text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+                  href="https://example.com/talks/slo-burn"
+                  rel="noopener noreferrer"
+                  >SLO Burn Talk</a
+                >
+              </h3>
+              <p class="whitespace-nowrap text-sm text-neutral-600">Mar 2025 – Mar 2025</p>
+            </div>
+            <p class="text-sm font-medium text-neutral-800">
+              USENIX · conference · Speaker, Writer
+            </p>
+            <p class="mt-1 italic text-neutral-800">
+              Conference talk on multi-window burn-rate alerting for tier-1 services.
+            </p>
+            <p class="mt-1 text-sm text-neutral-800">SLO, Alerting, Reliability</p>
+            <ul class="mt-1 list-disc space-y-0.5 pl-5 text-neutral-900">
+              <li>Presented at SREcon Americas 2025.</li>
+              <li>Slides downloaded 8,000+ times.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      <section class="mt-5" aria-labelledby="skills-heading">
+        <h2
+          id="skills-heading"
+          class="border-b border-neutral-300 pb-0.5 text-xs font-bold uppercase tracking-widest text-neutral-600"
+        >
+          Skills
+        </h2>
+        <dl class="mt-3 space-y-2">
+          <div>
+            <dt class="font-semibold text-neutral-950">Observability</dt>
+            <dd class="text-neutral-800">
+              Master — Prometheus, Grafana, Datadog, OpenTelemetry, Loki
+            </dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-neutral-950">Infrastructure as Code</dt>
+            <dd class="text-neutral-800">Master — Terraform, Pulumi, Helm, Crossplane</dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-neutral-950">Incident Management</dt>
+            <dd class="text-neutral-800">
+              Senior — PagerDuty, Statuspage, Blameless postmortems, Chaos engineering
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="mt-5" aria-labelledby="awards-heading">
+        <h2
+          id="awards-heading"
+          class="border-b border-neutral-300 pb-0.5 text-xs font-bold uppercase tracking-widest text-neutral-600"
+        >
+          Awards
+        </h2>
+        <div class="mt-3 space-y-3">
+          <div>
+            <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 class="font-semibold text-neutral-950">Golden SLO Award</h3>
+              <p class="whitespace-nowrap text-sm text-neutral-600">2025</p>
+            </div>
+            <p class="text-sm font-medium text-neutral-800">StreamVault Engineering</p>
+            <p class="mt-1 text-neutral-800">
+              Awarded for achieving 99.99% availability across ingestion tier for four consecutive
+              quarters.
+            </p>
+          </div>
+        </div>
+      </section>
+      <section class="mt-5" aria-labelledby="certificates-heading">
+        <h2
+          id="certificates-heading"
+          class="border-b border-neutral-300 pb-0.5 text-xs font-bold uppercase tracking-widest text-neutral-600"
+        >
+          Certificates
+        </h2>
+        <div class="mt-3 space-y-3">
+          <div>
+            <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 class="font-semibold text-neutral-950">
+                <a
+                  class="text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+                  href="https://example.com/certs/cka-mchen"
+                  rel="noopener noreferrer"
+                  >Certified Kubernetes Administrator</a
+                >
+              </h3>
+              <p class="whitespace-nowrap text-sm text-neutral-600">Aug 2023</p>
+            </div>
+            <p class="text-sm font-medium text-neutral-800">Cloud Native Computing Foundation</p>
+          </div>
+          <div>
+            <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 class="font-semibold text-neutral-950">
+                <a
+                  class="text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+                  href="https://example.com/certs/aws-sap"
+                  rel="noopener noreferrer"
+                  >AWS Certified Solutions Architect – Professional</a
+                >
+              </h3>
+              <p class="whitespace-nowrap text-sm text-neutral-600">Apr 2022</p>
+            </div>
+            <p class="text-sm font-medium text-neutral-800">Amazon Web Services</p>
+          </div>
+          <div>
+            <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 class="font-semibold text-neutral-950">
+                <a
+                  class="text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+                  href="https://example.com/certs/terraform"
+                  rel="noopener noreferrer"
+                  >HashiCorp Terraform Associate</a
+                >
+              </h3>
+              <p class="whitespace-nowrap text-sm text-neutral-600">2021</p>
+            </div>
+            <p class="text-sm font-medium text-neutral-800">HashiCorp</p>
+          </div>
+        </div>
+      </section>
+      <section class="mt-5" aria-labelledby="publications-heading">
+        <h2
+          id="publications-heading"
+          class="border-b border-neutral-300 pb-0.5 text-xs font-bold uppercase tracking-widest text-neutral-600"
+        >
+          Publications
+        </h2>
+        <div class="mt-3 space-y-3">
+          <div>
+            <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 class="font-semibold text-neutral-950">
+                <a
+                  class="text-inherit no-underline hover:text-neutral-600 print:text-inherit"
+                  href="https://example.com/pub/error-budgets"
+                  rel="noopener noreferrer"
+                  >Error Budgets That Engineers Actually Use</a
+                >
+              </h3>
+              <p class="whitespace-nowrap text-sm text-neutral-600">Nov 2024</p>
+            </div>
+            <p class="text-sm font-medium text-neutral-800">SRE Weekly</p>
+            <p class="mt-1 text-neutral-800">
+              Practical patterns for tying product priorities to reliability investment without
+              dashboard fatigue.
+            </p>
+          </div>
+        </div>
+      </section>
+      <section class="mt-5" aria-labelledby="languages-heading">
+        <h2
+          id="languages-heading"
+          class="border-b border-neutral-300 pb-0.5 text-xs font-bold uppercase tracking-widest text-neutral-600"
+        >
+          Languages
+        </h2>
+        <ul class="mt-3 list-none space-y-0.5 pl-0 text-neutral-800">
+          <li><span class="font-semibold text-neutral-950">English</span> — Native</li>
+          <li><span class="font-semibold text-neutral-950">Mandarin</span> — Conversational</li>
+        </ul>
+      </section>
+      <section class="mt-5" aria-labelledby="interests-heading">
+        <h2
+          id="interests-heading"
+          class="border-b border-neutral-300 pb-0.5 text-xs font-bold uppercase tracking-widest text-neutral-600"
+        >
+          Interests
+        </h2>
+        <dl class="mt-3 space-y-2">
+          <div>
+            <dt class="font-semibold text-neutral-950">Mechanical Keyboards</dt>
+            <dd class="text-neutral-800">Custom builds, Ergo layouts, Soldering</dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-neutral-950">Trail Running</dt>
+            <dd class="text-neutral-800">Ultra distances, Marin Headlands, Elevation training</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="mt-5" aria-labelledby="references-heading">
+        <h2
+          id="references-heading"
+          class="border-b border-neutral-300 pb-0.5 text-xs font-bold uppercase tracking-widest text-neutral-600"
+        >
+          References
+        </h2>
+        <div class="mt-3 space-y-3">
+          <div>
+            <h3 class="font-semibold text-neutral-950">Lisa Park</h3>
+            <p class="mt-1 text-neutral-800">
+              Marcus turned our reliability culture from reactive firefighting into measurable
+              engineering discipline. He is exceptional at teaching SLO thinking to product teams.
+            </p>
+          </div>
+        </div>
+      </section>
     </article>
   </body>
 </html>
