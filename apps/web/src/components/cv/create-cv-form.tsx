@@ -30,6 +30,7 @@ export function CreateCvForm({ onSave, onCancel }: CreateCvFormProps) {
       await onSave({ basics });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create CV');
+    } finally {
       setSaving(false);
     }
   };

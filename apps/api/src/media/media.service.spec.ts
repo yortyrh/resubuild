@@ -540,6 +540,86 @@ describe('MediaService', () => {
       );
       await moduleRef.close();
     });
+
+    it('throws BadRequest when media lookup returns an error', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({ data: null, error: { message: 'lookup failed' } });
+      await expect(service.cropMedia('user-123', FIXED_MEDIA_ID, crop)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws NotFound when original file download fails', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      downloadFn.mockResolvedValueOnce({ data: null, error: { message: 'missing object' } });
+      await expect(service.cropMedia('user-123', FIXED_MEDIA_ID, crop)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      await moduleRef.close();
+    });
+
+    it('removes previous cropped object before uploading replacement', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({
+        data: {
+          user_id: 'user-123',
+          storage_path: `user-123/${FIXED_MEDIA_ID}.png`,
+          content_type: 'image/png',
+          cropped_storage_path: `user-123/${FIXED_MEDIA_ID}_old.webp`,
+        },
+        error: null,
+      });
+      await service.cropMedia('user-123', FIXED_MEDIA_ID, crop);
+      expect(removeFn).toHaveBeenCalledWith([`user-123/${FIXED_MEDIA_ID}_old.webp`]);
+      await moduleRef.close();
+    });
+
+    it('throws BadRequest when cropped upload fails', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      uploadFn.mockResolvedValueOnce({ error: { message: 'upload rejected' } });
+      await expect(service.cropMedia('user-123', FIXED_MEDIA_ID, crop)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws BadRequest when crop metadata update fails', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      updateFn.mockReturnValueOnce({
+        eq: jest.fn().mockResolvedValue({ error: { message: 'update denied' } }),
+      });
+      await expect(service.cropMedia('user-123', FIXED_MEDIA_ID, crop)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws ServiceUnavailableException when MEDIA_BUCKET is not set', async () => {
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          MediaService,
+          {
+            provide: ConfigService,
+            useValue: {
+              get: (key: string) =>
+                (
+                  ({
+                    SUPABASE_URL: 'https://x.supabase.co',
+                    SUPABASE_SERVICE_ROLE_KEY: 'service-role-token',
+                    PORT: '3001',
+                  }) as Record<string, string | undefined>
+                )[key],
+            },
+          },
+        ],
+      }).compile();
+      await moduleRef.init();
+      await expect(
+        moduleRef.get(MediaService).cropMedia('user-123', FIXED_MEDIA_ID, crop),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+      await moduleRef.close();
+    });
   });
 
   describe('deleteMedia', () => {
@@ -573,6 +653,71 @@ describe('MediaService', () => {
       await expect(service.deleteMedia('other-user', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
         ForbiddenException,
       );
+      await moduleRef.close();
+    });
+
+    it('throws BadRequest when media lookup returns an error', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({ data: null, error: { message: 'lookup failed' } });
+      await expect(service.deleteMedia('user-123', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws NotFound for missing media', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({ data: null, error: null });
+      await expect(service.deleteMedia('user-123', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      await moduleRef.close();
+    });
+
+    it('logs when storage cleanup fails but still deletes row', async () => {
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const { service, moduleRef } = await bootstrapModule(true);
+      removeFn.mockRejectedValueOnce(new Error('storage unavailable'));
+      await service.deleteMedia('user-123', FIXED_MEDIA_ID);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Storage cleanup failed'));
+      warnSpy.mockRestore();
+      await moduleRef.close();
+    });
+
+    it('throws BadRequest when media row delete fails', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      deleteFn.mockReturnValueOnce({
+        eq: jest.fn().mockResolvedValue({ error: { message: 'delete denied' } }),
+      });
+      await expect(service.deleteMedia('user-123', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws ServiceUnavailableException when MEDIA_BUCKET is not set', async () => {
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          MediaService,
+          {
+            provide: ConfigService,
+            useValue: {
+              get: (key: string) =>
+                (
+                  ({
+                    SUPABASE_URL: 'https://x.supabase.co',
+                    SUPABASE_SERVICE_ROLE_KEY: 'service-role-token',
+                    PORT: '3001',
+                  }) as Record<string, string | undefined>
+                )[key],
+            },
+          },
+        ],
+      }).compile();
+      await moduleRef.init();
+      await expect(
+        moduleRef.get(MediaService).deleteMedia('user-123', FIXED_MEDIA_ID),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
       await moduleRef.close();
     });
   });
@@ -611,6 +756,24 @@ describe('MediaService', () => {
       const { service, moduleRef } = await bootstrapModule(true);
       await expect(service.getMediaMeta('other-user', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
         ForbiddenException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws BadRequest when media lookup returns an error', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({ data: null, error: { message: 'lookup failed' } });
+      await expect(service.getMediaMeta('user-123', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws NotFound for missing media', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({ data: null, error: null });
+      await expect(service.getMediaMeta('user-123', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
       );
       await moduleRef.close();
     });

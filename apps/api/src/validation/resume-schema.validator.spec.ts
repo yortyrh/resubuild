@@ -19,4 +19,21 @@ describe('ResumeSchemaValidator', () => {
       }),
     ).toThrow(BadRequestException);
   });
+
+  it('includes AJV error paths in validation messages', () => {
+    try {
+      validator.validate({
+        basics: { email: 'not-an-email', url: 'not-a-url' },
+      });
+      throw new Error('expected validation to fail');
+    } catch (error) {
+      expect(error).toBeInstanceOf(BadRequestException);
+      const response = (error as BadRequestException).getResponse() as {
+        message: string;
+        errors: string[];
+      };
+      expect(response.errors.length).toBeGreaterThan(0);
+      expect(response.errors.some((entry) => entry.includes('/basics'))).toBe(true);
+    }
+  });
 });
