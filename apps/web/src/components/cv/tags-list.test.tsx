@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { tagPillClassName } from './tags-input';
+import { roleTagPillClassName, tagPillClassName } from './tags-input';
 import { TagsList } from './tags-list';
 
 describe('TagsList', () => {
@@ -31,5 +31,19 @@ describe('TagsList', () => {
   it('returns null for empty values', () => {
     const { container } = render(<TagsList values={[]} />);
     expect(container.firstChild).toBeNull();
+  });
+
+  it('renders a metadata label when label is provided', () => {
+    render(<TagsList label="Keywords" values={['React']} />);
+
+    expect(screen.getByText('Keywords')).toBeInTheDocument();
+    expect(screen.getByText('React')).toBeInTheDocument();
+  });
+
+  it('uses role pill styling when variant is roles', () => {
+    render(<TagsList label="Roles" variant="roles" values={['Lead']} />);
+
+    const rolePill = screen.getByText('Lead').closest('span');
+    expect(rolePill).toHaveClass(...roleTagPillClassName.split(' '));
   });
 });

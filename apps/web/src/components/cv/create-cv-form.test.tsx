@@ -63,4 +63,17 @@ describe('CreateCvForm', () => {
     expect(mockOnCancel).toHaveBeenCalledTimes(1);
     expect(mockOnSave).not.toHaveBeenCalled();
   });
+
+  it('invokes onSave when Enter is pressed in a text field', async () => {
+    mockOnSave.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<CreateCvForm onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    const textboxes = screen.getAllByRole('textbox');
+    await user.type(textboxes[0], 'Jane Doe{Enter}');
+
+    await waitFor(() => {
+      expect(mockOnSave).toHaveBeenCalledTimes(1);
+    });
+  });
 });

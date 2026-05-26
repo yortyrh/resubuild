@@ -39,7 +39,7 @@ vi.mock('@/lib/api', () => ({
 }));
 
 import { CvSections } from './cv-sections';
-import { tagPillClassName } from './tags-input';
+import { roleTagPillClassName, tagPillClassName } from './tags-input';
 
 function fullyPopulatedResume(): Resume {
   return {
@@ -170,7 +170,7 @@ describe('CvSections field coverage', () => {
       const resume = fullyPopulatedResume();
       renderSection('work', resume);
 
-      expect(screen.getByText(/Staff Engineer/)).toBeInTheDocument();
+      expect(screen.getByText('Staff Engineer')).toBeInTheDocument();
       expectLinkedTitle('Acme Corp', 'https://acme.example.com');
       expect(screen.getByText('Remote')).toBeInTheDocument();
       expect(screen.queryByText('https://acme.example.com')).not.toBeInTheDocument();
@@ -204,16 +204,19 @@ describe('CvSections field coverage', () => {
       resume.work = [{ position: 'Dev', name: 'Co' }];
       renderSection('work', resume);
 
-      expect(screen.getByText(/Dev, Co/)).toBeInTheDocument();
+      expect(screen.getByText('Dev')).toBeInTheDocument();
+      expect(screen.getByText('Co')).toBeInTheDocument();
+      expect(screen.queryByText(/Dev, Co/)).not.toBeInTheDocument();
       expect(screen.queryByText('https://')).not.toBeInTheDocument();
     });
   });
 
   describe('Volunteer view', () => {
-    it('links organization in title when url is populated', () => {
+    it('links organization in subtitle when url is populated', () => {
       const resume = fullyPopulatedResume();
       renderSection('volunteer', resume);
 
+      expect(screen.getByText('Mentor')).toBeInTheDocument();
       expectLinkedTitle('Code for Good', 'https://codeforgood.org');
       expect(screen.queryByText('https://codeforgood.org')).not.toBeInTheDocument();
       expect(screen.getByText('Mentored junior devs.')).toBeInTheDocument();
@@ -238,18 +241,35 @@ describe('CvSections field coverage', () => {
       renderSection('projects', resume);
 
       expectLinkedTitle('Resume Builder', 'https://resume.example.com');
-      expect(screen.getByText('Entity: Open Source')).toBeInTheDocument();
-      expect(screen.getByText('Type: Application')).toBeInTheDocument();
+      expect(screen.getByText('Entity')).toBeInTheDocument();
+      expect(screen.getByText('Open Source')).toBeInTheDocument();
+      expect(screen.getByText('Type')).toBeInTheDocument();
+      expect(screen.getByText('Application')).toBeInTheDocument();
+      expect(screen.queryByText('Entity: Open Source')).not.toBeInTheDocument();
+      expect(screen.queryByText('Type: Application')).not.toBeInTheDocument();
       expect(screen.queryByText('https://resume.example.com')).not.toBeInTheDocument();
       expect(screen.getByText('Open source resume tool.')).toBeInTheDocument();
     });
 
-    it('renders keywords as tag pills without comma-separated prefix', () => {
+    it('renders roles as labeled pills with distinct styling', () => {
+      const resume = fullyPopulatedResume();
+      renderSection('projects', resume);
+
+      expect(screen.getByText('Roles')).toBeInTheDocument();
+      expect(screen.getByText('Lead')).toBeInTheDocument();
+      expect(screen.queryByText('Roles: Lead')).not.toBeInTheDocument();
+
+      const rolePill = screen.getByText('Lead').closest('span');
+      expect(rolePill).toHaveClass(...roleTagPillClassName.split(' '));
+    });
+
+    it('renders keywords as labeled tag pills without comma-separated prefix', () => {
       const resume = fullyPopulatedResume();
       const { container } = render(
         <CvSections {...defaultProps} activeSection="projects" resume={resume} />,
       );
 
+      expect(screen.getByText('Keywords')).toBeInTheDocument();
       expect(screen.getByText('React')).toBeInTheDocument();
       expect(screen.queryByText('Keywords: React')).not.toBeInTheDocument();
       expect(screen.queryByText('React,')).not.toBeInTheDocument();
@@ -261,10 +281,11 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Skills view', () => {
-    it('renders keywords as tag pills', () => {
+    it('renders keywords as tag pills without a label', () => {
       const resume = fullyPopulatedResume();
       renderSection('skills', resume);
 
+      expect(screen.queryByText('Keywords')).not.toBeInTheDocument();
       expect(screen.getByText('TS')).toBeInTheDocument();
       expect(screen.getByText('JS')).toBeInTheDocument();
       expect(screen.queryByText('TS, JS')).not.toBeInTheDocument();
@@ -275,10 +296,11 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Interests view', () => {
-    it('renders keywords as tag pills', () => {
+    it('renders keywords as labeled tag pills', () => {
       const resume = fullyPopulatedResume();
       renderSection('interests', resume);
 
+      expect(screen.getByText('Keywords')).toBeInTheDocument();
       expect(screen.getByText('outdoors')).toBeInTheDocument();
       expect(screen.getByText('nature')).toBeInTheDocument();
       expect(screen.queryByText('outdoors, nature')).not.toBeInTheDocument();

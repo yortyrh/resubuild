@@ -3,6 +3,8 @@
 import { type ReactNode, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 
+const resumeItemActionsClassName = 'divider-soft mt-4 flex gap-2 border-t pt-4';
+
 interface DeleteItemDialogProps {
   open: boolean;
   title: string;
@@ -38,7 +40,7 @@ export function DeleteItemDialog({
   return (
     <dialog
       ref={dialogRef}
-      className="bg-background fixed left-1/2 top-1/2 w-[min(100%,24rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border p-6 shadow-lg backdrop:bg-black/50"
+      className="bg-background ring-border/50 fixed left-1/2 top-1/2 w-[min(100%,24rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl p-6 shadow-lg ring-1 backdrop:bg-black/50"
       onCancel={(e) => {
         e.preventDefault();
         onCancel();
@@ -76,20 +78,22 @@ export function ResumeItemRow({
   onDelete,
 }: ResumeItemRowProps) {
   return (
-    <div className="border-b pb-4 pt-0 last:border-b-0">
+    <article className="surface-soft text-card-foreground p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="font-semibold">{title}</div>
           {subtitle ? (
-            <div className="text-muted-foreground mt-0.5 text-sm font-normal">{subtitle}</div>
+            <div className="text-muted-foreground mt-0 text-sm font-normal leading-snug">
+              {subtitle}
+            </div>
           ) : null}
         </div>
         {meta ? (
           <div className="text-muted-foreground shrink-0 text-right text-sm">{meta}</div>
         ) : null}
       </div>
-      {children ? <div className="mt-2">{children}</div> : null}
-      <div className="mt-3 flex gap-2">
+      {children ? <div className="mt-3">{children}</div> : null}
+      <div className={resumeItemActionsClassName}>
         <Button type="button" variant="outline" size="sm" onClick={onEdit}>
           Edit
         </Button>
@@ -99,7 +103,7 @@ export function ResumeItemRow({
           </Button>
         ) : null}
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -119,18 +123,26 @@ export function ResumeItemForm({
   onCancel,
 }: ResumeItemFormProps) {
   return (
-    <div className="border-b last:border-b-0">
+    <form
+      className="surface-soft text-card-foreground p-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!saving) {
+          onSave();
+        }
+      }}
+    >
       <div className="space-y-4">{children}</div>
       {error ? <p className="text-destructive mt-3 text-sm">{error}</p> : null}
-      <div className="my-2 flex gap-2">
-        <Button type="button" onClick={onSave} disabled={saving}>
+      <div className={resumeItemActionsClassName}>
+        <Button type="submit" disabled={saving}>
           {saving ? 'Saving…' : 'Save'}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
       </div>
-    </div>
+    </form>
   );
 }
 
@@ -164,18 +176,26 @@ export function SectionCreateForm({
   }
 
   return (
-    <div className="mt-6 border-t pt-6">
+    <form
+      className="surface-soft text-card-foreground mt-4 p-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!saving) {
+          onSave();
+        }
+      }}
+    >
       <h4 className="mb-4 text-base font-semibold">{label}</h4>
       <div className="space-y-4">{children}</div>
       {error ? <p className="text-destructive mt-3 text-sm">{error}</p> : null}
-      <div className="mt-4 flex gap-2">
-        <Button type="button" onClick={onSave} disabled={saving}>
+      <div className={resumeItemActionsClassName}>
+        <Button type="submit" disabled={saving}>
           {saving ? 'Saving…' : 'Save'}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
       </div>
-    </div>
+    </form>
   );
 }

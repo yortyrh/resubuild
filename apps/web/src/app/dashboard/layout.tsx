@@ -6,7 +6,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <SessionGate>
       <div className="min-h-screen">
-        <header className="border-b">
+        <header className="chrome-divider bg-background/90 supports-[backdrop-filter]:bg-background/75 border-b shadow-[0_1px_3px_0_rgb(0_0_0/0.04)] backdrop-blur-sm">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
             <div className="flex items-center gap-6">
               <Link href="/dashboard" className="text-lg font-semibold">
@@ -21,7 +21,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <SignOutButton />
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+        <main className="p-4.5 mx-auto max-w-6xl pt-2">{children}</main>
       </div>
     </SessionGate>
   );

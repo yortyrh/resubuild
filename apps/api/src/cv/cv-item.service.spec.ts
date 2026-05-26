@@ -78,6 +78,43 @@ describe('CvItemService', () => {
     expect(cvService.persistValidatedData).toHaveBeenCalled();
   });
 
+  it('strips empty optional url before persisting work entries', async () => {
+    cvService.findOne.mockResolvedValue(baseRow({ meta, work: [] }));
+    cvService.persistValidatedData.mockResolvedValue(
+      baseRow({
+        meta: { ...meta, version: 'v1.0.1' },
+        work: [{ name: 'TechNova', position: 'Senior Software Engineer' }],
+      }),
+    );
+
+    await service.createArrayItem(
+      user,
+      'cv-1',
+      'work',
+      {
+        name: 'TechNova',
+        position: 'Senior Software Engineer',
+        url: '',
+        highlights: ['Shipped features'],
+      },
+      'v1.0.0',
+    );
+
+    expect(cvService.persistValidatedData).toHaveBeenCalledWith(
+      user,
+      'cv-1',
+      expect.objectContaining({
+        work: [
+          {
+            name: 'TechNova',
+            position: 'Senior Software Engineer',
+            highlights: ['Shipped features'],
+          },
+        ],
+      }),
+    );
+  });
+
   it('throws 409 when client version is stale', async () => {
     cvService.findOne.mockResolvedValue(
       baseRow({

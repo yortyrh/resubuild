@@ -69,6 +69,6 @@ describe('ManagedBasicsSection', () => {
     expect(
       summary.compareDocumentPosition(editButton) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(editButton.closest('.mt-3.flex.gap-2')).not.toBeNull();
+    expect(editButton.closest('.divider-soft.mt-4.flex.gap-2')).not.toBeNull();
   });
 });

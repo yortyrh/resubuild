@@ -1,0 +1,92 @@
+'use client';
+
+import {
+  type CvTitleBasics,
+  deriveCvShortTitleFromBasics,
+  deriveCvTitleFromBasics,
+} from '@resumind/types';
+import Link from 'next/link';
+import { CV_SECTIONS, type CvSectionSlug } from '@/components/cv/cv-section-nav';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { cn } from '@/lib/utils';
+
+interface CvEditorBreadcrumbProps {
+  cvId: string;
+  basics?: CvTitleBasics | null;
+  activeSection: CvSectionSlug;
+  className?: string;
+}
+
+function sectionLabel(slug: CvSectionSlug): string {
+  return CV_SECTIONS.find((section) => section.slug === slug)?.label ?? 'Basics';
+}
+
+function CvTitleDisplay({ basics, muted }: { basics?: CvTitleBasics | null; muted: boolean }) {
+  const title = deriveCvTitleFromBasics(basics);
+  const shortTitle = deriveCvShortTitleFromBasics(basics);
+  const showShortTitle = shortTitle !== title;
+
+  return (
+    <>
+      {showShortTitle ? (
+        <span className={cn('sm:hidden', muted && 'text-muted-foreground')}>{shortTitle}</span>
+      ) : null}
+      <span className={cn(showShortTitle && 'hidden sm:inline', muted && 'text-muted-foreground')}>
+        {title}
+      </span>
+    </>
+  );
+}
+
+export function CvEditorBreadcrumb({
+  cvId,
+  basics,
+  activeSection,
+  className,
+}: CvEditorBreadcrumbProps) {
+  const title = deriveCvTitleFromBasics(basics);
+  const isUntitled = title === 'Untitled CV';
+  const onBasics = activeSection === 'basics';
+  const cvHref = `/dashboard/cv/${cvId}`;
+
+  return (
+    <Breadcrumb className={cn('mt-2', className)}>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink asChild>
+            <Link href="/dashboard">My CVs</Link>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          {onBasics ? (
+            <BreadcrumbPage>
+              <CvTitleDisplay basics={basics} muted={isUntitled} />
+            </BreadcrumbPage>
+          ) : (
+            <BreadcrumbLink asChild>
+              <Link href={cvHref} aria-label={title}>
+                <CvTitleDisplay basics={basics} muted={isUntitled} />
+              </Link>
+            </BreadcrumbLink>
+          )}
+        </BreadcrumbItem>
+        {!onBasics ? (
+          <>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{sectionLabel(activeSection)}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </>
+        ) : null}
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
+}

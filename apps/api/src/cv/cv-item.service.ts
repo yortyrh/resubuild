@@ -5,7 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { applyResumeMetaForUpdate, getResumeMetaVersion } from '@resumind/types';
+import {
+  applyResumeMetaForUpdate,
+  getResumeMetaVersion,
+  sanitizeResumeItemPayload,
+} from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvService } from './cv.service';
 import type { CvItemMutationResponse } from './cv-item.types';
@@ -182,9 +186,10 @@ export class CvItemService {
     item: Record<string, unknown>,
     version?: string,
   ): Promise<CvItemMutationResponse> {
+    const sanitized = sanitizeResumeItemPayload(item);
     return this.mutateCvData(user, cvId, version, (data) => {
       const array = this.ensureArray(data, key);
-      array.push(item);
+      array.push(sanitized);
       const index = array.length - 1;
       return { index, item: array[index] };
     });
@@ -203,7 +208,7 @@ export class CvItemService {
     return this.mutateCvData(user, cvId, version, (data) => {
       const array = this.ensureArray(data, key);
       const current = this.getArrayItem<Record<string, unknown>>(data, key, index, label);
-      array[index] = { ...current, ...item };
+      array[index] = sanitizeResumeItemPayload({ ...current, ...item });
       return { index, item: array[index] };
     });
   }

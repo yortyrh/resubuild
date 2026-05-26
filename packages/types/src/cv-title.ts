@@ -23,3 +23,12 @@ export function deriveCvTitleFromBasics(basics?: CvTitleBasics | null): string {
 
   return UNTITLED_CV;
 }
+
+export function deriveCvShortTitleFromBasics(basics?: CvTitleBasics | null): string {
+  const name = basics?.name?.trim() ?? '';
+  if (name) {
+    return name;
+  }
+
+  return deriveCvTitleFromBasics(basics);
+}

@@ -35,6 +35,21 @@ describe('highlightBody', () => {
     expect(container.textContent).toContain('CS101');
   });
 
+  it('renders a title above the bullet list', () => {
+    const { container } = render(highlightBody(['Shipped v2'], { markdown: true }));
+
+    expect(container.textContent).toContain('Highlights');
+    expect(container.textContent).toContain('Shipped v2');
+    expect(container.querySelector('ul')).not.toBeNull();
+  });
+
+  it('supports a custom title', () => {
+    const { container } = render(highlightBody(['CS101'], { title: 'Courses' }));
+
+    expect(container.textContent).toContain('Courses');
+    expect(container.textContent).toContain('CS101');
+  });
+
   it('returns null for empty values', () => {
     const { container } = render(highlightBody([]));
     expect(container.innerHTML).toBe('');

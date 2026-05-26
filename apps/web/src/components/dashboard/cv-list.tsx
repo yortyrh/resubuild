@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { DeleteItemDialog } from '@/components/cv/cv-item-ui';
+import { CvListSkeleton } from '@/components/dashboard/cv-list-skeleton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { CvRecord } from '@/lib/api';
@@ -14,6 +16,8 @@ export function CvList() {
   const [cvs, setCvs] = useState<CvRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadCvs = () =>
     listCvs()
@@ -25,23 +29,29 @@ export function CvList() {
     loadCvs();
   }, [loadCvs]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this CV?')) {
+  const pendingDelete = deleteId ? cvs.find((cv) => cv.id === deleteId) : undefined;
+
+  const confirmDelete = async () => {
+    if (!deleteId) {
       return;
     }
 
+    setDeleting(true);
     try {
-      await deleteCv(id);
+      await deleteCv(deleteId);
       toast.success('CV deleted');
+      setDeleteId(null);
       await loadCvs();
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete CV');
+    } finally {
+      setDeleting(false);
     }
   };
 
   if (loading) {
-    return <p className="text-muted-foreground">Loading CVs…</p>;
+    return <CvListSkeleton />;
   }
 
   if (error) {
@@ -67,21 +77,40 @@ export function CvList() {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {cvs.map((cv) => (
-        <Card key={cv.id}>
-          <CardHeader>
-            <CardTitle>{cv.title}</CardTitle>
-            <CardDescription>Updated {new Date(cv.updated_at).toLocaleString()}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex gap-2">
-            <Button asChild>
+        <article key={cv.id} className="surface-soft text-card-foreground p-4">
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold">{cv.title}</div>
+            <div className="text-muted-foreground mt-0 text-sm font-normal leading-snug">
+              Updated {new Date(cv.updated_at).toLocaleString()}
+            </div>
+          </div>
+          <div className="divider-soft mt-4 flex gap-2 border-t pt-4">
+            <Button asChild size="sm" variant="outline">
               <Link href={`/dashboard/cv/${cv.id}`}>Edit</Link>
             </Button>
-            <Button variant="destructive" onClick={() => handleDelete(cv.id)}>
+            <Button size="sm" variant="destructive" onClick={() => setDeleteId(cv.id)}>
               Delete
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </article>
       ))}
+
+      <DeleteItemDialog
+        open={deleteId !== null}
+        title="Delete CV?"
+        description={
+          pendingDelete
+            ? `"${pendingDelete.title}" will be permanently removed. This cannot be undone.`
+            : 'This CV will be permanently removed. This cannot be undone.'
+        }
+        confirming={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          if (!deleting) {
+            setDeleteId(null);
+          }
+        }}
+      />
     </div>
   );
 }

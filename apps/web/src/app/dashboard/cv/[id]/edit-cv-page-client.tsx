@@ -3,7 +3,8 @@
 import type { Resume } from '@resumind/types';
 import { useEffect, useState } from 'react';
 import { CvEditor } from '@/components/cv/cv-editor';
-import type { CvSectionSlug } from '@/components/cv/cv-section-nav';
+import { CvEditorSkeleton } from '@/components/cv/cv-editor-skeleton';
+import { type CvSectionSlug, resolveSectionFromSlug } from '@/components/cv/cv-section-nav';
 import { getCv } from '@/lib/api';
 
 export function EditCvPageClient({ cvId, section }: { cvId: string; section?: CvSectionSlug }) {
@@ -23,16 +24,8 @@ export function EditCvPageClient({ cvId, section }: { cvId: string; section?: Cv
   }
 
   if (!resume) {
-    return <p className="text-muted-foreground">Loading CV…</p>;
+    return <CvEditorSkeleton section={resolveSectionFromSlug(section)} />;
   }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Edit CV</h1>
-        <p className="text-muted-foreground">Update your CV.</p>
-      </div>
-      <CvEditor cvId={cvId} initialResume={resume} section={section} />
-    </div>
-  );
+  return <CvEditor cvId={cvId} initialResume={resume} section={section} />;
 }

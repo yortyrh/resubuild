@@ -14,8 +14,8 @@
   --accent: 240 4.8% 95.9%;
   --accent-foreground: 240 5.9% 10%;
   --destructive: 0 84.2% 60.2%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
+  --border: 240 6% 93%;
+  --input: 240 6% 91%;
   --ring: 240 5.9% 10%;
   --popover: 0 0% 100%;
   --popover-foreground: 240 10% 3.9%;
@@ -36,8 +36,8 @@
     --accent: 240 3.7% 15.9%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
+    --border: 240 4% 22%;
+    --input: 240 4% 20%;
     --ring: 240 4.9% 83.9%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
@@ -73,23 +73,80 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
+@layer utilities {
+  .surface-soft {
+    border-radius: 0.75rem;
+    background-color: hsl(var(--muted) / 0.35);
+    box-shadow:
+      0 1px 2px 0 rgb(0 0 0 / 0.04),
+      inset 0 0 0 1px hsl(var(--border) / 0.55);
+  }
+
+  .divider-soft {
+    border-color: hsl(var(--border) / 0.45);
+  }
+
+  .chrome-divider {
+    border-color: hsl(var(--border) / 0.5);
+  }
+}
+
 .rich-text-editor .rounded-md.border {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.25rem;
 }
 
 .rich-text-editor--inline .rounded-md.border {
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
+}
+
+/* Wysimark toolbar — em-based sizing inherits from `.rounded-md.border` above. */
+.rich-text-editor .rounded-md.border > div > div:first-child > div {
+  height: calc(2.35em + 1px) !important;
+}
+
+.rich-text-editor--inline .rounded-md.border > div > div:first-child > div {
+  height: calc(1.9em + 1px) !important;
+}
+
+.rich-text-editor [data-item-type='button'] {
+  font-size: 1.05em !important;
+  height: 1.65em !important;
+  margin-top: 0.125em !important;
+  padding: 0.2em 0.28em !important;
+}
+
+.rich-text-editor--inline [data-item-type='button'] {
+  font-size: 0.95em !important;
+  height: 1.45em !important;
+  margin-top: 0.08em !important;
+  padding: 0.15em 0.2em !important;
+}
+
+.rich-text-editor [data-item-type='button'] svg {
+  width: 1em;
+  height: 1em;
+}
+
+.rich-text-editor [data-item-type='divider'] {
+  height: 2.1em !important;
+  padding-inline: 0.2em !important;
+}
+
+.rich-text-editor--inline [data-item-type='divider'] {
+  height: 1.6em !important;
+  padding-inline: 0.12em !important;
 }
 
 /* Wysimark renders Slate's `<Editable as={$Editable}>` so `[data-slate-editor='true']`
  * IS the styled `$Editable` div carrying its `padding: 2em`. Override it directly. */
 .rich-text-editor [data-slate-editor='true'] {
-  padding: 1rem !important;
+  padding: 0.75rem !important;
 }
 
 .rich-text-editor--inline [data-slate-editor='true'] {
-  padding: 0.5rem !important;
+  padding: 0.3125rem 0.4375rem !important;
+  min-height: 1.5rem;
 }
 
 .rich-text-editor--inline [data-slate-node='element'] {
@@ -135,9 +192,17 @@ body {
 }
 
 .markdown-view a {
-  color: hsl(var(--primary));
+  color: rgb(3 105 161);
   text-decoration: underline;
+  text-decoration-color: rgb(3 105 161 / 0.5);
   text-underline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .markdown-view a {
+    color: rgb(56 189 248);
+    text-decoration-color: rgb(56 189 248 / 0.5);
+  }
 }
 
 .markdown-view blockquote {

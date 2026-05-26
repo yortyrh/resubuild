@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { type ReactNode, startTransition, useEffect, useState } from 'react';
+import { DashboardShellSkeleton } from '@/components/dashboard/dashboard-shell-skeleton';
 import { hasSession } from '@/lib/auth-session';
 
 export function SessionGate({ children }: { children: ReactNode }) {
@@ -20,11 +21,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
   }, [router]);
 
   if (!allow) {
-    return (
-      <div className="text-muted-foreground flex min-h-[40vh] items-center justify-center text-sm">
-        Loading…
-      </div>
-    );
+    return <DashboardShellSkeleton />;
   }
 
   return <>{children}</>;

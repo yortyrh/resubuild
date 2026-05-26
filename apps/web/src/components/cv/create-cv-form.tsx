@@ -50,7 +50,15 @@ export function CreateCvForm({ onSave, onCancel }: CreateCvFormProps) {
   const busy = saving || uploadingPhoto;
 
   return (
-    <div className="space-y-6">
+    <form
+      className="space-y-6"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!busy) {
+          void handleSave();
+        }
+      }}
+    >
       <BasicsFormFields
         value={basics}
         onChange={setBasics}
@@ -59,13 +67,13 @@ export function CreateCvForm({ onSave, onCancel }: CreateCvFormProps) {
       />
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
       <div className="flex gap-2">
-        <Button type="button" onClick={handleSave} disabled={busy}>
+        <Button type="submit" disabled={busy}>
           {saving ? 'Saving…' : 'Save'}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
           Cancel
         </Button>
       </div>
-    </div>
+    </form>
   );
 }

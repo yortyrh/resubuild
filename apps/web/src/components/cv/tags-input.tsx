@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils';
 
 export const tagPillClassName = 'bg-muted rounded-md px-2 py-1 text-sm';
 
+export const roleTagPillClassName =
+  'bg-primary/10 text-primary rounded-md px-2 py-1 text-sm dark:bg-primary/20';
+
 interface TagsInputProps {
   label: string;
   description?: string;
@@ -67,10 +70,15 @@ export function TagsInput({
         placeholder={placeholder}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') {
+          if (e.key !== 'Enter') {
+            return;
+          }
+          if (draft.trim()) {
             e.preventDefault();
             commitDraft();
+            return;
           }
+          e.currentTarget.form?.requestSubmit();
         }}
         onBlur={commitDraft}
         className={cn(values.length > 0 && 'mt-1')}

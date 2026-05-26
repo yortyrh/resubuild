@@ -1,5 +1,6 @@
 'use client';
 
+import { sanitizeResumeItemPayload } from '@resumind/types';
 import { type ReactNode, useState } from 'react';
 import {
   DeleteItemDialog,
@@ -90,7 +91,7 @@ export function ManagedArraySection<T>({
       return;
     }
     await run(
-      (v) => api.update(cvId, editingIndex, toPayload(draft), v),
+      (v) => api.update(cvId, editingIndex, sanitizeResumeItemPayload(toPayload(draft)), v),
       () => {
         const next = [...items];
         next[editingIndex] = draft;
@@ -120,7 +121,7 @@ export function ManagedArraySection<T>({
       return;
     }
     await run(
-      (v) => api.create(cvId, toPayload(createDraft), v),
+      (v) => api.create(cvId, sanitizeResumeItemPayload(toPayload(createDraft)), v),
       (result) => {
         const created = (result.item ?? createDraft) as T;
         onItemsChange([...items, created]);
@@ -149,7 +150,7 @@ export function ManagedArraySection<T>({
   };
 
   return (
-    <div>
+    <div className="space-y-4">
       {items.length === 0 && editingIndex === null && !creating ? (
         <p className="text-muted-foreground text-sm">No entries yet.</p>
       ) : null}

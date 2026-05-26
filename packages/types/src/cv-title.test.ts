@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deriveCvTitleFromBasics } from './cv-title';
+import { deriveCvShortTitleFromBasics, deriveCvTitleFromBasics } from './cv-title';
 
 describe('deriveCvTitleFromBasics', () => {
   it('formats name and label with em dash separator', () => {
@@ -33,5 +33,20 @@ describe('deriveCvTitleFromBasics', () => {
     );
     expect(deriveCvTitleFromBasics({ name: '   ', label: '  Engineer  ' })).toBe('Engineer');
     expect(deriveCvTitleFromBasics({ name: '   ', label: '   ' })).toBe('Untitled CV');
+  });
+});
+
+describe('deriveCvShortTitleFromBasics', () => {
+  it('returns name only when both name and label are present', () => {
+    expect(
+      deriveCvShortTitleFromBasics({ name: 'Jane Doe', label: 'Senior Software Engineer' }),
+    ).toBe('Jane Doe');
+  });
+
+  it('falls back to full title when name is missing', () => {
+    expect(deriveCvShortTitleFromBasics({ name: '', label: 'Software Engineer' })).toBe(
+      'Software Engineer',
+    );
+    expect(deriveCvShortTitleFromBasics({})).toBe('Untitled CV');
   });
 });

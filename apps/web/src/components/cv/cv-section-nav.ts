@@ -51,3 +51,15 @@ export function getSectionHref(cvId: string, slug: CvSectionSlug): string {
   }
   return `/dashboard/cv/${cvId}/${slug}`;
 }
+
+export function getSectionLabel(slug: CvSectionSlug): string {
+  return CV_SECTIONS.find((section) => section.slug === slug)?.label ?? 'Basics';
+}
+
+export function resolveActiveSectionFromPathname(pathname: string): CvSectionSlug {
+  const match = pathname.match(/\/dashboard\/cv\/[^/]+\/([^/]+)/);
+  if (match && isValidSectionSlug(match[1])) {
+    return match[1];
+  }
+  return 'basics';
+}

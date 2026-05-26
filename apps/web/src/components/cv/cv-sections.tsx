@@ -16,13 +16,23 @@ import type {
   ResumeWork,
 } from '@resumind/types';
 import type { ReactNode } from 'react';
-import { ExternalLink, linkedEntityLabel } from '@/components/cv/external-link';
+import { CvEditorBreadcrumb } from '@/components/cv/cv-editor-breadcrumb';
+import {
+  ExternalLink,
+  linkedEntityLabel,
+  linkedEntitySubtitle,
+} from '@/components/cv/external-link';
 import { StringListField, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { LanguageField } from '@/components/cv/language-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { ManagedBasicsSection } from '@/components/cv/managed-basics-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
+import {
+  MetadataFieldGroup,
+  MetadataLabel,
+  MetadataTextField,
+} from '@/components/cv/metadata-field';
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
 import {
@@ -67,43 +77,48 @@ function trimStringList(values?: string[]): string[] {
   return (values ?? []).map((value) => value.trim()).filter(Boolean);
 }
 
-export function highlightBody(values?: string[], options?: { markdown?: boolean }) {
+export function highlightBody(values?: string[], options?: { markdown?: boolean; title?: string }) {
   if (!values?.length) {
     return null;
   }
   const useMarkdown = options?.markdown ?? false;
+  const title = options?.title ?? 'Highlights';
   return (
-    <ul className="list-disc space-y-1 pl-5 text-sm font-normal">
-      {values.map((value, index) => (
-        <li key={`${value}-${index}`}>
-          {useMarkdown ? <MarkdownView value={value} variant="inline" /> : value}
-        </li>
-      ))}
-    </ul>
+    <div className="mt-3 space-y-2">
+      <MetadataLabel>{title}</MetadataLabel>
+      <ul className="list-disc space-y-1 pl-5 text-sm font-normal">
+        {values.map((value, index) => (
+          <li key={`${value}-${index}`}>
+            {useMarkdown ? <MarkdownView value={value} variant="inline" /> : value}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
-function positionEntityTitle(
+function positionEntityView(
   position: string | undefined,
   entity: string | undefined,
   url: string | undefined,
   fallback: string,
-): ReactNode {
-  const linkedEntity = entity ? linkedEntityLabel(entity, url) : null;
-  if (position && linkedEntity) {
-    return (
-      <span>
-        {position}, {linkedEntity}
-      </span>
-    );
-  }
+): { title: ReactNode; subtitle?: ReactNode } {
+  const linkedEntitySubtitleNode = entity ? linkedEntitySubtitle(entity, url) : null;
+  const linkedEntityTitleNode = entity ? linkedEntityLabel(entity, url) : null;
+
   if (position) {
-    return <span>{position}</span>;
+    return {
+      title: <span>{position}</span>,
+      subtitle: linkedEntitySubtitleNode ?? (entity ? <span>{entity}</span> : undefined),
+    };
   }
-  if (linkedEntity) {
-    return <span>{linkedEntity}</span>;
+  if (linkedEntityTitleNode) {
+    return { title: <span>{linkedEntityTitleNode}</span> };
   }
-  return <span>{fallback}</span>;
+  if (entity) {
+    return { title: <span>{entity}</span> };
+  }
+  return { title: <span>{fallback}</span> };
 }
 
 export function CvSections({
@@ -122,15 +137,18 @@ export function CvSections({
 
   return (
     <CvSectionLayout cvId={cvId}>
-      <SectionContent
-        activeSection={activeSection}
-        cvId={cvId}
-        version={version}
-        onVersionChange={onVersionChange}
-        resume={resume}
-        onResumeChange={onResumeChange}
-        profileApi={profileApi}
-      />
+      <div className="space-y-6">
+        <CvEditorBreadcrumb cvId={cvId} basics={resume.basics} activeSection={activeSection} />
+        <SectionContent
+          activeSection={activeSection}
+          cvId={cvId}
+          version={version}
+          onVersionChange={onVersionChange}
+          resume={resume}
+          onResumeChange={onResumeChange}
+          profileApi={profileApi}
+        />
+      </div>
     </CvSectionLayout>
   );
 }
@@ -241,22 +259,33 @@ function SectionContent({
             highlights: trimStringList(item.highlights),
           })}
           api={cvWorkApi}
-          renderView={(item) => ({
-            title: positionEntityTitle(item.position, item.name, item.url, 'Work entry'),
-            meta: (
-              <div>
-                <div>{formatDateRange(item.startDate, item.endDate)}</div>
-                {item.location ? <div>{item.location}</div> : null}
-              </div>
-            ),
-            body: (
-              <>
-                <MarkdownView value={item.summary} variant="block" />
-                <MarkdownView value={item.description} variant="block" />
-                {highlightBody(item.highlights, { markdown: true })}
-              </>
-            ),
-          })}
+          renderView={(item) => {
+            const { title, subtitle } = positionEntityView(
+              item.position,
+              item.name,
+              item.url,
+              'Work entry',
+            );
+            return {
+              title,
+              subtitle,
+              meta: (
+                <div>
+                  <div>{formatDateRange(item.startDate, item.endDate)}</div>
+                  {item.location ? <div>{item.location}</div> : null}
+                </div>
+              ),
+              body: (
+                <>
+                  <div className="space-y-3">
+                    <MarkdownView value={item.summary} variant="block" />
+                    <MarkdownView value={item.description} variant="block" />
+                  </div>
+                  {highlightBody(item.highlights, { markdown: true })}
+                </>
+              ),
+            };
+          }}
           renderForm={(item, onChange) => (
             <>
               <TextField
@@ -333,21 +362,25 @@ function SectionContent({
             highlights: trimStringList(item.highlights),
           })}
           api={cvVolunteerApi}
-          renderView={(item) => ({
-            title: positionEntityTitle(
+          renderView={(item) => {
+            const { title, subtitle } = positionEntityView(
               item.position,
               item.organization,
               item.url,
               'Volunteer entry',
-            ),
-            meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
-            body: (
-              <>
-                <MarkdownView value={item.summary} variant="block" />
-                {highlightBody(item.highlights, { markdown: true })}
-              </>
-            ),
-          })}
+            );
+            return {
+              title,
+              subtitle,
+              meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
+              body: (
+                <>
+                  <MarkdownView value={item.summary} variant="block" />
+                  {highlightBody(item.highlights, { markdown: true })}
+                </>
+              ),
+            };
+          }}
           renderForm={(item, onChange) => (
             <>
               <TextField
@@ -425,7 +458,7 @@ function SectionContent({
                   {item.score ? <div>Score: {item.score}</div> : null}
                 </div>
               ),
-              body: highlightBody(item.courses),
+              body: highlightBody(item.courses, { title: 'Courses' }),
             };
           }}
           renderForm={(item, onChange) => (
@@ -493,12 +526,8 @@ function SectionContent({
           toPayload={(item) => item as Record<string, unknown>}
           api={cvSkillApi}
           renderView={(item) => ({
-            title: (
-              <span>
-                {item.name || 'Skill'}
-                {item.level ? `: ${item.level}` : ''}
-              </span>
-            ),
+            title: <span>{item.name || 'Skill'}</span>,
+            subtitle: item.level || undefined,
             body: <TagsList values={item.keywords ?? []} />,
           })}
           renderForm={(item, onChange) => (
@@ -548,14 +577,12 @@ function SectionContent({
               body: (
                 <>
                   <MarkdownView value={item.description} variant="block" />
-                  {item.entity ? (
-                    <p className="text-sm font-normal">Entity: {item.entity}</p>
-                  ) : null}
-                  {item.type ? <p className="text-sm font-normal">Type: {item.type}</p> : null}
-                  {item.roles?.length ? (
-                    <p className="text-sm font-normal">Roles: {item.roles.join(', ')}</p>
-                  ) : null}
-                  <TagsList values={item.keywords ?? []} />
+                  <MetadataFieldGroup>
+                    <MetadataTextField label="Entity" value={item.entity} />
+                    <MetadataTextField label="Type" value={item.type} />
+                    <TagsList label="Roles" variant="roles" values={item.roles ?? []} />
+                    <TagsList label="Keywords" values={item.keywords ?? []} />
+                  </MetadataFieldGroup>
                   {highlightBody(item.highlights, { markdown: true })}
                 </>
               ),
@@ -741,13 +768,9 @@ function SectionContent({
               title: (
                 <span>{linkedEntityLabel(publicationLabel, item.url) ?? publicationLabel}</span>
               ),
+              subtitle: item.publisher || undefined,
               meta: item.releaseDate ? <div>{item.releaseDate}</div> : undefined,
-              body: (
-                <>
-                  {item.publisher ? <p className="text-sm font-normal">{item.publisher}</p> : null}
-                  <MarkdownView value={item.summary} variant="block" />
-                </>
-              ),
+              body: <MarkdownView value={item.summary} variant="block" />,
             };
           }}
           renderForm={(item, onChange) => (
@@ -834,7 +857,7 @@ function SectionContent({
           api={cvInterestApi}
           renderView={(item) => ({
             title: <span>{item.name || 'Interest'}</span>,
-            body: <TagsList values={item.keywords ?? []} />,
+            body: <TagsList label="Keywords" values={item.keywords ?? []} />,
           })}
           renderForm={(item, onChange) => (
             <>

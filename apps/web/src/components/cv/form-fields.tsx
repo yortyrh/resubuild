@@ -1,3 +1,6 @@
+'use client';
+
+import { type KeyboardEvent, useEffect, useRef } from 'react';
 import { MarkdownEditor } from '@/components/cv/markdown-editor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,6 +65,14 @@ interface StringListFieldProps {
   markdown?: boolean;
 }
 
+function focusListItem(input: HTMLInputElement | null): boolean {
+  if (!input) {
+    return false;
+  }
+  input.focus();
+  return true;
+}
+
 export function StringListField({
   label,
   description,
@@ -69,15 +80,58 @@ export function StringListField({
   onChange,
   markdown = false,
 }: StringListFieldProps) {
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const pendingFocusIndex = useRef<number | null>(null);
+
   const updateItem = (index: number, value: string) => {
     const next = [...values];
     next[index] = value;
     onChange(next);
   };
 
-  const addItem = () => onChange([...values, '']);
+  const scheduleFocus = (index: number) => {
+    if (markdown) {
+      return;
+    }
+    pendingFocusIndex.current = index;
+  };
+
+  const addItem = () => {
+    scheduleFocus(values.length);
+    onChange([...values, '']);
+  };
+
   const removeItem = (index: number) =>
     onChange(values.filter((_, itemIndex) => itemIndex !== index));
+
+  const handleItemEnter = (index: number, event: KeyboardEvent) => {
+    if (markdown || event.key !== 'Enter' || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (index === values.length - 1) {
+      scheduleFocus(values.length);
+      onChange([...values, '']);
+    }
+  };
+
+  useEffect(() => {
+    if (markdown) {
+      return undefined;
+    }
+
+    const focusIndex = pendingFocusIndex.current;
+    if (focusIndex === null) {
+      return undefined;
+    }
+
+    pendingFocusIndex.current = null;
+    focusListItem(inputRefs.current[focusIndex]);
+    return undefined;
+  }, [values.length, markdown]);
 
   return (
     <div className="space-y-2">
@@ -94,7 +148,16 @@ export function StringListField({
                   variant="inline"
                 />
               ) : (
-                <Input value={value} onChange={(e) => updateItem(index, e.target.value)} />
+                <Input
+                  ref={(element) => {
+                    inputRefs.current[index] = element;
+                  }}
+                  value={value}
+                  onChange={(e) => updateItem(index, e.target.value)}
+                  onKeyDown={(event) => {
+                    handleItemEnter(index, event);
+                  }}
+                />
               )}
             </div>
             <Button

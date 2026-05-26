@@ -1,25 +1,35 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { MarkdownEditorSkeleton } from '@/components/cv/markdown-editor-skeleton';
 import { cn } from '@/lib/utils';
 import type { MarkdownEditorProps } from './markdown-editor-impl';
 
 /**
  * Wysimark/Slate use Emotion which emits `:first-child` selectors at runtime.
  * Next.js warns this is unsafe during server rendering, so we render the actual
- * editor only on the client (`ssr: false`) and show a stable placeholder during
- * server render & hydration to avoid layout shift.
+ * editor only on the client (`ssr: false`) and show a skeleton during server
+ * render, hydration, and chunk loading to avoid layout shift.
  */
-const MarkdownEditorImpl = dynamic(
+const InlineMarkdownEditorImpl = dynamic(
   () => import('./markdown-editor-impl').then((mod) => mod.MarkdownEditorImpl),
   {
     ssr: false,
-    loading: () => null,
+    loading: () => <MarkdownEditorSkeleton variant="inline" />,
+  },
+);
+
+const BlockMarkdownEditorImpl = dynamic(
+  () => import('./markdown-editor-impl').then((mod) => mod.MarkdownEditorImpl),
+  {
+    ssr: false,
+    loading: () => <MarkdownEditorSkeleton variant="block" />,
   },
 );
 
 export function MarkdownEditor(props: MarkdownEditorProps) {
   const { variant = 'block', className, value = '', placeholder } = props;
+  const EditorImpl = variant === 'inline' ? InlineMarkdownEditorImpl : BlockMarkdownEditorImpl;
 
   return (
     <>
@@ -35,7 +45,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
           readOnly
         />
       </noscript>
-      <MarkdownEditorImpl {...props} />
+      <EditorImpl {...props} />
     </>
   );
 }
