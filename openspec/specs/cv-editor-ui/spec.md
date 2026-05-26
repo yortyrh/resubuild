@@ -109,17 +109,20 @@ The editor SHALL augment field bindings with succinct helper/description lines o
 
 ### Requirement: CV section tabs SHALL use resume-preview rows for listed entity types
 
-For Work, Volunteer, Education, Skills, Projects, Awards, Certificates, Publications, Languages, Interests, and References, the editor SHALL render saved entries using resume-preview row components (bold primary text left, optional subtitle beneath the title when applicable, dates and locations right, bullet lists for highlights and courses preceded by a visible section label such as **Highlights** or **Courses**) instead of always-visible card forms. Work and Volunteer rows SHALL show position in the title and linked company or organization in the subtitle—not concatenated in the title. Skills SHALL show level as subtitle rather than inline `"name: level"` prose. Publications SHALL show publisher as subtitle. Projects supplemental fields (entity, type, roles, keywords) and Interests keywords SHALL use labeled metadata rows rather than inline `"Label: value"` strings. **Basics** view mode SHALL use the same row component but structured location and optional street address MUST render in the contact line under the name—not in the right-aligned meta column—and a profile photo thumbnail MUST appear left of the name/contact block when `basics.image` is set per the Basics profile photo requirements.
+For Work, Volunteer, Education, Skills, Projects, Awards, Certificates, Publications, Languages, Interests, and References, the editor SHALL render saved entries using resume-preview row components (bold primary text left, optional subtitle beneath title, dates and locations right, bullet lists for highlights and courses) instead of always-visible card forms. **Basics** view mode SHALL use the same row component but structured location and optional street address MUST render in the contact line under the name—not in the right-aligned meta column—and a profile photo thumbnail MUST appear left of the name/contact block when `basics.image` is set per the Basics profile photo requirements.
+
+Entity `url` values on Work, Volunteer, Education, Projects, Certificates, and Publications entries SHALL attach to the primary entity label in the title (company, organization, institution, project name, certificate name, publication name) as clickable external links when present; raw URL strings MUST NOT appear in the meta column or as standalone body links for those sections.
 
 #### Scenario: Work section preview layout
 
 - **WHEN** a user views the Work tab with saved entries
-- **THEN** each job SHALL show position in the title, linked company in the subtitle when present, date range and location on the right, and highlight bullets beneath the title block under a **Highlights** label
+- **THEN** each job SHALL show position and company emphasis with the company linked when `url` is set, date range and location on the right, and highlight bullets beneath the title block
+- **AND** the raw URL string SHALL NOT appear in meta or body
 
 #### Scenario: Skills section preview layout
 
 - **WHEN** a user views the Skills tab
-- **THEN** each skill SHALL show name in the title and level as subtitle when present, with keywords rendered as tag pills
+- **THEN** each skill SHALL show name and level in a compact resume line with keywords rendered as inline comma-separated or tag-like text consistent with the sample CV
 
 #### Scenario: References section preview layout
 
@@ -138,10 +141,11 @@ For Work, Volunteer, Education, Skills, Projects, Awards, Certificates, Publicat
 - **THEN** a profile thumbnail SHALL appear to the left of the name and contact line
 - **AND** the photo URL SHALL NOT render as plain text in the row body
 
-#### Scenario: Education courses labeled in preview
+#### Scenario: Project entity and type in body before roles
 
-- **WHEN** a user views the Education tab with saved courses
-- **THEN** course bullets SHALL appear under a **Courses** label
+- **WHEN** a user views a saved project with `entity`, `type`, and `roles` populated
+- **THEN** entity and type SHALL render in the row body before the roles line
+- **AND** entity and type SHALL NOT appear in the right-aligned meta column
 
 ### Requirement: Section interactions SHALL follow view, inline edit, bottom create, and confirmed delete patterns
 
@@ -166,51 +170,9 @@ Skills keywords, Interests keywords, Projects keywords, and Projects roles SHALL
 - **WHEN** a user edits a project in form mode
 - **THEN** roles and keywords fields SHALL both use TagsInput with appropriate labels
 
-### Requirement: CV document title SHALL use view/edit inline pattern in the edit shell
-
-The CV edit shell (`CvEditor`) SHALL present the persisted document title (`cv.title`) in **view mode** by default: prominent read-only text with an **Edit** control. **Edit mode** SHALL expose a single-line text input and **Save** / **Cancel** actions. The editor MUST NOT show a persistent labeled title field and standalone **Save title** button in the default (view) layout.
-
-#### Scenario: Default view shows title and Edit
-
-- **WHEN** a user opens the CV edit page with a saved title
-- **THEN** the document title SHALL render as read-only text above the section tabs
-- **AND** an **Edit** button SHALL be visible without an always-on title input
-- **AND** a standalone **Save title** button SHALL NOT be visible
-
-#### Scenario: Edit mode exposes input and actions
-
-- **WHEN** a user activates **Edit** on the document title
-- **THEN** a text input SHALL appear prefilled with the current title
-- **AND** **Save** and **Cancel** buttons SHALL be available
-- **AND** the read-only title display SHALL be hidden until save or cancel completes
-
-#### Scenario: Save persists title via API
-
-- **WHEN** a user changes the title in edit mode and activates **Save**
-- **THEN** the client SHALL call the existing CV update endpoint with the new `title`
-- **AND** on success the view mode SHALL show the updated title
-- **AND** a success toast SHALL be shown consistent with current title-save feedback
-
-#### Scenario: Cancel discards unsaved edits
-
-- **WHEN** a user activates **Edit**, modifies the draft title, then activates **Cancel**
-- **THEN** the displayed title SHALL revert to the last successfully saved value
-- **AND** no title update API call SHALL be made
-
-#### Scenario: Empty title displays placeholder in view mode
-
-- **WHEN** a user views the edit shell and the saved title is empty or whitespace-only
-- **THEN** view mode SHALL show an **Untitled CV** (or equivalent) placeholder treatment
-- **AND** the **Edit** affordance SHALL remain available
-
-#### Scenario: Save disabled while request in flight
-
-- **WHEN** a title save request is in progress
-- **THEN** **Save** and **Cancel** (and **Edit** if still visible) SHALL be disabled or otherwise prevent duplicate submission until the request completes
-
 ### Requirement: View mode SHALL render markdown-authored fields as formatted Markdown
 
-Every CV editor field that uses the shared Wysimark markdown editor in form mode (`markdown="block"` or inline markdown on highlights) SHALL render its saved value through a shared read-only Markdown renderer in view mode (resume-preview rows and nested highlight rows). Raw Markdown source syntax MUST NOT be shown to the user when formatted output is available.
+Every CV editor field that uses the shared Wysimark markdown editor in form mode (`markdown="block"` or inline markdown on highlights) SHALL render its saved value through a shared read-only Markdown renderer in view mode (resume-preview rows and nested highlight rows). Raw Markdown source syntax MUST NOT be shown to the user when formatted output is available. The `highlightBody` helper used for Work, Volunteer, and Projects highlight lists MUST render each bullet with the shared `MarkdownView` component using the inline variant—not as a plain text string inside `<li>`.
 
 #### Scenario: Basics summary preview
 
@@ -221,6 +183,12 @@ Every CV editor field that uses the shared Wysimark markdown editor in form mode
 
 - **WHEN** a work highlight contains inline emphasis or a link authored via the inline markdown editor
 - **THEN** the highlight bullet in the Work tab view row SHALL render the emphasis and clickable link
+
+#### Scenario: Work highlight bold text regression
+
+- **WHEN** a saved work highlight contains `**Reduced API latency by 40%**` authored via the inline markdown editor
+- **THEN** the Work tab view row SHALL display bold emphasis for that phrase
+- **AND** SHALL NOT display literal `**` characters in the bullet text
 
 #### Scenario: Reference text preview
 
@@ -241,6 +209,11 @@ The shared Markdown renderer SHALL be used for markdown-authored view output in 
 - **WHEN** a saved project includes a non-empty description authored with the block markdown editor
 - **THEN** the Projects tab preview SHALL show the description as rendered Markdown in the entry body
 
+#### Scenario: Volunteer and project highlight preview
+
+- **WHEN** a volunteer or project highlight contains inline emphasis authored via the inline markdown editor
+- **THEN** the corresponding tab view row SHALL render formatted Markdown in the highlight bullet, not raw source syntax
+
 ### Requirement: Markdown view output SHALL be sanitized and safe
 
 The read-only Markdown renderer MUST sanitize HTML emitted from user-authored Markdown and MUST NOT execute scripts or render unsafe tags. External links rendered from Markdown SHOULD open in a new browsing context with appropriate `rel` attributes.
@@ -252,7 +225,9 @@ The read-only Markdown renderer MUST sanitize HTML emitted from user-authored Ma
 
 ### Requirement: View mode SHALL render persisted URL fields as clickable external links
 
-Every JSON Resume `url` field shown in CV editor view mode (resume-preview rows) SHALL be rendered as a clickable hyperlink using the stored value as the destination. The link MUST open in a new browsing context (`target="_blank"`) with `rel="noopener noreferrer"`. Bare hostnames without a scheme (e.g. `linkedin.com/in/user`) SHALL be normalized to HTTPS for navigation. Entity URLs on Work and Volunteer entries SHALL appear in the row subtitle (linked entity name), not as a separate bare URL string in the row body. External links SHALL use a consistent visual affordance (distinct link color and optional external-link icon).
+Every JSON Resume `url` field shown in CV editor view mode (resume-preview rows) SHALL be rendered as a clickable hyperlink using the stored value as the destination. The link MUST open in a new browsing context (`target="_blank"`) with `rel="noopener noreferrer"`. Bare hostnames without a scheme (e.g. `linkedin.com/in/user`) SHALL be normalized to HTTPS for navigation.
+
+For Work, Volunteer, Education, Projects, Certificates, and Publications, the hyperlink SHALL wrap the primary entity label in the row title and SHALL display the entity name (not the raw URL string) as link text. The URL MUST NOT additionally appear as plain text in the meta column or as a duplicate standalone link in the row body.
 
 #### Scenario: Social profile URL in preview
 
@@ -266,19 +241,33 @@ Every JSON Resume `url` field shown in CV editor view mode (resume-preview rows)
 
 #### Scenario: Work entry URL in preview
 
-- **WHEN** a user views a saved work entry with a non-empty `url` field and populated company name
-- **THEN** the Work tab preview SHALL display the company as a linked subtitle (or title when position is absent)
-- **AND** SHALL NOT show the raw URL string as plain text in the row body
+- **WHEN** a user views a saved work entry with a non-empty `url` field and company name populated
+- **THEN** the Work tab preview SHALL render the company name in the title as a clickable external link
+- **AND** the raw URL string SHALL NOT appear in the meta column or entry body
+
+#### Scenario: Volunteer entry URL in preview
+
+- **WHEN** a user views a saved volunteer entry with a non-empty `url` field and organization populated
+- **THEN** the Volunteer tab preview SHALL render the organization name in the title as a clickable external link
+- **AND** the raw URL string SHALL NOT appear in the meta column or entry body
+
+#### Scenario: Education institution URL in preview
+
+- **WHEN** a user views a saved education entry with a non-empty `url` field and institution populated
+- **THEN** the Education tab preview SHALL render the institution name in the title as a clickable external link
+- **AND** the raw URL string SHALL NOT appear in the meta column
 
 #### Scenario: Project URL in preview
 
-- **WHEN** a user views a saved project with a non-empty `url` field
-- **THEN** the Projects tab preview SHALL display the URL as a clickable external link
+- **WHEN** a user views a saved project with a non-empty `url` field and name populated
+- **THEN** the Projects tab preview SHALL render the project name in the title as a clickable external link
+- **AND** the raw URL string SHALL NOT appear in the meta column or entry body
 
 #### Scenario: Publication and certificate URLs in preview
 
-- **WHEN** a user views a saved publication or certificate with a non-empty `url` field
-- **THEN** the corresponding tab preview SHALL display the URL as a clickable external link
+- **WHEN** a user views a saved publication or certificate with a non-empty `url` field and name populated
+- **THEN** the corresponding tab preview SHALL render the entry name in the title as a clickable external link
+- **AND** the raw URL string SHALL NOT appear in the entry body
 
 #### Scenario: Unsafe URL scheme
 
@@ -382,40 +371,42 @@ The navigation list (sidebar at all breakpoints) SHALL visually distinguish the 
 
 For each CV editor tab that uses resume-preview rows, the read-only view for a saved entry SHALL render every field that the corresponding edit form can persist, whenever that field holds a non-empty value. Fields MUST NOT be hidden in view mode solely because they were absent from sample resume data used during initial UI design.
 
+URL fields remain visible in view mode via linked entity titles (or contact-line links for Basics) rather than raw URL text.
+
 #### Scenario: Work entry shows URL and description
 
 - **WHEN** a user saves a work entry with `url` and `description` populated
-- **THEN** the Work tab view row SHALL display both values without requiring Edit mode
+- **THEN** the Work tab view row SHALL display the company as a linked title segment and the description in the body without requiring Edit mode
 
 #### Scenario: Volunteer entry shows organization URL
 
 - **WHEN** a user saves a volunteer entry with `url` populated
-- **THEN** the Volunteer tab view row SHALL display the URL
+- **THEN** the Volunteer tab view row SHALL expose the URL as a link on the organization name in the title
 
 #### Scenario: Education entry shows institution URL and score
 
 - **WHEN** a user saves an education entry with `url` and `score` populated
-- **THEN** the Education tab view row SHALL display both values
+- **THEN** the Education tab view row SHALL display the institution as a linked title and the score in the meta column
 
 #### Scenario: Project entry shows URL, entity, and type
 
 - **WHEN** a user saves a project with `url`, `entity`, and `type` populated
-- **THEN** the Projects tab view row SHALL display all three values
+- **THEN** the Projects tab view row SHALL display the project name as a linked title, entity and type in the body, and dates in meta
 
 #### Scenario: Award entry shows awarder
 
 - **WHEN** a user saves an award with `awarder` populated
-- **THEN** the Awards tab view row SHALL display the awarder
+- **THEN** the Awards tab view row SHALL display the awarder as subtitle beneath the title
 
 #### Scenario: Certificate entry shows URL
 
 - **WHEN** a user saves a certificate with `url` populated
-- **THEN** the Certificates tab view row SHALL display the URL
+- **THEN** the Certificates tab view row SHALL display the certificate name as a linked title
 
 #### Scenario: Publication entry shows URL and summary
 
 - **WHEN** a user saves a publication with `url` and `summary` populated
-- **THEN** the Publications tab view row SHALL display both values
+- **THEN** the Publications tab view row SHALL display the publication name as a linked title and the summary in the body
 
 ### Requirement: Field coverage audit SHALL be documented and verified
 
@@ -679,3 +670,95 @@ The CV editor layout (section sidebar, breadcrumb row, and main content pane) SH
 
 - **WHEN** a user sequentially visits Basics, Social profiles, Work, Volunteer, Education, Skills, Projects, Awards, Certificates, Publications, Languages, Interests, and References
 - **THEN** `#cv-section-nav` bounding box `left` coordinate SHALL remain within 1px across all sections at the same viewport size
+
+### Requirement: Keyword string arrays SHALL render as read-only tag pills in view mode
+
+Skills, Interests, and Projects keyword arrays in resume-preview view rows SHALL render through a shared read-only tag list component that reuses the same pill styling as `TagsInput` (`bg-muted`, rounded corners, compact padding) without remove buttons or text inputs. Keywords MUST NOT be displayed as comma-separated plain text in view mode.
+
+#### Scenario: Skills keywords as tag pills
+
+- **WHEN** a user views the Skills tab with a saved skill whose `keywords` array contains `["React", "TypeScript"]`
+- **THEN** each keyword SHALL appear as an individual muted pill beneath the skill name/level line
+- **AND** SHALL NOT appear as the literal string `React, TypeScript`
+
+#### Scenario: Interests keywords as tag pills
+
+- **WHEN** a user views the Interests tab with saved keywords on an interest entry
+- **THEN** keywords SHALL render as the same read-only tag pills used on Skills
+
+#### Scenario: Projects keywords as tag pills
+
+- **WHEN** a user views the Projects tab with saved keywords on a project entry
+- **THEN** keywords SHALL render as read-only tag pills in the entry body
+- **AND** SHALL NOT use a comma-separated `Keywords:` prose line
+
+### Requirement: ResumeItemRow SHALL support an optional subtitle beneath the title
+
+The shared resume-preview row component SHALL accept an optional `subtitle` prop rendered directly below the primary title in muted, normal-weight small text. Sections that carry secondary entity context (education study type/area, awarder, language fluency) SHALL use this slot instead of the right-aligned meta column or redundant body lines.
+
+#### Scenario: Education row shows study type and area as subtitle
+
+- **WHEN** a user views a saved education entry with `studyType` "Bachelor" and `area` "Computer Science"
+- **THEN** the institution name SHALL appear as the bold title (linked when `url` is set)
+- **AND** "Bachelor — Computer Science" SHALL appear as subtitle beneath the title
+- **AND** study type and area SHALL NOT appear in the right-aligned meta column
+
+#### Scenario: Language row shows fluency as subtitle
+
+- **WHEN** a user views a saved language entry with `language` "English" and `fluency` "Native"
+- **THEN** "English" SHALL appear as the title
+- **AND** "Native" SHALL appear as subtitle beneath the title
+- **AND** fluency SHALL NOT appear in the meta column
+
+#### Scenario: Award row shows awarder as subtitle
+
+- **WHEN** a user views a saved award with `title` "Employee of the Year" and `awarder` "Acme Corp"
+- **THEN** the award title SHALL remain the bold primary title
+- **AND** "Acme Corp" SHALL appear as subtitle beneath the title
+- **AND** awarder SHALL NOT appear in the meta column
+
+### Requirement: CV document title SHALL derive from Basics name and label
+
+The persisted document title (`cv.title`) SHALL be computed from `data.basics.name` and `data.basics.label` using the shared derivation rules: trim both fields; when both are non-empty use `` `{name} — {label}` ``; when only name is non-empty use name; when only label is non-empty use label; when both are empty use **Untitled CV**. The edit shell SHALL display this derived title as read-only prominent text above section tabs. Authors SHALL NOT edit document title independently of Basics.
+
+#### Scenario: Both name and label set
+
+- **WHEN** basics contain name `Jane Doe` and label `Software Engineer`
+- **THEN** the edit shell header SHALL display `Jane Doe — Software Engineer`
+- **AND** the dashboard CV list SHALL show the same derived title from `cv.title`
+
+#### Scenario: Name only
+
+- **WHEN** basics contain name `Jane Doe` and an empty or whitespace-only label
+- **THEN** the derived title SHALL be `Jane Doe`
+
+#### Scenario: Neither name nor label
+
+- **WHEN** basics name and label are both empty or whitespace-only
+- **THEN** the derived title SHALL be `Untitled CV`
+
+#### Scenario: No title edit affordance
+
+- **WHEN** a user views the CV edit shell
+- **THEN** the document title SHALL NOT expose Edit, Save, or Cancel controls for title
+- **AND** SHALL NOT show a standalone title text input in the default layout
+
+#### Scenario: Title updates after basics save
+
+- **WHEN** a user saves Basics with an updated name or label
+- **THEN** the edit shell header SHALL reflect the newly derived title after the basics save succeeds (via updated `cv.title` in the response or equivalent refetch)
+
+### Requirement: Profile photo crop dialog SHALL NOT render an image with empty src
+
+The profile photo crop dialog component SHALL NOT mount an `<img>` element with an empty or missing `src` attribute when no preview URL is available or when the dialog is idle. This prevents spurious network requests and React/Next.js console warnings.
+
+#### Scenario: Dialog closed with empty preview URL
+
+- **WHEN** the crop dialog is not open and `imageUrl` is an empty string
+- **THEN** the component SHALL NOT render an `<img>` element with `src=""`
+
+#### Scenario: Dialog open with valid preview URL
+
+- **WHEN** the crop dialog is open and `imageUrl` is a non-empty blob or media URL
+- **THEN** the crop preview `<img>` SHALL render with that URL as `src`
+- **AND** the user SHALL be able to adjust and confirm the crop as today

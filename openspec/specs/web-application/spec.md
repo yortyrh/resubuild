@@ -31,47 +31,29 @@ Authenticated requests to Nest CV endpoints SHALL send the short-lived **access 
 
 The App Router under `src/app/` MUST provide public entry and auth pages (`/`, `/login`, `/register`), a dashboard shell, CV list, new CV (`/dashboard/cv/new`), and per-CV view/edit (`/dashboard/cv/[id]`) backed by shared CV UI components. The per-CV editor SHALL organize authoring tabs per `cv-editor-ui`, use item-level persistence for resume content, and SHALL continue to upload profile photos through authenticated Nest **`POST /media/upload`** via `uploadResumeMedia`. Rich-text editors SHALL NOT expose separate image-upload tooling.
 
-The dashboard CV list route (`/dashboard`) SHALL delegate page heading (`My CVs`), descriptive subcopy, and the primary **New CV** action to the `CvList` component so empty-state and populated-state views share the same chrome. The dashboard page component itself MUST NOT duplicate this header.
+The new CV route (`/dashboard/cv/new`) SHALL NOT call `POST /cv` on page load. It SHALL render a simplified create form collecting JSON Resume `basics` fields only (equivalent to the Basics tab edit field set)—**without** a separate CV title field. The client SHALL invoke `createCv` with resume `data` (including `basics`) only when the user activates an explicit Save (or Create) control; the API SHALL derive `cv.title` from the submitted basics. On successful create, the UI SHALL navigate to `/dashboard/cv/:id` for full editing. Navigating away or canceling before Save SHALL NOT create a CV row.
 
-The new CV route (`/dashboard/cv/new`) SHALL NOT call `POST /cv` on page load. It SHALL render a simplified create form collecting CV title and JSON Resume `basics` fields only (equivalent to the Basics tab edit field set). The client SHALL invoke `createCv` with the entered title and resume `data` (including `basics`) only when the user activates an explicit Save (or Create) control. On successful create, the UI SHALL navigate to `/dashboard/cv/:id` for full editing. Navigating away or canceling before Save SHALL NOT create a CV row. The create form SHALL support native form submit (Enter in a text field triggers Save). While CV list or auth-gated dashboard content is loading, the UI SHALL show skeleton placeholders per `cv-editor-ui` loading requirements rather than plain text alone.
-
-#### Scenario: Dashboard CV flows
+#### Scenario: User creates and edits a CV in the UI
 
 - **WHEN** a signed-in user navigates dashboard flows
 - **THEN** the UI SHALL load CVs through `listCvs`, `getCv`, `createCv`, and `deleteCv`, and SHALL mutate resume sections through item-scoped helpers matching the REST contract
 
-#### Scenario: Dashboard list owns page header
+#### Scenario: User uploads a profile photo used in resumes
 
-- **WHEN** a signed-in user views `/dashboard` with one or more CVs
-- **THEN** the `My CVs` heading, description, and **New CV** button SHALL appear above the CV grid inside `CvList`
-- **AND** the dashboard page wrapper SHALL NOT render a duplicate header
-
-#### Scenario: Empty dashboard shows consistent chrome
-
-- **WHEN** a signed-in user views `/dashboard` with zero CVs
-- **THEN** the empty-state card SHALL appear below the same `My CVs` header and **New CV** action as the populated list
-
-#### Scenario: Profile photo upload on basics
-
-- **WHEN** a user uploads a profile photo from the Basics tab
+- **WHEN** a signed-in user selects a file in the Basics profile photo control and saves basics
 - **THEN** the client SHALL call `uploadResumeMedia` when uploading a file, assign the returned API URL to `basics.image`, persist basics via the basics patch helper, and surface descriptive errors on failure
 
-#### Scenario: New CV page does not create on visit
+#### Scenario: User opens new CV without saving
 
 - **WHEN** a signed-in user visits `/dashboard/cv/new` and leaves without clicking Save
-- **THEN** the client SHALL NOT have called `POST /cv`
+- **THEN** the client SHALL NOT have called `POST /cv` for that visit
 - **AND THEN** no new CV row SHALL appear in the dashboard list attributable to that visit
 
-#### Scenario: New CV saves on explicit action
+#### Scenario: User creates CV from simplified form
 
-- **WHEN** a signed-in user fills title and/or basics on `/dashboard/cv/new` and clicks Save
-- **THEN** the client SHALL call `createCv` once with the entered payload
-- **AND THEN** on success SHALL navigate to `/dashboard/cv/:id` for the created CV
-
-#### Scenario: Create CV form submits on Enter
-
-- **WHEN** a user presses Enter in a text field on the new CV form
-- **THEN** the Save action SHALL run as if the Save button were clicked
+- **WHEN** a signed-in user fills basics on `/dashboard/cv/new` and clicks Save
+- **THEN** the client SHALL call `createCv` once with resume `data` containing the entered `basics` and SHALL NOT require a separate title field
+- **AND THEN** on success SHALL navigate to `/dashboard/cv/:id` for the created CV with a server-derived title visible in the shell and list
 
 ### Requirement: Shared types and schema packages SHALL inform the client and server contract
 
@@ -92,15 +74,6 @@ The web client in `apps/web/src/lib/api.ts` SHALL expose typed functions for eac
 - **THEN** the client SHALL invoke the language update helper with the CV id, item index, payload, and current meta version
 - **AND THEN** on success SHALL update local section state from the response
 
-### Requirement: CV title MAY save independently of resume item mutations
-
-The editor MAY retain a title field with its own save path via `PATCH /cv/:id` (title only) or equivalent, separate from granular resume item routes. Resume body sections SHALL NOT depend on a global Save CV button.
-
-#### Scenario: No bulk resume save required
-
-- **WHEN** a user edits and saves multiple work entries in sequence
-- **THEN** each save SHALL persist independently and the UI SHALL NOT require clicking Save CV to commit those work changes
-
 ### Requirement: Dashboard CV delete SHALL use an in-app confirmation dialog
 
 Deleting a CV from the dashboard list SHALL require confirmation through an accessible in-app dialog (not `window.confirm`). The dialog SHALL name the CV being deleted when available and SHALL disable dismiss actions while the delete request is in flight.
@@ -116,3 +89,24 @@ Deleting a CV from the dashboard list SHALL require confirmation through an acce
 - **WHEN** a user confirms deletion in the dialog
 - **THEN** the client SHALL call `deleteCv`
 - **AND** on success SHALL refresh the list and show a success toast
+
+### Requirement: Auth pages SHALL render cross-links outside client form boundaries
+
+The `/login` and `/register` routes SHALL render static navigation cross-links (login ↔ register) from Server Components. Interactive auth forms (`LoginForm`, `RegisterForm`) SHALL NOT include Next.js `<Link>` cross-links in their `'use client'` module trees.
+
+#### Scenario: Login page cross-link is server-rendered
+
+- **WHEN** a user loads `/login`
+- **THEN** the **Register** cross-link SHALL be rendered by the Server Component page (or a server-safe shared helper)
+- **AND** `LoginForm` SHALL contain only the sign-in form and its client state
+
+#### Scenario: Register page cross-link is server-rendered
+
+- **WHEN** a user loads `/register`
+- **THEN** the **Sign in** cross-link SHALL be rendered by the Server Component page (or a server-safe shared helper)
+- **AND** `RegisterForm` SHALL contain only the registration form and its client state
+
+#### Scenario: Standard browser hydration on auth pages
+
+- **WHEN** a developer loads `/login` or `/register` in a standard browser (not Cursor embedded browser) with `pnpm dev` running
+- **THEN** the browser console SHALL NOT report a React hydration mismatch attributable to auth cross-links
