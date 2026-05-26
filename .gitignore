@@ -9,8 +9,9 @@ coverage
 *.log
 .DS_Store
 
-# Supabase CLI local link state (may include project refs / URLs)
+# Supabase CLI local state (branch selection, link refs, temp files)
 supabase/.temp/
+supabase/.branches/
 
 # Parallel OpenSpec worktrees and ephemeral planner state
 # (Created by /opsx-plan-parallel and /opsx-launch-parallel — see .cursor/agents/README.md)
