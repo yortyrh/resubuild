@@ -15,15 +15,13 @@ type AwardItem = SectionItem<ResumeAward>;
 
 export function AwardsSection() {
   useSectionMount('awards');
-  const { cvId, resume, version, setResume, setVersion } = useCvEditor();
+  const { cvId, resume, setResume } = useCvEditor();
 
   return (
     <ManagedArraySection<AwardItem>
       cvId={cvId}
-      version={version}
-      onVersionChange={setVersion}
       items={resume.awards ?? []}
-      onItemsChange={(awards) => setResume({ ...resume, awards })}
+      onItemsChange={(awards) => setResume((prev) => ({ ...prev, awards }))}
       refetchItems={createSectionRefetch<AwardItem>(getCvAwards, cvId)}
       entityLabel="Award"
       addLabel="Add award"

@@ -20,15 +20,13 @@ type ProjectItem = SectionItem<ResumeProject>;
 
 export function ProjectsSection() {
   useSectionMount('projects');
-  const { cvId, resume, version, setResume, setVersion } = useCvEditor();
+  const { cvId, resume, setResume } = useCvEditor();
 
   return (
     <ManagedArraySection<ProjectItem>
       cvId={cvId}
-      version={version}
-      onVersionChange={setVersion}
       items={resume.projects ?? []}
-      onItemsChange={(projects) => setResume({ ...resume, projects })}
+      onItemsChange={(projects) => setResume((prev) => ({ ...prev, projects }))}
       refetchItems={createSectionRefetch<ProjectItem>(getCvProjects, cvId)}
       entityLabel="Project"
       addLabel="Add project"

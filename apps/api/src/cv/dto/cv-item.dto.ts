@@ -1,93 +1,78 @@
-import {
-  ArrayNotEmpty,
-  IsArray,
-  IsObject,
-  IsOptional,
-  IsString,
-  IsUUID,
-  MinLength,
-} from 'class-validator';
+import { ArrayNotEmpty, IsArray, IsObject, IsOptional, IsString, IsUUID } from 'class-validator';
 
-export class VersionedDto {
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  version?: string;
-}
-
-export class BasicsItemDto extends VersionedDto {
+export class BasicsItemDto {
   @IsOptional()
   @IsObject()
   basics?: Record<string, unknown>;
 }
 
-export class ProfileItemDto extends VersionedDto {
+export class ProfileItemDto {
   @IsObject()
   profile!: Record<string, unknown>;
 }
 
-export class WorkItemDto extends VersionedDto {
+export class WorkItemDto {
   @IsObject()
   work!: Record<string, unknown>;
 }
 
-export class VolunteerItemDto extends VersionedDto {
+export class VolunteerItemDto {
   @IsObject()
   volunteer!: Record<string, unknown>;
 }
 
-export class EducationItemDto extends VersionedDto {
+export class EducationItemDto {
   @IsObject()
   education!: Record<string, unknown>;
 }
 
-export class SkillItemDto extends VersionedDto {
+export class SkillItemDto {
   @IsObject()
   skill!: Record<string, unknown>;
 }
 
-export class ProjectItemDto extends VersionedDto {
+export class ProjectItemDto {
   @IsObject()
   project!: Record<string, unknown>;
 }
 
-export class AwardItemDto extends VersionedDto {
+export class AwardItemDto {
   @IsObject()
   award!: Record<string, unknown>;
 }
 
-export class CertificateItemDto extends VersionedDto {
+export class CertificateItemDto {
   @IsObject()
   certificate!: Record<string, unknown>;
 }
 
-export class PublicationItemDto extends VersionedDto {
+export class PublicationItemDto {
   @IsObject()
   publication!: Record<string, unknown>;
 }
 
-export class LanguageItemDto extends VersionedDto {
+export class LanguageItemDto {
   @IsObject()
   language!: Record<string, unknown>;
 }
 
-export class InterestItemDto extends VersionedDto {
+export class InterestItemDto {
   @IsObject()
   interest!: Record<string, unknown>;
 }
 
-export class ReferenceItemDto extends VersionedDto {
+export class ReferenceItemDto {
   @IsObject()
   reference!: Record<string, unknown>;
 }
 
-export class StringListDto extends VersionedDto {
+export class StringListDto {
   @IsArray()
   @IsString({ each: true })
   values!: string[];
 }
 
-export class ReorderSectionDto extends VersionedDto {
+export class ReorderSectionDto {
   @IsArray()
   @ArrayNotEmpty()
   @IsUUID('4', { each: true })

@@ -5,12 +5,8 @@ import { getValidAccessToken } from '@/lib/auth-session';
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export interface CvItemMutationResponse {
-  version: string;
   item?: unknown;
-}
-
-interface VersionedPayload {
-  version?: string;
+  items?: unknown[];
 }
 
 async function itemFetch<T>(path: string, options: RequestInit & { method: string }): Promise<T> {
@@ -32,70 +28,57 @@ async function itemFetch<T>(path: string, options: RequestInit & { method: strin
         ? body.message
         : Array.isArray(body.message)
           ? body.message.join(', ')
-          : response.status === 409
-            ? 'This CV was modified elsewhere. Reload the page and try again.'
-            : `Request failed (${response.status})`;
+          : `Request failed (${response.status})`;
     throw new Error(message);
   }
 
   return response.json() as Promise<T>;
 }
 
-function withVersion(version?: string): VersionedPayload {
-  return version ? { version } : {};
-}
-
-export function patchCvBasics(cvId: string, basics: Record<string, unknown>, version?: string) {
+export function patchCvBasics(cvId: string, basics: Record<string, unknown>) {
   return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/basics`, {
     method: 'PATCH',
-    body: JSON.stringify({ basics, ...withVersion(version) }),
+    body: JSON.stringify({ basics }),
   });
 }
 
-export function createCvProfile(cvId: string, profile: Record<string, unknown>, version?: string) {
+export function createCvProfile(cvId: string, profile: Record<string, unknown>) {
   return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/profiles`, {
     method: 'POST',
-    body: JSON.stringify({ profile, ...withVersion(version) }),
+    body: JSON.stringify({ profile }),
   });
 }
 
-export function updateCvProfile(
-  cvId: string,
-  itemId: string,
-  profile: Record<string, unknown>,
-  version?: string,
-) {
+export function updateCvProfile(cvId: string, itemId: string, profile: Record<string, unknown>) {
   return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/profiles/${itemId}`, {
     method: 'PATCH',
-    body: JSON.stringify({ profile, ...withVersion(version) }),
+    body: JSON.stringify({ profile }),
   });
 }
 
-export function deleteCvProfile(cvId: string, itemId: string, version?: string) {
+export function deleteCvProfile(cvId: string, itemId: string) {
   return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/profiles/${itemId}`, {
     method: 'DELETE',
-    body: JSON.stringify(withVersion(version)),
   });
 }
 
 function arrayCrud(segment: string, entityKey: string) {
   return {
-    create(cvId: string, item: Record<string, unknown>, version?: string) {
+    create(cvId: string, item: Record<string, unknown>) {
       return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/${segment}`, {
         method: 'POST',
-        body: JSON.stringify({ [entityKey]: item, ...withVersion(version) }),
+        body: JSON.stringify({ [entityKey]: item }),
       });
     },
-    update(cvId: string, itemId: string, item: Record<string, unknown>, version?: string) {
+    update(cvId: string, itemId: string, item: Record<string, unknown>) {
       return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/${segment}/${itemId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ [entityKey]: item, ...withVersion(version) }),
+        body: JSON.stringify({ [entityKey]: item }),
       });
     },
-    delete(cvId: string, itemId: string, version?: string) {
+    delete(cvId: string, itemId: string) {
       return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/${segment}/${itemId}`, {
         method: 'DELETE',
-        body: JSON.stringify(withVersion(version)),
       });
     },
   };

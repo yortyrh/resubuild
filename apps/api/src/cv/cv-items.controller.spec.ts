@@ -10,9 +10,7 @@ describe('CvItemsController', () => {
   const user = { id: 'user-1', email: 'u@test.com', accessToken: 'token' };
   const req = { user } as never;
   const cvId = 'cv-1';
-  const version = 'v1.0.0';
-  const versionDto = { version };
-  const resolved = { version: 'v1.0.1' };
+  const resolved = { item: { id: 'row-1' } };
   const itemId = '00000000-0000-4000-8000-000000000001';
 
   beforeEach(() => {
@@ -26,36 +24,30 @@ describe('CvItemsController', () => {
       deleteArrayItem: jest.fn().mockResolvedValue(resolved),
       getSection: jest.fn().mockResolvedValue([]),
       getBasics: jest.fn().mockResolvedValue({ name: 'Jane' }),
-      reorderSection: jest.fn().mockResolvedValue({ items: [], version: 'v1.0.1' }),
+      reorderSection: jest.fn().mockResolvedValue({ items: [] }),
     } as never;
 
     controller = new CvItemsController(service);
   });
 
   it('delegates basics patch to service', async () => {
-    await controller.updateBasics(req, cvId, { basics: { name: 'Jane' }, version });
+    await controller.updateBasics(req, cvId, { basics: { name: 'Jane' } });
 
-    expect(service.updateBasics).toHaveBeenCalledWith(user, cvId, { name: 'Jane' }, version);
+    expect(service.updateBasics).toHaveBeenCalledWith(user, cvId, { name: 'Jane' });
 
-    await controller.updateBasics(req, cvId, { version });
-    expect(service.updateBasics).toHaveBeenCalledWith(user, cvId, {}, version);
+    await controller.updateBasics(req, cvId, {});
+    expect(service.updateBasics).toHaveBeenCalledWith(user, cvId, {});
   });
 
   it('delegates profile CRUD to service', async () => {
-    await controller.createProfile(req, cvId, { profile: { network: 'GitHub' }, version });
-    expect(service.createProfile).toHaveBeenCalledWith(user, cvId, { network: 'GitHub' }, version);
+    await controller.createProfile(req, cvId, { profile: { network: 'GitHub' } });
+    expect(service.createProfile).toHaveBeenCalledWith(user, cvId, { network: 'GitHub' });
 
-    await controller.updateProfile(req, cvId, itemId, { profile: { username: 'jane' }, version });
-    expect(service.updateProfile).toHaveBeenCalledWith(
-      user,
-      cvId,
-      itemId,
-      { username: 'jane' },
-      version,
-    );
+    await controller.updateProfile(req, cvId, itemId, { profile: { username: 'jane' } });
+    expect(service.updateProfile).toHaveBeenCalledWith(user, cvId, itemId, { username: 'jane' });
 
-    await controller.deleteProfile(req, cvId, itemId, versionDto);
-    expect(service.deleteProfile).toHaveBeenCalledWith(user, cvId, itemId, version);
+    await controller.deleteProfile(req, cvId, itemId);
+    expect(service.deleteProfile).toHaveBeenCalledWith(user, cvId, itemId);
   });
 
   it.each([
@@ -151,10 +143,10 @@ describe('CvItemsController', () => {
     'delegates $key array CRUD to service',
     async ({ key, label, itemKey, create, update, delete: del }) => {
       const item = { name: 'Sample' };
-      const dto = { [itemKey]: item, version } as never;
+      const dto = { [itemKey]: item } as never;
 
       await (controller[create as keyof CvItemsController] as ControllerHandler)(req, cvId, dto);
-      expect(service.createArrayItem).toHaveBeenCalledWith(user, cvId, key, item, version);
+      expect(service.createArrayItem).toHaveBeenCalledWith(user, cvId, key, item);
 
       await (controller[update as keyof CvItemsController] as ControllerHandler)(
         req,
@@ -162,23 +154,10 @@ describe('CvItemsController', () => {
         itemId,
         dto,
       );
-      expect(service.updateArrayItem).toHaveBeenCalledWith(
-        user,
-        cvId,
-        key,
-        itemId,
-        item,
-        label,
-        version,
-      );
+      expect(service.updateArrayItem).toHaveBeenCalledWith(user, cvId, key, itemId, item, label);
 
-      await (controller[del as keyof CvItemsController] as ControllerHandler)(
-        req,
-        cvId,
-        itemId,
-        versionDto,
-      );
-      expect(service.deleteArrayItem).toHaveBeenCalledWith(user, cvId, key, itemId, label, version);
+      await (controller[del as keyof CvItemsController] as ControllerHandler)(req, cvId, itemId);
+      expect(service.deleteArrayItem).toHaveBeenCalledWith(user, cvId, key, itemId, label);
     },
   );
 
@@ -195,7 +174,7 @@ describe('CvItemsController', () => {
 
   it('delegates reorder routes to service', async () => {
     const order = ['id-1', 'id-2'];
-    await controller.reorderSkills(req, cvId, { order, version });
-    expect(service.reorderSection).toHaveBeenCalledWith(user, cvId, 'skills', order, version);
+    await controller.reorderSkills(req, cvId, { order });
+    expect(service.reorderSection).toHaveBeenCalledWith(user, cvId, 'skills', order);
   });
 });

@@ -14,15 +14,13 @@ type ReferenceItem = SectionItem<ResumeReference>;
 
 export function ReferencesSection() {
   useSectionMount('references');
-  const { cvId, resume, version, setResume, setVersion } = useCvEditor();
+  const { cvId, resume, setResume } = useCvEditor();
 
   return (
     <ManagedArraySection<ReferenceItem>
       cvId={cvId}
-      version={version}
-      onVersionChange={setVersion}
       items={resume.references ?? []}
-      onItemsChange={(references) => setResume({ ...resume, references })}
+      onItemsChange={(references) => setResume((prev) => ({ ...prev, references }))}
       refetchItems={createSectionRefetch<ReferenceItem>(getCvReferences, cvId)}
       entityLabel="Reference"
       addLabel="Add reference"

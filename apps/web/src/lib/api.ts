@@ -32,9 +32,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
         ? body.message
         : Array.isArray(body.message)
           ? body.message.join(', ')
-          : response.status === 409
-            ? 'This CV was modified elsewhere. Reload the page and try again.'
-            : `Request failed (${response.status})`;
+          : `Request failed (${response.status})`;
     throw new Error(message);
   }
 
@@ -173,53 +171,79 @@ export function deleteCv(id: string) {
 }
 
 export function getCvBasics(cvId: string) {
-  return apiFetch<Record<string, unknown>>(`/cv/${cvId}/basics`);
+  return dedupeGetRequest(`GET /cv/${cvId}/basics`, () =>
+    apiFetch<Record<string, unknown>>(`/cv/${cvId}/basics`),
+  );
 }
 
 export function getCvWork(cvId: string) {
-  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/work`);
+  return dedupeGetRequest(`GET /cv/${cvId}/work`, () =>
+    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/work`),
+  );
 }
 
 export function getCvVolunteer(cvId: string) {
-  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/volunteer`);
+  return dedupeGetRequest(`GET /cv/${cvId}/volunteer`, () =>
+    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/volunteer`),
+  );
 }
 
 export function getCvEducation(cvId: string) {
-  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/education`);
+  return dedupeGetRequest(`GET /cv/${cvId}/education`, () =>
+    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/education`),
+  );
 }
 
 export function getCvSkills(cvId: string) {
-  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/skills`);
+  return dedupeGetRequest(`GET /cv/${cvId}/skills`, () =>
+    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/skills`),
+  );
 }
 
 export function getCvProjects(cvId: string) {
-  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/projects`);
+  return dedupeGetRequest(`GET /cv/${cvId}/projects`, () =>
+    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/projects`),
+  );
 }
 
 export function getCvAwards(cvId: string) {
-  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/awards`);
+  return dedupeGetRequest(`GET /cv/${cvId}/awards`, () =>
+    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/awards`),
+  );
 }
 
 export function getCvCertificates(cvId: string) {
-  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/certificates`);
+  return dedupeGetRequest(`GET /cv/${cvId}/certificates`, () =>
+    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/certificates`),
+  );
 }
 
 export function getCvPublications(cvId: string) {
-  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/publications`);
+  return dedupeGetRequest(`GET /cv/${cvId}/publications`, () =>
+    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/publications`),
+  );
 }
 
 export function getCvLanguages(cvId: string) {
-  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/languages`);
+  return dedupeGetRequest(`GET /cv/${cvId}/languages`, () =>
+    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/languages`),
+  );
 }
 
 export function getCvInterests(cvId: string) {
-  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/interests`);
+  return dedupeGetRequest(`GET /cv/${cvId}/interests`, () =>
+    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/interests`),
+  );
 }
 
 export function getCvReferences(cvId: string) {
-  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/references`);
+  return dedupeGetRequest(`GET /cv/${cvId}/references`, () =>
+    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/references`),
+  );
 }
 
 export function getCvProfiles(cvId: string) {
-  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/profiles`);
+  return dedupeGetRequest(`GET /cv/${cvId}/profiles`, () =>
+    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/profiles`),
+  );
 }

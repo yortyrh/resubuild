@@ -1,4 +1,4 @@
 export interface CvItemMutationResponse {
-  version: string;
   item?: unknown;
+  items?: unknown[];
 }

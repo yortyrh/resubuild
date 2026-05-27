@@ -349,30 +349,6 @@ describe('CvNormalizedRepository', () => {
     expect(result.name).toBe('Pat');
   });
 
-  it('bumpMetaVersion updates meta columns', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest
-                .fn()
-                .mockResolvedValue({ data: { meta_version: 'v2.0.0' }, error: null }),
-            }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(
-      repo.bumpMetaVersion(supabase, 'cv-1', {
-        version: 'v2.0.0',
-        canonical: 'http://x',
-        lastModified: '2024-02-01',
-      }),
-    ).resolves.toBe('v2.0.0');
-  });
-
   it('insertNormalizedCv updates header and section rows', async () => {
     const header = mockCvHeader();
     const resume: Resume = {
@@ -543,28 +519,6 @@ describe('CvNormalizedRepository', () => {
     await expect(repo.updateBasicsHeader(supabase, 'cv-1', { name: 'Z' })).rejects.toThrow(
       'basics fail',
     );
-  });
-
-  it('bumpMetaVersion throws on supabase error', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({ data: null, error: { message: 'meta fail' } }),
-            }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(
-      repo.bumpMetaVersion(supabase, 'cv-1', {
-        version: 'v1',
-        canonical: 'c',
-        lastModified: 'd',
-      }),
-    ).rejects.toThrow('meta fail');
   });
 
   it('listSectionRows throws on supabase error', async () => {

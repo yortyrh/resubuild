@@ -84,7 +84,7 @@ describe('E2E — CV REST (local Supabase)', () => {
     expect(response.body.id).toBe(target.id);
     expect(response.body.title).toBe(target.title);
     expect(response.body.data.basics?.name).toEqual(expect.any(String));
-    expect(response.body.data.meta?.version).toEqual(expect.any(String));
+    expect(response.body.data).not.toHaveProperty('meta');
   });
 
   it('every seeded CV has basics.image set to its assigned media URL', async () => {
@@ -138,7 +138,6 @@ describe('E2E — CV REST (local Supabase)', () => {
       .expect(201);
 
     const cvId = created.body.id;
-    let currentVersion = created.body.data.meta.version as string;
 
     const skillNames = ['Alpha', 'Beta', 'Gamma'];
     const ids: string[] = [];
@@ -147,10 +146,9 @@ describe('E2E — CV REST (local Supabase)', () => {
       const res = await request(app.getHttpServer())
         .post(`/cv/${cvId}/skills`)
         .set('Authorization', `Bearer ${accessToken}`)
-        .send({ skill: { name }, version: currentVersion })
+        .send({ skill: { name } })
         .expect(201);
       ids.push(res.body.item.id);
-      currentVersion = res.body.version;
     }
 
     const listBefore = await request(app.getHttpServer())
@@ -160,16 +158,10 @@ describe('E2E — CV REST (local Supabase)', () => {
 
     const rowIds = listBefore.body.map((row: { id: string }) => row.id);
 
-    const latestVersion = (
-      await request(app.getHttpServer())
-        .get(`/cv/${cvId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-    ).body.data.meta.version;
-
     const reordered = await request(app.getHttpServer())
       .put(`/cv/${cvId}/skills/reorder`)
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ order: [rowIds[2], rowIds[0], rowIds[1]], version: latestVersion })
+      .send({ order: [rowIds[2], rowIds[0], rowIds[1]] })
       .expect(200);
 
     expect(reordered.body.items.map((s: { name: string }) => s.name)).toEqual([
@@ -194,25 +186,21 @@ describe('E2E — CV REST (local Supabase)', () => {
       .expect(201);
 
     const cvId = created.body.id;
-    let currentVersion = created.body.data.meta.version as string;
 
     const older = await request(app.getHttpServer())
       .post(`/cv/${cvId}/work`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
         work: { name: 'Older Co', position: 'Engineer', startDate: '2018-01' },
-        version: currentVersion,
       })
       .expect(201);
     const olderId = older.body.item.id as string;
-    currentVersion = older.body.version;
 
     await request(app.getHttpServer())
       .post(`/cv/${cvId}/work`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
         work: { name: 'Newer Co', position: 'Lead', startDate: '2024-01' },
-        version: currentVersion,
       })
       .expect(201);
 
@@ -224,18 +212,11 @@ describe('E2E — CV REST (local Supabase)', () => {
     expect(list.body[0].name).toBe('Newer Co');
     expect(list.body[1].id).toBe(olderId);
 
-    const latestVersion = (
-      await request(app.getHttpServer())
-        .get(`/cv/${cvId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-    ).body.data.meta.version;
-
     const patched = await request(app.getHttpServer())
       .patch(`/cv/${cvId}/work/${olderId}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
         work: { name: 'Older Co', position: 'Senior Engineer', startDate: '2018-01' },
-        version: latestVersion,
       })
       .expect(200);
 

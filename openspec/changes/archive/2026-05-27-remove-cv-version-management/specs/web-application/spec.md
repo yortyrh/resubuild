@@ -1,10 +1,4 @@
-# Web application (Next.js)
-
-## Purpose
-
-Capture how the Resumind frontend authenticates users via the Nest API, calls CV endpoints with Bearer tokens, and exposes CV editing flows aligned with the API and Supabase-backed tokens (validated server-side).
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The web app MUST use backend-owned HTTP endpoints for authentication and authenticated Nest API access
 
@@ -26,6 +20,22 @@ Authenticated requests to Nest CV endpoints SHALL send the short-lived **access 
 
 - **WHEN** the API returns a non-OK response
 - **THEN** `apiFetch` SHALL surface a clear error string, including concatenated validation messages when present
+
+### Requirement: The CV editor SHALL persist resume sections through item-scoped API helpers
+
+The web client in `apps/web/src/lib/cv-item-api.ts` (and related helpers) SHALL expose typed functions for each item operation defined in `cv-rest-api` (basics patch, array CRUD, nested highlight/course CRUD). Array-item update and delete helpers SHALL accept the item row UUID (`itemId`) rather than a numeric array index. Item mutation helpers SHALL NOT accept or send a `version` field. The dashboard CV editor SHALL call these functions on per-item Save and confirmed Delete instead of deferring resume body changes to a single Save CV action. After update or delete, local section state SHALL be merged by matching item `id`; after create, the client SHALL incorporate the returned item (with `id`) and refresh section ordering via section GET or equivalent sort logic.
+
+#### Scenario: Saving a language entry
+
+- **WHEN** a user saves a language from the inline edit form
+- **THEN** the client SHALL invoke the language update helper with the CV id, the language row id, and payload only
+- **AND THEN** on success SHALL replace the matching entry in local section state by `id` from the response
+
+#### Scenario: Deleting an award entry
+
+- **WHEN** a user confirms deletion of an award
+- **THEN** the client SHALL call the award delete helper with the award row id
+- **AND THEN** on success SHALL remove the entry from local state by `id` without requiring a full section refetch
 
 ### Requirement: The SPA routes SHALL expose landing, auth, and dashboard CV workflows
 
@@ -55,67 +65,5 @@ The per-CV editor bootstrap (`GET /cv/:id`) SHALL merge slim `data.basics` into 
 #### Scenario: User creates CV from simplified form
 
 - **WHEN** a signed-in user fills basics on `/dashboard/cv/new` and clicks Save
-- **THEN** the client SHALL call `createCv` once with resume `data` containing the entered `basics` and SHALL NOT require a separate title field
+- **THEN** the client SHALL call `createCv` once with resume `data` containing the entered `basics` only
 - **AND THEN** on success SHALL navigate to `/dashboard/cv/:id` for the created CV with a server-derived title visible in the shell and list
-
-### Requirement: Shared types and schema packages SHALL inform the client and server contract
-
-The frontend and API both depend on workspace packages for resume typing and schema; changes to CV shape MUST flow through those packages to keep UI, API validation, and persistence aligned.
-
-#### Scenario: Workspace alignment
-
-- **WHEN** a developer changes resume structure
-- **THEN** they SHALL update `packages/types` and/or `packages/schemas` and ensure both `apps/web` and `apps/api` still build and tests pass
-
-### Requirement: The CV editor SHALL persist resume sections through item-scoped API helpers
-
-The web client in `apps/web/src/lib/cv-item-api.ts` (and related helpers) SHALL expose typed functions for each item operation defined in `cv-rest-api` (basics patch, array CRUD, nested highlight/course CRUD). Array-item update and delete helpers SHALL accept the item row UUID (`itemId`) rather than a numeric array index. Item mutation helpers SHALL NOT accept or send a `version` field. The dashboard CV editor SHALL call these functions on per-item Save and confirmed Delete instead of deferring resume body changes to a single Save CV action. After update or delete, local section state SHALL be merged by matching item `id`; after create, the client SHALL incorporate the returned item (with `id`) and refresh section ordering via section GET or equivalent sort logic.
-
-#### Scenario: Saving a language entry
-
-- **WHEN** a user saves a language from the inline edit form
-- **THEN** the client SHALL invoke the language update helper with the CV id, the language row id, and payload only
-- **AND THEN** on success SHALL replace the matching entry in local section state by `id` from the response
-
-#### Scenario: Deleting an award entry
-
-- **WHEN** a user confirms deletion of an award
-- **THEN** the client SHALL call the award delete helper with the award row id
-- **AND THEN** on success SHALL remove the entry from local state by `id` without requiring a full section refetch
-
-### Requirement: Dashboard CV delete SHALL use an in-app confirmation dialog
-
-Deleting a CV from the dashboard list SHALL require confirmation through an accessible in-app dialog (not `window.confirm`). The dialog SHALL name the CV being deleted when available and SHALL disable dismiss actions while the delete request is in flight.
-
-#### Scenario: User cancels CV delete
-
-- **WHEN** a user clicks Delete on a dashboard CV card and then cancels the confirmation dialog
-- **THEN** no delete API call SHALL be made
-- **AND** the CV SHALL remain in the list
-
-#### Scenario: User confirms CV delete
-
-- **WHEN** a user confirms deletion in the dialog
-- **THEN** the client SHALL call `deleteCv`
-- **AND** on success SHALL refresh the list and show a success toast
-
-### Requirement: Auth pages SHALL render cross-links outside client form boundaries
-
-The `/login` and `/register` routes SHALL render static navigation cross-links (login ↔ register) from Server Components. Interactive auth forms (`LoginForm`, `RegisterForm`) SHALL NOT include Next.js `<Link>` cross-links in their `'use client'` module trees.
-
-#### Scenario: Login page cross-link is server-rendered
-
-- **WHEN** a user loads `/login`
-- **THEN** the **Register** cross-link SHALL be rendered by the Server Component page (or a server-safe shared helper)
-- **AND** `LoginForm` SHALL contain only the sign-in form and its client state
-
-#### Scenario: Register page cross-link is server-rendered
-
-- **WHEN** a user loads `/register`
-- **THEN** the **Sign in** cross-link SHALL be rendered by the Server Component page (or a server-safe shared helper)
-- **AND** `RegisterForm` SHALL contain only the registration form and its client state
-
-#### Scenario: Standard browser hydration on auth pages
-
-- **WHEN** a developer loads `/login` or `/register` in a standard browser (not Cursor embedded browser) with `pnpm dev` running
-- **THEN** the browser console SHALL NOT report a React hydration mismatch attributable to auth cross-links

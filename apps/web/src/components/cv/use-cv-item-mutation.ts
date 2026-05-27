@@ -4,26 +4,20 @@ import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import type { CvItemMutationResponse } from '@/lib/cv-item-api';
 
-interface UseCvItemMutationOptions {
-  version: string | undefined;
-  onVersionChange: (version: string) => void;
-}
-
-export function useCvItemMutation({ version, onVersionChange }: UseCvItemMutationOptions) {
+export function useCvItemMutation() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const run = useCallback(
     async <T>(
-      action: (currentVersion?: string) => Promise<CvItemMutationResponse>,
+      action: () => Promise<CvItemMutationResponse>,
       onSuccess?: (result: CvItemMutationResponse) => T,
       successMessage?: string,
     ): Promise<T | undefined> => {
       setSaving(true);
       setError(null);
       try {
-        const result = await action(version);
-        onVersionChange(result.version);
+        const result = await action();
         if (successMessage) {
           toast.success(successMessage);
         }
@@ -37,7 +31,7 @@ export function useCvItemMutation({ version, onVersionChange }: UseCvItemMutatio
         setSaving(false);
       }
     },
-    [onVersionChange, version],
+    [],
   );
 
   return { saving, error, setError, run };

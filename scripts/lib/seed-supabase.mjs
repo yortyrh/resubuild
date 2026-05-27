@@ -216,70 +216,15 @@ export function deriveCvTitleFromBasics(basics) {
 }
 
 /**
- * @param {string} baseUrl
- * @param {string} cvId
- */
-function buildResumeCanonicalUrl(baseUrl, cvId) {
-  return `${baseUrl.replace(/\/$/, '')}/dashboard/cv/${cvId}`;
-}
-
-/**
- * @param {Record<string, unknown>} data
- * @param {{ cvId: string; baseUrl: string }} options
- */
-export function applyResumeMetaForCreate(data, options) {
-  const now = new Date().toISOString().slice(0, 19);
-  return {
-    ...data,
-    meta: {
-      canonical: buildResumeCanonicalUrl(options.baseUrl, options.cvId),
-      version: 'v1.0.0',
-      lastModified: now,
-    },
-  };
-}
-
-/**
- * @param {string} version
- */
-function bumpResumeMetaVersion(version) {
-  const match = version.match(/^v?(\d+)\.(\d+)\.(\d+)$/i);
-  if (match) {
-    const patch = Number.parseInt(match[3], 10) + 1;
-    return `v${match[1]}.${match[2]}.${patch}`;
-  }
-  return 'v1.0.1';
-}
-
-/**
- * @param {Record<string, unknown>} data
- * @param {{ cvId: string; baseUrl: string; currentVersion?: string }} options
- */
-export function applyResumeMetaForUpdate(data, options) {
-  const now = new Date().toISOString().slice(0, 19);
-  const baseVersion = options.currentVersion ?? 'v1.0.0';
-  return {
-    ...data,
-    meta: {
-      canonical: buildResumeCanonicalUrl(options.baseUrl, options.cvId),
-      version: bumpResumeMetaVersion(baseVersion),
-      lastModified: now,
-    },
-  };
-}
-
-/**
  * @param {import('@supabase/supabase-js').SupabaseClient} admin
  * @param {string} userId
  * @param {Record<string, unknown>} resumeData
- * @param {string} appUrl
+ * @param {string} _appUrl
  */
-export async function insertCv(admin, userId, resumeData, appUrl) {
+export async function insertCv(admin, userId, resumeData, _appUrl) {
   const cvId = randomUUID();
-  const dataWithMeta = applyResumeMetaForCreate(resumeData, { cvId, baseUrl: appUrl });
   const basics =
-    dataWithMeta.basics && typeof dataWithMeta.basics === 'object' ? dataWithMeta.basics : {};
-  const meta = dataWithMeta.meta && typeof dataWithMeta.meta === 'object' ? dataWithMeta.meta : {};
+    resumeData.basics && typeof resumeData.basics === 'object' ? resumeData.basics : {};
   const title = deriveCvTitleFromBasics(basics);
 
   const { data, error } = await admin
@@ -295,9 +240,6 @@ export async function insertCv(admin, userId, resumeData, appUrl) {
       url: basics.url ?? null,
       summary: basics.summary ?? null,
       location: basics.location ?? {},
-      meta_version: meta.version ?? null,
-      meta_canonical: meta.canonical ?? null,
-      meta_last_modified: meta.lastModified ?? null,
     })
     .select('*')
     .single();
@@ -306,7 +248,7 @@ export async function insertCv(admin, userId, resumeData, appUrl) {
     throw new Error(`CV insert failed: ${error.message}`);
   }
 
-  await insertNormalizedSections(admin, cvId, dataWithMeta);
+  await insertNormalizedSections(admin, cvId, resumeData);
 
   return { ...data, title };
 }
@@ -595,36 +537,11 @@ export async function insertMedia(
  * @param {string} imageUrl
  * @param {string} appUrl
  */
-export async function assignProfilePhoto(admin, cvId, userId, imageUrl, appUrl) {
-  const { data: row, error: fetchError } = await admin
-    .from('cv')
-    .select('meta_version')
-    .eq('id', cvId)
-    .eq('user_id', userId)
-    .single();
-
-  if (fetchError || !row) {
-    throw new Error(`Profile photo update failed: ${fetchError?.message ?? 'CV not found'}`);
-  }
-
-  const dataWithMeta = applyResumeMetaForUpdate(
-    {},
-    {
-      cvId,
-      baseUrl: appUrl,
-      currentVersion: row.meta_version ?? undefined,
-    },
-  );
-
-  const meta = dataWithMeta.meta && typeof dataWithMeta.meta === 'object' ? dataWithMeta.meta : {};
-
+export async function assignProfilePhoto(admin, cvId, userId, imageUrl, _appUrl) {
   const { data: updated, error } = await admin
     .from('cv')
     .update({
       image: imageUrl,
-      meta_version: meta.version ?? null,
-      meta_canonical: meta.canonical ?? null,
-      meta_last_modified: meta.lastModified ?? null,
     })
     .eq('id', cvId)
     .eq('user_id', userId)

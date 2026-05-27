@@ -2,6 +2,7 @@
 
 import { sanitizeResumeItemPayload } from '@resumind/types';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { CvGenericSectionSkeleton } from '@/components/cv/cv-editor-skeleton';
 import {
   DeleteItemDialog,
   ResumeItemForm,
@@ -12,27 +13,20 @@ import { useCvItemMutation } from '@/components/cv/use-cv-item-mutation';
 import { Button } from '@/components/ui/button';
 import type { CvItemMutationResponse } from '@/lib/cv-item-api';
 import { getItemId, mergeItemById, removeItemById, type WithItemId } from '@/lib/cv-section-order';
-import { sectionItemsMissingIds } from '@/lib/cv-section-refetch';
+import { sectionItemsNeedHydration } from '@/lib/cv-section-refetch';
 
 interface ArraySectionApi {
-  create: (
-    cvId: string,
-    item: Record<string, unknown>,
-    version?: string,
-  ) => Promise<CvItemMutationResponse>;
+  create: (cvId: string, item: Record<string, unknown>) => Promise<CvItemMutationResponse>;
   update: (
     cvId: string,
     itemId: string,
     item: Record<string, unknown>,
-    version?: string,
   ) => Promise<CvItemMutationResponse>;
-  delete: (cvId: string, itemId: string, version?: string) => Promise<CvItemMutationResponse>;
+  delete: (cvId: string, itemId: string) => Promise<CvItemMutationResponse>;
 }
 
 interface ManagedArraySectionProps<T extends WithItemId> {
   cvId: string;
-  version: string | undefined;
-  onVersionChange: (version: string) => void;
   items: T[];
   onItemsChange: (items: T[]) => void;
   refetchItems: () => Promise<T[]>;
@@ -53,8 +47,6 @@ interface ManagedArraySectionProps<T extends WithItemId> {
 
 export function ManagedArraySection<T extends WithItemId>({
   cvId,
-  version,
-  onVersionChange,
   items,
   onItemsChange,
   refetchItems,
@@ -67,42 +59,70 @@ export function ManagedArraySection<T extends WithItemId>({
   api,
   successMessages,
 }: ManagedArraySectionProps<T>) {
-  const { saving, error, setError, run } = useCvItemMutation({ version, onVersionChange });
+  const { saving, error, setError, run } = useCvItemMutation();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<T | null>(null);
   const [creating, setCreating] = useState(false);
   const [createDraft, setCreateDraft] = useState<T | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const hydrateAttemptedRef = useRef(false);
+  const [itemsLoading, setItemsLoading] = useState(() => sectionItemsNeedHydration(items));
+  const refetchItemsRef = useRef(refetchItems);
+  const onItemsChangeRef = useRef(onItemsChange);
+  const setErrorRef = useRef(setError);
+  const hydratedForCvIdRef = useRef<string | null>(null);
+  const needsHydration = sectionItemsNeedHydration(items);
+
+  refetchItemsRef.current = refetchItems;
+  onItemsChangeRef.current = onItemsChange;
+  setErrorRef.current = setError;
 
   useEffect(() => {
-    hydrateAttemptedRef.current = false;
+    if (hydratedForCvIdRef.current !== null && hydratedForCvIdRef.current !== cvId) {
+      hydratedForCvIdRef.current = null;
+    }
   }, [cvId]);
 
   useEffect(() => {
-    if (!sectionItemsMissingIds(items) || hydrateAttemptedRef.current) {
+    if (!needsHydration) {
+      setItemsLoading(false);
+      return;
+    }
+    if (hydratedForCvIdRef.current === cvId) {
+      setItemsLoading(false);
       return;
     }
 
-    hydrateAttemptedRef.current = true;
+    setItemsLoading(true);
     let cancelled = false;
 
-    refetchItems()
+    void refetchItemsRef
+      .current()
       .then((refetched) => {
-        if (!cancelled) {
-          onItemsChange(refetched);
+        if (cancelled) {
+          return;
         }
+        hydratedForCvIdRef.current = cvId;
+        onItemsChangeRef.current(refetched);
       })
       .catch((err) => {
+        if (cancelled) {
+          return;
+        }
+        hydratedForCvIdRef.current = null;
+        setErrorRef.current(
+          err instanceof Error ? err.message : 'Failed to refresh section entries',
+        );
+      })
+      .finally(() => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to refresh section entries');
+          setItemsLoading(false);
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [cvId, items, refetchItems, onItemsChange, setError]);
+  }, [cvId, needsHydration]);
 
   const startEdit = (item: T) => {
     setCreating(false);
@@ -129,7 +149,7 @@ export function ManagedArraySection<T extends WithItemId>({
       return;
     }
     await run(
-      (v) => api.update(cvId, editingId, sanitizeResumeItemPayload(toPayload(draft)), v),
+      () => api.update(cvId, editingId, sanitizeResumeItemPayload(toPayload(draft))),
       (result) => {
         const updated = (result.item ?? draft) as T;
         onItemsChange(mergeItemById(items, updated));
@@ -158,7 +178,7 @@ export function ManagedArraySection<T extends WithItemId>({
       return;
     }
     await run(
-      (v) => api.create(cvId, sanitizeResumeItemPayload(toPayload(createDraft)), v),
+      () => api.create(cvId, sanitizeResumeItemPayload(toPayload(createDraft))),
       async () => {
         onItemsChange(await refetchItems());
         cancelCreate();
@@ -173,7 +193,7 @@ export function ManagedArraySection<T extends WithItemId>({
     }
     const itemId = deleteId;
     await run(
-      (v) => api.delete(cvId, itemId, v),
+      () => api.delete(cvId, itemId),
       () => {
         onItemsChange(removeItemById(items, itemId));
         setDeleteId(null);
@@ -184,6 +204,19 @@ export function ManagedArraySection<T extends WithItemId>({
       successMessages?.delete ?? `${entityLabel} deleted`,
     );
   };
+
+  if (itemsLoading) {
+    return (
+      <div
+        className="space-y-4"
+        role="status"
+        aria-busy="true"
+        aria-label={`Loading ${entityLabel.toLowerCase()} entries`}
+      >
+        <CvGenericSectionSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

@@ -92,7 +92,7 @@ function CvBasicsSectionSkeleton() {
   );
 }
 
-function CvGenericSectionSkeleton() {
+export function CvGenericSectionSkeleton() {
   return (
     <article aria-hidden="true" className="surface-soft text-card-foreground p-4">
       <div className="space-y-2">

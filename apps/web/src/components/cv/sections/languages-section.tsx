@@ -14,15 +14,13 @@ type LanguageItem = SectionItem<ResumeLanguage>;
 
 export function LanguagesSection() {
   useSectionMount('languages');
-  const { cvId, resume, version, setResume, setVersion } = useCvEditor();
+  const { cvId, resume, setResume } = useCvEditor();
 
   return (
     <ManagedArraySection<LanguageItem>
       cvId={cvId}
-      version={version}
-      onVersionChange={setVersion}
       items={resume.languages ?? []}
-      onItemsChange={(languages) => setResume({ ...resume, languages })}
+      onItemsChange={(languages) => setResume((prev) => ({ ...prev, languages }))}
       refetchItems={createSectionRefetch<LanguageItem>(getCvLanguages, cvId)}
       entityLabel="Language"
       addLabel="Add language"

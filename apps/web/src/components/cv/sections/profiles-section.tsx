@@ -20,15 +20,15 @@ const profileApi = {
 
 export function ProfilesSection() {
   useSectionMount('profiles');
-  const { cvId, resume, version, setResume, setVersion } = useCvEditor();
+  const { cvId, resume, setResume } = useCvEditor();
 
   return (
     <ManagedArraySection<ProfileItem>
       cvId={cvId}
-      version={version}
-      onVersionChange={setVersion}
       items={resume.basics?.profiles ?? []}
-      onItemsChange={(profiles) => setResume({ ...resume, basics: { ...resume.basics, profiles } })}
+      onItemsChange={(profiles) =>
+        setResume((prev) => ({ ...prev, basics: { ...prev.basics, profiles } }))
+      }
       refetchItems={createSectionRefetch<ProfileItem>(getCvProfiles, cvId)}
       entityLabel="Profile"
       addLabel="Add social profile"

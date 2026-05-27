@@ -376,7 +376,6 @@ function projectToRow(project: ResumeProject, cvId: string): Omit<CvProjectRow, 
 
 export function disassembleResume(data: Resume, cvId = ''): NormalizedCvPayload {
   const basics = data.basics ?? {};
-  const meta = data.meta;
 
   const header: NormalizedCvPayload['header'] = {
     name: basics.name ?? null,
@@ -387,9 +386,6 @@ export function disassembleResume(data: Resume, cvId = ''): NormalizedCvPayload 
     url: basics.url ?? null,
     summary: basics.summary ?? null,
     location: emptyLocation(basics.location),
-    meta_version: meta?.version ?? null,
-    meta_canonical: meta?.canonical ?? null,
-    meta_last_modified: meta?.lastModified ?? null,
   };
 
   const profiles = (basics.profiles ?? []).map((p, i) => profileToRow(p, cvId, i));
@@ -627,6 +623,26 @@ export function sortReferenceRows(rows: CvReferenceRow[]): CvReferenceRow[] {
   return sortProfileRows(rows as CvProfileRow[]) as CvReferenceRow[];
 }
 
+/** Slim CV envelope for list/detail reads: basics from `cv` header only (no section tables). */
+export function headerToSlimCvData(header: CvHeaderRow): Record<string, unknown> {
+  const basics = omitUndefined({
+    name: header.name ?? undefined,
+    label: header.label ?? undefined,
+    image: header.image ?? undefined,
+    email: header.email ?? undefined,
+    phone: header.phone ?? undefined,
+    url: header.url ?? undefined,
+    summary: header.summary ?? undefined,
+    location: emptyLocation(header.location),
+  });
+
+  const data: Record<string, unknown> = {};
+  if (Object.keys(basics).length > 0) {
+    data.basics = basics;
+  }
+  return data;
+}
+
 export function assembleResume(header: CvHeaderRow, sections: NormalizedCvSections): Resume {
   const profiles = sortProfileRows(sections.profiles).map((row) =>
     withRowId(row, rowToProfile(row)),
@@ -642,15 +658,6 @@ export function assembleResume(header: CvHeaderRow, sections: NormalizedCvSectio
     location: emptyLocation(header.location),
     profiles: profiles.length > 0 ? profiles : undefined,
   }) as ResumeBasics;
-
-  const meta =
-    header.meta_version || header.meta_canonical || header.meta_last_modified
-      ? omitUndefined({
-          version: header.meta_version ?? undefined,
-          canonical: header.meta_canonical ?? undefined,
-          lastModified: header.meta_last_modified ?? undefined,
-        })
-      : undefined;
 
   const work = sortWorkRows(sections.work).map((row) => withRowId(row, rowToWork(row)));
   const volunteer = sortVolunteerRows(sections.volunteer).map((row) =>
@@ -693,7 +700,6 @@ export function assembleResume(header: CvHeaderRow, sections: NormalizedCvSectio
     interests: interests.length > 0 ? interests : undefined,
     references: references.length > 0 ? references : undefined,
     projects: projects.length > 0 ? projects : undefined,
-    meta,
   }) as Resume;
 }
 

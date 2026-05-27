@@ -6,6 +6,7 @@ import {
   assembleResume,
   dbRowToResumeItem,
   disassembleResume,
+  headerToSlimCvData,
   resumeItemToDbPayload,
 } from './resume-normalized';
 
@@ -154,6 +155,35 @@ describe('resume-normalized round-trip', () => {
     const assembled = assembleResume(header, payload.sections);
 
     expect(assembled.work?.[0]).toMatchObject({ name: 'Acme', id: workId });
+  });
+});
+
+describe('headerToSlimCvData', () => {
+  it('returns basics from header columns only', () => {
+    const data = headerToSlimCvData({
+      id: 'cv-1',
+      user_id: 'user-1',
+      name: 'Alex',
+      label: 'Dev',
+      meta_version: 'v1.0.0',
+      meta_canonical: 'https://app/cv/cv-1',
+      location: { city: 'Paris' },
+    });
+
+    expect(data).not.toHaveProperty('meta');
+    expect(data.basics).toMatchObject({ name: 'Alex', label: 'Dev', location: { city: 'Paris' } });
+    expect(data).not.toHaveProperty('work');
+    expect(data).not.toHaveProperty('profiles');
+  });
+
+  it('includes empty location when header has no scalar basics', () => {
+    const data = headerToSlimCvData({
+      id: 'cv-1',
+      user_id: 'user-1',
+    });
+
+    expect(data).not.toHaveProperty('meta');
+    expect(data.basics).toEqual({ location: {} });
   });
 });
 

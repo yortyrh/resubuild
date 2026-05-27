@@ -16,15 +16,13 @@ type PublicationItem = SectionItem<ResumePublication>;
 
 export function PublicationsSection() {
   useSectionMount('publications');
-  const { cvId, resume, version, setResume, setVersion } = useCvEditor();
+  const { cvId, resume, setResume } = useCvEditor();
 
   return (
     <ManagedArraySection<PublicationItem>
       cvId={cvId}
-      version={version}
-      onVersionChange={setVersion}
       items={resume.publications ?? []}
-      onItemsChange={(publications) => setResume({ ...resume, publications })}
+      onItemsChange={(publications) => setResume((prev) => ({ ...prev, publications }))}
       refetchItems={createSectionRefetch<PublicationItem>(getCvPublications, cvId)}
       entityLabel="Publication"
       addLabel="Add publication"

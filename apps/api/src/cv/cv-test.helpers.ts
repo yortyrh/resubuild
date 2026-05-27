@@ -17,7 +17,6 @@ export function createMockNormalizedRepo(): jest.Mocked<
     | 'replaceNormalizedCv'
     | 'reorderSection'
     | 'getNextSort'
-    | 'bumpMetaVersion'
   >
 > {
   return {
@@ -47,7 +46,6 @@ export function createMockNormalizedRepo(): jest.Mocked<
     replaceNormalizedCv: jest.fn(),
     reorderSection: jest.fn(),
     getNextSort: jest.fn().mockResolvedValue(0),
-    bumpMetaVersion: jest.fn().mockResolvedValue('v1.0.1'),
   };
 }
 
@@ -55,9 +53,6 @@ export function mockCvHeader(overrides: Partial<CvHeaderRow> = {}): CvHeaderRow 
   return {
     id: 'cv-1',
     user_id: 'user-1',
-    meta_version: 'v1.0.0',
-    meta_canonical: 'http://app.test/dashboard/cv/cv-1',
-    meta_last_modified: '2024-01-01T00:00:00',
     location: {},
     created_at: 'c',
     updated_at: 'u',

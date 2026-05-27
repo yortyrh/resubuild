@@ -1,13 +1,8 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   type CvSectionKey,
   dbRowToResumeItem,
-  getCvMetaVersion,
+  headerToSlimCvData,
   isSortBackedSection,
   sanitizeResumeItemPayload,
 } from '@resumind/types';
@@ -51,15 +46,6 @@ export class CvItemService {
     return row as Record<string, unknown>;
   }
 
-  private assertVersion(
-    clientVersion: string | undefined,
-    currentVersion: string | undefined,
-  ): void {
-    if (clientVersion && currentVersion && clientVersion !== currentVersion) {
-      throw new ConflictException('This CV was modified elsewhere. Reload the page and try again.');
-    }
-  }
-
   private rowToItem(row: Record<string, unknown>): Record<string, unknown> {
     return dbRowToResumeItem('', row);
   }
@@ -67,47 +53,25 @@ export class CvItemService {
   private async mutateSection(
     user: AuthenticatedRequest['user'],
     cvId: string,
-    clientVersion: string | undefined,
     mutator: (
       supabase: ReturnType<CvNormalizedRepository['createClientForUser']>,
-      currentVersion: string | undefined,
-    ) => Promise<Omit<CvItemMutationResponse, 'version'>>,
+    ) => Promise<CvItemMutationResponse>,
   ): Promise<CvItemMutationResponse> {
-    const header = await this.cvService.getHeader(user, cvId);
-    const currentVersion = getCvMetaVersion(header);
-    this.assertVersion(clientVersion, currentVersion);
-
+    await this.cvService.getHeader(user, cvId);
     const supabase = this.normalizedRepo.createClientForUser(user);
-
-    const result = await mutator(supabase, currentVersion);
-    const version = await this.cvService.bumpVersion(supabase, cvId, currentVersion, clientVersion);
-    return { ...result, version };
+    return mutator(supabase);
   }
 
   updateBasics(
     user: AuthenticatedRequest['user'],
     cvId: string,
     basics: Record<string, unknown>,
-    version?: string,
   ): Promise<CvItemMutationResponse> {
-    return this.mutateSection(user, cvId, version, async (supabase) => {
+    return this.mutateSection(user, cvId, async (supabase) => {
       const header = await this.normalizedRepo.updateBasicsHeader(supabase, cvId, basics);
-      const profiles = await this.normalizedRepo.listSectionRows(supabase, cvId, 'profiles');
-      const profileItems = profiles.map((p) => this.rowToItem(p as Record<string, unknown>));
+      const item = headerToSlimCvData(header).basics ?? {};
 
-      const item = {
-        name: header.name ?? undefined,
-        label: header.label ?? undefined,
-        image: header.image ?? undefined,
-        email: header.email ?? undefined,
-        phone: header.phone ?? undefined,
-        url: header.url ?? undefined,
-        summary: header.summary ?? undefined,
-        location: header.location ?? {},
-        profiles: profileItems,
-      };
-
-      return { item };
+      return { item: item as Record<string, unknown> };
     });
   }
 
@@ -115,9 +79,8 @@ export class CvItemService {
     user: AuthenticatedRequest['user'],
     cvId: string,
     profile: Record<string, unknown>,
-    version?: string,
   ): Promise<CvItemMutationResponse> {
-    return this.mutateSection(user, cvId, version, async (supabase) => {
+    return this.mutateSection(user, cvId, async (supabase) => {
       const row = await this.normalizedRepo.insertSectionRow(supabase, cvId, 'profiles', profile);
       return { item: this.rowToItem(row) };
     });
@@ -128,9 +91,8 @@ export class CvItemService {
     cvId: string,
     itemId: string,
     profile: Record<string, unknown>,
-    version?: string,
   ): Promise<CvItemMutationResponse> {
-    return this.mutateSection(user, cvId, version, async (supabase) => {
+    return this.mutateSection(user, cvId, async (supabase) => {
       const row = await this.requireSectionRow(supabase, cvId, 'profiles', itemId, 'Profile');
       const current = this.rowToItem(row);
       const updated = await this.normalizedRepo.updateSectionRow(
@@ -149,9 +111,8 @@ export class CvItemService {
     user: AuthenticatedRequest['user'],
     cvId: string,
     itemId: string,
-    version?: string,
   ): Promise<CvItemMutationResponse> {
-    return this.mutateSection(user, cvId, version, async (supabase) => {
+    return this.mutateSection(user, cvId, async (supabase) => {
       const row = await this.requireSectionRow(supabase, cvId, 'profiles', itemId, 'Profile');
       await this.normalizedRepo.deleteSectionRow(supabase, cvId, 'profiles', row.id as string);
       return {};
@@ -163,7 +124,6 @@ export class CvItemService {
     cvId: string,
     key: string,
     item: Record<string, unknown>,
-    version?: string,
   ): Promise<CvItemMutationResponse> {
     const section = ARRAY_SECTION_MAP[key];
     if (!section) {
@@ -171,7 +131,7 @@ export class CvItemService {
     }
 
     const sanitized = sanitizeResumeItemPayload(item);
-    return this.mutateSection(user, cvId, version, async (supabase) => {
+    return this.mutateSection(user, cvId, async (supabase) => {
       const row = await this.normalizedRepo.insertSectionRow(supabase, cvId, section, sanitized);
       return { item: this.rowToItem(row) };
     });
@@ -184,14 +144,13 @@ export class CvItemService {
     itemId: string,
     item: Record<string, unknown>,
     label: string,
-    version?: string,
   ): Promise<CvItemMutationResponse> {
     const section = ARRAY_SECTION_MAP[key];
     if (!section) {
       throw new BadRequestException(`Unknown section: ${key}`);
     }
 
-    return this.mutateSection(user, cvId, version, async (supabase) => {
+    return this.mutateSection(user, cvId, async (supabase) => {
       const row = await this.requireSectionRow(supabase, cvId, section, itemId, label);
       const current = this.rowToItem(row);
       const updated = await this.normalizedRepo.updateSectionRow(
@@ -212,14 +171,13 @@ export class CvItemService {
     key: string,
     itemId: string,
     label: string,
-    version?: string,
   ): Promise<CvItemMutationResponse> {
     const section = ARRAY_SECTION_MAP[key];
     if (!section) {
       throw new BadRequestException(`Unknown section: ${key}`);
     }
 
-    return this.mutateSection(user, cvId, version, async (supabase) => {
+    return this.mutateSection(user, cvId, async (supabase) => {
       const row = await this.requireSectionRow(supabase, cvId, section, itemId, label);
       await this.normalizedRepo.deleteSectionRow(supabase, cvId, section, row.id as string);
       return {};
@@ -242,20 +200,7 @@ export class CvItemService {
     cvId: string,
   ): Promise<Record<string, unknown>> {
     const header = await this.cvService.getHeader(user, cvId);
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const profiles = await this.normalizedRepo.listSectionRows(supabase, cvId, 'profiles');
-
-    return {
-      name: header.name ?? undefined,
-      label: header.label ?? undefined,
-      image: header.image ?? undefined,
-      email: header.email ?? undefined,
-      phone: header.phone ?? undefined,
-      url: header.url ?? undefined,
-      summary: header.summary ?? undefined,
-      location: header.location ?? {},
-      profiles: profiles.map((p) => this.rowToItem(p as Record<string, unknown>)),
-    };
+    return (headerToSlimCvData(header).basics ?? {}) as Record<string, unknown>;
   }
 
   async reorderSection(
@@ -263,23 +208,17 @@ export class CvItemService {
     cvId: string,
     section: CvSectionKey,
     order: string[],
-    version?: string,
-  ): Promise<{ items: Record<string, unknown>[]; version: string }> {
+  ): Promise<{ items: Record<string, unknown>[] }> {
     if (!isSortBackedSection(section)) {
       throw new BadRequestException(`Section ${section} does not support reorder`);
     }
 
-    const header = await this.cvService.getHeader(user, cvId);
-    const currentVersion = getCvMetaVersion(header);
-    this.assertVersion(version, currentVersion);
-
+    await this.cvService.getHeader(user, cvId);
     const supabase = this.normalizedRepo.createClientForUser(user);
     const rows = await this.normalizedRepo.reorderSection(supabase, cvId, section, order);
-    const newVersion = await this.cvService.bumpVersion(supabase, cvId, currentVersion, version);
 
     return {
       items: rows.map((row) => this.rowToItem(row)),
-      version: newVersion,
     };
   }
 }

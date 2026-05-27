@@ -6,13 +6,11 @@ import { useSectionMount } from '@/components/cv/use-section-mount';
 
 export function BasicsSection() {
   useSectionMount('basics');
-  const { cvId, resume, version, setResume, setVersion } = useCvEditor();
+  const { cvId, resume, setResume } = useCvEditor();
 
   return (
     <ManagedBasicsSection
       cvId={cvId}
-      version={version}
-      onVersionChange={setVersion}
       basics={resume.basics ?? {}}
       onBasicsChange={(basics) => setResume({ ...resume, basics })}
     />

@@ -104,6 +104,7 @@ function fullyPopulatedResume(): Resume {
     },
     work: [
       {
+        id: '00000000-0000-4000-8000-000000000101',
         name: 'Acme Corp',
         position: 'Staff Engineer',
         location: 'Remote',
@@ -117,6 +118,7 @@ function fullyPopulatedResume(): Resume {
     ],
     volunteer: [
       {
+        id: '00000000-0000-4000-8000-000000000102',
         organization: 'Code for Good',
         position: 'Mentor',
         url: 'https://codeforgood.org',
@@ -128,6 +130,7 @@ function fullyPopulatedResume(): Resume {
     ],
     education: [
       {
+        id: '00000000-0000-4000-8000-000000000103',
         institution: 'MIT',
         url: 'https://mit.edu',
         area: 'Computer Science',
@@ -138,9 +141,17 @@ function fullyPopulatedResume(): Resume {
         courses: ['CS101'],
       },
     ],
-    skills: [{ name: 'TypeScript', level: 'Expert', keywords: ['TS', 'JS'] }],
+    skills: [
+      {
+        id: '00000000-0000-4000-8000-000000000104',
+        name: 'TypeScript',
+        level: 'Expert',
+        keywords: ['TS', 'JS'],
+      },
+    ],
     projects: [
       {
+        id: '00000000-0000-4000-8000-000000000105',
         name: 'Resume Builder',
         description: 'Open source resume tool.',
         url: 'https://resume.example.com',
@@ -155,6 +166,7 @@ function fullyPopulatedResume(): Resume {
     ],
     awards: [
       {
+        id: '00000000-0000-4000-8000-000000000106',
         title: 'Best Paper',
         date: '2023-06',
         awarder: 'IEEE',
@@ -163,6 +175,7 @@ function fullyPopulatedResume(): Resume {
     ],
     certificates: [
       {
+        id: '00000000-0000-4000-8000-000000000107',
         name: 'AWS Certified',
         date: '2022-03',
         issuer: 'Amazon',
@@ -171,6 +184,7 @@ function fullyPopulatedResume(): Resume {
     ],
     publications: [
       {
+        id: '00000000-0000-4000-8000-000000000108',
         name: 'Scaling Microservices',
         publisher: "O'Reilly",
         releaseDate: '2023-01',
@@ -178,21 +192,27 @@ function fullyPopulatedResume(): Resume {
         summary: 'A guide to scaling microservices.',
       },
     ],
-    languages: [{ language: 'English', fluency: 'Native' }],
-    interests: [{ name: 'Hiking', keywords: ['outdoors', 'nature'] }],
+    languages: [
+      { id: '00000000-0000-4000-8000-000000000109', language: 'English', fluency: 'Native' },
+    ],
+    interests: [
+      {
+        id: '00000000-0000-4000-8000-000000000110',
+        name: 'Hiking',
+        keywords: ['outdoors', 'nature'],
+      },
+    ],
     references: [{ name: 'John Smith', reference: 'Jane is excellent.' }],
-  };
+  } as unknown as Resume;
 }
 
 function setupEditor(resume: Resume) {
   useCvEditorMock.mockReturnValue({
     cvId: 'cv-1',
     resume,
-    version: 'v1',
     loading: false,
     error: null,
     setResume: vi.fn(),
-    setVersion: vi.fn(),
     mountedSection: null,
     setMountedSection: vi.fn(),
   });
@@ -236,11 +256,12 @@ describe('CvSections field coverage', () => {
       const resume = fullyPopulatedResume();
       resume.work = [
         {
+          id: '00000000-0000-4000-8000-000000000101',
           position: 'Staff Engineer',
           name: 'Acme Corp',
           highlights: ['**Reduced API latency by 40%**'],
         },
-      ];
+      ] as unknown as Resume['work'];
       const { container } = renderSection('work', resume);
 
       const strong = container.querySelector('strong');
@@ -251,7 +272,9 @@ describe('CvSections field coverage', () => {
 
     it('omits empty optional fields', () => {
       const resume = fullyPopulatedResume();
-      resume.work = [{ position: 'Dev', name: 'Co' }];
+      resume.work = [
+        { id: '00000000-0000-4000-8000-000000000101', position: 'Dev', name: 'Co' },
+      ] as unknown as Resume['work'];
       renderSection('work', resume);
 
       expect(screen.getByText('Dev')).toBeInTheDocument();

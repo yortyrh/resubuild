@@ -48,13 +48,7 @@ describe('ManagedBasicsSection', () => {
 
   it('renders Edit in the bottom action bar below the summary', () => {
     const { container } = render(
-      <ManagedBasicsSection
-        cvId="cv-1"
-        version="v1"
-        onVersionChange={vi.fn()}
-        basics={basics}
-        onBasicsChange={vi.fn()}
-      />,
+      <ManagedBasicsSection cvId="cv-1" basics={basics} onBasicsChange={vi.fn()} />,
     );
 
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();

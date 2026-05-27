@@ -1,7 +1,7 @@
 'use client';
 
 import type { Resume } from '@resumind/types';
-import { createEmptyResume, stripResumeMetaFromEditor } from '@resumind/types';
+import { createEmptyResume } from '@resumind/types';
 import {
   createContext,
   type ReactNode,
@@ -17,11 +17,9 @@ import { getCv } from '@/lib/api';
 interface CvEditorState {
   cvId: string;
   resume: Resume;
-  version: string | undefined;
   loading: boolean;
   error: string | null;
   setResume: (next: Resume | ((prev: Resume) => Resume)) => void;
-  setVersion: (next: string) => void;
   mountedSection: CvSectionSlug | null;
   setMountedSection: (slug: CvSectionSlug) => void;
 }
@@ -30,7 +28,6 @@ const CvEditorContext = createContext<CvEditorState | null>(null);
 
 export function CvEditorProvider({ cvId, children }: { cvId: string; children: ReactNode }) {
   const [resume, setResumeState] = useState<Resume>(() => createEmptyResume());
-  const [version, setVersion] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mountedSection, setMountedSectionState] = useState<CvSectionSlug | null>(null);
@@ -43,9 +40,12 @@ export function CvEditorProvider({ cvId, children }: { cvId: string; children: R
     getCv(cvId)
       .then((cv) => {
         if (cancelled) return;
-        const fetched = cv.data as Resume;
-        setResumeState(stripResumeMetaFromEditor(fetched));
-        setVersion(fetched.meta?.version);
+        const slim = cv.data as Resume;
+        const { meta: _meta, ...slimWithoutMeta } = slim;
+        setResumeState({
+          ...createEmptyResume(),
+          ...slimWithoutMeta,
+        });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -74,15 +74,13 @@ export function CvEditorProvider({ cvId, children }: { cvId: string; children: R
     () => ({
       cvId,
       resume,
-      version,
       loading,
       error,
       setResume,
-      setVersion,
       mountedSection,
       setMountedSection,
     }),
-    [cvId, resume, version, loading, error, setResume, mountedSection, setMountedSection],
+    [cvId, resume, loading, error, setResume, mountedSection, setMountedSection],
   );
 
   return <CvEditorContext.Provider value={value}>{children}</CvEditorContext.Provider>;

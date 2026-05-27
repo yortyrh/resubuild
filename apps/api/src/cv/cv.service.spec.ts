@@ -1,9 +1,8 @@
 /**
- * Scenarios referenced from openspec/specs/cv-rest-api (CRUD, 409 concurrency, baseline create flow).
+ * Scenarios referenced from openspec/specs/cv-rest-api (CRUD, baseline create flow).
  */
 
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 import { CvService } from './cv.service';
@@ -26,23 +25,6 @@ describe('CvService', () => {
         CvService,
         ResumeSchemaValidator,
         { provide: CvNormalizedRepository, useValue: normalizedRepo },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: (key: string) => {
-              switch (key) {
-                case 'SUPABASE_URL':
-                  return 'https://supa.test';
-                case 'SUPABASE_ANON_KEY':
-                  return 'anon-key';
-                case 'APP_URL':
-                  return 'http://app.test.example';
-                default:
-                  return undefined;
-              }
-            },
-          },
-        },
       ],
     }).compile();
 
@@ -68,7 +50,7 @@ describe('CvService', () => {
       await expect(service.findAll(user)).rejects.toThrow(BadRequestException);
     });
 
-    it('returns assembled CV records ordered by updated_at', async () => {
+    it('returns slim CV records ordered by updated_at', async () => {
       const header = mockCvHeader({ id: 'a', name: 'Jane', label: 'Engineer' });
       const order = jest.fn().mockResolvedValue({ data: [header], error: null });
 
@@ -81,6 +63,9 @@ describe('CvService', () => {
       expect(result).toHaveLength(1);
       expect(result[0].title).toBe('Jane — Engineer');
       expect((result[0].data as { basics?: { name?: string } }).basics?.name).toBe('Jane');
+      expect(result[0].data).not.toHaveProperty('meta');
+      expect(result[0].data).not.toHaveProperty('work');
+      expect(normalizedRepo.fetchSections).not.toHaveBeenCalled();
     });
   });
 
@@ -96,41 +81,22 @@ describe('CvService', () => {
       await expect(service.findOne(user, 'gone')).rejects.toThrow(NotFoundException);
     });
 
-    it('assembles full resume from normalized rows', async () => {
+    it('returns slim data from header row only', async () => {
       const header = mockCvHeader({ name: 'Jane Doe', label: 'Engineer' });
       normalizedRepo.fetchHeader.mockResolvedValue(header);
-      normalizedRepo.fetchSections.mockResolvedValue({
-        profiles: [],
-        work: [
-          {
-            id: 'w1',
-            cv_id: 'cv-1',
-            name: 'Acme',
-            start_date: '2020-01',
-            highlights: [],
-          },
-        ],
-        volunteer: [],
-        education: [],
-        awards: [],
-        certificates: [],
-        publications: [],
-        skills: [],
-        languages: [],
-        interests: [],
-        references: [],
-        projects: [],
-      });
 
       const result = await service.findOne(user, 'cv-1');
 
       expect(result.title).toBe('Jane Doe — Engineer');
-      expect(result.data.work).toEqual([{ id: 'w1', name: 'Acme', startDate: '2020-01' }]);
+      expect((result.data as { basics?: { name?: string } }).basics?.name).toBe('Jane Doe');
+      expect(result.data).not.toHaveProperty('meta');
+      expect(result.data).not.toHaveProperty('work');
+      expect(normalizedRepo.fetchSections).not.toHaveBeenCalled();
     });
   });
 
   describe('create', () => {
-    it('inserts cv row and normalized sections with meta', async () => {
+    it('inserts cv row and normalized sections', async () => {
       const insertedHeader = mockCvHeader({ id: 'fresh-id' });
       (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
         insert: jest.fn(() => ({
@@ -145,8 +111,6 @@ describe('CvService', () => {
           id: 'fresh-id',
           name: 'Jane Doe',
           label: 'Engineer',
-          meta_version: 'v1.0.0',
-          meta_canonical: 'http://app.test.example/dashboard/cv/fresh-id',
         }),
       );
 
@@ -156,7 +120,7 @@ describe('CvService', () => {
 
       expect(normalizedRepo.insertNormalizedCv).toHaveBeenCalled();
       expect(result.title).toBe('Jane Doe — Engineer');
-      expect((result.data as { meta?: { version?: string } }).meta?.version).toBe('v1.0.0');
+      expect(result.data).not.toHaveProperty('meta');
     });
 
     it('throws BadRequestException when insert fails', async () => {
@@ -189,48 +153,25 @@ describe('CvService', () => {
   });
 
   describe('update', () => {
-    it('throws ConflictException on stale version', async () => {
-      normalizedRepo.fetchHeader.mockResolvedValue(mockCvHeader({ meta_version: 'v2.0.0' }));
-
-      await expect(
-        service.update(user, 'cv-1', {
-          data: { meta: { version: 'v1.0.0' }, basics: { name: 'Jane' } },
-        }),
-      ).rejects.toThrow(ConflictException);
-    });
-
-    it('ignores title-only updates and returns assembled CV', async () => {
+    it('ignores title-only updates and returns slim CV', async () => {
       normalizedRepo.fetchHeader.mockResolvedValue(mockCvHeader({ name: 'Jane' }));
-      normalizedRepo.fetchSections.mockResolvedValue({
-        profiles: [],
-        work: [],
-        volunteer: [],
-        education: [],
-        awards: [],
-        certificates: [],
-        publications: [],
-        skills: [],
-        languages: [],
-        interests: [],
-        references: [],
-        projects: [],
-      });
 
       const result = await service.update(user, 'cv-1', { title: 'Ignored' });
       expect(result.title).toBe('Jane');
       expect(normalizedRepo.replaceNormalizedCv).not.toHaveBeenCalled();
+      expect(normalizedRepo.fetchSections).not.toHaveBeenCalled();
     });
 
     it('replaces normalized rows when data is provided', async () => {
-      normalizedRepo.fetchHeader
-        .mockResolvedValueOnce(mockCvHeader())
-        .mockResolvedValueOnce(mockCvHeader({ name: 'Updated', label: 'Role' }));
+      normalizedRepo.fetchHeader.mockResolvedValue(
+        mockCvHeader({ name: 'Updated', label: 'Role' }),
+      );
       normalizedRepo.replaceNormalizedCv.mockResolvedValue(
         mockCvHeader({ name: 'Updated', label: 'Role' }),
       );
 
       const result = await service.update(user, 'cv-1', {
-        data: { basics: { name: 'Updated', label: 'Role' }, meta: { version: 'v1.0.0' } },
+        data: { basics: { name: 'Updated', label: 'Role' } },
       });
 
       expect(normalizedRepo.replaceNormalizedCv).toHaveBeenCalled();
@@ -240,20 +181,6 @@ describe('CvService', () => {
 
   it('persistValidatedData validates and replaces normalized cv', async () => {
     normalizedRepo.replaceNormalizedCv.mockResolvedValue(mockCvHeader({ name: 'Import' }));
-    normalizedRepo.fetchSections.mockResolvedValue({
-      profiles: [],
-      work: [],
-      volunteer: [],
-      education: [],
-      awards: [],
-      certificates: [],
-      publications: [],
-      skills: [],
-      languages: [],
-      interests: [],
-      references: [],
-      projects: [],
-    });
 
     const result = await service.persistValidatedData(user, 'cv-1', {
       basics: { name: 'Import' },
@@ -261,15 +188,7 @@ describe('CvService', () => {
 
     expect(normalizedRepo.replaceNormalizedCv).toHaveBeenCalled();
     expect(result.title).toBe('Import');
-  });
-
-  it('bumpVersion delegates to normalized repository', async () => {
-    normalizedRepo.bumpMetaVersion.mockResolvedValue('v1.0.2');
-
-    const version = await service.bumpVersion(supabaseStub as never, 'cv-1', 'v1.0.1', 'v1.0.1');
-
-    expect(version).toBe('v1.0.2');
-    expect(normalizedRepo.bumpMetaVersion).toHaveBeenCalled();
+    expect(normalizedRepo.fetchSections).not.toHaveBeenCalled();
   });
 
   describe('remove', () => {

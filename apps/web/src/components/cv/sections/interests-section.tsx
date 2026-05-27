@@ -15,15 +15,13 @@ type InterestItem = SectionItem<ResumeInterest>;
 
 export function InterestsSection() {
   useSectionMount('interests');
-  const { cvId, resume, version, setResume, setVersion } = useCvEditor();
+  const { cvId, resume, setResume } = useCvEditor();
 
   return (
     <ManagedArraySection<InterestItem>
       cvId={cvId}
-      version={version}
-      onVersionChange={setVersion}
       items={resume.interests ?? []}
-      onItemsChange={(interests) => setResume({ ...resume, interests })}
+      onItemsChange={(interests) => setResume((prev) => ({ ...prev, interests }))}
       refetchItems={createSectionRefetch<InterestItem>(getCvInterests, cvId)}
       entityLabel="Interest"
       addLabel="Add interest"

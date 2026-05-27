@@ -22,8 +22,6 @@ import { patchCvBasics } from '@/lib/cv-item-api';
 
 interface ManagedBasicsSectionProps {
   cvId: string;
-  version: string | undefined;
-  onVersionChange: (version: string) => void;
   basics: NonNullable<Resume['basics']>;
   onBasicsChange: (basics: NonNullable<Resume['basics']>) => void;
 }
@@ -38,14 +36,8 @@ function formatBasicsLocation(basics: NonNullable<Resume['basics']>): string {
   return parts.join(', ');
 }
 
-export function ManagedBasicsSection({
-  cvId,
-  version,
-  onVersionChange,
-  basics,
-  onBasicsChange,
-}: ManagedBasicsSectionProps) {
-  const { saving, error, setError, run } = useCvItemMutation({ version, onVersionChange });
+export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBasicsSectionProps) {
+  const { saving, error, setError, run } = useCvItemMutation();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(basics);
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
@@ -71,7 +63,7 @@ export function ManagedBasicsSection({
 
   const saveBasics = async (nextBasics: NonNullable<Resume['basics']>) => {
     await run(
-      (v) => patchCvBasics(cvId, nextBasics as Record<string, unknown>, v),
+      () => patchCvBasics(cvId, nextBasics as Record<string, unknown>),
       () => {
         onBasicsChange(nextBasics);
         setEditing(false);

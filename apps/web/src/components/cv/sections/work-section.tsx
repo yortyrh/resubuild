@@ -21,15 +21,13 @@ type WorkItem = SectionItem<ResumeWork>;
 
 export function WorkSection() {
   useSectionMount('work');
-  const { cvId, resume, version, setResume, setVersion } = useCvEditor();
+  const { cvId, resume, setResume } = useCvEditor();
 
   return (
     <ManagedArraySection<WorkItem>
       cvId={cvId}
-      version={version}
-      onVersionChange={setVersion}
       items={resume.work ?? []}
-      onItemsChange={(work) => setResume({ ...resume, work })}
+      onItemsChange={(work) => setResume((prev) => ({ ...prev, work }))}
       refetchItems={createSectionRefetch<WorkItem>(getCvWork, cvId)}
       entityLabel="Work entry"
       addLabel="Add work experience"

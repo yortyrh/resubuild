@@ -1,42 +1,12 @@
-# CV REST API
+## REMOVED Requirements
 
-## Purpose
+### Requirement: Updates SHALL detect concurrent edits using resume meta version metadata
 
-Specify the NestJS HTTP surface for listing, reading, creating, updating, and deleting CVs, including request validation and integration with Supabase for persistence.
+**Reason**: Normalized per-section storage makes document-level optimistic locking unnecessary.
 
-## Requirements
+**Migration**: Stop sending `version` on mutations; API no longer returns 409 for version mismatch.
 
-### Requirement: All `/cv` routes MUST require authentication
-
-The `CvController` SHALL apply the Supabase auth guard to every handler so unauthenticated requests never reach service logic.
-
-#### Scenario: No bearer token
-
-- **WHEN** a client calls any `/cv` route without a bearer token
-- **THEN** the response SHALL be 401 from the auth guard
-
-### Requirement: The API SHALL expose CRUD endpoints for CVs scoped to the authenticated user
-
-Handlers MUST implement `GET /cv`, `GET /cv/:id`, `POST /cv`, `PATCH /cv/:id`, and `DELETE /cv/:id`, using a per-user Supabase client created with the caller's access token so RLS applies.
-
-#### Scenario: List CVs
-
-- **WHEN** an authenticated client calls `GET /cv`
-- **THEN** the service SHALL return CV rows for that user ordered by `updated_at` descending
-
-#### Scenario: Missing CV
-
-- **WHEN** `GET /cv/:id` or a mutating operation targets an id that does not exist or is not owned (RLS empty result)
-- **THEN** the API SHALL respond with 404 and a CV not found message where implemented
-
-### Requirement: Create and update payloads MUST be validated with class-validator DTOs
-
-`POST` bodies SHALL use `CreateCvDto` (optional `title`, required `data` object). `PATCH` bodies SHALL use `UpdateCvDto` (optional `title`, optional `data`). The global validation pipe SHALL strip unknown properties and reject invalid shapes. When `data.basics` is supplied on create or when basics are patched via item routes, the service SHALL overwrite any client-provided `title` with the value derived from basics.
-
-#### Scenario: Invalid DTO
-
-- **WHEN** the body violates DTO constraints (e.g. missing `data` on create)
-- **THEN** the framework SHALL return 400 without persisting
+## MODIFIED Requirements
 
 ### Requirement: Create flow SHALL insert baseline row then apply validated resume `data`
 
@@ -49,19 +19,10 @@ On `POST`, the service SHALL insert a `cv` row with empty basics columns and emp
 - **AND** the response SHALL include the new CV id, computed `title`, timestamps, and slim `data` with `basics` only
 - **AND** the response `data` SHALL NOT include `meta`
 
-### Requirement: Media routes MUST inherit CV-grade authentication on upload and public read on stream
+#### Scenario: Invalid DTO
 
-Nest SHALL classify **`POST /media/upload`** under `MediaController` guarded by the identical Supabase-derived authentication strategy used for `/cv`. **`GET /media/:id`** SHALL be public (no Bearer) and stream stored objects by registry id. Upload handlers MUST remain tenant-isolated via authenticated user id embedded in Storage paths and registry rows.
-
-#### Scenario: Auth parity with CV fetch on upload
-
-- **WHEN** a valid bearer used for `GET /cv/:id` is replayed onto `POST /media/upload`
-- **THEN** Nest SHALL authorize identically modulo multipart validation errors
-
-#### Scenario: Public media stream without token
-
-- **WHEN** any client requests `GET /media/{valid_uuid}` without Authorization
-- **THEN** Nest SHALL return the image stream when the registry row exists
+- **WHEN** the body violates DTO constraints (e.g. missing `data` on create)
+- **THEN** the framework SHALL return 400 without persisting
 
 ### Requirement: The API SHALL expose item-scoped authenticated routes for CV resume content
 
@@ -113,46 +74,6 @@ Successful item create and update responses SHALL include the affected entity (w
 - **WHEN** a client successfully patches a work highlight via nested route
 - **THEN** the response SHALL include the highlight value, parent work `id`, and highlight index
 
-### Requirement: CV title SHALL be computed from basics on read and after basics mutations
-
-The API service SHALL compute `title` from `cv.name` and `cv.label` using the shared `deriveCvTitleFromBasics` function when assembling CV responses (`GET /cv`, `GET /cv/:id`, and mutation responses that return the CV header). The derived title SHALL NOT be persisted in the database. When `PATCH /cv/:cvId/basics` succeeds, the response SHALL include the newly derived `title` computed from the updated basics columns.
-
-#### Scenario: Create response derives title from basics
-
-- **WHEN** `POST /cv` includes basics with name `Alex` and label `Designer`
-- **THEN** the response SHALL include `title` equal to `Alex — Designer`
-- **AND** the `cv` row SHALL NOT contain a `title` column value
-
-#### Scenario: Basics patch response includes derived title
-
-- **WHEN** an authenticated client calls `PATCH /cv/:cvId/basics` changing `name` or `label`
-- **THEN** the service SHALL merge basics into the `cv` row, validate, persist, and return the newly derived `title` in the response
-
-#### Scenario: Empty basics yields default title
-
-- **WHEN** a create or basics patch results in empty name and label after trim
-- **THEN** the computed `title` in the response SHALL be `Untitled CV`
-
-#### Scenario: Name-only basics
-
-- **WHEN** basics contain name `Alex` and no label
-- **THEN** the computed `title` SHALL be `Alex`
-
-### Requirement: The API SHALL expose section-scoped GET routes for editor views
-
-For each multi-valued resume section, the API SHALL provide `GET /cv/:cvId/{section}` (e.g. `work`, `skills`, `education`) returning an ordered JSON array of that section only, assembled from normalized tables. `GET /cv/:id` SHALL return slim CV `data` with basics only for editor bootstrap; full JSON Resume assembly for export or preview SHALL use a dedicated export endpoint when implemented.
-
-#### Scenario: Fetch work section only
-
-- **WHEN** an authenticated client calls `GET /cv/:cvId/work`
-- **THEN** the response SHALL contain only the `work` array ordered by `start_date` descending without loading other sections from the client perspective
-
-#### Scenario: Detail bootstrap excludes section arrays
-
-- **WHEN** an authenticated client calls `GET /cv/:id` for editor bootstrap
-- **THEN** the response `data` SHALL contain basics only
-- **AND** SHALL NOT contain section arrays such as `work` or `skills`
-
 ### Requirement: Full CV reads SHALL assemble JSON Resume from normalized storage
 
 `GET /cv` and `GET /cv/:id` SHALL build the response `data` field from the `cv` header row only: optional `basics` (name, label, image, email, phone, url, summary, location). The service SHALL NOT include `data.meta`. The service SHALL NOT call `fetchSections` or `assembleResume` for these routes unless a future export endpoint is defined separately.
@@ -183,6 +104,8 @@ Authenticated handlers under `/cv/:cvId` SHALL provide `PUT /cv/:cvId/profiles/r
 
 - **WHEN** the reorder request omits a row id or includes an id from another CV
 - **THEN** the API SHALL respond with 400 and SHALL NOT modify any `sort` values
+
+## ADDED Requirements
 
 ### Requirement: JSON Resume export SHALL own meta generation (future)
 

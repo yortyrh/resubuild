@@ -106,7 +106,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: ReorderSectionDto,
   ) {
-    return this.cvItemService.reorderSection(req.user, cvId, 'profiles', dto.order, dto.version);
+    return this.cvItemService.reorderSection(req.user, cvId, 'profiles', dto.order);
   }
 
   @Put('skills/reorder')
@@ -115,7 +115,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: ReorderSectionDto,
   ) {
-    return this.cvItemService.reorderSection(req.user, cvId, 'skills', dto.order, dto.version);
+    return this.cvItemService.reorderSection(req.user, cvId, 'skills', dto.order);
   }
 
   @Put('languages/reorder')
@@ -124,7 +124,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: ReorderSectionDto,
   ) {
-    return this.cvItemService.reorderSection(req.user, cvId, 'languages', dto.order, dto.version);
+    return this.cvItemService.reorderSection(req.user, cvId, 'languages', dto.order);
   }
 
   @Put('interests/reorder')
@@ -133,7 +133,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: ReorderSectionDto,
   ) {
-    return this.cvItemService.reorderSection(req.user, cvId, 'interests', dto.order, dto.version);
+    return this.cvItemService.reorderSection(req.user, cvId, 'interests', dto.order);
   }
 
   @Put('references/reorder')
@@ -142,7 +142,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: ReorderSectionDto,
   ) {
-    return this.cvItemService.reorderSection(req.user, cvId, 'references', dto.order, dto.version);
+    return this.cvItemService.reorderSection(req.user, cvId, 'references', dto.order);
   }
 
   @Patch('basics')
@@ -151,7 +151,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: BasicsItemDto,
   ) {
-    return this.cvItemService.updateBasics(req.user, cvId, dto.basics ?? {}, dto.version);
+    return this.cvItemService.updateBasics(req.user, cvId, dto.basics ?? {});
   }
 
   @Post('profiles')
@@ -160,7 +160,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: ProfileItemDto,
   ) {
-    return this.cvItemService.createProfile(req.user, cvId, dto.profile, dto.version);
+    return this.cvItemService.createProfile(req.user, cvId, dto.profile);
   }
 
   @Patch('profiles/:itemId')
@@ -170,7 +170,7 @@ export class CvItemsController {
     @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: ProfileItemDto,
   ) {
-    return this.cvItemService.updateProfile(req.user, cvId, itemId, dto.profile, dto.version);
+    return this.cvItemService.updateProfile(req.user, cvId, itemId, dto.profile);
   }
 
   @Delete('profiles/:itemId')
@@ -178,9 +178,8 @@ export class CvItemsController {
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: BasicsItemDto,
   ) {
-    return this.cvItemService.deleteProfile(req.user, cvId, itemId, dto.version);
+    return this.cvItemService.deleteProfile(req.user, cvId, itemId);
   }
 
   @Post('work')
@@ -189,7 +188,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: WorkItemDto,
   ) {
-    return this.cvItemService.createArrayItem(req.user, cvId, 'work', dto.work, dto.version);
+    return this.cvItemService.createArrayItem(req.user, cvId, 'work', dto.work);
   }
 
   @Patch('work/:itemId')
@@ -206,7 +205,6 @@ export class CvItemsController {
       itemId,
       dto.work,
       'Work entry',
-      dto.version,
     );
   }
 
@@ -215,16 +213,8 @@ export class CvItemsController {
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: BasicsItemDto,
   ) {
-    return this.cvItemService.deleteArrayItem(
-      req.user,
-      cvId,
-      'work',
-      itemId,
-      'Work entry',
-      dto.version,
-    );
+    return this.cvItemService.deleteArrayItem(req.user, cvId, 'work', itemId, 'Work entry');
   }
 
   @Post('volunteer')
@@ -233,13 +223,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: VolunteerItemDto,
   ) {
-    return this.cvItemService.createArrayItem(
-      req.user,
-      cvId,
-      'volunteer',
-      dto.volunteer,
-      dto.version,
-    );
+    return this.cvItemService.createArrayItem(req.user, cvId, 'volunteer', dto.volunteer);
   }
 
   @Patch('volunteer/:itemId')
@@ -256,7 +240,6 @@ export class CvItemsController {
       itemId,
       dto.volunteer,
       'Volunteer entry',
-      dto.version,
     );
   }
 
@@ -265,7 +248,6 @@ export class CvItemsController {
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
@@ -273,7 +255,6 @@ export class CvItemsController {
       'volunteer',
       itemId,
       'Volunteer entry',
-      dto.version,
     );
   }
 
@@ -283,13 +264,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: EducationItemDto,
   ) {
-    return this.cvItemService.createArrayItem(
-      req.user,
-      cvId,
-      'education',
-      dto.education,
-      dto.version,
-    );
+    return this.cvItemService.createArrayItem(req.user, cvId, 'education', dto.education);
   }
 
   @Patch('education/:itemId')
@@ -306,7 +281,6 @@ export class CvItemsController {
       itemId,
       dto.education,
       'Education entry',
-      dto.version,
     );
   }
 
@@ -315,7 +289,6 @@ export class CvItemsController {
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
@@ -323,7 +296,6 @@ export class CvItemsController {
       'education',
       itemId,
       'Education entry',
-      dto.version,
     );
   }
 
@@ -333,7 +305,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: SkillItemDto,
   ) {
-    return this.cvItemService.createArrayItem(req.user, cvId, 'skills', dto.skill, dto.version);
+    return this.cvItemService.createArrayItem(req.user, cvId, 'skills', dto.skill);
   }
 
   @Patch('skills/:itemId')
@@ -343,15 +315,7 @@ export class CvItemsController {
     @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: SkillItemDto,
   ) {
-    return this.cvItemService.updateArrayItem(
-      req.user,
-      cvId,
-      'skills',
-      itemId,
-      dto.skill,
-      'Skill',
-      dto.version,
-    );
+    return this.cvItemService.updateArrayItem(req.user, cvId, 'skills', itemId, dto.skill, 'Skill');
   }
 
   @Delete('skills/:itemId')
@@ -359,16 +323,8 @@ export class CvItemsController {
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: BasicsItemDto,
   ) {
-    return this.cvItemService.deleteArrayItem(
-      req.user,
-      cvId,
-      'skills',
-      itemId,
-      'Skill',
-      dto.version,
-    );
+    return this.cvItemService.deleteArrayItem(req.user, cvId, 'skills', itemId, 'Skill');
   }
 
   @Post('projects')
@@ -377,7 +333,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: ProjectItemDto,
   ) {
-    return this.cvItemService.createArrayItem(req.user, cvId, 'projects', dto.project, dto.version);
+    return this.cvItemService.createArrayItem(req.user, cvId, 'projects', dto.project);
   }
 
   @Patch('projects/:itemId')
@@ -394,7 +350,6 @@ export class CvItemsController {
       itemId,
       dto.project,
       'Project',
-      dto.version,
     );
   }
 
@@ -403,16 +358,8 @@ export class CvItemsController {
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: BasicsItemDto,
   ) {
-    return this.cvItemService.deleteArrayItem(
-      req.user,
-      cvId,
-      'projects',
-      itemId,
-      'Project',
-      dto.version,
-    );
+    return this.cvItemService.deleteArrayItem(req.user, cvId, 'projects', itemId, 'Project');
   }
 
   @Post('awards')
@@ -421,7 +368,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: AwardItemDto,
   ) {
-    return this.cvItemService.createArrayItem(req.user, cvId, 'awards', dto.award, dto.version);
+    return this.cvItemService.createArrayItem(req.user, cvId, 'awards', dto.award);
   }
 
   @Patch('awards/:itemId')
@@ -431,15 +378,7 @@ export class CvItemsController {
     @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: AwardItemDto,
   ) {
-    return this.cvItemService.updateArrayItem(
-      req.user,
-      cvId,
-      'awards',
-      itemId,
-      dto.award,
-      'Award',
-      dto.version,
-    );
+    return this.cvItemService.updateArrayItem(req.user, cvId, 'awards', itemId, dto.award, 'Award');
   }
 
   @Delete('awards/:itemId')
@@ -447,16 +386,8 @@ export class CvItemsController {
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: BasicsItemDto,
   ) {
-    return this.cvItemService.deleteArrayItem(
-      req.user,
-      cvId,
-      'awards',
-      itemId,
-      'Award',
-      dto.version,
-    );
+    return this.cvItemService.deleteArrayItem(req.user, cvId, 'awards', itemId, 'Award');
   }
 
   @Post('certificates')
@@ -465,13 +396,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: CertificateItemDto,
   ) {
-    return this.cvItemService.createArrayItem(
-      req.user,
-      cvId,
-      'certificates',
-      dto.certificate,
-      dto.version,
-    );
+    return this.cvItemService.createArrayItem(req.user, cvId, 'certificates', dto.certificate);
   }
 
   @Patch('certificates/:itemId')
@@ -488,7 +413,6 @@ export class CvItemsController {
       itemId,
       dto.certificate,
       'Certificate',
-      dto.version,
     );
   }
 
@@ -497,7 +421,6 @@ export class CvItemsController {
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
@@ -505,7 +428,6 @@ export class CvItemsController {
       'certificates',
       itemId,
       'Certificate',
-      dto.version,
     );
   }
 
@@ -515,13 +437,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: PublicationItemDto,
   ) {
-    return this.cvItemService.createArrayItem(
-      req.user,
-      cvId,
-      'publications',
-      dto.publication,
-      dto.version,
-    );
+    return this.cvItemService.createArrayItem(req.user, cvId, 'publications', dto.publication);
   }
 
   @Patch('publications/:itemId')
@@ -538,7 +454,6 @@ export class CvItemsController {
       itemId,
       dto.publication,
       'Publication',
-      dto.version,
     );
   }
 
@@ -547,7 +462,6 @@ export class CvItemsController {
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
@@ -555,7 +469,6 @@ export class CvItemsController {
       'publications',
       itemId,
       'Publication',
-      dto.version,
     );
   }
 
@@ -565,13 +478,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: LanguageItemDto,
   ) {
-    return this.cvItemService.createArrayItem(
-      req.user,
-      cvId,
-      'languages',
-      dto.language,
-      dto.version,
-    );
+    return this.cvItemService.createArrayItem(req.user, cvId, 'languages', dto.language);
   }
 
   @Patch('languages/:itemId')
@@ -588,7 +495,6 @@ export class CvItemsController {
       itemId,
       dto.language,
       'Language',
-      dto.version,
     );
   }
 
@@ -597,16 +503,8 @@ export class CvItemsController {
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: BasicsItemDto,
   ) {
-    return this.cvItemService.deleteArrayItem(
-      req.user,
-      cvId,
-      'languages',
-      itemId,
-      'Language',
-      dto.version,
-    );
+    return this.cvItemService.deleteArrayItem(req.user, cvId, 'languages', itemId, 'Language');
   }
 
   @Post('interests')
@@ -615,13 +513,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: InterestItemDto,
   ) {
-    return this.cvItemService.createArrayItem(
-      req.user,
-      cvId,
-      'interests',
-      dto.interest,
-      dto.version,
-    );
+    return this.cvItemService.createArrayItem(req.user, cvId, 'interests', dto.interest);
   }
 
   @Patch('interests/:itemId')
@@ -638,7 +530,6 @@ export class CvItemsController {
       itemId,
       dto.interest,
       'Interest',
-      dto.version,
     );
   }
 
@@ -647,16 +538,8 @@ export class CvItemsController {
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: BasicsItemDto,
   ) {
-    return this.cvItemService.deleteArrayItem(
-      req.user,
-      cvId,
-      'interests',
-      itemId,
-      'Interest',
-      dto.version,
-    );
+    return this.cvItemService.deleteArrayItem(req.user, cvId, 'interests', itemId, 'Interest');
   }
 
   @Post('references')
@@ -665,13 +548,7 @@ export class CvItemsController {
     @Param('cvId') cvId: string,
     @Body() dto: ReferenceItemDto,
   ) {
-    return this.cvItemService.createArrayItem(
-      req.user,
-      cvId,
-      'references',
-      dto.reference,
-      dto.version,
-    );
+    return this.cvItemService.createArrayItem(req.user, cvId, 'references', dto.reference);
   }
 
   @Patch('references/:itemId')
@@ -688,7 +565,6 @@ export class CvItemsController {
       itemId,
       dto.reference,
       'Reference',
-      dto.version,
     );
   }
 
@@ -697,15 +573,7 @@ export class CvItemsController {
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: BasicsItemDto,
   ) {
-    return this.cvItemService.deleteArrayItem(
-      req.user,
-      cvId,
-      'references',
-      itemId,
-      'Reference',
-      dto.version,
-    );
+    return this.cvItemService.deleteArrayItem(req.user, cvId, 'references', itemId, 'Reference');
   }
 }

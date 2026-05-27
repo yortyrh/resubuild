@@ -1,10 +1,4 @@
-# Database CV storage and RLS
-
-## Purpose
-
-Define the canonical shape of persisted CV records and the Postgres row-level guarantees so each user only reads and writes their own data when the API uses a user-scoped Supabase client.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The system SHALL store each CV as a row in `public.cv` with JSON document body
 
@@ -26,17 +20,3 @@ The `public.cv` table MUST include `id` (uuid PK), `user_id` (uuid FK to `auth.u
 - **WHEN** a CV is created or updated through Nest management APIs
 - **THEN** `meta_version`, `meta_canonical`, and `meta_last_modified` SHALL remain null or unchanged from prior values
 - **AND** API responses SHALL NOT expose JSON Resume `meta` derived from those columns
-
-### Requirement: Row Level Security MUST restrict `public.cv` to the owning user
-
-RLS SHALL be enabled on `public.cv` and every normalized CV child table with policies for SELECT, INSERT, UPDATE, and DELETE such that only rows linked to a `cv` record where `auth.uid() = user_id` are visible or mutable, using `WITH CHECK` on insert/update as appropriate.
-
-#### Scenario: Cross-tenant isolation on cv header
-
-- **WHEN** a user's JWT is presented to Supabase for queries against `cv`
-- **THEN** the user SHALL only see or modify rows whose `user_id` matches their `auth.uid()`, regardless of knowing another row's `id`
-
-#### Scenario: Cross-tenant isolation on section rows
-
-- **WHEN** a user's JWT is presented for queries against `cv_work` (or any other normalized section table)
-- **THEN** the user SHALL only see or modify rows whose parent `cv.user_id` matches their `auth.uid()`

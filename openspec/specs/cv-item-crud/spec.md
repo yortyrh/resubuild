@@ -30,7 +30,7 @@ Nested string items (`work[].highlights[]`, `volunteer[].highlights[]`, `educati
 
 - **WHEN** a user edits a work entry and clicks Save in that entry's form
 - **THEN** the client SHALL call the work-item update API for that CV
-- **AND THEN** the server SHALL persist the change to the corresponding `cv_work` row (including `highlights` jsonb) and return updated data including a new `meta.version` from `cv.meta_version`
+- **AND THEN** the server SHALL persist the change to the corresponding `cv_work` row (including `highlights` jsonb) and return the updated work item in the response
 
 #### Scenario: Creating a skill entry persists immediately
 
@@ -89,12 +89,12 @@ Each section listed in the product scope SHALL render entries in a resume-like l
 
 ### Requirement: Failed item operations SHALL not silently discard user intent
 
-When an item create, update, or delete API call fails (including HTTP 409 version conflict), the UI SHALL surface an error, SHALL NOT pretend the change succeeded, and SHOULD offer reload guidance on conflict.
+When an item create, update, or delete API call fails, the UI SHALL surface an error and SHALL NOT pretend the change succeeded.
 
-#### Scenario: Version conflict on save
+#### Scenario: Server error on save
 
-- **WHEN** the API returns 409 during an item update because `meta.version` is stale
-- **THEN** the client SHALL show the concurrency message and SHALL NOT update local state as if the save succeeded
+- **WHEN** the API returns a non-success status during an item update
+- **THEN** the client SHALL show an error message and SHALL NOT update local state as if the save succeeded
 
 ### Requirement: Highlights and courses SHALL persist on parent entity save
 

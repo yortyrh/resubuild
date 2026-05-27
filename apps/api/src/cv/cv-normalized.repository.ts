@@ -107,9 +107,6 @@ export class CvNormalizedRepository {
         url: payload.header.url,
         summary: payload.header.summary,
         location: payload.header.location ?? {},
-        meta_version: payload.header.meta_version,
-        meta_canonical: payload.header.meta_canonical,
-        meta_last_modified: payload.header.meta_last_modified,
       })
       .eq('id', cvId);
 
@@ -307,29 +304,6 @@ export class CvNormalizedRepository {
     }
 
     return data as CvHeaderRow;
-  }
-
-  async bumpMetaVersion(
-    supabase: SupabaseClient,
-    cvId: string,
-    meta: { version: string; canonical: string; lastModified: string },
-  ): Promise<string> {
-    const { data, error } = await supabase
-      .from('cv')
-      .update({
-        meta_version: meta.version,
-        meta_canonical: meta.canonical,
-        meta_last_modified: meta.lastModified,
-      })
-      .eq('id', cvId)
-      .select('meta_version')
-      .single();
-
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return data.meta_version as string;
   }
 
   async reorderSection(

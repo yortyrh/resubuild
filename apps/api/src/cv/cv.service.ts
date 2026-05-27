@@ -1,20 +1,6 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Resume } from '@resumind/types';
-import {
-  applyResumeMetaForCreate,
-  applyResumeMetaForUpdate,
-  assembleResume,
-  type CvHeaderRow,
-  deriveCvTitleFromBasics,
-  getCvMetaVersion,
-} from '@resumind/types';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { type CvHeaderRow, deriveCvTitleFromBasics, headerToSlimCvData } from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 import { CvNormalizedRepository } from './cv-normalized.repository';
@@ -32,18 +18,9 @@ export interface CvRecord {
 @Injectable()
 export class CvService {
   constructor(
-    private readonly configService: ConfigService,
     private readonly resumeValidator: ResumeSchemaValidator,
     private readonly normalizedRepo: CvNormalizedRepository,
   ) {}
-
-  private appBaseUrl(): string {
-    return (
-      this.configService.get<string>('APP_URL') ??
-      this.configService.get<string>('CORS_ORIGIN')?.split(',')[0] ??
-      'http://localhost:3000'
-    );
-  }
 
   private deriveTitleFromHeader(header: CvHeaderRow): string {
     return deriveCvTitleFromBasics({
@@ -52,15 +29,12 @@ export class CvService {
     });
   }
 
-  private async toCvRecord(supabase: SupabaseClient, header: CvHeaderRow): Promise<CvRecord> {
-    const sections = await this.normalizedRepo.fetchSections(supabase, header.id);
-    const resume = assembleResume(header, sections);
-
+  private toCvRecord(header: CvHeaderRow): CvRecord {
     return {
       id: header.id,
       user_id: header.user_id,
       title: this.deriveTitleFromHeader(header),
-      data: resume as unknown as Record<string, unknown>,
+      data: headerToSlimCvData(header),
       created_at: header.created_at ?? '',
       updated_at: header.updated_at ?? '',
     };
@@ -78,7 +52,7 @@ export class CvService {
     }
 
     const rows = data ?? [];
-    return Promise.all(rows.map((header) => this.toCvRecord(supabase, header as CvHeaderRow)));
+    return rows.map((header) => this.toCvRecord(header as CvHeaderRow));
   }
 
   async findOne(user: AuthenticatedRequest['user'], id: string): Promise<CvRecord> {
@@ -89,7 +63,7 @@ export class CvService {
       throw new NotFoundException('CV not found');
     }
 
-    return this.toCvRecord(supabase, header);
+    return this.toCvRecord(header);
   }
 
   async getHeader(user: AuthenticatedRequest['user'], id: string): Promise<CvHeaderRow> {
@@ -105,7 +79,6 @@ export class CvService {
 
   async create(user: AuthenticatedRequest['user'], dto: CreateCvDto): Promise<CvRecord> {
     const supabase = this.normalizedRepo.createClientForUser(user);
-    const baseUrl = this.appBaseUrl();
 
     const { data: inserted, error: insertError } = await supabase
       .from('cv')
@@ -120,21 +93,16 @@ export class CvService {
       throw new BadRequestException(insertError.message);
     }
 
-    const dataWithMeta = applyResumeMetaForCreate(dto.data, {
-      cvId: inserted.id,
-      baseUrl,
-    }) as Resume;
-
-    this.resumeValidator.validate(dataWithMeta as unknown as Record<string, unknown>);
+    this.resumeValidator.validate(dto.data as unknown as Record<string, unknown>);
 
     const header = await this.normalizedRepo.insertNormalizedCv(
       supabase,
       inserted.id,
       user.id,
-      dataWithMeta,
+      dto.data as unknown as Resume,
     );
 
-    return this.toCvRecord(supabase, header);
+    return this.toCvRecord(header);
   }
 
   async update(
@@ -143,35 +111,10 @@ export class CvService {
     dto: UpdateCvDto,
   ): Promise<CvRecord> {
     const supabase = this.normalizedRepo.createClientForUser(user);
-    const existing = await this.getHeader(user, id);
-    const currentVersion = getCvMetaVersion(existing);
 
     if (dto.data !== undefined) {
-      const expectedVersion = getCvMetaVersion({
-        meta_version:
-          dto.data.meta && typeof dto.data.meta === 'object'
-            ? (dto.data.meta as { version?: string }).version
-            : undefined,
-      });
-
-      if (expectedVersion && currentVersion && expectedVersion !== currentVersion) {
-        throw new ConflictException(
-          'This CV was modified elsewhere. Reload the page and try again.',
-        );
-      }
-
-      const dataWithMeta = applyResumeMetaForUpdate(dto.data, {
-        cvId: id,
-        baseUrl: this.appBaseUrl(),
-        currentVersion: currentVersion ?? expectedVersion,
-      }) as Resume;
-
-      this.resumeValidator.validate(dataWithMeta as unknown as Record<string, unknown>);
-      await this.normalizedRepo.replaceNormalizedCv(supabase, id, dataWithMeta);
-    }
-
-    if (dto.title !== undefined) {
-      // title is computed; ignore persisted title updates
+      this.resumeValidator.validate(dto.data as unknown as Record<string, unknown>);
+      await this.normalizedRepo.replaceNormalizedCv(supabase, id, dto.data as unknown as Resume);
     }
 
     const header = await this.normalizedRepo.fetchHeader(supabase, id);
@@ -179,7 +122,7 @@ export class CvService {
       throw new NotFoundException('CV not found');
     }
 
-    return this.toCvRecord(supabase, header);
+    return this.toCvRecord(header);
   }
 
   async persistValidatedData(
@@ -195,28 +138,7 @@ export class CvService {
       data as unknown as Resume,
     );
 
-    return this.toCvRecord(supabase, header);
-  }
-
-  async bumpVersion(
-    supabase: SupabaseClient,
-    cvId: string,
-    currentVersion: string | undefined,
-    clientVersion: string | undefined,
-  ): Promise<string> {
-    const baseUrl = this.appBaseUrl();
-    const dataWithMeta = applyResumeMetaForUpdate(
-      {},
-      {
-        cvId,
-        baseUrl,
-        currentVersion: currentVersion ?? clientVersion,
-      },
-    );
-
-    const meta = dataWithMeta.meta as { version: string; canonical: string; lastModified: string };
-
-    return this.normalizedRepo.bumpMetaVersion(supabase, cvId, meta);
+    return this.toCvRecord(header);
   }
 
   async remove(user: AuthenticatedRequest['user'], id: string): Promise<void> {

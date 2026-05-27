@@ -21,15 +21,13 @@ type VolunteerItem = SectionItem<ResumeVolunteer>;
 
 export function VolunteerSection() {
   useSectionMount('volunteer');
-  const { cvId, resume, version, setResume, setVersion } = useCvEditor();
+  const { cvId, resume, setResume } = useCvEditor();
 
   return (
     <ManagedArraySection<VolunteerItem>
       cvId={cvId}
-      version={version}
-      onVersionChange={setVersion}
       items={resume.volunteer ?? []}
-      onItemsChange={(volunteer) => setResume({ ...resume, volunteer })}
+      onItemsChange={(volunteer) => setResume((prev) => ({ ...prev, volunteer }))}
       refetchItems={createSectionRefetch<VolunteerItem>(getCvVolunteer, cvId)}
       entityLabel="Volunteer entry"
       addLabel="Add volunteer experience"
