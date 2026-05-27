@@ -185,6 +185,63 @@ describe('E2E — CV REST (local Supabase)', () => {
 
     expect(listAfter.body.map((s: { name: string }) => s.name)).toEqual(['Gamma', 'Alpha', 'Beta']);
   });
+
+  it('patches work by row id after a newer entry changes list order', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/cv')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ data: { basics: { name: 'Work Id Test' }, work: [] } })
+      .expect(201);
+
+    const cvId = created.body.id;
+    let currentVersion = created.body.data.meta.version as string;
+
+    const older = await request(app.getHttpServer())
+      .post(`/cv/${cvId}/work`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        work: { name: 'Older Co', position: 'Engineer', startDate: '2018-01' },
+        version: currentVersion,
+      })
+      .expect(201);
+    const olderId = older.body.item.id as string;
+    currentVersion = older.body.version;
+
+    await request(app.getHttpServer())
+      .post(`/cv/${cvId}/work`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        work: { name: 'Newer Co', position: 'Lead', startDate: '2024-01' },
+        version: currentVersion,
+      })
+      .expect(201);
+
+    const list = await request(app.getHttpServer())
+      .get(`/cv/${cvId}/work`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(list.body[0].name).toBe('Newer Co');
+    expect(list.body[1].id).toBe(olderId);
+
+    const latestVersion = (
+      await request(app.getHttpServer())
+        .get(`/cv/${cvId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+    ).body.data.meta.version;
+
+    const patched = await request(app.getHttpServer())
+      .patch(`/cv/${cvId}/work/${olderId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        work: { name: 'Older Co', position: 'Senior Engineer', startDate: '2018-01' },
+        version: latestVersion,
+      })
+      .expect(200);
+
+    expect(patched.body.item.id).toBe(olderId);
+    expect(patched.body.item.position).toBe('Senior Engineer');
+  });
 });
 
 describe('E2E — media service (local Supabase)', () => {

@@ -36,6 +36,18 @@ vi.mock('@/lib/cv-item-api', () => ({
 
 vi.mock('@/lib/api', () => ({
   uploadResumeMedia: vi.fn(),
+  getCvWork: vi.fn().mockResolvedValue([]),
+  getCvVolunteer: vi.fn().mockResolvedValue([]),
+  getCvEducation: vi.fn().mockResolvedValue([]),
+  getCvSkills: vi.fn().mockResolvedValue([]),
+  getCvProjects: vi.fn().mockResolvedValue([]),
+  getCvAwards: vi.fn().mockResolvedValue([]),
+  getCvCertificates: vi.fn().mockResolvedValue([]),
+  getCvPublications: vi.fn().mockResolvedValue([]),
+  getCvLanguages: vi.fn().mockResolvedValue([]),
+  getCvInterests: vi.fn().mockResolvedValue([]),
+  getCvReferences: vi.fn().mockResolvedValue([]),
+  getCvProfiles: vi.fn().mockResolvedValue([]),
 }));
 
 const useCvEditorMock = vi.fn();

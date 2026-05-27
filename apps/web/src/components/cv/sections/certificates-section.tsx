@@ -7,19 +7,24 @@ import { TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
+import { getCvCertificates } from '@/lib/api';
 import { cvCertificateApi } from '@/lib/cv-item-api';
+import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
+
+type CertificateItem = SectionItem<ResumeCertificate>;
 
 export function CertificatesSection() {
   useSectionMount('certificates');
   const { cvId, resume, version, setResume, setVersion } = useCvEditor();
 
   return (
-    <ManagedArraySection<ResumeCertificate>
+    <ManagedArraySection<CertificateItem>
       cvId={cvId}
       version={version}
       onVersionChange={setVersion}
       items={resume.certificates ?? []}
       onItemsChange={(certificates) => setResume({ ...resume, certificates })}
+      refetchItems={createSectionRefetch<CertificateItem>(getCvCertificates, cvId)}
       entityLabel="Certificate"
       addLabel="Add certificate"
       createEmpty={() => ({})}

@@ -6,11 +6,7 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export interface CvItemMutationResponse {
   version: string;
-  index?: number;
-  parentIndex?: number;
-  childIndex?: number;
   item?: unknown;
-  value?: string;
 }
 
 interface VersionedPayload {
@@ -65,18 +61,18 @@ export function createCvProfile(cvId: string, profile: Record<string, unknown>, 
 
 export function updateCvProfile(
   cvId: string,
-  index: number,
+  itemId: string,
   profile: Record<string, unknown>,
   version?: string,
 ) {
-  return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/profiles/${index}`, {
+  return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/profiles/${itemId}`, {
     method: 'PATCH',
     body: JSON.stringify({ profile, ...withVersion(version) }),
   });
 }
 
-export function deleteCvProfile(cvId: string, index: number, version?: string) {
-  return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/profiles/${index}`, {
+export function deleteCvProfile(cvId: string, itemId: string, version?: string) {
+  return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/profiles/${itemId}`, {
     method: 'DELETE',
     body: JSON.stringify(withVersion(version)),
   });
@@ -90,14 +86,14 @@ function arrayCrud(segment: string, entityKey: string) {
         body: JSON.stringify({ [entityKey]: item, ...withVersion(version) }),
       });
     },
-    update(cvId: string, index: number, item: Record<string, unknown>, version?: string) {
-      return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/${segment}/${index}`, {
+    update(cvId: string, itemId: string, item: Record<string, unknown>, version?: string) {
+      return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/${segment}/${itemId}`, {
         method: 'PATCH',
         body: JSON.stringify({ [entityKey]: item, ...withVersion(version) }),
       });
     },
-    delete(cvId: string, index: number, version?: string) {
-      return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/${segment}/${index}`, {
+    delete(cvId: string, itemId: string, version?: string) {
+      return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/${segment}/${itemId}`, {
         method: 'DELETE',
         body: JSON.stringify(withVersion(version)),
       });
@@ -116,44 +112,3 @@ export const cvPublicationApi = arrayCrud('publications', 'publication');
 export const cvLanguageApi = arrayCrud('languages', 'language');
 export const cvInterestApi = arrayCrud('interests', 'interest');
 export const cvReferenceApi = arrayCrud('references', 'reference');
-
-function nestedStringCrud(parentSegment: string, _parentIndexParam: string, childSegment: string) {
-  return {
-    create(cvId: string, parentIndex: number, value: string, version?: string) {
-      return itemFetch<CvItemMutationResponse>(
-        `/cv/${cvId}/${parentSegment}/${parentIndex}/${childSegment}`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ value, ...withVersion(version) }),
-        },
-      );
-    },
-    update(cvId: string, parentIndex: number, childIndex: number, value: string, version?: string) {
-      return itemFetch<CvItemMutationResponse>(
-        `/cv/${cvId}/${parentSegment}/${parentIndex}/${childSegment}/${childIndex}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ value, ...withVersion(version) }),
-        },
-      );
-    },
-    delete(cvId: string, parentIndex: number, childIndex: number, version?: string) {
-      return itemFetch<CvItemMutationResponse>(
-        `/cv/${cvId}/${parentSegment}/${parentIndex}/${childSegment}/${childIndex}`,
-        {
-          method: 'DELETE',
-          body: JSON.stringify(withVersion(version)),
-        },
-      );
-    },
-  };
-}
-
-export const cvWorkHighlightApi = nestedStringCrud('work', 'workIndex', 'highlights');
-export const cvVolunteerHighlightApi = nestedStringCrud(
-  'volunteer',
-  'volunteerIndex',
-  'highlights',
-);
-export const cvEducationCourseApi = nestedStringCrud('education', 'educationIndex', 'courses');
-export const cvProjectHighlightApi = nestedStringCrud('projects', 'projectIndex', 'highlights');

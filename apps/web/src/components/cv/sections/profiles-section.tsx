@@ -6,7 +6,11 @@ import { ExternalLink } from '@/components/cv/external-link';
 import { TextField } from '@/components/cv/form-fields';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
+import { getCvProfiles } from '@/lib/api';
 import { createCvProfile, deleteCvProfile, updateCvProfile } from '@/lib/cv-item-api';
+import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
+
+type ProfileItem = SectionItem<ResumeProfile>;
 
 const profileApi = {
   create: createCvProfile,
@@ -19,12 +23,13 @@ export function ProfilesSection() {
   const { cvId, resume, version, setResume, setVersion } = useCvEditor();
 
   return (
-    <ManagedArraySection<ResumeProfile>
+    <ManagedArraySection<ProfileItem>
       cvId={cvId}
       version={version}
       onVersionChange={setVersion}
       items={resume.basics?.profiles ?? []}
       onItemsChange={(profiles) => setResume({ ...resume, basics: { ...resume.basics, profiles } })}
+      refetchItems={createSectionRefetch<ProfileItem>(getCvProfiles, cvId)}
       entityLabel="Profile"
       addLabel="Add social profile"
       createEmpty={() => ({})}

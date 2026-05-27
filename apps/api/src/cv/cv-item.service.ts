@@ -37,12 +37,26 @@ export class CvItemService {
     private readonly normalizedRepo: CvNormalizedRepository,
   ) {}
 
-  private parseIndex(index: string, label: string): number {
+  private parseChildIndex(index: string): number {
     const parsed = Number.parseInt(index, 10);
     if (!Number.isInteger(parsed) || parsed < 0) {
-      throw new BadRequestException(`Invalid ${label} index`);
+      throw new BadRequestException('Invalid nested item index');
     }
     return parsed;
+  }
+
+  private async requireSectionRow(
+    supabase: ReturnType<CvNormalizedRepository['createClientForUser']>,
+    cvId: string,
+    section: CvSectionKey,
+    itemId: string,
+    label: string,
+  ): Promise<Record<string, unknown>> {
+    const row = await this.normalizedRepo.getSectionRowById(supabase, cvId, section, itemId);
+    if (!row) {
+      throw new NotFoundException(`${label} not found`);
+    }
+    return row as Record<string, unknown>;
   }
 
   private assertVersion(
@@ -55,15 +69,7 @@ export class CvItemService {
   }
 
   private rowToItem(row: Record<string, unknown>): Record<string, unknown> {
-    const item = dbRowToResumeItem('', row);
-    if (typeof row.id === 'string') {
-      item.id = row.id;
-    }
-    return item;
-  }
-
-  private findIndexByRowId<T extends { id: string }>(rows: T[], rowId: string): number {
-    return rows.findIndex((r) => r.id === rowId);
+    return dbRowToResumeItem('', row);
   }
 
   private async mutateSection(
@@ -81,18 +87,9 @@ export class CvItemService {
 
     const supabase = this.normalizedRepo.createClientForUser(user);
 
-    try {
-      const result = await mutator(supabase, currentVersion);
-      const version = await this.cvService.bumpVersion(
-        supabase,
-        cvId,
-        currentVersion,
-        clientVersion,
-      );
-      return { ...result, version };
-    } catch (error) {
-      throw error;
-    }
+    const result = await mutator(supabase, currentVersion);
+    const version = await this.cvService.bumpVersion(supabase, cvId, currentVersion, clientVersion);
+    return { ...result, version };
   }
 
   updateBasics(
@@ -130,56 +127,42 @@ export class CvItemService {
   ): Promise<CvItemMutationResponse> {
     return this.mutateSection(user, cvId, version, async (supabase) => {
       const row = await this.normalizedRepo.insertSectionRow(supabase, cvId, 'profiles', profile);
-      const rows = await this.normalizedRepo.listSectionRows(supabase, cvId, 'profiles');
-      const index = this.findIndexByRowId(rows, row.id as string);
-      return { index, item: this.rowToItem(row) };
+      return { item: this.rowToItem(row) };
     });
   }
 
   updateProfile(
     user: AuthenticatedRequest['user'],
     cvId: string,
-    indexStr: string,
+    itemId: string,
     profile: Record<string, unknown>,
     version?: string,
   ): Promise<CvItemMutationResponse> {
-    const index = this.parseIndex(indexStr, 'profile');
     return this.mutateSection(user, cvId, version, async (supabase) => {
-      const rows = await this.normalizedRepo.listSectionRows(supabase, cvId, 'profiles');
-      const row = rows[index];
-      if (!row) {
-        throw new NotFoundException('Profile not found');
-      }
-
-      const current = this.rowToItem(row as Record<string, unknown>);
+      const row = await this.requireSectionRow(supabase, cvId, 'profiles', itemId, 'Profile');
+      const current = this.rowToItem(row);
       const updated = await this.normalizedRepo.updateSectionRow(
         supabase,
         cvId,
         'profiles',
-        row.id,
+        row.id as string,
         { ...current, ...profile },
       );
 
-      return { index, item: this.rowToItem(updated) };
+      return { item: this.rowToItem(updated) };
     });
   }
 
   deleteProfile(
     user: AuthenticatedRequest['user'],
     cvId: string,
-    indexStr: string,
+    itemId: string,
     version?: string,
   ): Promise<CvItemMutationResponse> {
-    const index = this.parseIndex(indexStr, 'profile');
     return this.mutateSection(user, cvId, version, async (supabase) => {
-      const rows = await this.normalizedRepo.listSectionRows(supabase, cvId, 'profiles');
-      const row = rows[index];
-      if (!row) {
-        throw new NotFoundException('Profile not found');
-      }
-
-      await this.normalizedRepo.deleteSectionRow(supabase, cvId, 'profiles', row.id);
-      return { index };
+      const row = await this.requireSectionRow(supabase, cvId, 'profiles', itemId, 'Profile');
+      await this.normalizedRepo.deleteSectionRow(supabase, cvId, 'profiles', row.id as string);
+      return {};
     });
   }
 
@@ -198,9 +181,7 @@ export class CvItemService {
     const sanitized = sanitizeResumeItemPayload(item);
     return this.mutateSection(user, cvId, version, async (supabase) => {
       const row = await this.normalizedRepo.insertSectionRow(supabase, cvId, section, sanitized);
-      const rows = await this.normalizedRepo.listSectionRows(supabase, cvId, section);
-      const index = this.findIndexByRowId(rows, row.id as string);
-      return { index, item: this.rowToItem(row) };
+      return { item: this.rowToItem(row) };
     });
   }
 
@@ -208,7 +189,7 @@ export class CvItemService {
     user: AuthenticatedRequest['user'],
     cvId: string,
     key: string,
-    indexStr: string,
+    itemId: string,
     item: Record<string, unknown>,
     label: string,
     version?: string,
@@ -218,24 +199,18 @@ export class CvItemService {
       throw new BadRequestException(`Unknown section: ${key}`);
     }
 
-    const index = this.parseIndex(indexStr, label);
     return this.mutateSection(user, cvId, version, async (supabase) => {
-      const rows = await this.normalizedRepo.listSectionRows(supabase, cvId, section);
-      const row = rows[index];
-      if (!row) {
-        throw new NotFoundException(`${label} not found`);
-      }
-
-      const current = this.rowToItem(row as Record<string, unknown>);
+      const row = await this.requireSectionRow(supabase, cvId, section, itemId, label);
+      const current = this.rowToItem(row);
       const updated = await this.normalizedRepo.updateSectionRow(
         supabase,
         cvId,
         section,
-        row.id,
+        row.id as string,
         sanitizeResumeItemPayload({ ...current, ...item }),
       );
 
-      return { index, item: this.rowToItem(updated) };
+      return { item: this.rowToItem(updated) };
     });
   }
 
@@ -243,7 +218,7 @@ export class CvItemService {
     user: AuthenticatedRequest['user'],
     cvId: string,
     key: string,
-    indexStr: string,
+    itemId: string,
     label: string,
     version?: string,
   ): Promise<CvItemMutationResponse> {
@@ -252,16 +227,10 @@ export class CvItemService {
       throw new BadRequestException(`Unknown section: ${key}`);
     }
 
-    const index = this.parseIndex(indexStr, label);
     return this.mutateSection(user, cvId, version, async (supabase) => {
-      const rows = await this.normalizedRepo.listSectionRows(supabase, cvId, section);
-      const row = rows[index];
-      if (!row) {
-        throw new NotFoundException(`${label} not found`);
-      }
-
-      await this.normalizedRepo.deleteSectionRow(supabase, cvId, section, row.id);
-      return { index };
+      const row = await this.requireSectionRow(supabase, cvId, section, itemId, label);
+      await this.normalizedRepo.deleteSectionRow(supabase, cvId, section, row.id as string);
+      return {};
     });
   }
 
@@ -269,7 +238,7 @@ export class CvItemService {
     user: AuthenticatedRequest['user'],
     cvId: string,
     arrayKey: string,
-    parentIndexStr: string,
+    parentId: string,
     nestedKey: string,
     parentLabel: string,
     version: string | undefined,
@@ -280,29 +249,28 @@ export class CvItemService {
       throw new BadRequestException(`Unknown section: ${arrayKey}`);
     }
 
-    const parentIndex = this.parseIndex(parentIndexStr, parentLabel);
-
     return this.mutateSection(user, cvId, version, async (supabase) => {
-      const rows = await this.normalizedRepo.listSectionRows(supabase, cvId, section);
-      const row = rows[parentIndex];
-      if (!row) {
-        throw new NotFoundException(`${parentLabel} not found`);
-      }
-
-      const dbRow = row as Record<string, unknown>;
+      const row = await this.requireSectionRow(supabase, cvId, section, parentId, parentLabel);
+      const dbRow = row;
       const dbNestedKey = nestedKey;
       const current = Array.isArray(dbRow[dbNestedKey])
         ? ([...dbRow[dbNestedKey]] as string[])
         : [];
 
       const { childIndex, value } = mutator(current);
-      const updated = await this.normalizedRepo.updateSectionRow(supabase, cvId, section, row.id, {
-        ...this.rowToItem(dbRow),
-        [nestedKey]: current,
-      });
+      const updated = await this.normalizedRepo.updateSectionRow(
+        supabase,
+        cvId,
+        section,
+        row.id as string,
+        {
+          ...this.rowToItem(dbRow),
+          [nestedKey]: current,
+        },
+      );
 
       return {
-        parentIndex,
+        parentId: row.id as string,
         childIndex,
         value,
         item: this.rowToItem(updated),
@@ -314,7 +282,7 @@ export class CvItemService {
     user: AuthenticatedRequest['user'],
     cvId: string,
     arrayKey: string,
-    parentIndexStr: string,
+    parentId: string,
     nestedKey: string,
     value: string,
     parentLabel: string,
@@ -324,7 +292,7 @@ export class CvItemService {
       user,
       cvId,
       arrayKey,
-      parentIndexStr,
+      parentId,
       nestedKey,
       parentLabel,
       version,
@@ -339,20 +307,20 @@ export class CvItemService {
     user: AuthenticatedRequest['user'],
     cvId: string,
     arrayKey: string,
-    parentIndexStr: string,
+    parentId: string,
     nestedKey: string,
     childIndexStr: string,
     value: string,
     parentLabel: string,
     version?: string,
   ): Promise<CvItemMutationResponse> {
-    const childIndex = this.parseIndex(childIndexStr, 'item');
+    const childIndex = this.parseChildIndex(childIndexStr);
 
     return this.mutateNestedString(
       user,
       cvId,
       arrayKey,
-      parentIndexStr,
+      parentId,
       nestedKey,
       parentLabel,
       version,
@@ -370,19 +338,19 @@ export class CvItemService {
     user: AuthenticatedRequest['user'],
     cvId: string,
     arrayKey: string,
-    parentIndexStr: string,
+    parentId: string,
     nestedKey: string,
     childIndexStr: string,
     parentLabel: string,
     version?: string,
   ): Promise<CvItemMutationResponse> {
-    const childIndex = this.parseIndex(childIndexStr, 'item');
+    const childIndex = this.parseChildIndex(childIndexStr);
 
     return this.mutateNestedString(
       user,
       cvId,
       arrayKey,
-      parentIndexStr,
+      parentId,
       nestedKey,
       parentLabel,
       version,

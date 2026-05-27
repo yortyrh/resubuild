@@ -8,6 +8,7 @@ export function createMockNormalizedRepo(): jest.Mocked<
     | 'fetchHeader'
     | 'fetchSections'
     | 'listSectionRows'
+    | 'getSectionRowById'
     | 'insertSectionRow'
     | 'updateSectionRow'
     | 'deleteSectionRow'
@@ -37,6 +38,7 @@ export function createMockNormalizedRepo(): jest.Mocked<
       projects: [],
     }),
     listSectionRows: jest.fn().mockResolvedValue([]),
+    getSectionRowById: jest.fn().mockResolvedValue(null),
     insertSectionRow: jest.fn(),
     updateSectionRow: jest.fn(),
     deleteSectionRow: jest.fn(),

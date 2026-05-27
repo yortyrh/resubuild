@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -163,24 +164,24 @@ export class CvItemsController {
     return this.cvItemService.createProfile(req.user, cvId, dto.profile, dto.version);
   }
 
-  @Patch('profiles/:index')
+  @Patch('profiles/:itemId')
   updateProfile(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: ProfileItemDto,
   ) {
-    return this.cvItemService.updateProfile(req.user, cvId, index, dto.profile, dto.version);
+    return this.cvItemService.updateProfile(req.user, cvId, itemId, dto.profile, dto.version);
   }
 
-  @Delete('profiles/:index')
+  @Delete('profiles/:itemId')
   deleteProfile(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: BasicsItemDto,
   ) {
-    return this.cvItemService.deleteProfile(req.user, cvId, index, dto.version);
+    return this.cvItemService.deleteProfile(req.user, cvId, itemId, dto.version);
   }
 
   @Post('work')
@@ -192,53 +193,53 @@ export class CvItemsController {
     return this.cvItemService.createArrayItem(req.user, cvId, 'work', dto.work, dto.version);
   }
 
-  @Patch('work/:index')
+  @Patch('work/:itemId')
   updateWork(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: WorkItemDto,
   ) {
     return this.cvItemService.updateArrayItem(
       req.user,
       cvId,
       'work',
-      index,
+      itemId,
       dto.work,
       'Work entry',
       dto.version,
     );
   }
 
-  @Delete('work/:index')
+  @Delete('work/:itemId')
   deleteWork(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
       cvId,
       'work',
-      index,
+      itemId,
       'Work entry',
       dto.version,
     );
   }
 
-  @Post('work/:workIndex/highlights')
+  @Post('work/:parentId/highlights')
   createWorkHighlight(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('workIndex') workIndex: string,
+    @Param('parentId', ParseUUIDPipe) parentId: string,
     @Body() dto: StringValueDto,
   ) {
     return this.cvItemService.createNestedString(
       req.user,
       cvId,
       'work',
-      workIndex,
+      parentId,
       'highlights',
       dto.value,
       'Work entry',
@@ -246,11 +247,11 @@ export class CvItemsController {
     );
   }
 
-  @Patch('work/:workIndex/highlights/:highlightIndex')
+  @Patch('work/:parentId/highlights/:highlightIndex')
   updateWorkHighlight(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('workIndex') workIndex: string,
+    @Param('parentId', ParseUUIDPipe) parentId: string,
     @Param('highlightIndex') highlightIndex: string,
     @Body() dto: StringValueDto,
   ) {
@@ -258,7 +259,7 @@ export class CvItemsController {
       req.user,
       cvId,
       'work',
-      workIndex,
+      parentId,
       'highlights',
       highlightIndex,
       dto.value,
@@ -267,11 +268,11 @@ export class CvItemsController {
     );
   }
 
-  @Delete('work/:workIndex/highlights/:highlightIndex')
+  @Delete('work/:parentId/highlights/:highlightIndex')
   deleteWorkHighlight(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('workIndex') workIndex: string,
+    @Param('parentId', ParseUUIDPipe) parentId: string,
     @Param('highlightIndex') highlightIndex: string,
     @Body() dto: BasicsItemDto,
   ) {
@@ -279,7 +280,7 @@ export class CvItemsController {
       req.user,
       cvId,
       'work',
-      workIndex,
+      parentId,
       'highlights',
       highlightIndex,
       'Work entry',
@@ -302,53 +303,53 @@ export class CvItemsController {
     );
   }
 
-  @Patch('volunteer/:index')
+  @Patch('volunteer/:itemId')
   updateVolunteer(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: VolunteerItemDto,
   ) {
     return this.cvItemService.updateArrayItem(
       req.user,
       cvId,
       'volunteer',
-      index,
+      itemId,
       dto.volunteer,
       'Volunteer entry',
       dto.version,
     );
   }
 
-  @Delete('volunteer/:index')
+  @Delete('volunteer/:itemId')
   deleteVolunteer(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
       cvId,
       'volunteer',
-      index,
+      itemId,
       'Volunteer entry',
       dto.version,
     );
   }
 
-  @Post('volunteer/:volunteerIndex/highlights')
+  @Post('volunteer/:parentId/highlights')
   createVolunteerHighlight(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('volunteerIndex') volunteerIndex: string,
+    @Param('parentId', ParseUUIDPipe) parentId: string,
     @Body() dto: StringValueDto,
   ) {
     return this.cvItemService.createNestedString(
       req.user,
       cvId,
       'volunteer',
-      volunteerIndex,
+      parentId,
       'highlights',
       dto.value,
       'Volunteer entry',
@@ -356,11 +357,11 @@ export class CvItemsController {
     );
   }
 
-  @Patch('volunteer/:volunteerIndex/highlights/:highlightIndex')
+  @Patch('volunteer/:parentId/highlights/:highlightIndex')
   updateVolunteerHighlight(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('volunteerIndex') volunteerIndex: string,
+    @Param('parentId', ParseUUIDPipe) parentId: string,
     @Param('highlightIndex') highlightIndex: string,
     @Body() dto: StringValueDto,
   ) {
@@ -368,7 +369,7 @@ export class CvItemsController {
       req.user,
       cvId,
       'volunteer',
-      volunteerIndex,
+      parentId,
       'highlights',
       highlightIndex,
       dto.value,
@@ -377,11 +378,11 @@ export class CvItemsController {
     );
   }
 
-  @Delete('volunteer/:volunteerIndex/highlights/:highlightIndex')
+  @Delete('volunteer/:parentId/highlights/:highlightIndex')
   deleteVolunteerHighlight(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('volunteerIndex') volunteerIndex: string,
+    @Param('parentId', ParseUUIDPipe) parentId: string,
     @Param('highlightIndex') highlightIndex: string,
     @Body() dto: BasicsItemDto,
   ) {
@@ -389,7 +390,7 @@ export class CvItemsController {
       req.user,
       cvId,
       'volunteer',
-      volunteerIndex,
+      parentId,
       'highlights',
       highlightIndex,
       'Volunteer entry',
@@ -412,53 +413,53 @@ export class CvItemsController {
     );
   }
 
-  @Patch('education/:index')
+  @Patch('education/:itemId')
   updateEducation(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: EducationItemDto,
   ) {
     return this.cvItemService.updateArrayItem(
       req.user,
       cvId,
       'education',
-      index,
+      itemId,
       dto.education,
       'Education entry',
       dto.version,
     );
   }
 
-  @Delete('education/:index')
+  @Delete('education/:itemId')
   deleteEducation(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
       cvId,
       'education',
-      index,
+      itemId,
       'Education entry',
       dto.version,
     );
   }
 
-  @Post('education/:educationIndex/courses')
+  @Post('education/:parentId/courses')
   createEducationCourse(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('educationIndex') educationIndex: string,
+    @Param('parentId', ParseUUIDPipe) parentId: string,
     @Body() dto: StringValueDto,
   ) {
     return this.cvItemService.createNestedString(
       req.user,
       cvId,
       'education',
-      educationIndex,
+      parentId,
       'courses',
       dto.value,
       'Education entry',
@@ -466,11 +467,11 @@ export class CvItemsController {
     );
   }
 
-  @Patch('education/:educationIndex/courses/:courseIndex')
+  @Patch('education/:parentId/courses/:courseIndex')
   updateEducationCourse(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('educationIndex') educationIndex: string,
+    @Param('parentId', ParseUUIDPipe) parentId: string,
     @Param('courseIndex') courseIndex: string,
     @Body() dto: StringValueDto,
   ) {
@@ -478,7 +479,7 @@ export class CvItemsController {
       req.user,
       cvId,
       'education',
-      educationIndex,
+      parentId,
       'courses',
       courseIndex,
       dto.value,
@@ -487,11 +488,11 @@ export class CvItemsController {
     );
   }
 
-  @Delete('education/:educationIndex/courses/:courseIndex')
+  @Delete('education/:parentId/courses/:courseIndex')
   deleteEducationCourse(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('educationIndex') educationIndex: string,
+    @Param('parentId', ParseUUIDPipe) parentId: string,
     @Param('courseIndex') courseIndex: string,
     @Body() dto: BasicsItemDto,
   ) {
@@ -499,7 +500,7 @@ export class CvItemsController {
       req.user,
       cvId,
       'education',
-      educationIndex,
+      parentId,
       'courses',
       courseIndex,
       'Education entry',
@@ -516,36 +517,36 @@ export class CvItemsController {
     return this.cvItemService.createArrayItem(req.user, cvId, 'skills', dto.skill, dto.version);
   }
 
-  @Patch('skills/:index')
+  @Patch('skills/:itemId')
   updateSkill(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: SkillItemDto,
   ) {
     return this.cvItemService.updateArrayItem(
       req.user,
       cvId,
       'skills',
-      index,
+      itemId,
       dto.skill,
       'Skill',
       dto.version,
     );
   }
 
-  @Delete('skills/:index')
+  @Delete('skills/:itemId')
   deleteSkill(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
       cvId,
       'skills',
-      index,
+      itemId,
       'Skill',
       dto.version,
     );
@@ -560,53 +561,53 @@ export class CvItemsController {
     return this.cvItemService.createArrayItem(req.user, cvId, 'projects', dto.project, dto.version);
   }
 
-  @Patch('projects/:index')
+  @Patch('projects/:itemId')
   updateProject(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: ProjectItemDto,
   ) {
     return this.cvItemService.updateArrayItem(
       req.user,
       cvId,
       'projects',
-      index,
+      itemId,
       dto.project,
       'Project',
       dto.version,
     );
   }
 
-  @Delete('projects/:index')
+  @Delete('projects/:itemId')
   deleteProject(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
       cvId,
       'projects',
-      index,
+      itemId,
       'Project',
       dto.version,
     );
   }
 
-  @Post('projects/:projectIndex/highlights')
+  @Post('projects/:parentId/highlights')
   createProjectHighlight(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('projectIndex') projectIndex: string,
+    @Param('parentId', ParseUUIDPipe) parentId: string,
     @Body() dto: StringValueDto,
   ) {
     return this.cvItemService.createNestedString(
       req.user,
       cvId,
       'projects',
-      projectIndex,
+      parentId,
       'highlights',
       dto.value,
       'Project',
@@ -614,11 +615,11 @@ export class CvItemsController {
     );
   }
 
-  @Patch('projects/:projectIndex/highlights/:highlightIndex')
+  @Patch('projects/:parentId/highlights/:highlightIndex')
   updateProjectHighlight(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('projectIndex') projectIndex: string,
+    @Param('parentId', ParseUUIDPipe) parentId: string,
     @Param('highlightIndex') highlightIndex: string,
     @Body() dto: StringValueDto,
   ) {
@@ -626,7 +627,7 @@ export class CvItemsController {
       req.user,
       cvId,
       'projects',
-      projectIndex,
+      parentId,
       'highlights',
       highlightIndex,
       dto.value,
@@ -635,11 +636,11 @@ export class CvItemsController {
     );
   }
 
-  @Delete('projects/:projectIndex/highlights/:highlightIndex')
+  @Delete('projects/:parentId/highlights/:highlightIndex')
   deleteProjectHighlight(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('projectIndex') projectIndex: string,
+    @Param('parentId', ParseUUIDPipe) parentId: string,
     @Param('highlightIndex') highlightIndex: string,
     @Body() dto: BasicsItemDto,
   ) {
@@ -647,7 +648,7 @@ export class CvItemsController {
       req.user,
       cvId,
       'projects',
-      projectIndex,
+      parentId,
       'highlights',
       highlightIndex,
       'Project',
@@ -664,36 +665,36 @@ export class CvItemsController {
     return this.cvItemService.createArrayItem(req.user, cvId, 'awards', dto.award, dto.version);
   }
 
-  @Patch('awards/:index')
+  @Patch('awards/:itemId')
   updateAward(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: AwardItemDto,
   ) {
     return this.cvItemService.updateArrayItem(
       req.user,
       cvId,
       'awards',
-      index,
+      itemId,
       dto.award,
       'Award',
       dto.version,
     );
   }
 
-  @Delete('awards/:index')
+  @Delete('awards/:itemId')
   deleteAward(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
       cvId,
       'awards',
-      index,
+      itemId,
       'Award',
       dto.version,
     );
@@ -714,36 +715,36 @@ export class CvItemsController {
     );
   }
 
-  @Patch('certificates/:index')
+  @Patch('certificates/:itemId')
   updateCertificate(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: CertificateItemDto,
   ) {
     return this.cvItemService.updateArrayItem(
       req.user,
       cvId,
       'certificates',
-      index,
+      itemId,
       dto.certificate,
       'Certificate',
       dto.version,
     );
   }
 
-  @Delete('certificates/:index')
+  @Delete('certificates/:itemId')
   deleteCertificate(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
       cvId,
       'certificates',
-      index,
+      itemId,
       'Certificate',
       dto.version,
     );
@@ -764,36 +765,36 @@ export class CvItemsController {
     );
   }
 
-  @Patch('publications/:index')
+  @Patch('publications/:itemId')
   updatePublication(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: PublicationItemDto,
   ) {
     return this.cvItemService.updateArrayItem(
       req.user,
       cvId,
       'publications',
-      index,
+      itemId,
       dto.publication,
       'Publication',
       dto.version,
     );
   }
 
-  @Delete('publications/:index')
+  @Delete('publications/:itemId')
   deletePublication(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
       cvId,
       'publications',
-      index,
+      itemId,
       'Publication',
       dto.version,
     );
@@ -814,36 +815,36 @@ export class CvItemsController {
     );
   }
 
-  @Patch('languages/:index')
+  @Patch('languages/:itemId')
   updateLanguage(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: LanguageItemDto,
   ) {
     return this.cvItemService.updateArrayItem(
       req.user,
       cvId,
       'languages',
-      index,
+      itemId,
       dto.language,
       'Language',
       dto.version,
     );
   }
 
-  @Delete('languages/:index')
+  @Delete('languages/:itemId')
   deleteLanguage(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
       cvId,
       'languages',
-      index,
+      itemId,
       'Language',
       dto.version,
     );
@@ -864,36 +865,36 @@ export class CvItemsController {
     );
   }
 
-  @Patch('interests/:index')
+  @Patch('interests/:itemId')
   updateInterest(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: InterestItemDto,
   ) {
     return this.cvItemService.updateArrayItem(
       req.user,
       cvId,
       'interests',
-      index,
+      itemId,
       dto.interest,
       'Interest',
       dto.version,
     );
   }
 
-  @Delete('interests/:index')
+  @Delete('interests/:itemId')
   deleteInterest(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
       cvId,
       'interests',
-      index,
+      itemId,
       'Interest',
       dto.version,
     );
@@ -914,36 +915,36 @@ export class CvItemsController {
     );
   }
 
-  @Patch('references/:index')
+  @Patch('references/:itemId')
   updateReference(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: ReferenceItemDto,
   ) {
     return this.cvItemService.updateArrayItem(
       req.user,
       cvId,
       'references',
-      index,
+      itemId,
       dto.reference,
       'Reference',
       dto.version,
     );
   }
 
-  @Delete('references/:index')
+  @Delete('references/:itemId')
   deleteReference(
     @Req() req: AuthenticatedRequest,
     @Param('cvId') cvId: string,
-    @Param('index') index: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: BasicsItemDto,
   ) {
     return this.cvItemService.deleteArrayItem(
       req.user,
       cvId,
       'references',
-      index,
+      itemId,
       'Reference',
       dto.version,
     );

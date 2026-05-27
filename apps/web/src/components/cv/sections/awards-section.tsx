@@ -7,19 +7,24 @@ import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useSectionMount } from '@/components/cv/use-section-mount';
+import { getCvAwards } from '@/lib/api';
 import { cvAwardApi } from '@/lib/cv-item-api';
+import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
+
+type AwardItem = SectionItem<ResumeAward>;
 
 export function AwardsSection() {
   useSectionMount('awards');
   const { cvId, resume, version, setResume, setVersion } = useCvEditor();
 
   return (
-    <ManagedArraySection<ResumeAward>
+    <ManagedArraySection<AwardItem>
       cvId={cvId}
       version={version}
       onVersionChange={setVersion}
       items={resume.awards ?? []}
       onItemsChange={(awards) => setResume({ ...resume, awards })}
+      refetchItems={createSectionRefetch<AwardItem>(getCvAwards, cvId)}
       entityLabel="Award"
       addLabel="Add award"
       createEmpty={() => ({})}

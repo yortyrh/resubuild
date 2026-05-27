@@ -1,27 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import { insertAtIndex, replaceAtSortedIndex } from './cv-section-order';
+import { getItemId, mergeItemById, removeItemById } from './cv-section-order';
 
-describe('insertAtIndex', () => {
-  it('appends when index is omitted', () => {
-    expect(insertAtIndex(['a'], 'b')).toEqual(['a', 'b']);
+describe('mergeItemById', () => {
+  it('replaces an existing item by id', () => {
+    expect(mergeItemById([{ id: 'a', name: 'A' }], { id: 'a', name: 'Updated' })).toEqual([
+      { id: 'a', name: 'Updated' },
+    ]);
   });
 
-  it('inserts at the given index', () => {
-    expect(insertAtIndex(['b', 'c'], 'a', 0)).toEqual(['a', 'b', 'c']);
-    expect(insertAtIndex(['a', 'c'], 'b', 1)).toEqual(['a', 'b', 'c']);
+  it('appends when id is new', () => {
+    expect(mergeItemById([{ id: 'a', name: 'A' }], { id: 'b', name: 'B' })).toEqual([
+      { id: 'a', name: 'A' },
+      { id: 'b', name: 'B' },
+    ]);
   });
 });
 
-describe('replaceAtSortedIndex', () => {
-  it('replaces in place when sorted index matches', () => {
-    expect(replaceAtSortedIndex(['a', 'b', 'c'], 1, 'B', 1)).toEqual(['a', 'B', 'c']);
+describe('removeItemById', () => {
+  it('removes the matching row', () => {
+    expect(
+      removeItemById(
+        [
+          { id: 'a', name: 'A' },
+          { id: 'b', name: 'B' },
+        ],
+        'a',
+      ),
+    ).toEqual([{ id: 'b', name: 'B' }]);
+  });
+});
+
+describe('getItemId', () => {
+  it('returns id when present', () => {
+    expect(getItemId({ id: 'row-1' }, 'Entry')).toBe('row-1');
   });
 
-  it('moves an item earlier in the list', () => {
-    expect(replaceAtSortedIndex(['a', 'b', 'c'], 2, 'C', 0)).toEqual(['C', 'a', 'b']);
-  });
-
-  it('moves an item later in the list', () => {
-    expect(replaceAtSortedIndex(['a', 'b', 'c'], 0, 'A', 2)).toEqual(['b', 'c', 'A']);
+  it('throws when id is missing', () => {
+    expect(() => getItemId({}, 'Entry')).toThrow(/missing a row id/i);
   });
 });

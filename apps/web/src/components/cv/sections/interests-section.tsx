@@ -7,19 +7,24 @@ import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
 import { useSectionMount } from '@/components/cv/use-section-mount';
+import { getCvInterests } from '@/lib/api';
 import { cvInterestApi } from '@/lib/cv-item-api';
+import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
+
+type InterestItem = SectionItem<ResumeInterest>;
 
 export function InterestsSection() {
   useSectionMount('interests');
   const { cvId, resume, version, setResume, setVersion } = useCvEditor();
 
   return (
-    <ManagedArraySection<ResumeInterest>
+    <ManagedArraySection<InterestItem>
       cvId={cvId}
       version={version}
       onVersionChange={setVersion}
       items={resume.interests ?? []}
       onItemsChange={(interests) => setResume({ ...resume, interests })}
+      refetchItems={createSectionRefetch<InterestItem>(getCvInterests, cvId)}
       entityLabel="Interest"
       addLabel="Add interest"
       createEmpty={() => ({ keywords: [] })}

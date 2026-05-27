@@ -13,6 +13,8 @@ describe('CvItemsController', () => {
   const version = 'v1.0.0';
   const versionDto = { version };
   const resolved = { version: 'v1.0.1' };
+  const itemId = '00000000-0000-4000-8000-000000000001';
+  const parentId = '00000000-0000-4000-8000-000000000002';
 
   beforeEach(() => {
     service = {
@@ -47,17 +49,17 @@ describe('CvItemsController', () => {
     await controller.createProfile(req, cvId, { profile: { network: 'GitHub' }, version });
     expect(service.createProfile).toHaveBeenCalledWith(user, cvId, { network: 'GitHub' }, version);
 
-    await controller.updateProfile(req, cvId, '0', { profile: { username: 'jane' }, version });
+    await controller.updateProfile(req, cvId, itemId, { profile: { username: 'jane' }, version });
     expect(service.updateProfile).toHaveBeenCalledWith(
       user,
       cvId,
-      '0',
+      itemId,
       { username: 'jane' },
       version,
     );
 
-    await controller.deleteProfile(req, cvId, '0', versionDto);
-    expect(service.deleteProfile).toHaveBeenCalledWith(user, cvId, '0', version);
+    await controller.deleteProfile(req, cvId, itemId, versionDto);
+    expect(service.deleteProfile).toHaveBeenCalledWith(user, cvId, itemId, version);
   });
 
   it.each([
@@ -161,14 +163,14 @@ describe('CvItemsController', () => {
       await (controller[update as keyof CvItemsController] as ControllerHandler)(
         req,
         cvId,
-        '0',
+        itemId,
         dto,
       );
       expect(service.updateArrayItem).toHaveBeenCalledWith(
         user,
         cvId,
         key,
-        '0',
+        itemId,
         item,
         label,
         version,
@@ -177,10 +179,10 @@ describe('CvItemsController', () => {
       await (controller[del as keyof CvItemsController] as ControllerHandler)(
         req,
         cvId,
-        '0',
+        itemId,
         versionDto,
       );
-      expect(service.deleteArrayItem).toHaveBeenCalledWith(user, cvId, key, '0', label, version);
+      expect(service.deleteArrayItem).toHaveBeenCalledWith(user, cvId, key, itemId, label, version);
     },
   );
 
@@ -209,15 +211,20 @@ describe('CvItemsController', () => {
   ] as const)(
     'delegates $key highlight CRUD to service',
     async ({ key, parentLabel, create, update, delete: del }) => {
-      await (controller[create as keyof CvItemsController] as ControllerHandler)(req, cvId, '0', {
-        value: 'Highlight',
-        version,
-      });
+      await (controller[create as keyof CvItemsController] as ControllerHandler)(
+        req,
+        cvId,
+        parentId,
+        {
+          value: 'Highlight',
+          version,
+        },
+      );
       expect(service.createNestedString).toHaveBeenCalledWith(
         user,
         cvId,
         key,
-        '0',
+        parentId,
         'highlights',
         'Highlight',
         parentLabel,
@@ -227,7 +234,7 @@ describe('CvItemsController', () => {
       await (controller[update as keyof CvItemsController] as ControllerHandler)(
         req,
         cvId,
-        '0',
+        parentId,
         '1',
         {
           value: 'Updated',
@@ -238,7 +245,7 @@ describe('CvItemsController', () => {
         user,
         cvId,
         key,
-        '0',
+        parentId,
         'highlights',
         '1',
         'Updated',
@@ -249,7 +256,7 @@ describe('CvItemsController', () => {
       await (controller[del as keyof CvItemsController] as ControllerHandler)(
         req,
         cvId,
-        '0',
+        parentId,
         '1',
         versionDto,
       );
@@ -257,7 +264,7 @@ describe('CvItemsController', () => {
         user,
         cvId,
         key,
-        '0',
+        parentId,
         'highlights',
         '1',
         parentLabel,
@@ -284,24 +291,24 @@ describe('CvItemsController', () => {
   });
 
   it('delegates education course CRUD to service', async () => {
-    await controller.createEducationCourse(req, cvId, '0', { value: 'CS101', version });
+    await controller.createEducationCourse(req, cvId, parentId, { value: 'CS101', version });
     expect(service.createNestedString).toHaveBeenCalledWith(
       user,
       cvId,
       'education',
-      '0',
+      parentId,
       'courses',
       'CS101',
       'Education entry',
       version,
     );
 
-    await controller.updateEducationCourse(req, cvId, '0', '1', { value: 'CS102', version });
+    await controller.updateEducationCourse(req, cvId, parentId, '1', { value: 'CS102', version });
     expect(service.updateNestedString).toHaveBeenCalledWith(
       user,
       cvId,
       'education',
-      '0',
+      parentId,
       'courses',
       '1',
       'CS102',
@@ -309,12 +316,12 @@ describe('CvItemsController', () => {
       version,
     );
 
-    await controller.deleteEducationCourse(req, cvId, '0', '1', versionDto);
+    await controller.deleteEducationCourse(req, cvId, parentId, '1', versionDto);
     expect(service.deleteNestedString).toHaveBeenCalledWith(
       user,
       cvId,
       'education',
-      '0',
+      parentId,
       'courses',
       '1',
       'Education entry',

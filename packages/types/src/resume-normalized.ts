@@ -424,6 +424,10 @@ export function disassembleResume(data: Resume, cvId = ''): NormalizedCvPayload 
   };
 }
 
+function withRowId<R extends { id: string }, T>(row: R, item: T): T & { id: string } {
+  return { ...item, id: row.id };
+}
+
 function rowToProfile(row: CvProfileRow): ResumeProfile {
   return omitUndefined({
     network: row.network ?? undefined,
@@ -624,7 +628,9 @@ export function sortReferenceRows(rows: CvReferenceRow[]): CvReferenceRow[] {
 }
 
 export function assembleResume(header: CvHeaderRow, sections: NormalizedCvSections): Resume {
-  const profiles = sortProfileRows(sections.profiles).map(rowToProfile);
+  const profiles = sortProfileRows(sections.profiles).map((row) =>
+    withRowId(row, rowToProfile(row)),
+  );
   const basics: ResumeBasics = omitUndefined({
     name: header.name ?? undefined,
     label: header.label ?? undefined,
@@ -646,17 +652,33 @@ export function assembleResume(header: CvHeaderRow, sections: NormalizedCvSectio
         })
       : undefined;
 
-  const work = sortWorkRows(sections.work).map(rowToWork);
-  const volunteer = sortVolunteerRows(sections.volunteer).map(rowToVolunteer);
-  const education = sortEducationRows(sections.education).map(rowToEducation);
-  const awards = sortAwardRows(sections.awards).map(rowToAward);
-  const certificates = sortCertificateRows(sections.certificates).map(rowToCertificate);
-  const publications = sortPublicationRows(sections.publications).map(rowToPublication);
-  const skills = sortSkillRows(sections.skills).map(rowToSkill);
-  const languages = sortLanguageRows(sections.languages).map(rowToLanguage);
-  const interests = sortInterestRows(sections.interests).map(rowToInterest);
-  const references = sortReferenceRows(sections.references).map(rowToReference);
-  const projects = sortProjectRows(sections.projects).map(rowToProject);
+  const work = sortWorkRows(sections.work).map((row) => withRowId(row, rowToWork(row)));
+  const volunteer = sortVolunteerRows(sections.volunteer).map((row) =>
+    withRowId(row, rowToVolunteer(row)),
+  );
+  const education = sortEducationRows(sections.education).map((row) =>
+    withRowId(row, rowToEducation(row)),
+  );
+  const awards = sortAwardRows(sections.awards).map((row) => withRowId(row, rowToAward(row)));
+  const certificates = sortCertificateRows(sections.certificates).map((row) =>
+    withRowId(row, rowToCertificate(row)),
+  );
+  const publications = sortPublicationRows(sections.publications).map((row) =>
+    withRowId(row, rowToPublication(row)),
+  );
+  const skills = sortSkillRows(sections.skills).map((row) => withRowId(row, rowToSkill(row)));
+  const languages = sortLanguageRows(sections.languages).map((row) =>
+    withRowId(row, rowToLanguage(row)),
+  );
+  const interests = sortInterestRows(sections.interests).map((row) =>
+    withRowId(row, rowToInterest(row)),
+  );
+  const references = sortReferenceRows(sections.references).map((row) =>
+    withRowId(row, rowToReference(row)),
+  );
+  const projects = sortProjectRows(sections.projects).map((row) =>
+    withRowId(row, rowToProject(row)),
+  );
 
   return omitUndefined({
     basics,
@@ -688,8 +710,10 @@ export function resumeItemToDbPayload(
     organization: 'organization',
   };
 
+  const skip = new Set(['id', 'cv_id', 'sort']);
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(item)) {
+    if (skip.has(key)) continue;
     const dbKey = mapping[key] ?? key;
     if (key === 'highlights' || key === 'courses' || key === 'keywords' || key === 'roles') {
       result[dbKey] = emptyStringArray(value);
@@ -700,7 +724,7 @@ export function resumeItemToDbPayload(
   return result;
 }
 
-/** Map snake_case DB row to camelCase JSON Resume item (without id/sort/cv_id). */
+/** Map snake_case DB row to camelCase JSON Resume item (includes row id when present). */
 export function dbRowToResumeItem(
   section: string,
   row: Record<string, unknown>,
@@ -713,7 +737,7 @@ export function dbRowToResumeItem(
     organization: 'organization',
   };
 
-  const skip = new Set(['id', 'cv_id', 'sort']);
+  const skip = new Set(['cv_id', 'sort']);
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(row)) {

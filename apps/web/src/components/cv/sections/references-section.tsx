@@ -6,19 +6,24 @@ import { TextField } from '@/components/cv/form-fields';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useSectionMount } from '@/components/cv/use-section-mount';
+import { getCvReferences } from '@/lib/api';
 import { cvReferenceApi } from '@/lib/cv-item-api';
+import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
+
+type ReferenceItem = SectionItem<ResumeReference>;
 
 export function ReferencesSection() {
   useSectionMount('references');
   const { cvId, resume, version, setResume, setVersion } = useCvEditor();
 
   return (
-    <ManagedArraySection<ResumeReference>
+    <ManagedArraySection<ReferenceItem>
       cvId={cvId}
       version={version}
       onVersionChange={setVersion}
       items={resume.references ?? []}
       onItemsChange={(references) => setResume({ ...resume, references })}
+      refetchItems={createSectionRefetch<ReferenceItem>(getCvReferences, cvId)}
       entityLabel="Reference"
       addLabel="Add reference"
       createEmpty={() => ({})}

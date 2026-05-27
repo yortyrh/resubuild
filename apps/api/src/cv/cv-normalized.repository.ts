@@ -194,14 +194,25 @@ export class CvNormalizedRepository {
     return sortSectionRows(section, (data ?? []) as T[]) as T[];
   }
 
-  async getSectionRowByIndex<T extends { id: string }>(
+  async getSectionRowById<T extends { id: string }>(
     supabase: SupabaseClient,
     cvId: string,
     section: CvSectionKey,
-    index: number,
+    rowId: string,
   ): Promise<T | null> {
-    const rows = await this.listSectionRows<T>(supabase, cvId, section);
-    return rows[index] ?? null;
+    const table = SECTION_TABLE_MAP[section];
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .eq('id', rowId)
+      .eq('cv_id', cvId)
+      .maybeSingle();
+
+    if (error) {
+      throw new BadRequestException(error.message);
+    }
+
+    return (data as T | null) ?? null;
   }
 
   async insertSectionRow(

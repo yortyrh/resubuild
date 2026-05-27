@@ -230,14 +230,38 @@ describe('CvNormalizedRepository', () => {
     expect(result.map((r) => r.id)).toEqual(['b', 'a']);
   });
 
-  it('getSectionRowByIndex returns row at index', async () => {
-    jest.spyOn(repo, 'listSectionRows').mockResolvedValue([{ id: 'only' }] as never);
+  it('getSectionRowById returns row by primary key', async () => {
+    const supabase = createSupabaseMock({
+      from: () => ({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'only' }, error: null }),
+            }),
+          }),
+        }),
+      }),
+    });
 
-    const supabase = createSupabaseMock({});
-    await expect(repo.getSectionRowByIndex(supabase, 'cv-1', 'skills', 0)).resolves.toEqual({
+    await expect(repo.getSectionRowById(supabase, 'cv-1', 'skills', 'only')).resolves.toEqual({
       id: 'only',
     });
-    await expect(repo.getSectionRowByIndex(supabase, 'cv-1', 'skills', 1)).resolves.toBeNull();
+  });
+
+  it('getSectionRowById returns null when row is missing', async () => {
+    const supabase = createSupabaseMock({
+      from: () => ({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+          }),
+        }),
+      }),
+    });
+
+    await expect(repo.getSectionRowById(supabase, 'cv-1', 'skills', 'missing')).resolves.toBeNull();
   });
 
   it('insertSectionRow assigns sort for sort-backed sections', async () => {

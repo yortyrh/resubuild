@@ -64,6 +64,20 @@ describe('CvItemService', () => {
     normalizedRepo = createMockNormalizedRepo();
     normalizedRepo.createClientForUser.mockReturnValue(supabaseStub as never);
 
+    normalizedRepo.getSectionRowById.mockImplementation(async (_sb, _cvId, section, rowId) => {
+      const store =
+        section === 'work'
+          ? workRows
+          : section === 'profiles'
+            ? profileRows
+            : section === 'skills'
+              ? skillRows
+              : section === 'education'
+                ? educationRows
+                : [];
+      return (store.find((row) => row.id === rowId) as never) ?? null;
+    });
+
     normalizedRepo.insertSectionRow.mockImplementation(async (_sb, _cvId, section, item) => {
       const row = {
         id: crypto.randomUUID(),
@@ -125,9 +139,7 @@ describe('CvItemService', () => {
     service = module.get(CvItemService);
   });
 
-  it('creates a work entry and returns index with bumped version', async () => {
-    setupListMock('work', workRows);
-
+  it('creates a work entry and returns item with bumped version', async () => {
     const result = await service.createArrayItem(
       user,
       'cv-1',
@@ -136,14 +148,14 @@ describe('CvItemService', () => {
       'v1.0.0',
     );
 
-    expect(result.index).toBe(0);
+    expect(result.item).toMatchObject({ name: 'Acme', position: 'Engineer' });
+    expect((result.item as { id?: string }).id).toEqual(expect.any(String));
     expect(result.version).toBe('v1.0.1');
     expect(normalizedRepo.insertSectionRow).toHaveBeenCalled();
+    expect(normalizedRepo.listSectionRows).not.toHaveBeenCalled();
   });
 
   it('strips empty optional url before persisting work entries', async () => {
-    setupListMock('work', workRows);
-
     await service.createArrayItem(
       user,
       'cv-1',
@@ -178,10 +190,15 @@ describe('CvItemService', () => {
   });
 
   it('throws 404 when deleting missing education entry', async () => {
-    setupListMock('education', []);
-
     await expect(
-      service.deleteArrayItem(user, 'cv-1', 'education', '0', 'Education entry', 'v1.0.0'),
+      service.deleteArrayItem(
+        user,
+        'cv-1',
+        'education',
+        '00000000-0000-4000-8000-000000000001',
+        'Education entry',
+        'v1.0.0',
+      ),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -195,20 +212,19 @@ describe('CvItemService', () => {
         start_date: '2020-01',
       },
     ];
-    setupListMock('work', workRows);
 
     const result = await service.createNestedString(
       user,
       'cv-1',
       'work',
-      '0',
+      'work-1',
       'highlights',
       'Shipped feature X',
       'Work entry',
       'v1.0.0',
     );
 
-    expect(result.parentIndex).toBe(0);
+    expect(result.parentId).toBe('work-1');
     expect(result.childIndex).toBe(0);
     expect(result.value).toBe('Shipped feature X');
   });
@@ -224,36 +240,36 @@ describe('CvItemService', () => {
   });
 
   it('creates, updates, and deletes profiles', async () => {
-    setupListMock('profiles', profileRows);
-
     const created = await service.createProfile(
       user,
       'cv-1',
       { network: 'GitHub', username: 'jane' },
       'v1.0.0',
     );
-    expect(created.index).toBe(0);
+    const profileId = (created.item as { id: string }).id;
 
-    setupListMock('profiles', profileRows);
     const updated = await service.updateProfile(
       user,
       'cv-1',
-      '0',
+      profileId,
       { username: 'jane-doe' },
       'v1.0.1',
     );
     expect(updated.item).toMatchObject({ network: 'GitHub', username: 'jane-doe' });
 
-    setupListMock('profiles', profileRows);
-    const deleted = await service.deleteProfile(user, 'cv-1', '0', 'v1.0.2');
-    expect(deleted.index).toBe(0);
+    await service.deleteProfile(user, 'cv-1', profileId, 'v1.0.2');
+    expect(profileRows).toHaveLength(0);
   });
 
-  it('throws 404 when profile index is out of range', async () => {
-    setupListMock('profiles', []);
-
+  it('throws 404 when profile id is unknown', async () => {
     await expect(
-      service.updateProfile(user, 'cv-1', '0', { username: 'x' }, 'v1.0.0'),
+      service.updateProfile(
+        user,
+        'cv-1',
+        '00000000-0000-4000-8000-000000000099',
+        { username: 'x' },
+        'v1.0.0',
+      ),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -261,22 +277,20 @@ describe('CvItemService', () => {
     skillRows = [
       { id: 'skill-1', cv_id: 'cv-1', sort: 0, name: 'TypeScript', level: 'Expert', keywords: [] },
     ];
-    setupListMock('skills', skillRows);
 
     const updated = await service.updateArrayItem(
       user,
       'cv-1',
       'skills',
-      '0',
+      'skill-1',
       { level: 'Master' },
       'Skill',
       'v1.0.0',
     );
     expect(updated.item).toMatchObject({ name: 'TypeScript', level: 'Master' });
 
-    setupListMock('skills', skillRows);
-    const deleted = await service.deleteArrayItem(user, 'cv-1', 'skills', '0', 'Skill', 'v1.0.1');
-    expect(deleted.index).toBe(0);
+    await service.deleteArrayItem(user, 'cv-1', 'skills', 'skill-1', 'Skill', 'v1.0.1');
+    expect(skillRows).toHaveLength(0);
   });
 
   it('updates and deletes nested strings', async () => {
@@ -289,13 +303,12 @@ describe('CvItemService', () => {
         start_date: '2020-01',
       },
     ];
-    setupListMock('work', workRows);
 
     const updated = await service.updateNestedString(
       user,
       'cv-1',
       'work',
-      '0',
+      'work-1',
       'highlights',
       '0',
       'Built REST API',
@@ -304,12 +317,11 @@ describe('CvItemService', () => {
     );
     expect(updated.value).toBe('Built REST API');
 
-    setupListMock('work', workRows);
     const deleted = await service.deleteNestedString(
       user,
       'cv-1',
       'work',
-      '0',
+      'work-1',
       'highlights',
       '0',
       'Work entry',
@@ -320,14 +332,13 @@ describe('CvItemService', () => {
 
   it('throws 404 when nested string index is out of range', async () => {
     workRows = [{ id: 'work-1', cv_id: 'cv-1', name: 'Acme', highlights: [], start_date: '2020' }];
-    setupListMock('work', workRows);
 
     await expect(
       service.updateNestedString(
         user,
         'cv-1',
         'work',
-        '0',
+        'work-1',
         'highlights',
         '0',
         'Missing',
@@ -337,13 +348,17 @@ describe('CvItemService', () => {
     ).rejects.toThrow(NotFoundException);
   });
 
-  it('throws BadRequestException for invalid index', async () => {
-    try {
-      await service.deleteArrayItem(user, 'cv-1', 'work', 'bad', 'Work entry', 'v1.0.0');
-      throw new Error('expected BadRequestException');
-    } catch (error) {
-      expect(error).toBeInstanceOf(BadRequestException);
-    }
+  it('throws NotFoundException for unknown array item id', async () => {
+    await expect(
+      service.deleteArrayItem(
+        user,
+        'cv-1',
+        'work',
+        '00000000-0000-4000-8000-000000000099',
+        'Work entry',
+        'v1.0.0',
+      ),
+    ).rejects.toThrow(NotFoundException);
   });
 
   it('reorders skills and returns updated order', async () => {
@@ -403,13 +418,10 @@ describe('CvItemService', () => {
     );
   });
 
-  it('deleteProfile throws 404 when profile index is missing', async () => {
-    profileRows = [];
-    setupListMock('profiles', profileRows);
-
-    await expect(service.deleteProfile(user, 'cv-1', '0', 'v1.0.0')).rejects.toThrow(
-      NotFoundException,
-    );
+  it('deleteProfile throws 404 when profile id is missing', async () => {
+    await expect(
+      service.deleteProfile(user, 'cv-1', '00000000-0000-4000-8000-000000000099', 'v1.0.0'),
+    ).rejects.toThrow(NotFoundException);
   });
 
   it('createArrayItem rejects unknown section key', () => {
@@ -420,31 +432,55 @@ describe('CvItemService', () => {
 
   it('updateArrayItem rejects unknown section key', () => {
     expect(() =>
-      service.updateArrayItem(user, 'cv-1', 'unknown', '0', {}, 'Item', 'v1.0.0'),
+      service.updateArrayItem(
+        user,
+        'cv-1',
+        'unknown',
+        '00000000-0000-4000-8000-000000000001',
+        {},
+        'Item',
+        'v1.0.0',
+      ),
     ).toThrow(BadRequestException);
   });
 
   it('deleteArrayItem rejects unknown section key', () => {
-    expect(() => service.deleteArrayItem(user, 'cv-1', 'unknown', '0', 'Item', 'v1.0.0')).toThrow(
-      BadRequestException,
-    );
+    expect(() =>
+      service.deleteArrayItem(
+        user,
+        'cv-1',
+        'unknown',
+        '00000000-0000-4000-8000-000000000001',
+        'Item',
+        'v1.0.0',
+      ),
+    ).toThrow(BadRequestException);
   });
 
-  it('updateArrayItem throws 404 when index is out of range', async () => {
-    workRows = [];
-    setupListMock('work', workRows);
-
+  it('updateArrayItem throws 404 when item id is unknown', async () => {
     await expect(
-      service.updateArrayItem(user, 'cv-1', 'work', '0', { name: 'X' }, 'Work entry', 'v1.0.0'),
+      service.updateArrayItem(
+        user,
+        'cv-1',
+        'work',
+        '00000000-0000-4000-8000-000000000099',
+        { name: 'X' },
+        'Work entry',
+        'v1.0.0',
+      ),
     ).rejects.toThrow(NotFoundException);
   });
 
-  it('deleteArrayItem throws 404 when index is out of range', async () => {
-    workRows = [];
-    setupListMock('work', workRows);
-
+  it('deleteArrayItem throws 404 when item id is unknown', async () => {
     await expect(
-      service.deleteArrayItem(user, 'cv-1', 'work', '0', 'Work entry', 'v1.0.0'),
+      service.deleteArrayItem(
+        user,
+        'cv-1',
+        'work',
+        '00000000-0000-4000-8000-000000000099',
+        'Work entry',
+        'v1.0.0',
+      ),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -454,7 +490,7 @@ describe('CvItemService', () => {
         user,
         'cv-1',
         'unknown',
-        '0',
+        '00000000-0000-4000-8000-000000000001',
         'highlights',
         '0',
         'text',
@@ -463,15 +499,12 @@ describe('CvItemService', () => {
       ),
     ).rejects.toThrow(BadRequestException);
 
-    workRows = [];
-    setupListMock('work', workRows);
-
     await expect(
       service.updateNestedString(
         user,
         'cv-1',
         'work',
-        '0',
+        '00000000-0000-4000-8000-000000000099',
         'highlights',
         '0',
         'text',

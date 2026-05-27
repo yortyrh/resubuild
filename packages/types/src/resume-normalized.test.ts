@@ -2,7 +2,12 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Resume } from './resume';
-import { assembleResume, disassembleResume } from './resume-normalized';
+import {
+  assembleResume,
+  dbRowToResumeItem,
+  disassembleResume,
+  resumeItemToDbPayload,
+} from './resume-normalized';
 
 const samplesDir = join(process.cwd(), '../../.samples/resumes/jsonresume');
 
@@ -134,5 +139,55 @@ describe('resume-normalized round-trip', () => {
     const assembled = assembleResume(header, payload.sections);
 
     expect(assembled.skills?.map((s) => s.name)).toEqual(['A', 'B']);
+  });
+
+  it('includes stable row ids on assembled section items', () => {
+    const cvId = '00000000-0000-4000-8000-000000000005';
+    const workId = '00000000-0000-4000-8000-000000000020';
+    const resume: Resume = {
+      work: [{ name: 'Acme', position: 'Engineer', startDate: '2020-01' }],
+    };
+    const payload = disassembleResume(resume, cvId);
+    payload.sections.work[0].id = workId;
+
+    const header = { id: cvId, user_id: 'user-1', ...payload.header };
+    const assembled = assembleResume(header, payload.sections);
+
+    expect(assembled.work?.[0]).toMatchObject({ name: 'Acme', id: workId });
+  });
+});
+
+describe('dbRowToResumeItem', () => {
+  it('includes row id and omits cv_id and sort', () => {
+    expect(
+      dbRowToResumeItem('work', {
+        id: 'row-1',
+        cv_id: 'cv-1',
+        sort: 3,
+        name: 'Acme',
+        start_date: '2020-01',
+      }),
+    ).toEqual({
+      id: 'row-1',
+      name: 'Acme',
+      startDate: '2020-01',
+    });
+  });
+});
+
+describe('resumeItemToDbPayload', () => {
+  it('omits id, cv_id, and sort from update payloads', () => {
+    expect(
+      resumeItemToDbPayload('work', {
+        id: 'row-1',
+        cv_id: 'cv-1',
+        sort: 2,
+        name: 'Acme',
+        startDate: '2020-01',
+      }),
+    ).toEqual({
+      name: 'Acme',
+      start_date: '2020-01',
+    });
   });
 });

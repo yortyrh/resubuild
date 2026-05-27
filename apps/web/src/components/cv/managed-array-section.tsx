@@ -1,7 +1,7 @@
 'use client';
 
 import { sanitizeResumeItemPayload } from '@resumind/types';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import {
   DeleteItemDialog,
   ResumeItemForm,
@@ -11,7 +11,8 @@ import {
 import { useCvItemMutation } from '@/components/cv/use-cv-item-mutation';
 import { Button } from '@/components/ui/button';
 import type { CvItemMutationResponse } from '@/lib/cv-item-api';
-import { insertAtIndex, replaceAtSortedIndex } from '@/lib/cv-section-order';
+import { getItemId, mergeItemById, removeItemById, type WithItemId } from '@/lib/cv-section-order';
+import { sectionItemsMissingIds } from '@/lib/cv-section-refetch';
 
 interface ArraySectionApi {
   create: (
@@ -21,19 +22,20 @@ interface ArraySectionApi {
   ) => Promise<CvItemMutationResponse>;
   update: (
     cvId: string,
-    index: number,
+    itemId: string,
     item: Record<string, unknown>,
     version?: string,
   ) => Promise<CvItemMutationResponse>;
-  delete: (cvId: string, index: number, version?: string) => Promise<CvItemMutationResponse>;
+  delete: (cvId: string, itemId: string, version?: string) => Promise<CvItemMutationResponse>;
 }
 
-interface ManagedArraySectionProps<T> {
+interface ManagedArraySectionProps<T extends WithItemId> {
   cvId: string;
   version: string | undefined;
   onVersionChange: (version: string) => void;
   items: T[];
   onItemsChange: (items: T[]) => void;
+  refetchItems: () => Promise<T[]>;
   entityLabel: string;
   addLabel: string;
   createEmpty: () => T;
@@ -45,57 +47,92 @@ interface ManagedArraySectionProps<T> {
     body?: ReactNode;
   };
   renderForm: (item: T, onChange: (next: T) => void) => ReactNode;
-  renderAfterView?: (item: T, index: number, onItemChange: (next: T) => void) => ReactNode;
   api: ArraySectionApi;
   successMessages?: { create?: string; update?: string; delete?: string };
 }
 
-export function ManagedArraySection<T>({
+export function ManagedArraySection<T extends WithItemId>({
   cvId,
   version,
   onVersionChange,
   items,
   onItemsChange,
+  refetchItems,
   entityLabel,
   addLabel,
   createEmpty,
   toPayload,
   renderView,
   renderForm,
-  renderAfterView,
   api,
   successMessages,
 }: ManagedArraySectionProps<T>) {
   const { saving, error, setError, run } = useCvItemMutation({ version, onVersionChange });
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<T | null>(null);
   const [creating, setCreating] = useState(false);
   const [createDraft, setCreateDraft] = useState<T | null>(null);
-  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const hydrateAttemptedRef = useRef(false);
 
-  const startEdit = (index: number) => {
+  useEffect(() => {
+    hydrateAttemptedRef.current = false;
+  }, [cvId]);
+
+  useEffect(() => {
+    if (!sectionItemsMissingIds(items) || hydrateAttemptedRef.current) {
+      return;
+    }
+
+    hydrateAttemptedRef.current = true;
+    let cancelled = false;
+
+    refetchItems()
+      .then((refetched) => {
+        if (!cancelled) {
+          onItemsChange(refetched);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to refresh section entries');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cvId, items, refetchItems, onItemsChange, setError]);
+
+  const startEdit = (item: T) => {
     setCreating(false);
     setCreateDraft(null);
-    setEditingIndex(index);
-    setDraft({ ...items[index] });
-    setError(null);
+    try {
+      setEditingId(getItemId(item, entityLabel));
+      setDraft({ ...item });
+      setError(null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : `Cannot edit this ${entityLabel.toLowerCase()}`,
+      );
+    }
   };
 
   const cancelEdit = () => {
-    setEditingIndex(null);
+    setEditingId(null);
     setDraft(null);
     setError(null);
   };
 
   const saveEdit = async () => {
-    if (editingIndex === null || !draft) {
+    if (!editingId || !draft) {
       return;
     }
     await run(
-      (v) => api.update(cvId, editingIndex, sanitizeResumeItemPayload(toPayload(draft)), v),
+      (v) => api.update(cvId, editingId, sanitizeResumeItemPayload(toPayload(draft)), v),
       (result) => {
         const updated = (result.item ?? draft) as T;
-        onItemsChange(replaceAtSortedIndex(items, editingIndex, updated, result.index));
+        onItemsChange(mergeItemById(items, updated));
         cancelEdit();
       },
       successMessages?.update ?? `${entityLabel} updated`,
@@ -103,7 +140,7 @@ export function ManagedArraySection<T>({
   };
 
   const startCreate = () => {
-    setEditingIndex(null);
+    setEditingId(null);
     setDraft(null);
     setCreating(true);
     setCreateDraft(createEmpty());
@@ -122,9 +159,8 @@ export function ManagedArraySection<T>({
     }
     await run(
       (v) => api.create(cvId, sanitizeResumeItemPayload(toPayload(createDraft)), v),
-      (result) => {
-        const created = (result.item ?? createDraft) as T;
-        onItemsChange(insertAtIndex(items, created, result.index));
+      async () => {
+        onItemsChange(await refetchItems());
         cancelCreate();
       },
       successMessages?.create ?? `${entityLabel} added`,
@@ -132,16 +168,16 @@ export function ManagedArraySection<T>({
   };
 
   const confirmDelete = async () => {
-    if (deleteIndex === null) {
+    if (!deleteId) {
       return;
     }
-    const index = deleteIndex;
+    const itemId = deleteId;
     await run(
-      (v) => api.delete(cvId, index, v),
+      (v) => api.delete(cvId, itemId, v),
       () => {
-        onItemsChange(items.filter((_, i) => i !== index));
-        setDeleteIndex(null);
-        if (editingIndex === index) {
+        onItemsChange(removeItemById(items, itemId));
+        setDeleteId(null);
+        if (editingId === itemId) {
           cancelEdit();
         }
       },
@@ -151,14 +187,15 @@ export function ManagedArraySection<T>({
 
   return (
     <div className="space-y-4">
-      {items.length === 0 && editingIndex === null && !creating ? (
+      {items.length === 0 && editingId === null && !creating ? (
         <p className="text-muted-foreground text-sm">No entries yet.</p>
       ) : null}
 
-      {items.map((item, index) =>
-        editingIndex === index && draft ? (
+      {items.map((item, index) => {
+        const itemKey = item.id ?? `row-${index}`;
+        return editingId === item.id && draft ? (
           <ResumeItemForm
-            key={index}
+            key={itemKey}
             saving={saving}
             error={error}
             onSave={saveEdit}
@@ -167,7 +204,7 @@ export function ManagedArraySection<T>({
             {renderForm(draft, setDraft)}
           </ResumeItemForm>
         ) : (
-          <div key={index}>
+          <div key={itemKey}>
             {(() => {
               const view = renderView(item);
               return (
@@ -175,21 +212,22 @@ export function ManagedArraySection<T>({
                   title={view.title}
                   subtitle={view.subtitle}
                   meta={view.meta}
-                  onEdit={() => startEdit(index)}
-                  onDelete={() => setDeleteIndex(index)}
+                  onEdit={() => startEdit(item)}
+                  onDelete={() => {
+                    try {
+                      setDeleteId(getItemId(item, entityLabel));
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'Cannot delete this entry');
+                    }
+                  }}
                 >
                   {view.body}
                 </ResumeItemRow>
               );
             })()}
-            {renderAfterView?.(item, index, (next) => {
-              const updated = [...items];
-              updated[index] = next;
-              onItemsChange(updated);
-            })}
           </div>
-        ),
-      )}
+        );
+      })}
 
       {creating && createDraft ? (
         <SectionCreateForm
@@ -210,12 +248,12 @@ export function ManagedArraySection<T>({
       )}
 
       <DeleteItemDialog
-        open={deleteIndex !== null}
+        open={deleteId !== null}
         title={`Delete ${entityLabel.toLowerCase()}?`}
         description="This cannot be undone. The entry will be removed from your CV immediately."
         confirming={saving}
         onConfirm={confirmDelete}
-        onCancel={() => setDeleteIndex(null)}
+        onCancel={() => setDeleteId(null)}
       />
     </div>
   );

@@ -1,20 +1,28 @@
-/** Insert an item at the index returned by the API (defaults to end). */
-export function insertAtIndex<T>(items: T[], item: T, index?: number): T[] {
+export type WithItemId = { id?: string };
+
+/** Replace or append an item matched by `id`. */
+export function mergeItemById<T extends WithItemId>(items: T[], item: T): T[] {
+  const id = item.id;
+  if (!id) {
+    return [...items, item];
+  }
+  const index = items.findIndex((entry) => entry.id === id);
+  if (index < 0) {
+    return [...items, item];
+  }
   const next = [...items];
-  next.splice(index ?? next.length, 0, item);
+  next[index] = item;
   return next;
 }
 
-/** Move/replace an item using the sorted index returned by the API. */
-export function replaceAtSortedIndex<T>(
-  items: T[],
-  fromIndex: number,
-  item: T,
-  sortedIndex?: number,
-): T[] {
-  const toIndex = sortedIndex ?? fromIndex;
-  const next = [...items];
-  next.splice(fromIndex, 1);
-  next.splice(toIndex, 0, item);
-  return next;
+/** Remove the item with the given row id. */
+export function removeItemById<T extends WithItemId>(items: T[], id: string): T[] {
+  return items.filter((entry) => entry.id !== id);
+}
+
+export function getItemId(item: WithItemId, label: string): string {
+  if (!item.id) {
+    throw new Error(`${label} is missing a row id. Reload the page and try again.`);
+  }
+  return item.id;
 }

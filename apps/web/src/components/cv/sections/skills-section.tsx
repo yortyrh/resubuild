@@ -7,19 +7,24 @@ import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
 import { useSectionMount } from '@/components/cv/use-section-mount';
+import { getCvSkills } from '@/lib/api';
 import { cvSkillApi } from '@/lib/cv-item-api';
+import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
+
+type SkillItem = SectionItem<ResumeSkill>;
 
 export function SkillsSection() {
   useSectionMount('skills');
   const { cvId, resume, version, setResume, setVersion } = useCvEditor();
 
   return (
-    <ManagedArraySection<ResumeSkill>
+    <ManagedArraySection<SkillItem>
       cvId={cvId}
       version={version}
       onVersionChange={setVersion}
       items={resume.skills ?? []}
       onItemsChange={(skills) => setResume({ ...resume, skills })}
+      refetchItems={createSectionRefetch<SkillItem>(getCvSkills, cvId)}
       entityLabel="Skill"
       addLabel="Add skill"
       createEmpty={() => ({ keywords: [] })}

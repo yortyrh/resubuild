@@ -125,7 +125,7 @@ describe('CvService', () => {
       const result = await service.findOne(user, 'cv-1');
 
       expect(result.title).toBe('Jane Doe — Engineer');
-      expect(result.data.work).toEqual([{ name: 'Acme', startDate: '2020-01' }]);
+      expect(result.data.work).toEqual([{ id: 'w1', name: 'Acme', startDate: '2020-01' }]);
     });
   });
 

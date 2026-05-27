@@ -12,19 +12,24 @@ import { MetadataFieldGroup, MetadataTextField } from '@/components/cv/metadata-
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
 import { useSectionMount } from '@/components/cv/use-section-mount';
+import { getCvProjects } from '@/lib/api';
 import { cvProjectApi } from '@/lib/cv-item-api';
+import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
+
+type ProjectItem = SectionItem<ResumeProject>;
 
 export function ProjectsSection() {
   useSectionMount('projects');
   const { cvId, resume, version, setResume, setVersion } = useCvEditor();
 
   return (
-    <ManagedArraySection<ResumeProject>
+    <ManagedArraySection<ProjectItem>
       cvId={cvId}
       version={version}
       onVersionChange={setVersion}
       items={resume.projects ?? []}
       onItemsChange={(projects) => setResume({ ...resume, projects })}
+      refetchItems={createSectionRefetch<ProjectItem>(getCvProjects, cvId)}
       entityLabel="Project"
       addLabel="Add project"
       createEmpty={() => ({ highlights: [], keywords: [], roles: [] })}
