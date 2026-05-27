@@ -11,8 +11,12 @@ const ISO_MONTH = /^([1-2]\d{3})-(0[1-9]|1[0-2])$/;
 const ISO_DATE = /^([1-2]\d{3})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 
 export function parseIsoDate(
-  value: string,
-): (IsoDateParts & { precision: IsoDatePrecision }) | null {
+  value: string | null | undefined,
+): (IsoDateParts & { precision: IsoDatePrecision }) | null | undefined {
+  if (value == null) {
+    return value;
+  }
+
   const trimmed = value.trim();
   if (!trimmed) {
     return null;

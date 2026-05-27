@@ -39,6 +39,11 @@ describe('iso-date helpers', () => {
       expect(parseIsoDate('')).toBeNull();
       expect(parseIsoDate('abcd')).toBeNull();
     });
+
+    it('returns null or undefined when value is nullish', () => {
+      expect(parseIsoDate(null)).toBeNull();
+      expect(parseIsoDate(undefined)).toBeUndefined();
+    });
   });
 
   describe('formatIsoDate', () => {
