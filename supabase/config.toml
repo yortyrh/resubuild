@@ -8,7 +8,7 @@ port = 54321
 port = 54322
 
 [studio]
-enabled = true
+enabled = false
 port = 54323
 
 [auth]
