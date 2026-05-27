@@ -4,5 +4,8 @@
   "private": true,
   "files": [
     "resume.schema.json"
-  ]
+  ],
+  "exports": {
+    "./resume.schema.json": "./resume.schema.json"
+  }
 }

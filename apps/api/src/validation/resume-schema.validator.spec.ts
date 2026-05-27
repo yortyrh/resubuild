@@ -20,6 +20,19 @@ describe('ResumeSchemaValidator', () => {
     ).toThrow(BadRequestException);
   });
 
+  it('uses root path when AJV omits instancePath', () => {
+    try {
+      validator.validate({ work: [{ startDate: 'not-a-date' }] });
+      throw new Error('expected validation to fail');
+    } catch (error) {
+      expect(error).toBeInstanceOf(BadRequestException);
+      const response = (error as BadRequestException).getResponse() as {
+        errors: string[];
+      };
+      expect(response.errors.some((entry) => entry.startsWith('/'))).toBe(true);
+    }
+  });
+
   it('includes AJV error paths in validation messages', () => {
     try {
       validator.validate({

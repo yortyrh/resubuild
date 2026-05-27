@@ -165,16 +165,40 @@ describe('CvItemsController', () => {
     await controller.getBasics(req, cvId);
     expect(service.getBasics).toHaveBeenCalledWith(user, cvId);
 
-    await controller.getWork(req, cvId);
-    expect(service.getSection).toHaveBeenCalledWith(user, cvId, 'work');
+    const sections = [
+      ['getProfiles', 'profiles'],
+      ['getWork', 'work'],
+      ['getVolunteer', 'volunteer'],
+      ['getEducation', 'education'],
+      ['getSkills', 'skills'],
+      ['getProjects', 'projects'],
+      ['getAwards', 'awards'],
+      ['getCertificates', 'certificates'],
+      ['getPublications', 'publications'],
+      ['getLanguages', 'languages'],
+      ['getInterests', 'interests'],
+      ['getReferences', 'references'],
+    ] as const;
 
-    await controller.getSkills(req, cvId);
-    expect(service.getSection).toHaveBeenCalledWith(user, cvId, 'skills');
+    for (const [method, section] of sections) {
+      await (controller[method] as ControllerHandler)(req, cvId);
+      expect(service.getSection).toHaveBeenCalledWith(user, cvId, section);
+    }
   });
 
   it('delegates reorder routes to service', async () => {
     const order = ['id-1', 'id-2'];
-    await controller.reorderSkills(req, cvId, { order });
-    expect(service.reorderSection).toHaveBeenCalledWith(user, cvId, 'skills', order);
+    const reorders = [
+      ['reorderProfiles', 'profiles'],
+      ['reorderSkills', 'skills'],
+      ['reorderLanguages', 'languages'],
+      ['reorderInterests', 'interests'],
+      ['reorderReferences', 'references'],
+    ] as const;
+
+    for (const [method, section] of reorders) {
+      await (controller[method] as ControllerHandler)(req, cvId, { order });
+      expect(service.reorderSection).toHaveBeenCalledWith(user, cvId, section, order);
+    }
   });
 });

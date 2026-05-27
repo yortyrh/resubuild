@@ -40,7 +40,7 @@ Handlers MUST implement `GET /cv`, `GET /cv/:id`, `POST /cv`, `PATCH /cv/:id`, a
 
 ### Requirement: Create flow SHALL insert baseline row then apply validated resume `data`
 
-On `POST`, the service SHALL insert a `cv` row with empty basics columns and empty normalized section rows, disassemble the request `data` object into the `cv` row and child tables via the shared assembler/disassembler, validate the assembled document, then persist in a transaction. The service SHALL ignore `data.meta` on input and SHALL NOT persist `meta_version`, `meta_canonical`, or `meta_last_modified`. The response SHALL include a computed `title` derived from `deriveCvTitleFromBasics` applied to the validated basics (ignoring any client-supplied `title`). The response `data` field SHALL contain basics only and SHALL NOT include a `meta` property.
+On `POST`, the service SHALL insert a `cv` row with empty basics columns and empty normalized section rows, disassemble the request `data` object into the `cv` row and child tables via the shared assembler/disassembler, validate the assembled document, then persist in a transaction. The service SHALL ignore `data.meta` on input and SHALL NOT persist `meta_version`, `meta_canonical`, or `meta_last_modified`. The response SHALL include a computed `title` derived from `deriveCvTitleFromBasics` applied to the validated basics (ignoring any client-supplied `title`). The response `data` field SHALL contain basics only and SHALL NOT include a `meta` property. When `data` contains a full imported JSON Resume (multiple sections beyond `basics`), the same flow SHALL apply: incoming client `meta` SHALL be ignored, and the full document SHALL be validated against the JSON Resume schema before persist.
 
 #### Scenario: Successful create
 
@@ -48,6 +48,18 @@ On `POST`, the service SHALL insert a `cv` row with empty basics columns and emp
 - **THEN** normalized rows for supplied sections SHALL be persisted
 - **AND** the response SHALL include the new CV id, computed `title`, timestamps, and slim `data` with `basics` only
 - **AND** the response `data` SHALL NOT include `meta`
+
+#### Scenario: Successful create from imported full resume
+
+- **WHEN** `POST /cv` includes valid `data` with `basics`, `work`, `education`, and other JSON Resume sections as produced by `prepareImportedResume`
+- **THEN** normalized rows for all supplied sections SHALL be persisted
+- **AND** the response SHALL include a computed `title` from basics
+
+#### Scenario: Imported document fails schema validation
+
+- **WHEN** `POST /cv` includes `data` that violates the JSON Resume schema after assembly
+- **THEN** the API SHALL respond with 400 and structured validation errors
+- **AND** SHALL NOT leave a partially populated CV row
 
 ### Requirement: Media routes MUST inherit CV-grade authentication on upload and public read on stream
 

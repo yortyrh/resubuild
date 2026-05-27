@@ -2,22 +2,58 @@
 
 import { createEmptyResume } from '@resumind/types';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { CreateCvForm } from '@/components/cv/create-cv-form';
+import { ImportCvForm } from '@/components/cv/import-cv-form';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { createCv } from '@/lib/api';
+import { resolveImportedResumeData } from '@/lib/import-cv-media';
+
+type Basics = NonNullable<ReturnType<typeof createEmptyResume>['basics']>;
 
 export function NewCvPageClient() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState('manual');
 
-  const handleSave = async ({
-    basics,
-  }: {
-    basics: NonNullable<ReturnType<typeof createEmptyResume>['basics']>;
-  }) => {
+  const navigateToEditor = (id: string) => {
+    router.replace(`/dashboard/cv/${id}`);
+  };
+
+  const handleManualSave = async ({ basics }: { basics: Basics }) => {
     const created = await createCv({
       data: { ...createEmptyResume(), basics } as Record<string, unknown>,
     });
-    router.replace(`/dashboard/cv/${created.id}`);
+    navigateToEditor(created.id);
   };
 
-  return <CreateCvForm onSave={handleSave} onCancel={() => router.push('/dashboard')} />;
+  const handleImport = async ({
+    data,
+    useGravatar,
+  }: {
+    data: Record<string, unknown>;
+    useGravatar: boolean;
+  }) => {
+    const resolved = await resolveImportedResumeData(data, { useGravatar });
+    const created = await createCv({ data: resolved });
+    navigateToEditor(created.id);
+  };
+
+  const handleCancel = () => {
+    router.push('/dashboard');
+  };
+
+  return (
+    <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <TabsList>
+        <TabsTrigger value="manual">Create manually</TabsTrigger>
+        <TabsTrigger value="import">Import JSON</TabsTrigger>
+      </TabsList>
+      <TabsContent value="manual" className="mt-6">
+        <CreateCvForm onSave={handleManualSave} onCancel={handleCancel} />
+      </TabsContent>
+      <TabsContent value="import" className="mt-6">
+        <ImportCvForm onImport={handleImport} onCancel={handleCancel} />
+      </TabsContent>
+    </Tabs>
+  );
 }

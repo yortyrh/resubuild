@@ -26,14 +26,19 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   });
 
   if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
+    const body = (await response.json().catch(() => ({}))) as {
+      message?: string | string[];
+      errors?: string[];
+    };
     const message =
       typeof body.message === 'string'
         ? body.message
         : Array.isArray(body.message)
           ? body.message.join(', ')
           : `Request failed (${response.status})`;
-    throw new Error(message);
+    const details =
+      Array.isArray(body.errors) && body.errors.length > 0 ? body.errors.join('\n') : '';
+    throw new Error(details ? `${message}\n${details}` : message);
   }
 
   if (response.status === 204 || response.status === 205) {

@@ -6,7 +6,8 @@ export default function NewCvPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Create a new CV</h1>
         <p className="text-muted-foreground">
-          Enter a title and your basic details. Your CV is created only when you click Save.
+          Create a CV manually or import a JSON Resume file. Nothing is saved until you click Save
+          or Import.
         </p>
       </div>
       <NewCvPageClient />

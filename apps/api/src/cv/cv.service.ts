@@ -78,6 +78,8 @@ export class CvService {
   }
 
   async create(user: AuthenticatedRequest['user'], dto: CreateCvDto): Promise<CvRecord> {
+    this.resumeValidator.validate(dto.data as unknown as Record<string, unknown>);
+
     const supabase = this.normalizedRepo.createClientForUser(user);
 
     const { data: inserted, error: insertError } = await supabase
@@ -92,8 +94,6 @@ export class CvService {
     if (insertError) {
       throw new BadRequestException(insertError.message);
     }
-
-    this.resumeValidator.validate(dto.data as unknown as Record<string, unknown>);
 
     const header = await this.normalizedRepo.insertNormalizedCv(
       supabase,

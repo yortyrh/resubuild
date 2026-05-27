@@ -11,7 +11,9 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
+import { buildGravatarImageUrl } from './gravatar.util';
 import type { CropRect, MediaMetaDto } from './media-crop.dto';
+import { fetchRemoteImage } from './media-remote-fetch.util';
 import { buildThumbnailBuffer, thumbnailStoragePathFor } from './media-thumbnail.util';
 import {
   RESUME_UPLOAD_MAX_BYTES_DEFAULT,
@@ -87,21 +89,36 @@ export class MediaService implements OnModuleInit {
    * Upload file to Storage, insert `public.media` row, return API-only viewer URL (no direct Storage URL).
    */
   async uploadObject(userId: string, file: Express.Multer.File): Promise<UploadMediaResultDto> {
-    if (!userId?.trim()) {
-      throw new BadRequestException('User id missing');
-    }
-    const ext = RESUME_UPLOAD_MIME_EXTENSIONS[file.mimetype];
-    if (!ext) {
-      throw new BadRequestException(
-        `Unsupported file type (${file.mimetype}). Allowed: ${Object.keys(
-          RESUME_UPLOAD_MIME_EXTENSIONS,
-        ).join(', ')}`,
-      );
-    }
     if (!file.buffer?.length) {
       throw new BadRequestException('Empty upload');
     }
     if (file.size > this.maxBytes) {
+      throw new BadRequestException(`File exceeds max size (${this.maxBytes} bytes)`);
+    }
+
+    return this.uploadBuffer(userId, file.buffer, file.mimetype);
+  }
+
+  async uploadBuffer(
+    userId: string,
+    buffer: Buffer,
+    contentType: string,
+  ): Promise<UploadMediaResultDto> {
+    if (!userId?.trim()) {
+      throw new BadRequestException('User id missing');
+    }
+    const ext = RESUME_UPLOAD_MIME_EXTENSIONS[contentType];
+    if (!ext) {
+      throw new BadRequestException(
+        `Unsupported file type (${contentType}). Allowed: ${Object.keys(
+          RESUME_UPLOAD_MIME_EXTENSIONS,
+        ).join(', ')}`,
+      );
+    }
+    if (!buffer.length) {
+      throw new BadRequestException('Empty upload');
+    }
+    if (buffer.length > this.maxBytes) {
       throw new BadRequestException(`File exceeds max size (${this.maxBytes} bytes)`);
     }
 
@@ -114,12 +131,10 @@ export class MediaService implements OnModuleInit {
     const objectPath = `${userId}/${mediaId}.${ext}`;
     const supabase = this.ensureClient();
 
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(objectPath, file.buffer, {
-        contentType: file.mimetype,
-        upsert: false,
-      });
+    const { error: uploadError } = await supabase.storage.from(bucket).upload(objectPath, buffer, {
+      contentType,
+      upsert: false,
+    });
 
     if (uploadError) {
       this.logger.error(`Storage upload failed: ${uploadError.message}`);
@@ -130,8 +145,8 @@ export class MediaService implements OnModuleInit {
       id: mediaId,
       user_id: userId,
       storage_path: objectPath,
-      content_type: file.mimetype,
-      size_bytes: file.size,
+      content_type: contentType,
+      size_bytes: buffer.length,
     });
 
     if (dbError) {
@@ -145,11 +160,62 @@ export class MediaService implements OnModuleInit {
       throw new BadRequestException(dbError.message);
     }
 
+    try {
+      await this.ensureThumbnail(mediaId);
+    } catch (thumbnailError) {
+      await supabase.storage
+        .from(bucket)
+        .remove([objectPath])
+        .catch((err) =>
+          this.logger.warn(`Rolling back object after thumbnail failed: ${(err as Error).message}`),
+        );
+      const { error: rollbackDeleteError } = await supabase
+        .from('media')
+        .delete()
+        .eq('id', mediaId);
+      if (rollbackDeleteError) {
+        this.logger.warn(
+          `Rolling back media row after thumbnail failed: ${rollbackDeleteError.message}`,
+        );
+      }
+      throw thumbnailError;
+    }
+
     return {
       id: mediaId,
       url: this.viewerUrlForId(mediaId),
-      contentType: file.mimetype,
+      contentType,
     };
+  }
+
+  /**
+   * Fetches a remote profile image when it exists and stores it as owned media.
+   * Returns null when the URL is unreachable or not a supported image (caller may omit basics.image).
+   */
+  /** Whether the URL can be fetched for import (host checks + image validation; no upload). */
+  async canImportImageFromUrl(url: string): Promise<boolean> {
+    const remote = await fetchRemoteImage(url, { maxBytes: this.maxBytes });
+    return remote !== null;
+  }
+
+  async importFromUrl(userId: string, url: string): Promise<UploadMediaResultDto | null> {
+    const remote = await fetchRemoteImage(url, { maxBytes: this.maxBytes });
+    if (!remote) {
+      return null;
+    }
+    return this.uploadBuffer(userId, remote.buffer, remote.contentType);
+  }
+
+  /** Imports a Gravatar when one exists for the email (`d=404` probe). */
+  async importFromGravatarEmail(
+    userId: string,
+    email: string,
+  ): Promise<UploadMediaResultDto | null> {
+    const gravatarUrl = buildGravatarImageUrl(email);
+    if (!gravatarUrl) {
+      return null;
+    }
+    return this.importFromUrl(userId, gravatarUrl);
   }
 
   /**

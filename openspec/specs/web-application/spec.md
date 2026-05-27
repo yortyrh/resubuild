@@ -33,6 +33,8 @@ The App Router under `src/app/` MUST provide public entry and auth pages (`/`, `
 
 The new CV route (`/dashboard/cv/new`) SHALL NOT call `POST /cv` on page load. It SHALL render a simplified create form collecting JSON Resume `basics` fields only—**without** a separate CV title field. The client SHALL invoke `createCv` with resume `data` containing `basics` only (no `meta`) when the user activates an explicit Save (or Create) control; the API SHALL derive `cv.title` from the submitted basics. On successful create, the UI SHALL navigate to `/dashboard/cv/:id` for full editing. Navigating away or canceling before Save SHALL NOT create a CV row.
 
+The new CV route SHALL ALSO expose an **Import from JSON** workflow per `cv-json-import`: file selection, optional manual JSON editing (advanced), normalization via `prepareImportedResume`, client-side schema validation where practical, and `createCv` on explicit user confirmation. Manual create and import are separate paths on the same page; neither SHALL POST until the user confirms.
+
 The per-CV editor bootstrap (`GET /cv/:id`) SHALL merge slim `data.basics` into local editor state and SHALL NOT depend on `data.meta` or `meta.version` for saves.
 
 #### Scenario: User creates and edits a CV in the UI
@@ -57,6 +59,11 @@ The per-CV editor bootstrap (`GET /cv/:id`) SHALL merge slim `data.basics` into 
 - **WHEN** a signed-in user fills basics on `/dashboard/cv/new` and clicks Save
 - **THEN** the client SHALL call `createCv` once with resume `data` containing the entered `basics` and SHALL NOT require a separate title field
 - **AND THEN** on success SHALL navigate to `/dashboard/cv/:id` for the created CV with a server-derived title visible in the shell and list
+
+#### Scenario: User imports CV from JSON file
+
+- **WHEN** a signed-in user selects a valid JSON Resume file on `/dashboard/cv/new` and confirms import
+- **THEN** the client SHALL normalize the document, call `createCv` with full resume `data`, and navigate to `/dashboard/cv/:id` on success
 
 ### Requirement: Shared types and schema packages SHALL inform the client and server contract
 

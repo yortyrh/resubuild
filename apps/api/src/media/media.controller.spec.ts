@@ -2,6 +2,7 @@ import {
   BadRequestException,
   type CanActivate,
   type ExecutionContext,
+  NotFoundException,
   StreamableFile,
 } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
@@ -19,6 +20,9 @@ describe('MediaController', () => {
   const cropMedia = jest.fn();
   const deleteMedia = jest.fn();
   const getMediaMeta = jest.fn();
+  const importFromUrl = jest.fn();
+  const importFromGravatarEmail = jest.fn();
+  const canImportImageFromUrl = jest.fn();
 
   beforeEach(async () => {
     uploadObject.mockReset();
@@ -28,6 +32,9 @@ describe('MediaController', () => {
     cropMedia.mockReset();
     deleteMedia.mockReset();
     getMediaMeta.mockReset();
+    importFromUrl.mockReset();
+    importFromGravatarEmail.mockReset();
+    canImportImageFromUrl.mockReset();
 
     const alwaysAuthGuard: CanActivate = {
       canActivate: (ctx: ExecutionContext) => {
@@ -50,6 +57,9 @@ describe('MediaController', () => {
             cropMedia,
             deleteMedia,
             getMediaMeta,
+            importFromUrl,
+            importFromGravatarEmail,
+            canImportImageFromUrl,
           },
         },
       ],
@@ -88,6 +98,78 @@ describe('MediaController', () => {
     });
 
     expect(uploadObject).toHaveBeenCalledWith('user-test-1', sampleFile);
+  });
+
+  it('delegates import-url body to MediaService.importFromUrl', async () => {
+    importFromUrl.mockResolvedValue({
+      id: 'aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee',
+      url: 'https://api.example.com/media/aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee',
+      contentType: 'image/png',
+    });
+
+    const req = {
+      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+    } as AuthenticatedRequest;
+
+    await expect(
+      controller.importFromUrl(req, { url: 'https://cdn.example.com/photo.png' }),
+    ).resolves.toEqual({
+      id: 'aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee',
+      url: 'https://api.example.com/media/aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee',
+      contentType: 'image/png',
+    });
+
+    expect(importFromUrl).toHaveBeenCalledWith('user-test-1', 'https://cdn.example.com/photo.png');
+  });
+
+  it('returns 404 when import-url finds no image', async () => {
+    importFromUrl.mockResolvedValue(null);
+    const req = {
+      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+    } as AuthenticatedRequest;
+
+    await expect(
+      controller.importFromUrl(req, { url: 'https://cdn.example.com/missing.png' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('delegates import-url check to MediaService.canImportImageFromUrl', async () => {
+    canImportImageFromUrl.mockResolvedValue(true);
+
+    await expect(
+      controller.checkImportUrl({ url: 'https://cdn.example.com/photo.png' }),
+    ).resolves.toEqual({ importable: true });
+
+    expect(canImportImageFromUrl).toHaveBeenCalledWith('https://cdn.example.com/photo.png');
+  });
+
+  it('returns 404 when import-gravatar finds no avatar', async () => {
+    importFromGravatarEmail.mockResolvedValue(null);
+    const req = {
+      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+    } as AuthenticatedRequest;
+
+    await expect(
+      controller.importFromGravatar(req, { email: 'jane@example.com' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('delegates import-gravatar body to MediaService.importFromGravatarEmail', async () => {
+    importFromGravatarEmail.mockResolvedValue({
+      id: 'aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee',
+      url: 'https://api.example.com/media/aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee',
+      contentType: 'image/png',
+    });
+
+    const req = {
+      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+    } as AuthenticatedRequest;
+
+    await expect(
+      controller.importFromGravatar(req, { email: 'jane@example.com' }),
+    ).resolves.toMatchObject({ contentType: 'image/png' });
+
+    expect(importFromGravatarEmail).toHaveBeenCalledWith('user-test-1', 'jane@example.com');
   });
 
   it('streams media by id via MediaService.loadMediaPayload', async () => {

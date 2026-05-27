@@ -1,4 +1,7 @@
 jest.mock('@supabase/supabase-js');
+jest.mock('./media-remote-fetch.util', () => ({
+  fetchRemoteImage: jest.fn(),
+}));
 jest.mock('node:crypto', () => ({
   ...jest.requireActual<typeof import('node:crypto')>('node:crypto'),
   randomUUID: jest.fn(() => 'aef8297a-2786-4575-9d6c-52d5c93c4c4c'),
@@ -28,6 +31,9 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { createClient } from '@supabase/supabase-js';
 import { MediaService } from './media.service';
+import { fetchRemoteImage } from './media-remote-fetch.util';
+
+const mockedFetchRemoteImage = jest.mocked(fetchRemoteImage);
 
 const mockedCreateClient = jest.mocked(createClient);
 
@@ -159,16 +165,38 @@ describe('MediaService', () => {
         size_bytes: 1,
       }),
     );
+    expect(uploadFn).toHaveBeenCalledWith(
+      `user-123/${FIXED_MEDIA_ID}_thumb.webp`,
+      expect.any(Buffer),
+      expect.objectContaining({ contentType: 'image/webp', upsert: true }),
+    );
     await moduleRef.close();
   });
 
   it('PUBLIC_API_URL overrides default viewer URL host', async () => {
     uploadFn.mockResolvedValue({ error: null });
     insertFn.mockImplementation(() => Promise.resolve({ error: null }));
+    maybeSingleFn.mockResolvedValue({
+      data: {
+        storage_path: `u1/${FIXED_MEDIA_ID}.png`,
+        content_type: 'image/png',
+        user_id: 'u1',
+        crop: null,
+        cropped_storage_path: null,
+      },
+      error: null,
+    });
+    downloadFn.mockResolvedValue({
+      data: { arrayBuffer: async () => new Uint8Array([7, 8]) },
+      error: null,
+    });
+    updateFn.mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
 
     mockedCreateClient.mockReturnValue({
       from: jest.fn(() => ({
         insert: insertFn,
+        update: updateFn,
+        delete: deleteFn,
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({ maybeSingle: maybeSingleFn }),
         }),
@@ -351,6 +379,118 @@ describe('MediaService', () => {
 
     await expect(service.uploadObject('user-z', missingBuffer)).rejects.toBeInstanceOf(
       BadRequestException,
+    );
+    await moduleRef.close();
+  });
+
+  it('importFromUrl returns null when remote image is missing', async () => {
+    mockedFetchRemoteImage.mockResolvedValueOnce(null);
+    const { service, moduleRef } = await bootstrapModule(true);
+
+    await expect(
+      service.importFromUrl('user-123', 'https://cdn.example.com/missing.png'),
+    ).resolves.toBeNull();
+
+    await moduleRef.close();
+  });
+
+  it('canImportImageFromUrl reflects remote fetch outcome', async () => {
+    mockedFetchRemoteImage.mockResolvedValueOnce({
+      buffer: Buffer.from([1]),
+      contentType: 'image/png',
+    });
+    const { service, moduleRef } = await bootstrapModule(true);
+
+    await expect(service.canImportImageFromUrl('https://cdn.example.com/ok.png')).resolves.toBe(
+      true,
+    );
+
+    mockedFetchRemoteImage.mockResolvedValueOnce(null);
+    await expect(
+      service.canImportImageFromUrl('https://cdn.example.com/missing.png'),
+    ).resolves.toBe(false);
+
+    await moduleRef.close();
+  });
+
+  it('importFromGravatarEmail returns null for invalid email', async () => {
+    mockedFetchRemoteImage.mockClear();
+    const { service, moduleRef } = await bootstrapModule(true);
+
+    await expect(service.importFromGravatarEmail('user-123', 'not-an-email')).resolves.toBeNull();
+    expect(mockedFetchRemoteImage).not.toHaveBeenCalled();
+
+    await moduleRef.close();
+  });
+
+  it('rolls back upload when thumbnail generation fails', async () => {
+    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const { service, moduleRef } = await bootstrapModule(true);
+    uploadFn
+      .mockResolvedValueOnce({ error: null })
+      .mockResolvedValueOnce({ error: { message: 'thumb upload failed' } });
+
+    const file = {
+      mimetype: 'image/png',
+      buffer: Buffer.from([1]),
+      size: 1,
+    } as unknown as Express.Multer.File;
+
+    await expect(service.uploadObject('user-123', file)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(removeFn).toHaveBeenCalledWith([`user-123/${FIXED_MEDIA_ID}.png`]);
+    expect(deleteFn).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+    await moduleRef.close();
+  });
+
+  it('importFromGravatarEmail delegates to Gravatar URL import', async () => {
+    mockedFetchRemoteImage.mockResolvedValueOnce({
+      buffer: Buffer.from([0]),
+      contentType: 'image/png',
+    });
+    const { service, moduleRef } = await bootstrapModule(true);
+
+    await expect(
+      service.importFromGravatarEmail('user-123', 'MyEmail@Example.com'),
+    ).resolves.toMatchObject({
+      id: FIXED_MEDIA_ID,
+      contentType: 'image/png',
+    });
+
+    expect(mockedFetchRemoteImage).toHaveBeenCalledWith(
+      'https://www.gravatar.com/avatar/60a6c20d49f49bc210ac98d7e47c74a0?s=512&d=404',
+      expect.objectContaining({ maxBytes: expect.any(Number) }),
+    );
+    await moduleRef.close();
+  });
+
+  it('importFromUrl uploads fetched image bytes', async () => {
+    mockedFetchRemoteImage.mockResolvedValueOnce({
+      buffer: Buffer.from([0]),
+      contentType: 'image/png',
+    });
+    const { service, moduleRef } = await bootstrapModule(true);
+
+    await expect(
+      service.importFromUrl('user-123', 'https://cdn.example.com/photo.png'),
+    ).resolves.toEqual({
+      id: FIXED_MEDIA_ID,
+      url: `http://localhost:3001/media/${FIXED_MEDIA_ID}`,
+      contentType: 'image/png',
+    });
+
+    expect(uploadFn).toHaveBeenCalledWith(
+      `user-123/${FIXED_MEDIA_ID}.png`,
+      expect.any(Buffer),
+      expect.objectContaining({ contentType: 'image/png', upsert: false }),
+    );
+    expect(uploadFn).toHaveBeenCalledWith(
+      `user-123/${FIXED_MEDIA_ID}_thumb.webp`,
+      expect.any(Buffer),
+      expect.objectContaining({ contentType: 'image/webp', upsert: true }),
     );
     await moduleRef.close();
   });

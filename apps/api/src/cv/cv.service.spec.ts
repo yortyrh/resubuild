@@ -150,6 +150,75 @@ describe('CvService', () => {
         service.create(user, { data: { work: [{ name: 123 as unknown as string }] } }),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('validates before insert so invalid data does not create a cv row', async () => {
+      const insert = jest.fn();
+      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
+        insert,
+      }));
+
+      await expect(
+        service.create(user, { data: { work: [{ name: 123 as unknown as string }] } }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(insert).not.toHaveBeenCalled();
+    });
+
+    it('persists multi-section imported data via normalized insert', async () => {
+      const insertedHeader = mockCvHeader({ id: 'import-id' });
+      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
+        insert: jest.fn(() => ({
+          select: jest.fn(() => ({
+            single: jest.fn().mockResolvedValue({ data: insertedHeader, error: null }),
+          })),
+        })),
+      }));
+
+      normalizedRepo.insertNormalizedCv.mockResolvedValue(
+        mockCvHeader({
+          id: 'import-id',
+          name: 'Jane Doe',
+          label: 'Senior Software Engineer',
+        }),
+      );
+
+      const importedData = {
+        basics: { name: 'Jane Doe', label: 'Senior Software Engineer' },
+        work: [
+          {
+            name: 'Tech Innovators Inc.',
+            position: 'Lead Full Stack Developer',
+            startDate: '2021-06-15',
+          },
+        ],
+        education: [
+          {
+            institution: 'University of Toronto',
+            area: 'Computer Science',
+            studyType: 'Bachelor of Science',
+          },
+        ],
+        meta: { canonical: 'https://example.org/old', version: 'v4.99.99' },
+      };
+
+      const result = await service.create(user, { data: importedData });
+
+      expect(normalizedRepo.insertNormalizedCv).toHaveBeenCalledWith(
+        supabaseStub,
+        'import-id',
+        user.id,
+        expect.objectContaining({
+          basics: expect.objectContaining({ name: 'Jane Doe' }),
+          work: expect.arrayContaining([expect.objectContaining({ name: 'Tech Innovators Inc.' })]),
+          education: expect.arrayContaining([
+            expect.objectContaining({ institution: 'University of Toronto' }),
+          ]),
+        }),
+      );
+      expect(result.title).toBe('Jane Doe — Senior Software Engineer');
+      expect(result.data).not.toHaveProperty('meta');
+      expect(result.data).not.toHaveProperty('work');
+    });
   });
 
   describe('update', () => {
@@ -160,6 +229,14 @@ describe('CvService', () => {
       expect(result.title).toBe('Jane');
       expect(normalizedRepo.replaceNormalizedCv).not.toHaveBeenCalled();
       expect(normalizedRepo.fetchSections).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when header is missing after data update', async () => {
+      normalizedRepo.fetchHeader.mockResolvedValue(null);
+
+      await expect(
+        service.update(user, 'cv-1', { data: { basics: { name: 'Updated' } } }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('replaces normalized rows when data is provided', async () => {
