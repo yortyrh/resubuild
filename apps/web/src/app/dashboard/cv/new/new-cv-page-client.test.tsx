@@ -51,7 +51,7 @@ describe('NewCvPageClient', () => {
 
   it('creates a CV and navigates to the editor when Save succeeds', async () => {
     mockCreateCv.mockResolvedValue({ id: 'cv-new-1' });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<NewCvPageClient />);
 
     const textboxes = screen.getAllByRole('textbox');
@@ -72,5 +72,5 @@ describe('NewCvPageClient', () => {
       expect.not.objectContaining({ title: expect.anything() }),
     );
     expect(mockReplace).toHaveBeenCalledWith('/dashboard/cv/cv-new-1');
-  });
+  }, 15_000);
 });

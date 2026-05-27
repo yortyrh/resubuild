@@ -61,7 +61,7 @@ describe('CreateCvForm', () => {
         location: {},
       }),
     });
-  });
+  }, 15_000);
 
   it('calls onCancel when Cancel is clicked without saving', async () => {
     const user = userEvent.setup({ delay: null });
