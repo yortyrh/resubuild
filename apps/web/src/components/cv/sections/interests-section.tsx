@@ -3,7 +3,7 @@
 import type { ResumeInterest } from '@resumind/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { TextField } from '@/components/cv/form-fields';
-import { ManagedArraySection } from '@/components/cv/managed-array-section';
+import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
 import { useSectionMount } from '@/components/cv/use-section-mount';
@@ -18,8 +18,10 @@ export function InterestsSection() {
   const { cvId, resume, setResume } = useCvEditor();
 
   return (
-    <ManagedArraySection<InterestItem>
+    <SortableManagedArraySection<InterestItem>
       cvId={cvId}
+      reorderSection="interests"
+      reorderSectionLabel="interest"
       items={resume.interests ?? []}
       onItemsChange={(interests) => setResume((prev) => ({ ...prev, interests }))}
       refetchItems={createSectionRefetch<InterestItem>(getCvInterests, cvId)}

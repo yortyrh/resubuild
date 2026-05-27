@@ -1,41 +1,45 @@
 import { describe, expect, it } from 'vitest';
-import { getItemId, mergeItemById, removeItemById } from './cv-section-order';
+import {
+  getOrderedItemIds,
+  idsOrderEqual,
+  moveIdDown,
+  moveIdUp,
+  orderItemsByIds,
+  reorderIdsByIndex,
+} from './cv-section-order';
 
-describe('mergeItemById', () => {
-  it('replaces an existing item by id', () => {
-    expect(mergeItemById([{ id: 'a', name: 'A' }], { id: 'a', name: 'Updated' })).toEqual([
-      { id: 'a', name: 'Updated' },
-    ]);
+describe('cv-section-order reorder helpers', () => {
+  it('reorderIdsByIndex moves an id', () => {
+    expect(reorderIdsByIndex(['a', 'b', 'c'], 2, 0)).toEqual(['c', 'a', 'b']);
   });
 
-  it('appends when id is new', () => {
-    expect(mergeItemById([{ id: 'a', name: 'A' }], { id: 'b', name: 'B' })).toEqual([
+  it('moveIdUp returns null at top', () => {
+    expect(moveIdUp(['a', 'b'], 0)).toBeNull();
+    expect(moveIdUp(['a', 'b'], 1)).toEqual(['b', 'a']);
+  });
+
+  it('moveIdDown returns null at bottom', () => {
+    expect(moveIdDown(['a', 'b'], 1)).toBeNull();
+    expect(moveIdDown(['a', 'b'], 0)).toEqual(['b', 'a']);
+  });
+
+  it('getOrderedItemIds throws when id missing', () => {
+    expect(() => getOrderedItemIds([{ id: undefined }], 'Skill')).toThrow(/row id/);
+  });
+
+  it('orderItemsByIds reorders by id list', () => {
+    const items = [
       { id: 'a', name: 'A' },
       { id: 'b', name: 'B' },
+    ];
+    expect(orderItemsByIds(items, ['b', 'a'])).toEqual([
+      { id: 'b', name: 'B' },
+      { id: 'a', name: 'A' },
     ]);
   });
-});
 
-describe('removeItemById', () => {
-  it('removes the matching row', () => {
-    expect(
-      removeItemById(
-        [
-          { id: 'a', name: 'A' },
-          { id: 'b', name: 'B' },
-        ],
-        'a',
-      ),
-    ).toEqual([{ id: 'b', name: 'B' }]);
-  });
-});
-
-describe('getItemId', () => {
-  it('returns id when present', () => {
-    expect(getItemId({ id: 'row-1' }, 'Entry')).toBe('row-1');
-  });
-
-  it('throws when id is missing', () => {
-    expect(() => getItemId({}, 'Entry')).toThrow(/missing a row id/i);
+  it('idsOrderEqual compares id sequences', () => {
+    expect(idsOrderEqual(['a', 'b'], ['a', 'b'])).toBe(true);
+    expect(idsOrderEqual(['a', 'b'], ['b', 'a'])).toBe(false);
   });
 });

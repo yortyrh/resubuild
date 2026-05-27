@@ -65,7 +65,7 @@ Keywords on Skills and Interests, and both keywords and roles on Projects, SHALL
 
 ### Requirement: Section UI SHALL default to resume-style view with explicit edit, create, and delete flows
 
-Each section listed in the product scope SHALL render entries in a resume-like layout: primary label or title emphasized on the left, dates and location aligned to the right where applicable, and bullet lists for highlights or courses. Edit SHALL replace the viewed row with an inline form until Save or Cancel. Create SHALL show a form at the bottom of the section. Delete SHALL require an explicit confirmation step before calling the delete API.
+Each section listed in the product scope SHALL render entries in a resume-like layout: primary label or title emphasized on the left, dates and location aligned to the right where applicable, and bullet lists for highlights or courses. Edit SHALL replace the viewed row with an inline form until Save or Cancel. Create SHALL show a form at the bottom of the section. Delete SHALL require an explicit confirmation step before calling the delete API. Reorderable non-date sections (Social profiles, Skills, Languages, Interests, References) SHALL additionally show reorder affordances in view mode per `cv-section-reorder`.
 
 #### Scenario: View mode for education entry
 
@@ -86,6 +86,30 @@ Each section listed in the product scope SHALL render entries in a resume-like l
 
 - **WHEN** a user starts adding a new award
 - **THEN** the create form SHALL appear at the bottom of the Awards section below existing view rows
+
+#### Scenario: Skills view shows reorder handle
+
+- **WHEN** a user views the Skills section with two or more entries and none in edit mode
+- **THEN** each skill row SHALL display a drag handle or equivalent reorder control
+
+### Requirement: Item list state SHALL support reorder without separate document save
+
+After a successful reorder API call, the client SHALL update the in-memory section array to match the server response order when it differs from the optimistic order. Reorder SHALL NOT require a document-level Save CV action.
+
+#### Scenario: Local skills array updates after reorder
+
+- **WHEN** a reorder API call for skills succeeds with a different order than shown optimistically
+- **THEN** the editor's skills array state SHALL match the returned order
+- **AND** subsequent edit actions SHALL use indices from the new order
+
+### Requirement: Reorderable section items SHALL carry stable row ids in client state
+
+For Social profiles, Skills, Languages, Interests, and References, the client SHALL retain each entry's server row uuid (returned from create, section GET, or reorder responses) to build reorder request payloads.
+
+#### Scenario: Reorder payload uses row ids
+
+- **WHEN** the client sends a skills reorder request after drag-and-drop
+- **THEN** the `order` array SHALL contain uuid strings matching the skill rows, not display names or legacy indices alone
 
 ### Requirement: Failed item operations SHALL not silently discard user intent
 

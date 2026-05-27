@@ -7,7 +7,28 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 export interface CvItemMutationResponse {
   item?: unknown;
   items?: unknown[];
+  meta?: { version?: string };
 }
+
+export class CvItemApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'CvItemApiError';
+  }
+}
+
+export type ReorderableCvSection = 'profiles' | 'skills' | 'languages' | 'interests' | 'references';
+
+const REORDER_SEGMENT: Record<ReorderableCvSection, string> = {
+  profiles: 'profiles',
+  skills: 'skills',
+  languages: 'languages',
+  interests: 'interests',
+  references: 'references',
+};
 
 async function itemFetch<T>(path: string, options: RequestInit & { method: string }): Promise<T> {
   const token = await getValidAccessToken(apiUrl);
@@ -29,7 +50,7 @@ async function itemFetch<T>(path: string, options: RequestInit & { method: strin
         : Array.isArray(body.message)
           ? body.message.join(', ')
           : `Request failed (${response.status})`;
-    throw new Error(message);
+    throw new CvItemApiError(message, response.status);
   }
 
   return response.json() as Promise<T>;
@@ -95,3 +116,19 @@ export const cvPublicationApi = arrayCrud('publications', 'publication');
 export const cvLanguageApi = arrayCrud('languages', 'language');
 export const cvInterestApi = arrayCrud('interests', 'interest');
 export const cvReferenceApi = arrayCrud('references', 'reference');
+
+export function reorderCvSection(
+  cvId: string,
+  section: ReorderableCvSection,
+  order: string[],
+  version?: string | null,
+) {
+  const body: { order: string[]; version?: string } = { order };
+  if (version) {
+    body.version = version;
+  }
+  return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/${REORDER_SEGMENT[section]}/reorder`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}

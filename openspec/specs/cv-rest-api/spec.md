@@ -109,6 +109,11 @@ Successful item create and update responses SHALL include the affected entity (w
 - **WHEN** a client successfully patches a work entry by item id
 - **THEN** the response SHALL include the updated work object with `id`
 
+#### Scenario: Skill create includes row id
+
+- **WHEN** a client successfully creates a skill
+- **THEN** the response SHALL include the skill entity with its uuid `id`
+
 ### Requirement: CV title SHALL be computed from basics on read and after basics mutations
 
 The API service SHALL compute `title` from `cv.name` and `cv.label` using the shared `deriveCvTitleFromBasics` function when assembling CV responses (`GET /cv`, `GET /cv/:id`, and mutation responses that return the CV header). The derived title SHALL NOT be persisted in the database. When `PATCH /cv/:cvId/basics` succeeds, the response SHALL include the newly derived `title` computed from the updated basics columns.

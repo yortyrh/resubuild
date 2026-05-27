@@ -4,7 +4,7 @@ import type { ResumeProfile } from '@resumind/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { ExternalLink } from '@/components/cv/external-link';
 import { TextField } from '@/components/cv/form-fields';
-import { ManagedArraySection } from '@/components/cv/managed-array-section';
+import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { getCvProfiles } from '@/lib/api';
 import { createCvProfile, deleteCvProfile, updateCvProfile } from '@/lib/cv-item-api';
@@ -23,8 +23,10 @@ export function ProfilesSection() {
   const { cvId, resume, setResume } = useCvEditor();
 
   return (
-    <ManagedArraySection<ProfileItem>
+    <SortableManagedArraySection<ProfileItem>
       cvId={cvId}
+      reorderSection="profiles"
+      reorderSectionLabel="social profile"
       items={resume.basics?.profiles ?? []}
       onItemsChange={(profiles) =>
         setResume((prev) => ({ ...prev, basics: { ...prev.basics, profiles } }))

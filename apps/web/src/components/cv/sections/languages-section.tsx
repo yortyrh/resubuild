@@ -4,7 +4,7 @@ import type { ResumeLanguage } from '@resumind/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { TextField } from '@/components/cv/form-fields';
 import { LanguageField } from '@/components/cv/language-field';
-import { ManagedArraySection } from '@/components/cv/managed-array-section';
+import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { getCvLanguages } from '@/lib/api';
 import { cvLanguageApi } from '@/lib/cv-item-api';
@@ -17,8 +17,10 @@ export function LanguagesSection() {
   const { cvId, resume, setResume } = useCvEditor();
 
   return (
-    <ManagedArraySection<LanguageItem>
+    <SortableManagedArraySection<LanguageItem>
       cvId={cvId}
+      reorderSection="languages"
+      reorderSectionLabel="language"
       items={resume.languages ?? []}
       onItemsChange={(languages) => setResume((prev) => ({ ...prev, languages }))}
       refetchItems={createSectionRefetch<LanguageItem>(getCvLanguages, cvId)}

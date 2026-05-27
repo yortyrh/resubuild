@@ -762,3 +762,37 @@ The profile photo crop dialog component SHALL NOT mount an `<img>` element with 
 - **WHEN** the crop dialog is open and `imageUrl` is a non-empty blob or media URL
 - **THEN** the crop preview `<img>` SHALL render with that URL as `src`
 - **AND** the user SHALL be able to adjust and confirm the crop as today
+
+### Requirement: Reorderable sections SHALL expose drag-and-drop reorder in view mode
+
+The editor SHALL allow users to reorder entries via drag-and-drop in view mode for Social profiles, Skills, Languages, Interests, and References when at least two entries exist. Drag handles SHALL be visible and SHALL NOT appear while a row is in edit or create mode. Reorder SHALL apply optimistic list updates immediately, then call the section reorder API.
+
+#### Scenario: Drag skill row
+
+- **WHEN** a user drags a skill entry to a new position in view mode
+- **THEN** the list SHALL update immediately to the new order
+- **AND** the client SHALL call the skills reorder API with the new id order in the background
+
+#### Scenario: Reorder disabled during edit
+
+- **WHEN** a user is editing a language entry inline
+- **THEN** drag reorder controls SHALL be disabled for that section until save or cancel
+
+### Requirement: Reorder SHALL provide keyboard-accessible move controls
+
+Each reorderable row SHALL expose move-up and move-down actions that reorder by one position and invoke the same reorder API as drag-and-drop. Controls SHALL be disabled at list boundaries and SHALL include accessible names (e.g. "Move skill up").
+
+#### Scenario: Move reference up via keyboard
+
+- **WHEN** a user activates move-up on the second reference entry
+- **THEN** that entry SHALL move to first position in the UI immediately
+- **AND** SHALL persist after the API succeeds
+
+### Requirement: Failed reorder SHALL preserve prior order in the UI
+
+When a reorder API call fails (including 409), the UI SHALL revert or reload to the last known server order and SHALL surface an error.
+
+#### Scenario: Conflict during reorder
+
+- **WHEN** the reorder API returns 409
+- **THEN** the client SHALL show the concurrency message and SHALL reload the section list from the server

@@ -89,6 +89,13 @@ The web client in `apps/web/src/lib/cv-item-api.ts` (and related helpers) SHALL 
 - **THEN** the client SHALL call the work create or update helper with the full `highlights` array
 - **AND** SHALL NOT call separate nested highlight API helpers
 
+#### Scenario: Reordering skills optimistically
+
+- **WHEN** a user reorders skills via drag or move buttons
+- **THEN** the client SHALL update local skills state immediately
+- **AND** SHALL call `reorderCvSection` with the new id order
+- **AND** SHALL revert local state if the API fails or replace it only when the response order differs
+
 ### Requirement: Dashboard CV delete SHALL use an in-app confirmation dialog
 
 Deleting a CV from the dashboard list SHALL require confirmation through an accessible in-app dialog (not `window.confirm`). The dialog SHALL name the CV being deleted when available and SHALL disable dismiss actions while the delete request is in flight.

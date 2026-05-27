@@ -1,6 +1,7 @@
 'use client';
 
-import { type ReactNode, useEffect, useRef } from 'react';
+import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
+import { type ButtonHTMLAttributes, type ReactNode, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 
 const resumeItemActionsClassName = 'divider-soft mt-4 flex gap-2 border-t pt-4';
@@ -60,6 +61,15 @@ export function DeleteItemDialog({
   );
 }
 
+export interface ResumeItemRowReorderProps {
+  sectionLabel: string;
+  dragHandleProps?: ButtonHTMLAttributes<HTMLButtonElement>;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+}
+
 interface ResumeItemRowProps {
   title: ReactNode;
   subtitle?: ReactNode;
@@ -67,6 +77,8 @@ interface ResumeItemRowProps {
   children?: ReactNode;
   onEdit: () => void;
   onDelete?: () => void;
+  reorder?: ResumeItemRowReorderProps;
+  isDragging?: boolean;
 }
 
 export function ResumeItemRow({
@@ -76,10 +88,27 @@ export function ResumeItemRow({
   children,
   onEdit,
   onDelete,
+  reorder,
+  isDragging = false,
 }: ResumeItemRowProps) {
+  const moveUpLabel = reorder ? `Move ${reorder.sectionLabel} up` : undefined;
+  const moveDownLabel = reorder ? `Move ${reorder.sectionLabel} down` : undefined;
+
   return (
-    <article className="surface-soft text-card-foreground p-4">
+    <article
+      className={`surface-soft text-card-foreground p-4 ${isDragging ? 'ring-primary/30 opacity-60 ring-2' : ''}`}
+    >
       <div className="flex items-start justify-between gap-4">
+        {reorder?.dragHandleProps ? (
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground mt-0.5 shrink-0 cursor-grab touch-none active:cursor-grabbing"
+            aria-label={`Reorder ${reorder.sectionLabel}`}
+            {...reorder.dragHandleProps}
+          >
+            <GripVertical className="size-5" aria-hidden />
+          </button>
+        ) : null}
         <div className="min-w-0 flex-1">
           <div className="font-semibold">{title}</div>
           {subtitle ? (
@@ -94,6 +123,30 @@ export function ResumeItemRow({
       </div>
       {children ? <div className="mt-3">{children}</div> : null}
       <div className={resumeItemActionsClassName}>
+        {reorder ? (
+          <div className="mr-auto flex gap-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-label={moveUpLabel}
+              disabled={!reorder.canMoveUp}
+              onClick={reorder.onMoveUp}
+            >
+              <ChevronUp className="size-4" aria-hidden />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-label={moveDownLabel}
+              disabled={!reorder.canMoveDown}
+              onClick={reorder.onMoveDown}
+            >
+              <ChevronDown className="size-4" aria-hidden />
+            </Button>
+          </div>
+        ) : null}
         <Button type="button" variant="outline" size="sm" onClick={onEdit}>
           Edit
         </Button>

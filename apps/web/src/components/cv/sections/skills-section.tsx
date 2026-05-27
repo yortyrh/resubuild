@@ -3,7 +3,7 @@
 import type { ResumeSkill } from '@resumind/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { TextField } from '@/components/cv/form-fields';
-import { ManagedArraySection } from '@/components/cv/managed-array-section';
+import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
 import { useSectionMount } from '@/components/cv/use-section-mount';
@@ -18,8 +18,10 @@ export function SkillsSection() {
   const { cvId, resume, setResume } = useCvEditor();
 
   return (
-    <ManagedArraySection<SkillItem>
+    <SortableManagedArraySection<SkillItem>
       cvId={cvId}
+      reorderSection="skills"
+      reorderSectionLabel="skill"
       items={resume.skills ?? []}
       onItemsChange={(skills) => setResume((prev) => ({ ...prev, skills }))}
       refetchItems={createSectionRefetch<SkillItem>(getCvSkills, cvId)}

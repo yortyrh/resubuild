@@ -3,8 +3,8 @@
 import type { ResumeReference } from '@resumind/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { TextField } from '@/components/cv/form-fields';
-import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
+import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { getCvReferences } from '@/lib/api';
 import { cvReferenceApi } from '@/lib/cv-item-api';
@@ -17,8 +17,10 @@ export function ReferencesSection() {
   const { cvId, resume, setResume } = useCvEditor();
 
   return (
-    <ManagedArraySection<ReferenceItem>
+    <SortableManagedArraySection<ReferenceItem>
       cvId={cvId}
+      reorderSection="references"
+      reorderSectionLabel="reference"
       items={resume.references ?? []}
       onItemsChange={(references) => setResume((prev) => ({ ...prev, references }))}
       refetchItems={createSectionRefetch<ReferenceItem>(getCvReferences, cvId)}
