@@ -12,8 +12,6 @@ jest.mock('@supabase/supabase-js', () => ({
 
 const mockedCreateClient = jest.mocked(createClient);
 
-type QueryResult = { data: unknown; error: { message: string } | null };
-
 function createSupabaseMock(handlers: {
   from?: (table: string) => object;
 }): ReturnType<typeof createClient> {
