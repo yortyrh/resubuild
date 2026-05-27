@@ -81,11 +81,6 @@ export class ReferenceItemDto extends VersionedDto {
   reference!: Record<string, unknown>;
 }
 
-export class StringValueDto extends VersionedDto {
-  @IsString()
-  value!: string;
-}
-
 export class StringListDto extends VersionedDto {
   @IsArray()
   @IsString({ each: true })

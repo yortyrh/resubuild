@@ -202,31 +202,64 @@ describe('CvItemService', () => {
     ).rejects.toThrow(NotFoundException);
   });
 
-  it('creates nested work highlight', async () => {
+  it('updates work entry with full highlights array via parent save', async () => {
     workRows = [
       {
         id: 'work-1',
         cv_id: 'cv-1',
         name: 'Acme',
-        highlights: [],
+        highlights: ['Built API'],
         start_date: '2020-01',
       },
     ];
 
-    const result = await service.createNestedString(
+    const updated = await service.updateArrayItem(
       user,
       'cv-1',
       'work',
       'work-1',
-      'highlights',
-      'Shipped feature X',
+      { highlights: ['Built REST API', 'Led team'] },
       'Work entry',
       'v1.0.0',
     );
 
-    expect(result.parentId).toBe('work-1');
-    expect(result.childIndex).toBe(0);
-    expect(result.value).toBe('Shipped feature X');
+    expect(updated.item).toMatchObject({
+      highlights: ['Built REST API', 'Led team'],
+    });
+    expect(normalizedRepo.updateSectionRow).toHaveBeenCalledWith(
+      supabaseStub,
+      'cv-1',
+      'work',
+      'work-1',
+      expect.objectContaining({
+        highlights: ['Built REST API', 'Led team'],
+      }),
+    );
+  });
+
+  it('updates education entry with full courses array via parent save', async () => {
+    educationRows = [
+      {
+        id: 'edu-1',
+        cv_id: 'cv-1',
+        institution: 'University',
+        courses: ['CS101'],
+      },
+    ];
+
+    const updated = await service.updateArrayItem(
+      user,
+      'cv-1',
+      'education',
+      'edu-1',
+      { courses: ['CS101', 'CS102'] },
+      'Education entry',
+      'v1.0.0',
+    );
+
+    expect(updated.item).toMatchObject({
+      courses: ['CS101', 'CS102'],
+    });
   });
 
   it('updates basics and merges with existing data', async () => {
@@ -291,61 +324,6 @@ describe('CvItemService', () => {
 
     await service.deleteArrayItem(user, 'cv-1', 'skills', 'skill-1', 'Skill', 'v1.0.1');
     expect(skillRows).toHaveLength(0);
-  });
-
-  it('updates and deletes nested strings', async () => {
-    workRows = [
-      {
-        id: 'work-1',
-        cv_id: 'cv-1',
-        name: 'Acme',
-        highlights: ['Built API'],
-        start_date: '2020-01',
-      },
-    ];
-
-    const updated = await service.updateNestedString(
-      user,
-      'cv-1',
-      'work',
-      'work-1',
-      'highlights',
-      '0',
-      'Built REST API',
-      'Work entry',
-      'v1.0.0',
-    );
-    expect(updated.value).toBe('Built REST API');
-
-    const deleted = await service.deleteNestedString(
-      user,
-      'cv-1',
-      'work',
-      'work-1',
-      'highlights',
-      '0',
-      'Work entry',
-      'v1.0.1',
-    );
-    expect(deleted.childIndex).toBe(0);
-  });
-
-  it('throws 404 when nested string index is out of range', async () => {
-    workRows = [{ id: 'work-1', cv_id: 'cv-1', name: 'Acme', highlights: [], start_date: '2020' }];
-
-    await expect(
-      service.updateNestedString(
-        user,
-        'cv-1',
-        'work',
-        'work-1',
-        'highlights',
-        '0',
-        'Missing',
-        'Work entry',
-        'v1.0.0',
-      ),
-    ).rejects.toThrow(NotFoundException);
   });
 
   it('throws NotFoundException for unknown array item id', async () => {
@@ -478,36 +456,6 @@ describe('CvItemService', () => {
         'cv-1',
         'work',
         '00000000-0000-4000-8000-000000000099',
-        'Work entry',
-        'v1.0.0',
-      ),
-    ).rejects.toThrow(NotFoundException);
-  });
-
-  it('nested string mutation throws for unknown section or missing parent', async () => {
-    await expect(
-      service.updateNestedString(
-        user,
-        'cv-1',
-        'unknown',
-        '00000000-0000-4000-8000-000000000001',
-        'highlights',
-        '0',
-        'text',
-        'Parent',
-        'v1.0.0',
-      ),
-    ).rejects.toThrow(BadRequestException);
-
-    await expect(
-      service.updateNestedString(
-        user,
-        'cv-1',
-        'work',
-        '00000000-0000-4000-8000-000000000099',
-        'highlights',
-        '0',
-        'text',
         'Work entry',
         'v1.0.0',
       ),

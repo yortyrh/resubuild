@@ -26,7 +26,6 @@ import {
   ReferenceItemDto,
   ReorderSectionDto,
   SkillItemDto,
-  StringValueDto,
   VolunteerItemDto,
   WorkItemDto,
 } from './dto/cv-item.dto';
@@ -228,66 +227,6 @@ export class CvItemsController {
     );
   }
 
-  @Post('work/:parentId/highlights')
-  createWorkHighlight(
-    @Req() req: AuthenticatedRequest,
-    @Param('cvId') cvId: string,
-    @Param('parentId', ParseUUIDPipe) parentId: string,
-    @Body() dto: StringValueDto,
-  ) {
-    return this.cvItemService.createNestedString(
-      req.user,
-      cvId,
-      'work',
-      parentId,
-      'highlights',
-      dto.value,
-      'Work entry',
-      dto.version,
-    );
-  }
-
-  @Patch('work/:parentId/highlights/:highlightIndex')
-  updateWorkHighlight(
-    @Req() req: AuthenticatedRequest,
-    @Param('cvId') cvId: string,
-    @Param('parentId', ParseUUIDPipe) parentId: string,
-    @Param('highlightIndex') highlightIndex: string,
-    @Body() dto: StringValueDto,
-  ) {
-    return this.cvItemService.updateNestedString(
-      req.user,
-      cvId,
-      'work',
-      parentId,
-      'highlights',
-      highlightIndex,
-      dto.value,
-      'Work entry',
-      dto.version,
-    );
-  }
-
-  @Delete('work/:parentId/highlights/:highlightIndex')
-  deleteWorkHighlight(
-    @Req() req: AuthenticatedRequest,
-    @Param('cvId') cvId: string,
-    @Param('parentId', ParseUUIDPipe) parentId: string,
-    @Param('highlightIndex') highlightIndex: string,
-    @Body() dto: BasicsItemDto,
-  ) {
-    return this.cvItemService.deleteNestedString(
-      req.user,
-      cvId,
-      'work',
-      parentId,
-      'highlights',
-      highlightIndex,
-      'Work entry',
-      dto.version,
-    );
-  }
-
   @Post('volunteer')
   createVolunteer(
     @Req() req: AuthenticatedRequest,
@@ -338,66 +277,6 @@ export class CvItemsController {
     );
   }
 
-  @Post('volunteer/:parentId/highlights')
-  createVolunteerHighlight(
-    @Req() req: AuthenticatedRequest,
-    @Param('cvId') cvId: string,
-    @Param('parentId', ParseUUIDPipe) parentId: string,
-    @Body() dto: StringValueDto,
-  ) {
-    return this.cvItemService.createNestedString(
-      req.user,
-      cvId,
-      'volunteer',
-      parentId,
-      'highlights',
-      dto.value,
-      'Volunteer entry',
-      dto.version,
-    );
-  }
-
-  @Patch('volunteer/:parentId/highlights/:highlightIndex')
-  updateVolunteerHighlight(
-    @Req() req: AuthenticatedRequest,
-    @Param('cvId') cvId: string,
-    @Param('parentId', ParseUUIDPipe) parentId: string,
-    @Param('highlightIndex') highlightIndex: string,
-    @Body() dto: StringValueDto,
-  ) {
-    return this.cvItemService.updateNestedString(
-      req.user,
-      cvId,
-      'volunteer',
-      parentId,
-      'highlights',
-      highlightIndex,
-      dto.value,
-      'Volunteer entry',
-      dto.version,
-    );
-  }
-
-  @Delete('volunteer/:parentId/highlights/:highlightIndex')
-  deleteVolunteerHighlight(
-    @Req() req: AuthenticatedRequest,
-    @Param('cvId') cvId: string,
-    @Param('parentId', ParseUUIDPipe) parentId: string,
-    @Param('highlightIndex') highlightIndex: string,
-    @Body() dto: BasicsItemDto,
-  ) {
-    return this.cvItemService.deleteNestedString(
-      req.user,
-      cvId,
-      'volunteer',
-      parentId,
-      'highlights',
-      highlightIndex,
-      'Volunteer entry',
-      dto.version,
-    );
-  }
-
   @Post('education')
   createEducation(
     @Req() req: AuthenticatedRequest,
@@ -443,66 +322,6 @@ export class CvItemsController {
       cvId,
       'education',
       itemId,
-      'Education entry',
-      dto.version,
-    );
-  }
-
-  @Post('education/:parentId/courses')
-  createEducationCourse(
-    @Req() req: AuthenticatedRequest,
-    @Param('cvId') cvId: string,
-    @Param('parentId', ParseUUIDPipe) parentId: string,
-    @Body() dto: StringValueDto,
-  ) {
-    return this.cvItemService.createNestedString(
-      req.user,
-      cvId,
-      'education',
-      parentId,
-      'courses',
-      dto.value,
-      'Education entry',
-      dto.version,
-    );
-  }
-
-  @Patch('education/:parentId/courses/:courseIndex')
-  updateEducationCourse(
-    @Req() req: AuthenticatedRequest,
-    @Param('cvId') cvId: string,
-    @Param('parentId', ParseUUIDPipe) parentId: string,
-    @Param('courseIndex') courseIndex: string,
-    @Body() dto: StringValueDto,
-  ) {
-    return this.cvItemService.updateNestedString(
-      req.user,
-      cvId,
-      'education',
-      parentId,
-      'courses',
-      courseIndex,
-      dto.value,
-      'Education entry',
-      dto.version,
-    );
-  }
-
-  @Delete('education/:parentId/courses/:courseIndex')
-  deleteEducationCourse(
-    @Req() req: AuthenticatedRequest,
-    @Param('cvId') cvId: string,
-    @Param('parentId', ParseUUIDPipe) parentId: string,
-    @Param('courseIndex') courseIndex: string,
-    @Body() dto: BasicsItemDto,
-  ) {
-    return this.cvItemService.deleteNestedString(
-      req.user,
-      cvId,
-      'education',
-      parentId,
-      'courses',
-      courseIndex,
       'Education entry',
       dto.version,
     );
@@ -591,66 +410,6 @@ export class CvItemsController {
       cvId,
       'projects',
       itemId,
-      'Project',
-      dto.version,
-    );
-  }
-
-  @Post('projects/:parentId/highlights')
-  createProjectHighlight(
-    @Req() req: AuthenticatedRequest,
-    @Param('cvId') cvId: string,
-    @Param('parentId', ParseUUIDPipe) parentId: string,
-    @Body() dto: StringValueDto,
-  ) {
-    return this.cvItemService.createNestedString(
-      req.user,
-      cvId,
-      'projects',
-      parentId,
-      'highlights',
-      dto.value,
-      'Project',
-      dto.version,
-    );
-  }
-
-  @Patch('projects/:parentId/highlights/:highlightIndex')
-  updateProjectHighlight(
-    @Req() req: AuthenticatedRequest,
-    @Param('cvId') cvId: string,
-    @Param('parentId', ParseUUIDPipe) parentId: string,
-    @Param('highlightIndex') highlightIndex: string,
-    @Body() dto: StringValueDto,
-  ) {
-    return this.cvItemService.updateNestedString(
-      req.user,
-      cvId,
-      'projects',
-      parentId,
-      'highlights',
-      highlightIndex,
-      dto.value,
-      'Project',
-      dto.version,
-    );
-  }
-
-  @Delete('projects/:parentId/highlights/:highlightIndex')
-  deleteProjectHighlight(
-    @Req() req: AuthenticatedRequest,
-    @Param('cvId') cvId: string,
-    @Param('parentId', ParseUUIDPipe) parentId: string,
-    @Param('highlightIndex') highlightIndex: string,
-    @Body() dto: BasicsItemDto,
-  ) {
-    return this.cvItemService.deleteNestedString(
-      req.user,
-      cvId,
-      'projects',
-      parentId,
-      'highlights',
-      highlightIndex,
       'Project',
       dto.version,
     );
