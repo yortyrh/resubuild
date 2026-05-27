@@ -14,19 +14,40 @@ The system MUST persist resume body fields across dedicated tables (`cv_basics`,
 - **WHEN** the final migration phase completes
 - **THEN** the `cv` table SHALL NOT include a `data` jsonb column
 
-### Requirement: Multi-valued entity tables MUST include a `sort` column for display order
+### Requirement: Non-date multi-valued tables MUST include a `sort` column for display order
 
-Every table representing a JSON Resume array section (`cv_basics_profile`, `cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`, `cv_project`) SHALL have `sort integer not null`. New rows SHALL receive `sort = max(sort)+1` within the same `cv_id` unless explicitly supplied. Queries that list section items MUST order by `sort ASC`, then `id ASC` as tiebreaker.
+Only `cv_basics_profile`, `cv_skill`, `cv_language`, `cv_interest`, and `cv_reference` SHALL have `sort integer not null`. Date-primary tables (`cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_project`) SHALL NOT have a `sort` column. `cv_basics` SHALL NOT have a `sort` column (singleton per CV).
 
-#### Scenario: Work entries returned in sort order
+New rows in `sort`-backed tables SHALL receive `sort = max(sort) + 1` within the same `cv_id` (0 when the section is empty) unless explicitly supplied. Queries that list those sections MUST order by `sort ASC`, then `id ASC` as tiebreaker.
 
-- **WHEN** two work rows exist for a CV with `sort` values 0 and 1
-- **THEN** assembling or listing work entries SHALL return them in that order regardless of insertion time
+#### Scenario: Skills returned in sort order
 
-#### Scenario: Future reorder updates sort only
+- **WHEN** two skill rows exist for a CV with `sort` values 0 and 1
+- **THEN** assembling or listing skills SHALL return them in that order regardless of insertion time
+
+#### Scenario: Reorder updates sort only
 
 - **WHEN** a reorder operation changes display order without editing field content
 - **THEN** the system SHALL update `sort` values on affected rows and SHALL NOT require rewriting unrelated columns
+
+#### Scenario: Sort auto-assigned on create
+
+- **WHEN** a new skill row is created without an explicit `sort` value
+- **THEN** the service SHALL assign `sort` to one greater than the current maximum for that `cv_id`, or 0 if the section is empty
+
+### Requirement: Date-primary sections SHALL list by date attributes
+
+Services that list `cv_work`, `cv_volunteer`, `cv_education`, and `cv_project` SHALL order by `start_date DESC`, then `end_date DESC NULLS FIRST`, then `id ASC`. Services that list `cv_award` and `cv_certificate` SHALL order by `date DESC`, then `id ASC`. Services that list `cv_publication` SHALL order by `release_date DESC`, then `id ASC`.
+
+#### Scenario: Work entries returned by start date
+
+- **WHEN** two work rows exist for a CV with `start_date` values `2020-01` and `2022-06`
+- **THEN** listing or assembling work entries SHALL return the 2022 entry before the 2020 entry
+
+#### Scenario: Award entries returned by date
+
+- **WHEN** two award rows exist with `date` values `2019` and `2021`
+- **THEN** listing or assembling awards SHALL return the 2021 entry first
 
 ### Requirement: String-list fields SHALL be stored as jsonb arrays on the parent row
 
@@ -75,9 +96,14 @@ Each child table SHALL enable RLS with policies allowing SELECT, INSERT, UPDATE,
 
 ### Requirement: Indexes SHALL support section listing by CV
 
-Each multi-valued table MUST have an index on `(cv_id, sort)`. The `cv` table MUST retain an index on `(user_id, updated_at desc)`.
+`cv_basics_profile`, `cv_skill`, `cv_language`, `cv_interest`, and `cv_reference` MUST have an index on `(cv_id, sort)`. Date-primary tables MUST have an index on `(cv_id, <date column>)` appropriate to the section. The `cv` table MUST retain an index on `(user_id, updated_at desc)`.
 
-#### Scenario: List work by cv_id uses index
+#### Scenario: List skills by cv_id uses sort index
+
+- **WHEN** the API loads all skill rows for a CV
+- **THEN** the query SHALL filter by `cv_id` and order by `sort` using the defined composite index
+
+#### Scenario: List work by cv_id uses date index
 
 - **WHEN** the API loads all work rows for a CV
-- **THEN** the query SHALL filter by `cv_id` and order by `sort` using the defined composite index
+- **THEN** the query SHALL filter by `cv_id` and order by `start_date` using the defined composite index

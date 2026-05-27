@@ -5,7 +5,8 @@ Resumind stores each CV as a monolithic JSONB document in `public.cv.data`. Ever
 ## What Changes
 
 - Replace the single `data jsonb` blob with normalized Postgres tables for `basics` (including nested `location` as `jsonb`), `basics_profile`, and one table per top-level JSON Resume array section (`cv_work`, `cv_education`, etc.).
-- Add a `sort` integer column on every multi-valued entity table (work, volunteer, education, skills, projects, awards, certificates, publications, languages, interests, references, profiles) to preserve display order without array-index coupling.
+- Add a `sort` integer column on non-date multi-valued entity tables only (`cv_basics_profile`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`); auto-assign on create. Date-primary sections (`cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_project`) list by their date fields instead.
+- Add reorder API endpoints for the five `sort`-backed sections.
 - Store string-list fields (`highlights`, `courses`, `keywords`, `roles`) as `jsonb` arrays on their parent row instead of child tables.
 - Introduce a server-side assembler that builds a full JSON Resume document from normalized rows only when needed (export, preview, schema validation on full document, import bulk write).
 - Refactor `CvItemService` and related persistence to read/write individual tables per section instead of mutating `cv.data`.
@@ -18,13 +19,13 @@ Resumind stores each CV as a monolithic JSONB document in `public.cv.data`. Ever
 
 ### New Capabilities
 
-- `cv-normalized-schema`: Relational table definitions, column types, `sort` ordering rules, jsonb string-list columns, foreign keys, indexes, and RLS policies for all CV section tables.
+- `cv-normalized-schema`: Relational table definitions, column types, ordering rules (`sort` vs date fields), jsonb string-list columns, foreign keys, indexes, and RLS policies for all CV section tables.
 
 ### Modified Capabilities
 
 - `database-cv-rls`: CV storage moves from a single JSONB column to normalized tables with per-table RLS tied to `cv.user_id`.
 - `cv-rest-api`: Item routes query and mutate normalized tables; full-document endpoints assemble JSON Resume on read; create/import bulk-insert normalized rows.
-- `cv-item-crud`: Persistence semantics shift from array-index-in-JSON to stable row ids with explicit `sort`; API paths may keep numeric indices for compatibility or adopt row ids (design decision).
+- `cv-item-crud`: Persistence semantics shift from array-index-in-JSON to stable row ids; date sections order by date fields, non-date sections use explicit `sort`; API paths keep numeric indices for compatibility.
 - `resume-schema-validation`: Validation runs on assembled document at write boundaries; section-scoped writes validate the affected entity DTO plus optional full-document check on export.
 
 ## Impact

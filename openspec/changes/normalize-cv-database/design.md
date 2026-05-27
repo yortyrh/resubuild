@@ -10,11 +10,15 @@ Constraints: Supabase Postgres with RLS; SPA talks only to Nest (no direct Supab
 
 **Goals:**
 
-- Normalize CV content into relational tables with one row per multi-valued entity and explicit `sort` ordering.
+- Normalize CV content into relational tables with one row per multi-valued entity.
+- Keep a `sort` column only on sections that are not unique per `cv_id` and lack a date field for natural ordering: `cv_basics_profile`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`. Auto-assign `sort` on create (`max(sort) + 1` within the same `cv_id`).
+- List date-primary sections (`cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_project`) ordered by their date attributes (`start_date`, `end_date`, `date`, or `release_date` as applicable), descending by default so the most recent entry appears first. No `sort` column on those tables.
+- No ordering column on `cv_basics` — one row per CV.
 - Store string-list attributes as `jsonb` arrays on the parent entity row; store nested singleton objects (`basics.location`) as `jsonb` on the parent row when they do not warrant a separate table.
 - Enable section-scoped reads and writes so editor views fetch only the data they need.
 - Assemble a full JSON Resume document on demand for preview, export, import verification, and full-document validation.
 - Preserve RLS isolation per user across all new tables.
+- Expose reorder endpoints for the five `sort`-backed sections so clients can persist manual order updates.
 - Document the relational model with an ER diagram and table dictionary in this file.
 - Migrate existing `cv.data` rows to normalized tables with a reversible cutover plan.
 
@@ -25,7 +29,7 @@ Constraints: Supabase Postgres with RLS; SPA talks only to Nest (no direct Supab
 - Changing the JSON Resume interchange schema or public export format.
 - Real-time collaboration or CRDT-based merging.
 - Client-side direct Supabase access.
-- Drag-and-drop reorder UI in this change (only the `sort` column and server support; UI reorder is a follow-up).
+- Drag-and-drop reorder UI — handled by the separate `reorder-non-date-cv-sections` change (UI only; this change ships `sort` columns, auto-assignment on create, and reorder API endpoints).
 
 ## Relational Model
 
@@ -83,7 +87,6 @@ erDiagram
     cv_work {
         uuid id PK
         uuid cv_id FK
-        int sort
         text name
         text location
         text description
@@ -98,7 +101,6 @@ erDiagram
     cv_volunteer {
         uuid id PK
         uuid cv_id FK
-        int sort
         text organization
         text position
         text url
@@ -111,7 +113,6 @@ erDiagram
     cv_education {
         uuid id PK
         uuid cv_id FK
-        int sort
         text institution
         text url
         text area
@@ -125,7 +126,6 @@ erDiagram
     cv_award {
         uuid id PK
         uuid cv_id FK
-        int sort
         text title
         text date
         text awarder
@@ -135,7 +135,6 @@ erDiagram
     cv_certificate {
         uuid id PK
         uuid cv_id FK
-        int sort
         text name
         text date
         text url
@@ -145,7 +144,6 @@ erDiagram
     cv_publication {
         uuid id PK
         uuid cv_id FK
-        int sort
         text name
         text publisher
         text release_date
@@ -189,7 +187,6 @@ erDiagram
     cv_project {
         uuid id PK
         uuid cv_id FK
-        int sort
         text name
         text description
         text start_date
@@ -205,24 +202,24 @@ erDiagram
 
 ### Table Dictionary
 
-| Table               | Cardinality    | `sort` | `jsonb` string lists              | Notes                                                                                             |
-| ------------------- | -------------- | ------ | --------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `cv`                | 1 per document | —      | —                                 | Header row; holds `title` and flattened `meta_*` columns; `data` dropped after migration          |
-| `cv_basics`         | 0–1 per CV     | —      | `location`                        | Singleton; `location` jsonb holds JSON Resume `basics.location` shape; created empty on CV insert |
-| `cv_basics_profile` | 0–N            | yes    | —                                 | Ordered social profiles                                                                           |
-| `cv_work`           | 0–N            | yes    | `highlights`                      | ISO8601 dates as text                                                                             |
-| `cv_volunteer`      | 0–N            | yes    | `highlights`                      |                                                                                                   |
-| `cv_education`      | 0–N            | yes    | `courses`                         |                                                                                                   |
-| `cv_award`          | 0–N            | yes    | —                                 |                                                                                                   |
-| `cv_certificate`    | 0–N            | yes    | —                                 |                                                                                                   |
-| `cv_publication`    | 0–N            | yes    | —                                 |                                                                                                   |
-| `cv_skill`          | 0–N            | yes    | `keywords`                        |                                                                                                   |
-| `cv_language`       | 0–N            | yes    | —                                 |                                                                                                   |
-| `cv_interest`       | 0–N            | yes    | `keywords`                        |                                                                                                   |
-| `cv_reference`      | 0–N            | yes    | —                                 | Column `reference` holds the quote text                                                           |
-| `cv_project`        | 0–N            | yes    | `highlights`, `keywords`, `roles` |                                                                                                   |
+| Table               | Cardinality    | Order column   | `jsonb` string lists              | Notes                                                                                     |
+| ------------------- | -------------- | -------------- | --------------------------------- | ----------------------------------------------------------------------------------------- |
+| `cv`                | 1 per document | —              | —                                 | Header row; holds `title` and flattened `meta_*` columns; `data` dropped after migration  |
+| `cv_basics`         | 0–1 per CV     | —              | `location`                        | Singleton; no ordering needed; `location` jsonb holds JSON Resume `basics.location` shape |
+| `cv_basics_profile` | 0–N            | `sort`         | —                                 | Manual order; auto-assigned on create                                                     |
+| `cv_work`           | 0–N            | `start_date`   | `highlights`                      | List by `start_date DESC`, then `end_date DESC`, then `id ASC`                            |
+| `cv_volunteer`      | 0–N            | `start_date`   | `highlights`                      | Same date ordering as work                                                                |
+| `cv_education`      | 0–N            | `start_date`   | `courses`                         | Same date ordering as work                                                                |
+| `cv_award`          | 0–N            | `date`         | —                                 | List by `date DESC`, then `id ASC`                                                        |
+| `cv_certificate`    | 0–N            | `date`         | —                                 | List by `date DESC`, then `id ASC`                                                        |
+| `cv_publication`    | 0–N            | `release_date` | —                                 | List by `release_date DESC`, then `id ASC`                                                |
+| `cv_skill`          | 0–N            | `sort`         | `keywords`                        | Manual order; auto-assigned on create                                                     |
+| `cv_language`       | 0–N            | `sort`         | —                                 | Manual order; auto-assigned on create                                                     |
+| `cv_interest`       | 0–N            | `sort`         | `keywords`                        | Manual order; auto-assigned on create                                                     |
+| `cv_reference`      | 0–N            | `sort`         | —                                 | Manual order; column `reference` holds the quote text                                     |
+| `cv_project`        | 0–N            | `start_date`   | `highlights`, `keywords`, `roles` | List by `start_date DESC`, then `end_date DESC`, then `id ASC`                            |
 
-**Indexes:** `(cv_id, sort)` on every multi-valued table; `(user_id, updated_at desc)` remains on `cv`. **RLS:** each child table policy joins to `cv` and checks `cv.user_id = auth.uid()`.
+**Indexes:** `(cv_id, sort)` on the five `sort`-backed tables; `(cv_id, start_date)` or `(cv_id, date)` / `(cv_id, release_date)` on date-primary tables as appropriate; `(user_id, updated_at desc)` remains on `cv`. **RLS:** each child table policy joins to `cv` and checks `cv.user_id = auth.uid()`.
 
 **Default `jsonb`:** string-list columns default to `'[]'::jsonb`; `cv_basics.location` defaults to `'{}'::jsonb`; never `null` in application code.
 
@@ -232,23 +229,37 @@ erDiagram
 
 **Choice:** One Postgres table per JSON Resume section (plus basics split into singleton row with nested `location` jsonb + ordered profiles table).
 
-**Rationale:** Section-scoped SELECT/INSERT/UPDATE/DELETE; smaller write payloads; future reorder only touches `sort` values; clearer query plans for list endpoints.
+**Rationale:** Section-scoped SELECT/INSERT/UPDATE/DELETE; smaller write payloads; manual reorder for non-date sections only touches `sort` values; clearer query plans for list endpoints.
 
 **Alternatives considered:**
 
 - Keep JSONB and add generated columns — still full-document rewrite on each mutation.
 - JSONB per section on `cv` (`work jsonb`, `skills jsonb`) — partial improvement but no stable row ids and awkward RLS per section.
 
-### 2. `sort` integer for ordering; API keeps numeric index paths
+### 2. Two ordering strategies: date fields vs `sort` column
 
-**Choice:** Each multi-valued row has `sort int not null`. Public REST paths remain `/cv/:cvId/work/:index` where `index` is the zero-based position after `ORDER BY sort ASC, id ASC`. Reordering in the future updates `sort` only.
+**Choice:** Only `cv_basics_profile`, `cv_skill`, `cv_language`, `cv_interest`, and `cv_reference` carry a `sort int not null` column. On create, the service auto-assigns `sort = max(sort) + 1` within the same `cv_id` (starting at 0 when the section is empty). List queries for those tables use `ORDER BY sort ASC, id ASC`.
 
-**Rationale:** Matches current `cv-item-crud` contract; avoids breaking web client URL patterns. Stable internal `uuid` primary keys survive reorder without row replacement.
+Date-primary tables (`cv_work`, `cv_volunteer`, `cv_education`, `cv_project`) list by `start_date DESC, end_date DESC NULLS FIRST, id ASC`. `cv_award` and `cv_certificate` list by `date DESC, id ASC`. `cv_publication` lists by `release_date DESC, id ASC`. Those tables have no `sort` column.
+
+Public REST paths remain `/cv/:cvId/work/:index` where `index` is the zero-based position after the section's list ordering. Manual reorder for the five `sort`-backed sections is exposed via `PUT /cv/:cvId/{section}/reorder` (see Decision 9).
+
+**Rationale:** Date sections have a natural chronological order; manual `sort` on every table was redundant and could drift from dates. The five non-date sections need explicit user-controlled order. Matches current `cv-item-crud` contract; stable internal `uuid` primary keys survive reorder without row replacement.
 
 **Alternatives considered:**
 
+- `sort` on every multi-valued table — rejected; date sections should order by their date fields.
 - Expose row UUID in URLs — cleaner internally but breaking change for clients and e2e tests.
-- Use `sort` as sparse gaps (10, 20, 30) — defer until drag-and-drop reorder ships.
+
+### 9. Reorder API for `sort`-backed sections
+
+**Choice:** Add `PUT /cv/:cvId/{section}/reorder` for `profiles`, `skills`, `languages`, `interests`, `references`. Request body: `{ version, order: uuid[] }` (full permutation of row ids). Server assigns `sort = index` in one transaction and bumps `cv.meta_version`.
+
+**Rationale:** Persistence layer for manual order belongs with normalized storage; the `reorder-non-date-cv-sections` change adds only the React drag-and-drop UI that calls these endpoints.
+
+**Alternatives considered:**
+
+- Sparse `sort` gaps (10, 20, 30) — unnecessary at resume scale; dense 0..n-1 on reorder is sufficient.
 
 ### 3. String lists as `jsonb`, not child tables
 
@@ -292,14 +303,14 @@ erDiagram
 
 ## Risks / Trade-offs
 
-| Risk                                                | Mitigation                                                                     |
-| --------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Round-trip drift (JSON ↔ SQL)                       | Property-based or fixture tests for every section; migration verification step |
-| RLS policy gaps on child tables                     | Mirror `cv` ownership check; e2e cross-tenant tests per table                  |
-| API index vs sort mismatch after concurrent inserts | Return fresh ordered list + version after every mutation; 409 on stale version |
-| Large jsonb arrays on project rows                  | Acceptable for resume scale; GIN index only if profiling shows need            |
-| Migration failure on malformed legacy JSON          | Skip or quarantine rows with logged errors; manual fix playbook                |
-| More joins for full document assembly               | Single CV read is rare (export/preview); cache optional later                  |
+| Risk                                                      | Mitigation                                                                     |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Round-trip drift (JSON ↔ SQL)                             | Property-based or fixture tests for every section; migration verification step |
+| RLS policy gaps on child tables                           | Mirror `cv` ownership check; e2e cross-tenant tests per table                  |
+| API index vs list-order mismatch after concurrent inserts | Return fresh ordered list + version after every mutation; 409 on stale version |
+| Large jsonb arrays on project rows                        | Acceptable for resume scale; GIN index only if profiling shows need            |
+| Migration failure on malformed legacy JSON                | Skip or quarantine rows with logged errors; manual fix playbook                |
+| More joins for full document assembly                     | Single CV read is rare (export/preview); cache optional later                  |
 
 ## Migration Plan
 
@@ -315,4 +326,4 @@ erDiagram
 
 - Whether web refactors each editor tab to section GET in the same change or immediately after API ships section routes.
 - Whether `GET /cv` list should return assembled `data` or a slim DTO (title, dates, basics name only) — recommend slim DTO in follow-up to reduce list payload.
-- Sparse `sort` gap strategy when drag-and-drop reorder is implemented.
+- Whether date-primary list order should be ascending (oldest first) instead of descending — current default is most-recent first.

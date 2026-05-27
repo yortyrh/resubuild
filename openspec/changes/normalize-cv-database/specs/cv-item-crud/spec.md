@@ -96,11 +96,11 @@ When the API exposes section GET routes, each editor tab SHOULD load only its se
 - **WHEN** a user exports or previews the complete CV
 - **THEN** the client SHALL use the full assembled CV from `GET /cv/:id` or equivalent export endpoint
 
-### Requirement: Array item identity in URLs SHALL map to sort order
+### Requirement: Array item identity in URLs SHALL map to section list order
 
-Public item routes SHALL continue to use numeric indices in paths. The index SHALL equal the zero-based position after ordering section rows by `sort ASC`, then `id ASC`. Internal row primary keys (uuid) SHALL NOT be required in client URLs.
+Public item routes SHALL continue to use numeric indices in paths. The index SHALL equal the zero-based position after the section's list ordering: `sort ASC, id ASC` for sort-backed sections (`profiles`, `skills`, `languages`, `interests`, `references`); date DESC ordering for date-primary sections (see `cv-normalized-schema`). Internal row primary keys (uuid) SHALL NOT be required in client URLs.
 
-#### Scenario: Index stable after unrelated insert
+#### Scenario: Work index stable after unrelated insert
 
-- **WHEN** a work entry at index 0 exists and a new entry is appended
-- **THEN** the existing entry SHALL remain at index 0 unless its `sort` value is explicitly changed
+- **WHEN** a work entry at index 0 exists (most recent by date) and a new entry with an earlier date is appended
+- **THEN** the existing entry SHALL remain at index 0 unless its date fields change relative ordering

@@ -1,6 +1,8 @@
 ## Context
 
-The `normalize-cv-database` change introduces normalized section tables with a `sort integer not null` column on every multi-valued entity. New rows receive `sort = max(sort) + 1`. List queries order by `sort ASC, id ASC`. The editor currently renders sections via `ManagedArraySection` with create/edit/delete only — no reorder affordance.
+The `normalize-cv-database` change introduces normalized section tables where only non-date multi-valued entities carry a `sort` column: `cv_basics_profile`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`. New rows receive auto-assigned `sort = max(sort) + 1`. List queries order by `sort ASC, id ASC`. Reorder API endpoints (`PUT /cv/:cvId/{section}/reorder`) persist manual order updates server-side.
+
+The editor currently renders sections via `ManagedArraySection` with create/edit/delete only — no reorder affordance.
 
 Five sections lack reliable date-based ordering for authors:
 
@@ -12,9 +14,9 @@ Five sections lack reliable date-based ordering for authors:
 | Interests       | `cv_interest`       | Personal emphasis           |
 | References      | `cv_reference`      | Preferred contact order     |
 
-Date-primary sections (Work, Education, etc.) are explicitly **out of scope**; they may later auto-sort by `startDate` / `endDate`.
+Date-primary sections (Work, Education, etc.) are explicitly **out of scope**; they order by date fields from the normalization change.
 
-**Prerequisite:** `normalize-cv-database` merged and deployed.
+**Prerequisite:** `normalize-cv-database` merged and deployed (including reorder API endpoints).
 
 ## Goals / Non-Goals
 
@@ -22,13 +24,14 @@ Date-primary sections (Work, Education, etc.) are explicitly **out of scope**; t
 
 - Let users reorder entries in the five listed sections via drag-and-drop in view mode.
 - Provide keyboard-accessible move-up / move-down as an equivalent path.
-- Persist order by rewriting `sort` values server-side in one atomic operation.
-- Keep URL `:index` semantics aligned with post-reorder positions.
-- Bump `cv.meta_version` on reorder; honor 409 stale-version flow.
-- Reflect order in assembled JSON Resume export/preview.
+- Call the existing reorder API to persist order; refresh local section state and version on success.
+- Keep URL `:index` semantics aligned with post-reorder positions (indices follow `sort` order from the server).
+- Honor 409 stale-version flow (reload section on conflict).
 
 **Non-Goals:**
 
+- API routes, DTOs, or server-side reorder logic (shipped in `normalize-cv-database`).
+- Database schema or `sort` column design.
 - Reordering Work, Volunteer, Education, Projects, Awards, Certificates, Publications.
 - Reordering string lists within an entity (keywords, highlights).
 - Cross-section drag (moving a skill into languages).
@@ -37,46 +40,20 @@ Date-primary sections (Work, Education, etc.) are explicitly **out of scope**; t
 
 ## Decisions
 
-### 1. Reorder API — single endpoint per section with ordered id list
+### 1. UI-only change — consume existing reorder API
 
-**Choice:** `PUT /cv/:cvId/{section}/reorder` where `{section}` is one of `profiles`, `skills`, `languages`, `interests`, `references`.
+**Choice:** This change adds only the React UI and web API client calls. Reorder persistence (`PUT /cv/:cvId/{section}/reorder`, `sort` assignment, `meta_version` bump) is implemented in `normalize-cv-database`.
 
-Request body:
+**Rationale:** Keeps persistence and presentation concerns separate; UI change can ship immediately after normalization without duplicating API work.
 
-```json
-{
-  "version": "abc123",
-  "order": ["uuid-row-1", "uuid-row-2", "uuid-row-3"]
-}
-```
-
-Server validates: caller owns CV; `order` is a permutation of all row ids for that section; updates each row's `sort` to array index; bumps `meta_version`; returns `{ items: [...], version }` with entities in new order (indices implied).
-
-**Rationale:** One round-trip; stable uuid ids survive reorder; client sends full desired order after drag (simple to reason about).
-
-**Alternatives considered:**
-
-- `PATCH` with `{ fromIndex, toIndex }` — multiple calls for long moves; harder to batch.
-- Reuse numeric indices only — ambiguous during concurrent edits; normalization gives stable uuids internally.
-
-### 2. `sort` assignment — dense 0..n-1 on reorder
-
-**Choice:** After reorder, set `sort = index` for each id in `order` (0, 1, 2, …).
-
-**Rationale:** Simple; matches list rendering; no gap management needed at current scale.
-
-**Alternatives considered:**
-
-- Sparse sorts (10, 20, 30) — useful for single-row moves without full rewrite; unnecessary for ≤20 items per section.
-
-### 3. UI — `@dnd-kit/sortable` on view rows only
+### 2. UI — `@dnd-kit/sortable` on view rows only
 
 **Choice:** Add `SortableManagedArraySection` (or extend `ManagedArraySection`) wrapping `ResumeItemRow` list with:
 
 - Drag handle icon (grip) visible in view mode when ≥2 items and not editing/creating.
 - `@dnd-kit/core` + `@dnd-kit/sortable` with pointer + keyboard sensors.
 - Move up / down icon buttons on each row for accessibility (WCAG 2.5.7 alternative).
-- On drop or button click: compute new id order locally, call reorder API, refresh list + version on success.
+- On drop or button click: compute new id order locally, call `reorderCvSection`, refresh list + version on success.
 
 Disable sortable while a row is in edit/create mode to avoid conflicting interactions.
 
@@ -87,45 +64,36 @@ Disable sortable while a row is in edit/create mode to avoid conflicting interac
 - Up/down buttons only — accessible but tedious for long lists; keep as supplement.
 - Native HTML drag — poor a11y and mobile UX.
 
-### 4. Profiles path under `/profiles` not nested under basics in URL
+### 3. Client requires row `id` from normalization API responses
 
-**Choice:** Reorder endpoint is `PUT /cv/:cvId/profiles/reorder` (consistent with existing `POST /cv/:cvId/profiles` item routes).
+**Choice:** Section GET/create responses (from normalization) include internal `id` (uuid) per row. Web stores id alongside item for reorder payloads (`order: uuid[]`).
 
-**Rationale:** Matches current `cv-items.controller` grouping for profile CRUD.
+**Rationale:** Reorder body requires uuids; index-only responses are insufficient.
 
-### 5. Response includes row id for client mapping (additive)
+### 4. Concurrency — same 409 flow as item save
 
-**Choice:** Item list responses (GET section + reorder response) SHALL include internal `id` (uuid) per row in addition to index. Web stores id alongside item for reorder payloads.
-
-**Rationale:** Reorder body requires uuids; today index-only responses insufficient after normalization.
-
-**Note:** May require small additive change to existing item GET/create responses from normalization change; document as coordination point.
-
-### 6. Concurrency
-
-**Choice:** Reorder requires current `cv.meta_version`; 409 on mismatch; client reloads section on conflict (same as item save).
+**Choice:** Reorder calls pass current `cv.meta_version`; on 409 the client reloads the section (same as item create/update/delete).
 
 ## Risks / Trade-offs
 
-| Risk                             | Mitigation                                                   |
-| -------------------------------- | ------------------------------------------------------------ |
-| Reorder during active edit       | Disable drag while editing/creating; show inline hint        |
-| Missing row ids in legacy client | Block reorder until normalization + id in API responses ship |
-| DnD on mobile                    | Touch sensor in dnd-kit; up/down buttons fallback            |
-| Index drift after reorder        | Return full ordered list; client replaces local array        |
-| Partial `order` array            | Reject 400 if not exact permutation of section rows          |
+| Risk                             | Mitigation                                                    |
+| -------------------------------- | ------------------------------------------------------------- |
+| Reorder during active edit       | Disable drag while editing/creating; show inline hint         |
+| Missing row ids in API responses | Blocked by prerequisite; normalization must include `id`      |
+| DnD on mobile                    | Touch sensor in dnd-kit; up/down buttons fallback             |
+| Index drift after reorder        | Replace local array from reorder response                     |
+| Normalization not deployed       | Feature gated on prerequisite; no reorder UI until API exists |
 
 ## Migration Plan
 
-1. **Prerequisite:** Complete `normalize-cv-database`.
-2. Ship Nest reorder routes + service method `reorderSection(cvId, section, order, version)`.
-3. Extend web API client with `reorderCvSkills`, etc., or generic `reorderCvSection`.
-4. Add `SortableManagedArraySection`; wire five sections in `cv-sections.tsx`.
-5. Add `@dnd-kit` dependencies to `apps/web`.
-6. E2e: create 3 skills, reorder, assert GET order and export assembly.
-7. Rollback: hide drag handles via feature flag; endpoints unused.
+1. **Prerequisite:** Complete `normalize-cv-database` (including reorder endpoints).
+2. Add `@dnd-kit` dependencies to `apps/web`.
+3. Add `reorderCvSection(cvId, section, order, version)` in `cv-item-api.ts`.
+4. Create `SortableManagedArraySection`; wire five sections in `cv-sections.tsx`.
+5. Component tests for sortable list behavior.
+6. Manual QA: drag reorder in each section; verify export/preview order.
+7. Rollback: hide drag handles via feature flag; no server changes needed.
 
 ## Open Questions
 
-- Whether to expose row `id` in all item CRUD responses in normalization change vs. only in reorder — recommend all section GET/POST responses include `id`.
 - Whether Social profiles tab label stays "Social profiles" in reorder aria labels — yes, use section display name.

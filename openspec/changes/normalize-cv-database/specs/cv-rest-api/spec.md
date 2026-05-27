@@ -31,7 +31,7 @@ Under `/cv/:cvId`, authenticated handlers SHALL provide create, update, and dele
 #### Scenario: Create work entry
 
 - **WHEN** an authenticated client calls `POST /cv/:cvId/work` with a valid work payload and current version
-- **THEN** the service SHALL insert a row into `cv_work` with the next `sort` value, validate, persist, and return the created entry with its array index (position by sort) and updated version metadata
+- **THEN** the service SHALL insert a row into `cv_work`, validate, persist, and return the created entry with its array index (position by date order) and updated version metadata
 
 #### Scenario: Delete education course
 
@@ -46,7 +46,7 @@ Under `/cv/:cvId`, authenticated handlers SHALL provide create, update, and dele
 #### Scenario: Create reference entry
 
 - **WHEN** an authenticated client calls `POST /cv/:cvId/references` with a valid reference payload and current version
-- **THEN** the service SHALL insert into `cv_reference` with the next `sort`, validate, persist, and return the created entry with its array index and updated version metadata
+- **THEN** the service SHALL insert into `cv_reference` with auto-assigned `sort`, validate, persist, and return the created entry with its array index and updated version metadata
 
 #### Scenario: Unauthorized item mutation
 
@@ -87,7 +87,7 @@ For each multi-valued resume section, the API SHALL provide `GET /cv/:cvId/{sect
 #### Scenario: Fetch work section only
 
 - **WHEN** an authenticated client calls `GET /cv/:cvId/work`
-- **THEN** the response SHALL contain only the `work` array ordered by `sort` without loading other sections from the client perspective
+- **THEN** the response SHALL contain only the `work` array ordered by `start_date` descending without loading other sections from the client perspective
 
 #### Scenario: Full CV assembly on detail GET
 
@@ -101,4 +101,19 @@ For each multi-valued resume section, the API SHALL provide `GET /cv/:cvId/{sect
 #### Scenario: Detail response matches JSON Resume shape
 
 - **WHEN** a CV with work and skills exists in normalized tables
-- **THEN** `GET /cv/:id` SHALL return `data.work` and `data.skills` arrays matching JSON Resume field names and camelCase keys
+- **THEN** `GET /cv/:id` SHALL return `data.work` ordered by date and `data.skills` ordered by `sort`, matching JSON Resume field names and camelCase keys
+
+### Requirement: The API SHALL expose reorder endpoints for sort-backed sections
+
+Authenticated handlers under `/cv/:cvId` SHALL provide `PUT /cv/:cvId/profiles/reorder`, `PUT /cv/:cvId/skills/reorder`, `PUT /cv/:cvId/languages/reorder`, `PUT /cv/:cvId/interests/reorder`, and `PUT /cv/:cvId/references/reorder`. Each SHALL accept a body with `version` (optional but recommended) and `order` (array of row uuid strings representing the full desired order). The service SHALL assign `sort = index` for each id, bump `cv.meta_version`, and return the reordered section items with updated version.
+
+#### Scenario: Reorder skills
+
+- **WHEN** an authenticated client calls `PUT /cv/:cvId/skills/reorder` with a valid permutation of all skill row ids and current version
+- **THEN** each `cv_skill.sort` SHALL match the index in the request order
+- **AND** the response SHALL include the skills array in the new order and an updated version
+
+#### Scenario: Invalid reorder permutation rejected
+
+- **WHEN** the reorder request omits a row id or includes an id from another CV
+- **THEN** the API SHALL respond with 400 and SHALL NOT modify any `sort` values
