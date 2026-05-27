@@ -699,7 +699,7 @@ export function assembleResume(header: CvHeaderRow, sections: NormalizedCvSectio
 
 /** Map camelCase JSON Resume item fields to snake_case DB insert/update payload. */
 export function resumeItemToDbPayload(
-  section: string,
+  _section: string,
   item: Record<string, unknown>,
 ): Record<string, unknown> {
   const mapping: Record<string, string> = {
@@ -726,7 +726,7 @@ export function resumeItemToDbPayload(
 
 /** Map snake_case DB row to camelCase JSON Resume item (includes row id when present). */
 export function dbRowToResumeItem(
-  section: string,
+  _section: string,
   row: Record<string, unknown>,
 ): Record<string, unknown> {
   const reverseMapping: Record<string, string> = {

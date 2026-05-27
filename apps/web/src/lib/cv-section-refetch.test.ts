@@ -11,6 +11,6 @@ describe('sectionItemsMissingIds', () => {
   });
 
   it('returns true when any row lacks an id', () => {
-    expect(sectionItemsMissingIds([{ id: 'a' }, { name: 'No id' }])).toBe(true);
+    expect(sectionItemsMissingIds([{ id: 'a' }, {}])).toBe(true);
   });
 });
