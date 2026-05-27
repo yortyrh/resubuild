@@ -4,8 +4,8 @@ Resumind stores each CV as a monolithic JSONB document in `public.cv.data`. Ever
 
 ## What Changes
 
-- Replace the single `data jsonb` blob with normalized Postgres tables for `basics` (including nested `location` as `jsonb`), `basics_profile`, and one table per top-level JSON Resume array section (`cv_work`, `cv_education`, etc.).
-- Add a `sort` integer column on non-date multi-valued entity tables only (`cv_basics_profile`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`); auto-assign on create. Date-primary sections (`cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_project`) list by their date fields instead.
+- Replace the single `data jsonb` blob with JSON Resume `basics` columns on `cv` (including nested `location` as `jsonb`), `cv_profile` for `basics.profiles[]`, and one table per top-level JSON Resume array section (`cv_work`, `cv_education`, etc.).
+- Add a `sort` integer column on non-date multi-valued entity tables only (`cv_profile`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`); auto-assign on create. Date-primary sections (`cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_project`) list by their date fields instead.
 - Add reorder API endpoints for the five `sort`-backed sections.
 - Store string-list fields (`highlights`, `courses`, `keywords`, `roles`) as `jsonb` arrays on their parent row instead of child tables.
 - Introduce a server-side assembler that builds a full JSON Resume document from normalized rows only when needed (export, preview, schema validation on full document, import bulk write).

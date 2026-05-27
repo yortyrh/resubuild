@@ -2,7 +2,7 @@
 
 ### Requirement: The system SHALL store each CV as a row in `public.cv` with JSON document body
 
-The `public.cv` table MUST include `id` (uuid PK), `user_id` (uuid FK to `auth.users`), `title` (text, default untitled), flattened meta columns (`meta_version`, `meta_canonical`, `meta_last_modified`), and `created_at` / `updated_at` timestamps with an index on `(user_id, updated_at desc)` and a trigger to maintain `updated_at` on update. Resume body content MUST live in normalized child tables (see `cv-normalized-schema`), not in a `data` jsonb column after cutover.
+The `public.cv` table MUST include `id` (uuid PK), `user_id` (uuid FK to `auth.users`), JSON Resume `basics` scalar columns (`name`, `label`, `image`, `email`, `phone`, `url`, `summary`), `location jsonb` (default `'{}'::jsonb`), flattened meta columns (`meta_version`, `meta_canonical`, `meta_last_modified`), and `created_at` / `updated_at` timestamps with an index on `(user_id, updated_at desc)` and a trigger to maintain `updated_at` on update. The table SHALL NOT include a `title` column after cutover. Multi-valued resume sections MUST live in normalized child tables (see `cv-normalized-schema`), not in a `data` jsonb column after cutover.
 
 #### Scenario: Schema matches migration
 
@@ -13,6 +13,7 @@ The `public.cv` table MUST include `id` (uuid PK), `user_id` (uuid FK to `auth.u
 
 - **WHEN** the normalized storage migration is complete
 - **THEN** `public.cv` SHALL NOT contain a `data` jsonb column
+- **AND** `public.cv` SHALL NOT contain a `title` column
 
 ### Requirement: Row Level Security MUST restrict `public.cv` to the owning user
 

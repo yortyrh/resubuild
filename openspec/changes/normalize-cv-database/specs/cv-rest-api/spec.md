@@ -2,13 +2,13 @@
 
 ### Requirement: Create flow SHALL insert baseline row then apply validated resume `data`
 
-On `POST`, the service SHALL insert a `cv` header row with empty normalized section rows (including empty `cv_basics`), disassemble the request `data` object into normalized tables via the shared assembler/disassembler, validate the assembled document, then persist section rows in a transaction. The final write SHALL set `title` from `deriveCvTitleFromBasics` applied to the validated basics (ignoring client-supplied `title` when basics are present) and SHALL set `meta_version` / meta columns on the `cv` row.
+On `POST`, the service SHALL insert a `cv` row with empty basics columns and empty normalized section rows, disassemble the request `data` object into the `cv` row and child tables via the shared assembler/disassembler, validate the assembled document, then persist in a transaction. The final write SHALL set `meta_version` / meta columns on the `cv` row. The response SHALL include a computed `title` derived from `deriveCvTitleFromBasics` applied to the validated basics (ignoring any client-supplied `title`).
 
 #### Scenario: Successful create
 
 - **WHEN** `POST /cv` includes valid `data` with `basics`
 - **THEN** the response SHALL include the new CV with normalized rows persisted and an assembled `data` object in the response body including applied meta and schema-valid content
-- **AND** `title` SHALL reflect the derived value from basics
+- **AND** `title` in the response SHALL reflect the derived value from basics
 
 ### Requirement: Updates SHALL detect concurrent edits using resume meta version metadata
 
@@ -26,7 +26,7 @@ When any item-scoped route mutates resume content, the service SHALL compare the
 
 ### Requirement: The API SHALL expose item-scoped authenticated routes for CV resume content
 
-Under `/cv/:cvId`, authenticated handlers SHALL provide create, update, and delete operations for each resume collection defined in `cv-item-crud`, plus `PATCH /cv/:cvId/basics` for the singleton basics object. Handlers MUST read and write normalized section tables (not `cv.data`), validate entity DTOs, assemble for schema validation when required, and apply optimistic concurrency via `cv.meta_version`.
+Under `/cv/:cvId`, authenticated handlers SHALL provide create, update, and delete operations for each resume collection defined in `cv-item-crud`, plus `PATCH /cv/:cvId/basics` for the singleton basics object. Handlers MUST read and write normalized section tables and basics columns on `cv` (not `cv.data`), validate entity DTOs, assemble for schema validation when required, and apply optimistic concurrency via `cv.meta_version`.
 
 #### Scenario: Create work entry
 
@@ -41,7 +41,7 @@ Under `/cv/:cvId`, authenticated handlers SHALL provide create, update, and dele
 #### Scenario: Update basics
 
 - **WHEN** an authenticated client calls `PATCH /cv/:cvId/basics` with partial basics fields
-- **THEN** the service SHALL merge into `cv_basics` (including `location` jsonb) and related rows, validate, and persist without requiring a full resume body in the request
+- **THEN** the service SHALL merge into the `cv` basics columns (including `location` jsonb) and related profile rows, validate, and persist without requiring a full resume body in the request
 
 #### Scenario: Create reference entry
 
@@ -53,30 +53,30 @@ Under `/cv/:cvId`, authenticated handlers SHALL provide create, update, and dele
 - **WHEN** a client calls an item route without a valid bearer token
 - **THEN** the response SHALL be 401 from the auth guard
 
-### Requirement: CV title SHALL derive from basics on create and basics patch
+### Requirement: CV title SHALL be computed from basics on read and after basics mutations
 
-The API service SHALL compute `cv.title` from basics name and label using the shared derivation function whenever a CV is created with basics data or when `PATCH /cv/:cvId/basics` succeeds. The derived title SHALL be persisted in the `title` column in the same write as the updated basics rows.
+The API service SHALL compute `title` from `cv.name` and `cv.label` using the shared `deriveCvTitleFromBasics` function when assembling CV responses (`GET /cv`, `GET /cv/:id`, and mutation responses that return the CV header). The derived title SHALL NOT be persisted in the database. When `PATCH /cv/:cvId/basics` succeeds, the response SHALL include the newly derived `title` computed from the updated basics columns.
 
-#### Scenario: Create derives title from basics
+#### Scenario: Create response derives title from basics
 
 - **WHEN** `POST /cv` includes basics with name `Alex` and label `Designer`
-- **THEN** the created row SHALL have `title` equal to `Alex — Designer`
-- **AND** the response SHALL include the derived title
+- **THEN** the response SHALL include `title` equal to `Alex — Designer`
+- **AND** the `cv` row SHALL NOT contain a `title` column value
 
-#### Scenario: Basics patch updates title
+#### Scenario: Basics patch response includes derived title
 
 - **WHEN** an authenticated client calls `PATCH /cv/:cvId/basics` changing `name` or `label`
-- **THEN** the service SHALL merge basics, validate, persist normalized basics rows, and update `title` to the newly derived value in one operation
+- **THEN** the service SHALL merge basics into the `cv` row, validate, persist, and return the newly derived `title` in the response
 
 #### Scenario: Empty basics yields default title
 
 - **WHEN** a create or basics patch results in empty name and label after trim
-- **THEN** `title` SHALL be `Untitled CV`
+- **THEN** the computed `title` in the response SHALL be `Untitled CV`
 
 #### Scenario: Name-only basics
 
 - **WHEN** basics contain name `Alex` and no label
-- **THEN** derived `title` SHALL be `Alex`
+- **THEN** the computed `title` SHALL be `Alex`
 
 ## ADDED Requirements
 
@@ -96,7 +96,7 @@ For each multi-valued resume section, the API SHALL provide `GET /cv/:cvId/{sect
 
 ### Requirement: Full CV reads SHALL assemble JSON Resume from normalized storage
 
-`GET /cv` and `GET /cv/:id` SHALL build the response `data` field by assembling normalized rows. List endpoints MAY omit full `data` in a future optimization; until then they SHALL assemble or return a documented slim shape.
+`GET /cv` and `GET /cv/:id` SHALL build the response `data` field by assembling normalized rows. List endpoints MAY omit full `data` in a future optimization; until then they SHALL assemble or return a documented slim shape including computed `title`.
 
 #### Scenario: Detail response matches JSON Resume shape
 

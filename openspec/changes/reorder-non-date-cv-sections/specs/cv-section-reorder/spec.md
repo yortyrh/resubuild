@@ -4,7 +4,7 @@
 
 The web editor MUST provide drag-and-drop and keyboard move-up / move-down controls for reordering entries in these sections only:
 
-- Social profiles (`basics.profiles` / `cv_basics_profile`)
+- Social profiles (`basics.profiles` / `cv_profile`)
 - Skills (`skills` / `cv_skill`)
 - Languages (`languages` / `cv_language`)
 - Interests (`interests` / `cv_interest`)

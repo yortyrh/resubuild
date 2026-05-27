@@ -1,22 +1,22 @@
 ## 1. Database schema and RLS
 
-- [ ] 1.1 Add Supabase migration creating normalized tables (`cv_basics` with `location jsonb`, `cv_basics_profile`, `cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`, `cv_project`) per `design.md` ER diagram
+- [ ] 1.1 Add Supabase migration creating normalized tables (`cv` with basics columns and `location jsonb`, `cv_profile`, `cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`, `cv_project`) per `design.md` ER diagram; drop `cv.title` column
 - [ ] 1.2 Add `meta_version`, `meta_canonical`, `meta_last_modified` columns to `cv`; add `(cv_id, sort)` indexes on sort-backed tables only; add date indexes on date-primary tables
 - [ ] 1.3 Enable RLS on every new table with policies joining to `cv.user_id = auth.uid()`
 - [ ] 1.4 Add data backfill migration: read existing `cv.data`, disassemble into normalized rows, verify round-trip in migration script or one-off task
-- [ ] 1.5 Add final migration dropping `cv.data` after cutover verification
+- [ ] 1.5 Add final migration dropping `cv.data` and `cv.title` after cutover verification
 
 ## 2. Shared types — assembler / disassembler
 
 - [ ] 2.1 Add normalized row TypeScript types in `packages/types/src/` matching database columns (snake_case DB ↔ camelCase JSON Resume)
-- [ ] 2.2 Implement `disassembleResume(data: Resume): NormalizedCvPayload` mapping all sections including jsonb string lists and `cv_basics.location`
+- [ ] 2.2 Implement `disassembleResume(data: Resume): NormalizedCvPayload` mapping all sections including jsonb string lists and `cv.location`
 - [ ] 2.3 Implement `assembleResume(header, sections): Resume` with date ordering for date sections and `ORDER BY sort` for sort-backed arrays; empty jsonb → `[]` defaults
 - [ ] 2.4 Add unit tests in `packages/types/src/resume-normalized.test.ts` covering round-trip for sample fixtures from `.samples/resumes/jsonresume/`
 
 ## 3. API persistence layer
 
 - [ ] 3.1 Create `CvNormalizedRepository` (or feature-scoped repositories) in `apps/api/src/cv/` for section CRUD against Supabase
-- [ ] 3.2 Refactor `CvService.create/findOne/findAll/update/delete` to use normalized storage and assemble `data` on read
+- [ ] 3.2 Refactor `CvService.create/findOne/findAll/update/delete` to use normalized storage, assemble `data` on read, and compute `title` from basics columns via `deriveCvTitleFromBasics`
 - [ ] 3.3 Refactor `CvItemService.mutateCvData` to read/write individual tables; bump `cv.meta_version` on success; remove full-document clone path
 - [ ] 3.4 Map URL `:index` to row via section list ordering (date DESC for date sections; `sort ASC, id ASC` for sort-backed sections)
 - [ ] 3.5 Store string lists (`highlights`, `courses`, `keywords`, `roles`) as jsonb on parent row writes

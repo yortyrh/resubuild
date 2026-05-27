@@ -2,7 +2,7 @@
 
 ### Requirement: CV content SHALL be stored in normalized relational tables keyed by `cv.id`
 
-The system MUST persist resume body fields across dedicated tables (`cv_basics`, `cv_basics_profile`, `cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`, `cv_project`) instead of a monolithic `cv.data` jsonb document. The `cv_basics` row MUST include a `location jsonb` column for nested basics location fields. The `cv` header row MUST retain `id`, `user_id`, `title`, timestamps, and flattened meta columns (`meta_version`, `meta_canonical`, `meta_last_modified`).
+The system MUST persist resume body fields across dedicated tables (`cv_profile`, `cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`, `cv_project`) instead of a monolithic `cv.data` jsonb document. JSON Resume `basics` scalar fields (`name`, `label`, `image`, `email`, `phone`, `url`, `summary`) and nested `location` (`location jsonb`) MUST live on the `cv` row itself (1:1 with the document). The `cv` header row MUST retain `id`, `user_id`, timestamps, and flattened meta columns (`meta_version`, `meta_canonical`, `meta_last_modified`). The `cv` table SHALL NOT include a `title` column; display title is computed at the API layer from `name` and `label`.
 
 #### Scenario: Schema includes all section tables
 
@@ -13,10 +13,11 @@ The system MUST persist resume body fields across dedicated tables (`cv_basics`,
 
 - **WHEN** the final migration phase completes
 - **THEN** the `cv` table SHALL NOT include a `data` jsonb column
+- **AND** the `cv` table SHALL NOT include a `title` column
 
 ### Requirement: Non-date multi-valued tables MUST include a `sort` column for display order
 
-Only `cv_basics_profile`, `cv_skill`, `cv_language`, `cv_interest`, and `cv_reference` SHALL have `sort integer not null`. Date-primary tables (`cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_project`) SHALL NOT have a `sort` column. `cv_basics` SHALL NOT have a `sort` column (singleton per CV).
+Only `cv_profile`, `cv_skill`, `cv_language`, `cv_interest`, and `cv_reference` SHALL have `sort integer not null`. Date-primary tables (`cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_project`) SHALL NOT have a `sort` column.
 
 New rows in `sort`-backed tables SHALL receive `sort = max(sort) + 1` within the same `cv_id` (0 when the section is empty) unless explicitly supplied. Queries that list those sections MUST order by `sort ASC`, then `id ASC` as tiebreaker.
 
@@ -57,9 +58,9 @@ Parent entity tables MUST store these JSON Resume string arrays as `jsonb` defau
 - `cv_skill.keywords`, `cv_interest.keywords`
 - `cv_project.highlights`, `cv_project.keywords`, `cv_project.roles`
 
-`cv_basics.location` MUST store the JSON Resume `basics.location` object as `jsonb` defaulting to `'{}'::jsonb`.
+`cv.location` MUST store the JSON Resume `basics.location` object as `jsonb` defaulting to `'{}'::jsonb`.
 
-Application code MUST treat missing or null database values as empty arrays when assembling JSON Resume output, and an empty object for missing `cv_basics.location`.
+Application code MUST treat missing or null database values as empty arrays when assembling JSON Resume output, and an empty object for missing `cv.location`.
 
 #### Scenario: Work highlights persist as jsonb
 
@@ -74,16 +75,16 @@ Application code MUST treat missing or null database values as empty arrays when
 #### Scenario: Empty location default
 
 - **WHEN** a CV is created without basics location data
-- **THEN** `cv_basics.location` SHALL be `'{}'::jsonb` after insert
+- **THEN** `cv.location` SHALL be `'{}'::jsonb` after insert
 
-### Requirement: Singleton basics SHALL use one row per CV
+### Requirement: Basics scalars SHALL live on the cv row
 
-`cv_basics` SHALL use `cv_id` as primary key (one row maximum per CV). Creating a CV SHALL insert an empty `cv_basics` row with `location = '{}'::jsonb`. Location fields inside the jsonb object MAY be absent until the user provides address data.
+Creating a CV SHALL insert a single `cv` row with empty basics columns and `location = '{}'::jsonb`. Location fields inside the jsonb object MAY be absent until the user provides address data. There SHALL be no separate `cv_basics` table.
 
-#### Scenario: New CV gets empty basics row
+#### Scenario: New CV has basics columns on cv row
 
 - **WHEN** a CV is created via the API
-- **THEN** a corresponding `cv_basics` row SHALL exist for that `cv_id`
+- **THEN** the `cv` row for that `id` SHALL exist with basics columns and `location = '{}'::jsonb`
 
 ### Requirement: Normalized tables MUST inherit CV row-level security
 
@@ -96,7 +97,7 @@ Each child table SHALL enable RLS with policies allowing SELECT, INSERT, UPDATE,
 
 ### Requirement: Indexes SHALL support section listing by CV
 
-`cv_basics_profile`, `cv_skill`, `cv_language`, `cv_interest`, and `cv_reference` MUST have an index on `(cv_id, sort)`. Date-primary tables MUST have an index on `(cv_id, <date column>)` appropriate to the section. The `cv` table MUST retain an index on `(user_id, updated_at desc)`.
+`cv_profile`, `cv_skill`, `cv_language`, `cv_interest`, and `cv_reference` MUST have an index on `(cv_id, sort)`. Date-primary tables MUST have an index on `(cv_id, <date column>)` appropriate to the section. The `cv` table MUST retain an index on `(user_id, updated_at desc)`.
 
 #### Scenario: List skills by cv_id uses sort index
 

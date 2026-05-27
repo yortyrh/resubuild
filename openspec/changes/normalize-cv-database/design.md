@@ -11,10 +11,10 @@ Constraints: Supabase Postgres with RLS; SPA talks only to Nest (no direct Supab
 **Goals:**
 
 - Normalize CV content into relational tables with one row per multi-valued entity.
-- Keep a `sort` column only on sections that are not unique per `cv_id` and lack a date field for natural ordering: `cv_basics_profile`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`. Auto-assign `sort` on create (`max(sort) + 1` within the same `cv_id`).
+- Keep a `sort` column only on sections that are not unique per `cv_id` and lack a date field for natural ordering: `cv_profile`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`. Auto-assign `sort` on create (`max(sort) + 1` within the same `cv_id`).
 - List date-primary sections (`cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_project`) ordered by their date attributes (`start_date`, `end_date`, `date`, or `release_date` as applicable), descending by default so the most recent entry appears first. No `sort` column on those tables.
-- No ordering column on `cv_basics` — one row per CV.
-- Store string-list attributes as `jsonb` arrays on the parent entity row; store nested singleton objects (`basics.location`) as `jsonb` on the parent row when they do not warrant a separate table.
+- Store JSON Resume `basics` scalar fields and nested `location` on the `cv` row (1:1 with the document header); no separate `cv_basics` table.
+- Store string-list attributes as `jsonb` arrays on the parent entity row; store nested singleton objects (`basics.location`) as `jsonb` on the `cv` row when they do not warrant a separate table.
 - Enable section-scoped reads and writes so editor views fetch only the data they need.
 - Assemble a full JSON Resume document on demand for preview, export, import verification, and full-document validation.
 - Preserve RLS isolation per user across all new tables.
@@ -25,7 +25,7 @@ Constraints: Supabase Postgres with RLS; SPA talks only to Nest (no direct Supab
 **Non-Goals:**
 
 - Normalizing string-list items (`highlights`, `courses`, `keywords`, `roles`) into child tables — they stay as `jsonb` on the parent row.
-- Normalizing `basics.location` into its own table — it stays as a `jsonb` object on `cv_basics`.
+- Normalizing `basics.location` into its own table — it stays as a `jsonb` object on `cv`.
 - Changing the JSON Resume interchange schema or public export format.
 - Real-time collaboration or CRDT-based merging.
 - Client-side direct Supabase access.
@@ -38,8 +38,7 @@ Constraints: Supabase Postgres with RLS; SPA talks only to Nest (no direct Supab
 ```mermaid
 erDiagram
     auth_users ||--o{ cv : owns
-    cv ||--o| cv_basics : has
-    cv ||--o{ cv_basics_profile : contains
+    cv ||--o{ cv_profile : contains
     cv ||--o{ cv_work : contains
     cv ||--o{ cv_volunteer : contains
     cv ||--o{ cv_education : contains
@@ -55,16 +54,6 @@ erDiagram
     cv {
         uuid id PK
         uuid user_id FK
-        text title
-        text meta_version
-        text meta_canonical
-        timestamptz meta_last_modified
-        timestamptz created_at
-        timestamptz updated_at
-    }
-
-    cv_basics {
-        uuid cv_id PK
         text name
         text label
         text image
@@ -73,9 +62,14 @@ erDiagram
         text url
         text summary
         jsonb location
+        text meta_version
+        text meta_canonical
+        timestamptz meta_last_modified
+        timestamptz created_at
+        timestamptz updated_at
     }
 
-    cv_basics_profile {
+    cv_profile {
         uuid id PK
         uuid cv_id FK
         int sort
@@ -202,32 +196,33 @@ erDiagram
 
 ### Table Dictionary
 
-| Table               | Cardinality    | Order column   | `jsonb` string lists              | Notes                                                                                     |
-| ------------------- | -------------- | -------------- | --------------------------------- | ----------------------------------------------------------------------------------------- |
-| `cv`                | 1 per document | —              | —                                 | Header row; holds `title` and flattened `meta_*` columns; `data` dropped after migration  |
-| `cv_basics`         | 0–1 per CV     | —              | `location`                        | Singleton; no ordering needed; `location` jsonb holds JSON Resume `basics.location` shape |
-| `cv_basics_profile` | 0–N            | `sort`         | —                                 | Manual order; auto-assigned on create                                                     |
-| `cv_work`           | 0–N            | `start_date`   | `highlights`                      | List by `start_date DESC`, then `end_date DESC`, then `id ASC`                            |
-| `cv_volunteer`      | 0–N            | `start_date`   | `highlights`                      | Same date ordering as work                                                                |
-| `cv_education`      | 0–N            | `start_date`   | `courses`                         | Same date ordering as work                                                                |
-| `cv_award`          | 0–N            | `date`         | —                                 | List by `date DESC`, then `id ASC`                                                        |
-| `cv_certificate`    | 0–N            | `date`         | —                                 | List by `date DESC`, then `id ASC`                                                        |
-| `cv_publication`    | 0–N            | `release_date` | —                                 | List by `release_date DESC`, then `id ASC`                                                |
-| `cv_skill`          | 0–N            | `sort`         | `keywords`                        | Manual order; auto-assigned on create                                                     |
-| `cv_language`       | 0–N            | `sort`         | —                                 | Manual order; auto-assigned on create                                                     |
-| `cv_interest`       | 0–N            | `sort`         | `keywords`                        | Manual order; auto-assigned on create                                                     |
-| `cv_reference`      | 0–N            | `sort`         | —                                 | Manual order; column `reference` holds the quote text                                     |
-| `cv_project`        | 0–N            | `start_date`   | `highlights`, `keywords`, `roles` | List by `start_date DESC`, then `end_date DESC`, then `id ASC`                            |
+| Table            | Cardinality    | Order column   | `jsonb` string lists              | Notes                                                                                                                                |
+| ---------------- | -------------- | -------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `cv`             | 1 per document | —              | `location`                        | Header row; holds JSON Resume `basics` scalars, `location` jsonb, and flattened `meta_*`; `data` and `title` dropped after migration |
+| `cv_profile`     | 0–N            | `sort`         | —                                 | JSON Resume `basics.profiles[]`; manual order; auto-assigned on create                                                               |
+| `cv_work`        | 0–N            | `start_date`   | `highlights`                      | List by `start_date DESC`, then `end_date DESC`, then `id ASC`                                                                       |
+| `cv_volunteer`   | 0–N            | `start_date`   | `highlights`                      | Same date ordering as work                                                                                                           |
+| `cv_education`   | 0–N            | `start_date`   | `courses`                         | Same date ordering as work                                                                                                           |
+| `cv_award`       | 0–N            | `date`         | —                                 | List by `date DESC`, then `id ASC`                                                                                                   |
+| `cv_certificate` | 0–N            | `date`         | —                                 | List by `date DESC`, then `id ASC`                                                                                                   |
+| `cv_publication` | 0–N            | `release_date` | —                                 | List by `release_date DESC`, then `id ASC`                                                                                           |
+| `cv_skill`       | 0–N            | `sort`         | `keywords`                        | Manual order; auto-assigned on create                                                                                                |
+| `cv_language`    | 0–N            | `sort`         | —                                 | Manual order; auto-assigned on create                                                                                                |
+| `cv_interest`    | 0–N            | `sort`         | `keywords`                        | Manual order; auto-assigned on create                                                                                                |
+| `cv_reference`   | 0–N            | `sort`         | —                                 | Manual order; column `reference` holds the quote text                                                                                |
+| `cv_project`     | 0–N            | `start_date`   | `highlights`, `keywords`, `roles` | List by `start_date DESC`, then `end_date DESC`, then `id ASC`                                                                       |
 
 **Indexes:** `(cv_id, sort)` on the five `sort`-backed tables; `(cv_id, start_date)` or `(cv_id, date)` / `(cv_id, release_date)` on date-primary tables as appropriate; `(user_id, updated_at desc)` remains on `cv`. **RLS:** each child table policy joins to `cv` and checks `cv.user_id = auth.uid()`.
 
-**Default `jsonb`:** string-list columns default to `'[]'::jsonb`; `cv_basics.location` defaults to `'{}'::jsonb`; never `null` in application code.
+**Computed `title`:** The API derives display title from `cv.name` and `cv.label` via `deriveCvTitleFromBasics` at response time. It is not stored in the database.
+
+**Default `jsonb`:** string-list columns default to `'[]'::jsonb`; `cv.location` defaults to `'{}'::jsonb`; never `null` in application code.
 
 ## Decisions
 
 ### 1. Normalized tables instead of JSONB document blob
 
-**Choice:** One Postgres table per JSON Resume section (plus basics split into singleton row with nested `location` jsonb + ordered profiles table).
+**Choice:** One Postgres table per JSON Resume array section, with `basics` scalar fields and nested `location` jsonb on the `cv` row (1:1 with the document) plus an ordered `cv_profile` table for `basics.profiles[]`.
 
 **Rationale:** Section-scoped SELECT/INSERT/UPDATE/DELETE; smaller write payloads; manual reorder for non-date sections only touches `sort` values; clearer query plans for list endpoints.
 
@@ -238,7 +233,7 @@ erDiagram
 
 ### 2. Two ordering strategies: date fields vs `sort` column
 
-**Choice:** Only `cv_basics_profile`, `cv_skill`, `cv_language`, `cv_interest`, and `cv_reference` carry a `sort int not null` column. On create, the service auto-assigns `sort = max(sort) + 1` within the same `cv_id` (starting at 0 when the section is empty). List queries for those tables use `ORDER BY sort ASC, id ASC`.
+**Choice:** Only `cv_profile`, `cv_skill`, `cv_language`, `cv_interest`, and `cv_reference` carry a `sort int not null` column. On create, the service auto-assigns `sort = max(sort) + 1` within the same `cv_id` (starting at 0 when the section is empty). List queries for those tables use `ORDER BY sort ASC, id ASC`.
 
 Date-primary tables (`cv_work`, `cv_volunteer`, `cv_education`, `cv_project`) list by `start_date DESC, end_date DESC NULLS FIRST, id ASC`. `cv_award` and `cv_certificate` list by `date DESC, id ASC`. `cv_publication` lists by `release_date DESC, id ASC`. Those tables have no `sort` column.
 
@@ -263,7 +258,7 @@ Public REST paths remain `/cv/:cvId/work/:index` where `index` is the zero-based
 
 ### 3. String lists as `jsonb`, not child tables
 
-**Choice:** `highlights`, `courses`, `keywords`, and `roles` stored as `jsonb` string arrays on the parent row. `basics.location` stored as a `jsonb` object on `cv_basics`, matching JSON Resume shape when assembled.
+**Choice:** `highlights`, `courses`, `keywords`, and `roles` stored as `jsonb` string arrays on the parent row. `basics.location` stored as a `jsonb` object on `cv`, matching JSON Resume shape when assembled.
 
 **Rationale:** User requirement; avoids join explosion for bullet lists; TagsInput already edits arrays on parent save; nested highlight/course CRUD routes become in-row array mutations (same API semantics).
 
@@ -277,7 +272,7 @@ Public REST paths remain `/cv/:cvId/work/:index` where `index` is the zero-based
 
 **Choice:** Add `GET /cv/:cvId/work`, `GET /cv/:cvId/skills`, etc., returning ordered section arrays. Keep `GET /cv/:id` assembling full document for dashboard list preview and export.
 
-**Rationale:** Editor tabs load one section; list view may still need title + basics only (future `GET /cv/:id/summary` optional).
+**Rationale:** Editor tabs load one section; list view can read `name`, `label`, and timestamps directly from `cv` without joining a separate basics table (future `GET /cv/:id/summary` optional).
 
 **Alternatives considered:**
 
@@ -297,9 +292,20 @@ Public REST paths remain `/cv/:cvId/work/:index` where `index` is the zero-based
 
 ### 8. Migration: backfill then drop `data`
 
-**Choice:** Migration script reads each `cv.data`, disassembles into normalized rows in a transaction, verifies assembler round-trip equality (ignoring meta), then a follow-up migration drops `cv.data`.
+**Choice:** Migration script reads each `cv.data`, disassembles into normalized rows in a transaction, verifies assembler round-trip equality (ignoring meta), then a follow-up migration drops `cv.data` and `cv.title`.
 
 **Rationale:** Clean cutover; rollback window keeps `data` column until verification passes in staging.
+
+### 10. Basics on `cv` row; computed `title`
+
+**Choice:** Merge JSON Resume `basics` scalar fields and `location` jsonb onto the `cv` row instead of a separate `cv_basics` table. Rename `basics.profiles[]` storage to `cv_profile`. Drop the persisted `cv.title` column; API responses compute `title` via `deriveCvTitleFromBasics(name, label)` at read/mutation response time.
+
+**Rationale:** `cv` and basics are always 1:1; CV creation in the UI always includes basic info on the same row. Eliminating `cv_basics` removes an extra join for list views and basics PATCH. Dropping persisted `title` avoids redundant storage and sync logic — title is fully determined by `name` and `label` already on `cv`.
+
+**Alternatives considered:**
+
+- Keep `cv_basics` as a separate table — rejected; no cardinality benefit over columns on `cv`.
+- Keep persisted `title` — rejected; duplicates derivable data and requires write-path sync on every basics patch.
 
 ## Risks / Trade-offs
 
@@ -319,11 +325,11 @@ Public REST paths remain `/cv/:cvId/work/:index` where `index` is the zero-based
 3. Implement dual-write or backfill job: populate normalized tables from existing `cv.data`.
 4. Switch `CvService` / `CvItemService` reads and writes to normalized tables.
 5. Verify e2e suite and sample CV round-trip.
-6. Drop `cv.data` column in final migration.
+6. Drop `cv.data` and `cv.title` columns in final migration.
 7. Rollback: re-enable JSONB reads from backup column if dual-write period retained; otherwise restore from Supabase backup.
 
 ## Open Questions
 
 - Whether web refactors each editor tab to section GET in the same change or immediately after API ships section routes.
-- Whether `GET /cv` list should return assembled `data` or a slim DTO (title, dates, basics name only) — recommend slim DTO in follow-up to reduce list payload.
+- Whether `GET /cv` list should return assembled `data` or a slim DTO (derived title, dates, `name`/`label` only) — recommend slim DTO in follow-up to reduce list payload.
 - Whether date-primary list order should be ascending (oldest first) instead of descending — current default is most-recent first.

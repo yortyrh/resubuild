@@ -1,18 +1,18 @@
 ## Context
 
-The `normalize-cv-database` change introduces normalized section tables where only non-date multi-valued entities carry a `sort` column: `cv_basics_profile`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`. New rows receive auto-assigned `sort = max(sort) + 1`. List queries order by `sort ASC, id ASC`. Reorder API endpoints (`PUT /cv/:cvId/{section}/reorder`) persist manual order updates server-side.
+The `normalize-cv-database` change introduces normalized section tables where only non-date multi-valued entities carry a `sort` column: `cv_profile`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`. New rows receive auto-assigned `sort = max(sort) + 1`. List queries order by `sort ASC, id ASC`. Reorder API endpoints (`PUT /cv/:cvId/{section}/reorder`) persist manual order updates server-side.
 
 The editor currently renders sections via `ManagedArraySection` with create/edit/delete only — no reorder affordance.
 
 Five sections lack reliable date-based ordering for authors:
 
-| Section         | Table               | Typical sort intent         |
-| --------------- | ------------------- | --------------------------- |
-| Social profiles | `cv_basics_profile` | Prominence (LinkedIn first) |
-| Skills          | `cv_skill`          | Priority / grouping         |
-| Languages       | `cv_language`       | Fluency prominence          |
-| Interests       | `cv_interest`       | Personal emphasis           |
-| References      | `cv_reference`      | Preferred contact order     |
+| Section         | Table          | Typical sort intent         |
+| --------------- | -------------- | --------------------------- |
+| Social profiles | `cv_profile`   | Prominence (LinkedIn first) |
+| Skills          | `cv_skill`     | Priority / grouping         |
+| Languages       | `cv_language`  | Fluency prominence          |
+| Interests       | `cv_interest`  | Personal emphasis           |
+| References      | `cv_reference` | Preferred contact order     |
 
 Date-primary sections (Work, Education, etc.) are explicitly **out of scope**; they order by date fields from the normalization change.
 
