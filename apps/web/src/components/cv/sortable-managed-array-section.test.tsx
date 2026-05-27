@@ -88,7 +88,7 @@ describe('SortableManagedArraySection', () => {
     ]);
 
     await waitFor(() => {
-      expect(reorderCvSection).toHaveBeenCalledWith('cv-1', 'skills', ['id-b', 'id-a'], undefined);
+      expect(reorderCvSection).toHaveBeenCalledWith('cv-1', 'skills', ['id-b', 'id-a']);
     });
 
     await waitFor(() => expect(onItemsChange).toHaveBeenCalledTimes(1));

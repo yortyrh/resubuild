@@ -18,6 +18,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { loadFixture, mimeForFile, SAMPLES_DIR, STATE_PATH } from './lib/e2e-fixture-lib.mjs';
 import { ensureLocalCredentials, printLocalCredentials } from './lib/local-credentials.mjs';
+import { ensureMediaThumbnail } from './lib/media-thumbnail.mjs';
 import {
   assignProfilePhoto,
   clearUserSeedData,
@@ -112,6 +113,7 @@ async function seedFixtureAccount(admin, config, fixture, credentials, label) {
     }
 
     await assignProfilePhoto(admin, cv.id, user.id, targetMedia.url, config.appUrl);
+    await ensureMediaThumbnail(admin, config.mediaBucket, targetMedia.id);
     profilePhotoAssignments.push({
       cvId: cv.id,
       cvSourceFile: cv.sourceFile,

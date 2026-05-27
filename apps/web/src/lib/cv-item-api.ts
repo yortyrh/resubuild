@@ -7,7 +7,6 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 export interface CvItemMutationResponse {
   item?: unknown;
   items?: unknown[];
-  meta?: { version?: string };
 }
 
 export class CvItemApiError extends Error {
@@ -117,18 +116,9 @@ export const cvLanguageApi = arrayCrud('languages', 'language');
 export const cvInterestApi = arrayCrud('interests', 'interest');
 export const cvReferenceApi = arrayCrud('references', 'reference');
 
-export function reorderCvSection(
-  cvId: string,
-  section: ReorderableCvSection,
-  order: string[],
-  version?: string | null,
-) {
-  const body: { order: string[]; version?: string } = { order };
-  if (version) {
-    body.version = version;
-  }
+export function reorderCvSection(cvId: string, section: ReorderableCvSection, order: string[]) {
   return itemFetch<CvItemMutationResponse>(`/cv/${cvId}/${REORDER_SEGMENT[section]}/reorder`, {
     method: 'PUT',
-    body: JSON.stringify(body),
+    body: JSON.stringify({ order }),
   });
 }

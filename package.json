@@ -28,6 +28,7 @@
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "puppeteer": "^25.1.0",
+    "sharp": "^0.34.5",
     "turbo": "^2.5.4"
   },
   "packageManager": "pnpm@10.26.0",

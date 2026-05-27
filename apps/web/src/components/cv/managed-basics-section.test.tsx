@@ -11,6 +11,8 @@ vi.mock('@/lib/api', () => ({
   deleteMedia: vi.fn(),
   getMediaMeta: vi.fn(),
   parseMediaIdFromImageUrl: vi.fn(() => null),
+  profilePhotoPreviewUrl: (url: string | undefined) => url,
+  originalUrlForMediaId: (id: string) => `http://localhost:3001/media/${id}/original`,
   patchMediaCrop: vi.fn(),
   uploadResumeMedia: vi.fn(),
 }));

@@ -175,7 +175,7 @@ export async function ensureDeveloperUser(admin, user) {
 export async function clearUserSeedData(admin, userId, bucket) {
   const { data: mediaRows, error: mediaSelectError } = await admin
     .from('media')
-    .select('storage_path, cropped_storage_path')
+    .select('storage_path, cropped_storage_path, thumbnail_storage_path')
     .eq('user_id', userId);
 
   if (mediaSelectError) {
@@ -186,6 +186,7 @@ export async function clearUserSeedData(admin, userId, bucket) {
   for (const row of mediaRows ?? []) {
     if (row.storage_path) storagePaths.push(row.storage_path);
     if (row.cropped_storage_path) storagePaths.push(row.cropped_storage_path);
+    if (row.thumbnail_storage_path) storagePaths.push(row.thumbnail_storage_path);
   }
 
   if (storagePaths.length > 0) {

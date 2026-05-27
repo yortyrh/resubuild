@@ -14,8 +14,10 @@ import {
   type CropRect,
   deleteMedia,
   getMediaMeta,
+  originalUrlForMediaId,
   parseMediaIdFromImageUrl,
   patchMediaCrop,
+  profilePhotoPreviewUrl,
   uploadResumeMedia,
 } from '@/lib/api';
 import { patchCvBasics } from '@/lib/cv-item-api';
@@ -126,7 +128,7 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
       const meta = await getMediaMeta(mediaId);
       setCropMediaId(mediaId);
       setCropInitial(meta.crop);
-      setCropImageUrl(basics.image!);
+      setCropImageUrl(originalUrlForMediaId(mediaId));
       setCropDialogOpen(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to load crop data');
@@ -198,7 +200,7 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
         title={
           <div className="flex gap-4">
             <ProfilePhotoThumbnail
-              src={basics.image || undefined}
+              src={profilePhotoPreviewUrl(basics.image)}
               isOwnedMedia={isOwnedMedia}
               onUpload={handleUploadClick}
               onEditCrop={isOwnedMedia ? handleEditCrop : undefined}

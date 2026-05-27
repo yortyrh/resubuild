@@ -76,6 +76,32 @@ export class MediaController {
   }
 
   /**
+   * Public thumbnail read (no Bearer). Editor preview only; ≤150×150 aspect-preserving WebP.
+   */
+  @Get(':id/thumbnail')
+  @Header('Cache-Control', 'public, max-age=86400, immutable')
+  async streamThumbnail(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
+    const { buffer, contentType } = await this.mediaService.loadThumbnailPayload(id);
+    return new StreamableFile(buffer, {
+      type: contentType,
+      disposition: 'inline',
+    });
+  }
+
+  /**
+   * Public original upload (no Bearer). Used by the crop editor; crop rectangles are in original pixel space.
+   */
+  @Get(':id/original')
+  @Header('Cache-Control', 'public, max-age=86400, immutable')
+  async streamOriginal(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
+    const { buffer, contentType } = await this.mediaService.loadOriginalPayload(id);
+    return new StreamableFile(buffer, {
+      type: contentType,
+      disposition: 'inline',
+    });
+  }
+
+  /**
    * Public read by opaque id (no Bearer). Suitable for `<img src>` in Markdown.
    * Security: treat id as a capability token; do not publish ids you want private.
    */

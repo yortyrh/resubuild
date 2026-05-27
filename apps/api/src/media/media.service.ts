@@ -12,6 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import type { CropRect, MediaMetaDto } from './media-crop.dto';
+import { buildThumbnailBuffer, thumbnailStoragePathFor } from './media-thumbnail.util';
 import {
   RESUME_UPLOAD_MAX_BYTES_DEFAULT,
   RESUME_UPLOAD_MIME_EXTENSIONS,
@@ -151,7 +152,10 @@ export class MediaService implements OnModuleInit {
     };
   }
 
-  /** Loads bytes + content type for GET /media/:id. */
+  /**
+   * Display bytes for GET /media/:id — cropped derivative when present, else the original upload.
+   * Never reads or writes `storage_path` except via {@link loadOriginalPayload}.
+   */
   async loadMediaPayload(mediaId: string): Promise<{ buffer: Buffer; contentType: string }> {
     const bucket = this.configService.get<string>('MEDIA_BUCKET');
     if (!bucket) {
@@ -162,7 +166,7 @@ export class MediaService implements OnModuleInit {
 
     const { data: row, error: rowError } = await supabase
       .from('media')
-      .select('storage_path, cropped_storage_path, content_type')
+      .select('storage_path, cropped_storage_path, content_type, thumbnail_storage_path')
       .eq('id', mediaId)
       .maybeSingle();
 
@@ -194,6 +198,45 @@ export class MediaService implements OnModuleInit {
         : 'application/octet-stream';
 
     return { buffer: Buffer.from(ab), contentType };
+  }
+
+  /** Original upload bytes for GET /media/:id/original (crop editor source of truth). */
+  async loadOriginalPayload(mediaId: string): Promise<{ buffer: Buffer; contentType: string }> {
+    const bucket = this.configService.get<string>('MEDIA_BUCKET');
+    if (!bucket) {
+      throw new ServiceUnavailableException('MEDIA_BUCKET is not set');
+    }
+
+    const supabase = this.ensureClient();
+
+    const { data: row, error: rowError } = await supabase
+      .from('media')
+      .select('storage_path, content_type')
+      .eq('id', mediaId)
+      .maybeSingle();
+
+    if (rowError) {
+      this.logger.error(`Media lookup failed: ${rowError.message}`);
+      throw new BadRequestException(rowError.message);
+    }
+    if (!row?.storage_path) {
+      throw new NotFoundException('Media not found');
+    }
+
+    const { data: blob, error: downloadError } = await supabase.storage
+      .from(bucket)
+      .download(row.storage_path);
+
+    if (downloadError || !blob) {
+      throw new NotFoundException('Media file unavailable');
+    }
+
+    const contentType =
+      typeof row.content_type === 'string' && row.content_type.trim()
+        ? row.content_type
+        : 'application/octet-stream';
+
+    return { buffer: Buffer.from(await blob.arrayBuffer()), contentType };
   }
 
   /**
@@ -273,6 +316,8 @@ export class MediaService implements OnModuleInit {
       throw new BadRequestException(updateErr.message);
     }
 
+    await this.ensureThumbnail(mediaId);
+
     return {
       id: mediaId,
       url: this.viewerUrlForId(mediaId),
@@ -280,7 +325,110 @@ export class MediaService implements OnModuleInit {
     };
   }
 
-  /** Delete a media entry and both storage objects (original + cropped). Owner-only. */
+  /**
+   * Generate or refresh ≤150×150 WebP preview in `thumbnail_storage_path` only.
+   * Does not modify `storage_path` (original) or `cropped_storage_path`.
+   */
+  async ensureThumbnail(mediaId: string): Promise<void> {
+    const bucket = this.configService.get<string>('MEDIA_BUCKET');
+    if (!bucket) {
+      throw new ServiceUnavailableException('MEDIA_BUCKET is not set');
+    }
+
+    const supabase = this.ensureClient();
+
+    const { data: row, error: rowError } = await supabase
+      .from('media')
+      .select('user_id, storage_path, cropped_storage_path, thumbnail_storage_path')
+      .eq('id', mediaId)
+      .maybeSingle();
+
+    if (rowError) {
+      this.logger.error(`Media lookup failed: ${rowError.message}`);
+      throw new BadRequestException(rowError.message);
+    }
+    if (!row?.storage_path || !row.user_id) {
+      throw new NotFoundException('Media not found');
+    }
+
+    const servePath = row.cropped_storage_path || row.storage_path;
+    const { data: blob, error: downloadError } = await supabase.storage
+      .from(bucket)
+      .download(servePath);
+
+    if (downloadError || !blob) {
+      throw new NotFoundException('Media file unavailable');
+    }
+
+    const sourceBuffer = Buffer.from(await blob.arrayBuffer());
+    const thumbBuffer = await buildThumbnailBuffer(sourceBuffer);
+    const thumbPath = thumbnailStoragePathFor(row.user_id, mediaId);
+
+    if (row.thumbnail_storage_path) {
+      await supabase.storage
+        .from(bucket)
+        .remove([row.thumbnail_storage_path])
+        .catch(() => {});
+    }
+
+    const { error: uploadErr } = await supabase.storage
+      .from(bucket)
+      .upload(thumbPath, thumbBuffer, {
+        contentType: 'image/webp',
+        upsert: true,
+      });
+
+    if (uploadErr) {
+      this.logger.error(`Thumbnail upload failed: ${uploadErr.message}`);
+      throw new BadRequestException(uploadErr.message);
+    }
+
+    const { error: updateErr } = await supabase
+      .from('media')
+      .update({ thumbnail_storage_path: thumbPath })
+      .eq('id', mediaId);
+
+    if (updateErr) {
+      this.logger.error(`Thumbnail registry update failed: ${updateErr.message}`);
+      throw new BadRequestException(updateErr.message);
+    }
+  }
+
+  /** Loads thumbnail bytes for GET /media/:id/thumbnail. */
+  async loadThumbnailPayload(mediaId: string): Promise<{ buffer: Buffer; contentType: string }> {
+    const bucket = this.configService.get<string>('MEDIA_BUCKET');
+    if (!bucket) {
+      throw new ServiceUnavailableException('MEDIA_BUCKET is not set');
+    }
+
+    const supabase = this.ensureClient();
+
+    const { data: row, error: rowError } = await supabase
+      .from('media')
+      .select('thumbnail_storage_path')
+      .eq('id', mediaId)
+      .maybeSingle();
+
+    if (rowError) {
+      this.logger.error(`Media lookup failed: ${rowError.message}`);
+      throw new BadRequestException(rowError.message);
+    }
+    if (!row?.thumbnail_storage_path) {
+      throw new NotFoundException('Media thumbnail not found');
+    }
+
+    const { data: blob, error: downloadError } = await supabase.storage
+      .from(bucket)
+      .download(row.thumbnail_storage_path);
+
+    if (downloadError || !blob) {
+      throw new NotFoundException('Media thumbnail unavailable');
+    }
+
+    return { buffer: Buffer.from(await blob.arrayBuffer()), contentType: 'image/webp' };
+  }
+
+  /** Delete a media entry and all storage objects (original, cropped, thumbnail). Owner-only. */
   async deleteMedia(userId: string, mediaId: string): Promise<void> {
     const bucket = this.configService.get<string>('MEDIA_BUCKET');
     if (!bucket) {
@@ -291,7 +439,7 @@ export class MediaService implements OnModuleInit {
 
     const { data: row, error: rowError } = await supabase
       .from('media')
-      .select('user_id, storage_path, cropped_storage_path')
+      .select('user_id, storage_path, cropped_storage_path, thumbnail_storage_path')
       .eq('id', mediaId)
       .maybeSingle();
 
@@ -309,6 +457,9 @@ export class MediaService implements OnModuleInit {
     const pathsToRemove = [row.storage_path];
     if (row.cropped_storage_path) {
       pathsToRemove.push(row.cropped_storage_path);
+    }
+    if (row.thumbnail_storage_path) {
+      pathsToRemove.push(row.thumbnail_storage_path);
     }
 
     await supabase.storage

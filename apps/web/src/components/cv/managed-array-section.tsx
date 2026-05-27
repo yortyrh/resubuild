@@ -36,7 +36,6 @@ import {
 import { useCvItemMutation } from '@/components/cv/use-cv-item-mutation';
 import { Button } from '@/components/ui/button';
 import {
-  CvItemApiError,
   type CvItemMutationResponse,
   type ReorderableCvSection,
   reorderCvSection,
@@ -57,8 +56,6 @@ import { sectionItemsNeedHydration } from '@/lib/cv-section-refetch';
 interface SectionReorderConfig {
   section: ReorderableCvSection;
   sectionLabel: string;
-  version?: string | null;
-  onVersionChange?: (version: string | undefined) => void;
 }
 
 function SortableItemShell({
@@ -311,20 +308,10 @@ export function ManagedArraySection<T extends WithItemId>({
       const seq = ++reorderSeqRef.current;
 
       try {
-        const result = await reorderCvSection(
-          cvId,
-          reorder.section,
-          order,
-          reorder.version ?? undefined,
-        );
+        const result = await reorderCvSection(cvId, reorder.section, order);
 
         if (seq !== reorderSeqRef.current) {
           return;
-        }
-
-        const nextVersion = result.meta?.version;
-        if (nextVersion && reorder.onVersionChange) {
-          reorder.onVersionChange(nextVersion);
         }
 
         if (!result.items) {
@@ -338,24 +325,6 @@ export function ManagedArraySection<T extends WithItemId>({
         }
       } catch (err) {
         if (seq !== reorderSeqRef.current) {
-          return;
-        }
-
-        if (err instanceof CvItemApiError && err.status === 409) {
-          try {
-            const refetched = await refetchItems();
-            onItemsChange(refetched);
-            setError(
-              'This CV was updated elsewhere. The list was refreshed — try reordering again.',
-            );
-          } catch (refetchErr) {
-            onItemsChange(snapshotItems);
-            setError(
-              refetchErr instanceof Error
-                ? refetchErr.message
-                : 'Conflict while reordering. Reload the page and try again.',
-            );
-          }
           return;
         }
 

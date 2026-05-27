@@ -5,9 +5,15 @@ jest.mock('node:crypto', () => ({
 }));
 jest.mock('sharp', () => {
   const extractFn = jest.fn().mockReturnThis();
+  const resizeFn = jest.fn().mockReturnThis();
   const webpFn = jest.fn().mockReturnThis();
   const toBufferFn = jest.fn().mockResolvedValue(Buffer.from([99]));
-  const mockSharp = jest.fn(() => ({ extract: extractFn, webp: webpFn, toBuffer: toBufferFn }));
+  const mockSharp = jest.fn(() => ({
+    extract: extractFn,
+    resize: resizeFn,
+    webp: webpFn,
+    toBuffer: toBufferFn,
+  }));
   return { __esModule: true, default: mockSharp };
 });
 
@@ -648,6 +654,25 @@ describe('MediaService', () => {
       await moduleRef.close();
     });
 
+    it('removes thumbnail object when present', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({
+        data: {
+          user_id: 'user-123',
+          storage_path: `user-123/${FIXED_MEDIA_ID}.png`,
+          cropped_storage_path: null,
+          thumbnail_storage_path: `user-123/${FIXED_MEDIA_ID}_thumb.webp`,
+        },
+        error: null,
+      });
+      await service.deleteMedia('user-123', FIXED_MEDIA_ID);
+      expect(removeFn).toHaveBeenCalledWith([
+        `user-123/${FIXED_MEDIA_ID}.png`,
+        `user-123/${FIXED_MEDIA_ID}_thumb.webp`,
+      ]);
+      await moduleRef.close();
+    });
+
     it('rejects non-owner delete', async () => {
       const { service, moduleRef } = await bootstrapModule(true);
       await expect(service.deleteMedia('other-user', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
@@ -718,6 +743,122 @@ describe('MediaService', () => {
       await expect(
         moduleRef.get(MediaService).deleteMedia('user-123', FIXED_MEDIA_ID),
       ).rejects.toBeInstanceOf(ServiceUnavailableException);
+      await moduleRef.close();
+    });
+  });
+
+  describe('loadOriginalPayload', () => {
+    it('always downloads storage_path even when cropped exists', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({
+        data: {
+          storage_path: `user-123/${FIXED_MEDIA_ID}.png`,
+          content_type: 'image/png',
+        },
+        error: null,
+      });
+      const payload = await service.loadOriginalPayload(FIXED_MEDIA_ID);
+      expect(payload.contentType).toBe('image/png');
+      expect(downloadFn).toHaveBeenCalled();
+      await moduleRef.close();
+    });
+
+    it('throws NotFound when original object is missing', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({ data: null, error: null });
+      await expect(service.loadOriginalPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws NotFound when original download fails', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      downloadFn.mockResolvedValueOnce({ data: null, error: { message: 'missing' } });
+      await expect(service.loadOriginalPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      await moduleRef.close();
+    });
+  });
+
+  describe('ensureThumbnail', () => {
+    it('uploads thumbnail and updates registry without touching original path', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      await service.ensureThumbnail(FIXED_MEDIA_ID);
+      expect(uploadFn).toHaveBeenCalledWith(
+        `user-123/${FIXED_MEDIA_ID}_thumb.webp`,
+        expect.any(Buffer),
+        expect.objectContaining({ contentType: 'image/webp', upsert: true }),
+      );
+      const updatePayload = updateFn.mock.calls.find((call) =>
+        call[0]?.thumbnail_storage_path?.includes('_thumb.webp'),
+      );
+      expect(updatePayload).toBeDefined();
+      expect(updatePayload?.[0]).not.toHaveProperty('storage_path');
+      await moduleRef.close();
+    });
+
+    it('throws NotFound when media row is missing', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({ data: null, error: null });
+      await expect(service.ensureThumbnail(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws BadRequest when thumbnail upload fails', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      uploadFn.mockResolvedValueOnce({ error: { message: 'thumb upload failed' } });
+      await expect(service.ensureThumbnail(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws NotFound when source bytes are unavailable', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      downloadFn.mockResolvedValueOnce({ data: null, error: { message: 'missing' } });
+      await expect(service.ensureThumbnail(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      await moduleRef.close();
+    });
+  });
+
+  describe('loadThumbnailPayload', () => {
+    it('returns thumbnail bytes when path is set', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({
+        data: { thumbnail_storage_path: `user-123/${FIXED_MEDIA_ID}_thumb.webp` },
+        error: null,
+      });
+      const payload = await service.loadThumbnailPayload(FIXED_MEDIA_ID);
+      expect(payload.contentType).toBe('image/webp');
+      expect(payload.buffer).toEqual(Buffer.from([7, 8]));
+      await moduleRef.close();
+    });
+
+    it('throws NotFound when thumbnail path is missing', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({ data: { thumbnail_storage_path: null }, error: null });
+      await expect(service.loadThumbnailPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws NotFound when thumbnail download fails', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({
+        data: { thumbnail_storage_path: `user-123/${FIXED_MEDIA_ID}_thumb.webp` },
+        error: null,
+      });
+      downloadFn.mockResolvedValueOnce({ data: null, error: { message: 'gone' } });
+      await expect(service.loadThumbnailPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
       await moduleRef.close();
     });
   });

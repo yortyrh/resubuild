@@ -7,6 +7,8 @@ import {
   sanitizeResumeItemPayload,
 } from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import { MediaService } from '../media/media.service';
+import { parseMediaIdFromViewerUrl } from '../media/media-url.util';
 import { CvService } from './cv.service';
 import type { CvItemMutationResponse } from './cv-item.types';
 import { CvNormalizedRepository } from './cv-normalized.repository';
@@ -30,6 +32,7 @@ export class CvItemService {
   constructor(
     private readonly cvService: CvService,
     private readonly normalizedRepo: CvNormalizedRepository,
+    private readonly mediaService: MediaService,
   ) {}
 
   private async requireSectionRow(
@@ -69,6 +72,10 @@ export class CvItemService {
   ): Promise<CvItemMutationResponse> {
     return this.mutateSection(user, cvId, async (supabase) => {
       const header = await this.normalizedRepo.updateBasicsHeader(supabase, cvId, basics);
+      const mediaId = parseMediaIdFromViewerUrl(basics.image);
+      if (mediaId) {
+        await this.mediaService.ensureThumbnail(mediaId);
+      }
       const item = headerToSlimCvData(header).basics ?? {};
 
       return { item: item as Record<string, unknown> };

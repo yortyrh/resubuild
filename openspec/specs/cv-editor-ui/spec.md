@@ -445,19 +445,25 @@ In Basics **view** mode (non-editing), the editor SHALL render email, phone, web
 
 ### Requirement: Basics view mode SHALL display profile photo beside identity block
 
-When `basics.image` is set, Basics view mode SHALL render a profile photo thumbnail to the **left** of the name/label and contact line within the row title area. The raw photo URL MUST NOT appear as body text below the summary.
+When `basics.image` is set, Basics view mode SHALL render a profile photo thumbnail to the **left** of the name/label and contact line within the row title area. The raw photo URL MUST NOT appear as body text below the summary. For owned API media URLs, the thumbnail `<img>` src SHALL be the public thumbnail URL (`/media/{id}/thumbnail`), not the full display URL. The crop dialog and persisted `basics.image` SHALL continue to use the full `/media/{id}` URL.
 
 #### Scenario: Photo shown with name and contact
 
-- **WHEN** a user views Basics with `basics.image` populated and the image loads successfully
-- **THEN** a cropped-to-fit square thumbnail SHALL appear left of the name (`text-xl`) and contact paragraph
-- **AND** the body SHALL NOT include a `Photo: {url}` text line
+- **WHEN** a user views Basics with `basics.image` pointing at owned media and the thumbnail loads successfully
+- **THEN** a preview at most 150×150 CSS pixels (aspect ratio preserved) SHALL appear left of the name (`text-xl`) and contact paragraph
+- **AND** the image request SHALL target the thumbnail endpoint, not the full media stream
 
 #### Scenario: No photo configured
 
 - **WHEN** a user views Basics with no `basics.image`
 - **THEN** no thumbnail SHALL render
 - **AND** an upload affordance SHALL remain available in view mode
+
+#### Scenario: External image URL
+
+- **WHEN** `basics.image` is an external URL (not owned API media)
+- **THEN** the thumbnail MAY use that URL directly with the same max 150×150 display constraint
+- **AND** no thumbnail endpoint is required
 
 ### Requirement: Basics profile photo SHALL indicate load failures
 
@@ -787,12 +793,3 @@ Each reorderable row SHALL expose move-up and move-down actions that reorder by 
 - **WHEN** a user activates move-up on the second reference entry
 - **THEN** that entry SHALL move to first position in the UI immediately
 - **AND** SHALL persist after the API succeeds
-
-### Requirement: Failed reorder SHALL preserve prior order in the UI
-
-When a reorder API call fails (including 409), the UI SHALL revert or reload to the last known server order and SHALL surface an error.
-
-#### Scenario: Conflict during reorder
-
-- **WHEN** the reorder API returns 409
-- **THEN** the client SHALL show the concurrency message and SHALL reload the section list from the server

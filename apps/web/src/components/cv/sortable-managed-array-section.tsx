@@ -11,15 +11,11 @@ export type SortableManagedArraySectionProps<T extends WithItemId> = ManagedArra
   reorderSection: ReorderableCvSection;
   /** Accessible section name, e.g. "skill" for move-up labels. */
   reorderSectionLabel: string;
-  metaVersion?: string | null;
-  onMetaVersionChange?: (version: string | undefined) => void;
 };
 
 export function SortableManagedArraySection<T extends WithItemId>({
   reorderSection,
   reorderSectionLabel,
-  metaVersion,
-  onMetaVersionChange,
   ...props
 }: SortableManagedArraySectionProps<T>) {
   return (
@@ -28,8 +24,6 @@ export function SortableManagedArraySection<T extends WithItemId>({
       reorder={{
         section: reorderSection,
         sectionLabel: reorderSectionLabel,
-        version: metaVersion,
-        onVersionChange: onMetaVersionChange,
       }}
     />
   );

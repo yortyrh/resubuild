@@ -31,6 +31,9 @@ importers:
       puppeteer:
         specifier: ^25.1.0
         version: 25.1.0
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
       turbo:
         specifier: ^2.5.4
         version: 2.9.14

@@ -4,6 +4,7 @@
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { MediaService } from '../media/media.service';
 import { CvService } from './cv.service';
 import { CvItemService } from './cv-item.service';
 import { CvNormalizedRepository } from './cv-normalized.repository';
@@ -13,6 +14,7 @@ describe('CvItemService', () => {
   let service: CvItemService;
   let cvService: jest.Mocked<Pick<CvService, 'getHeader'>>;
   let normalizedRepo: ReturnType<typeof createMockNormalizedRepo>;
+  let ensureThumbnail: jest.Mock;
 
   const user = { id: 'user-1', email: 'u@test.com', accessToken: 'jwt-access-token' };
   const supabaseStub = {};
@@ -109,14 +111,18 @@ describe('CvItemService', () => {
       mockCvHeader({
         name: (basics.name as string) ?? 'Jane',
         label: (basics.label as string) ?? 'Developer',
+        image: (basics.image as string) ?? null,
       }),
     );
+
+    ensureThumbnail = jest.fn().mockResolvedValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CvItemService,
         { provide: CvService, useValue: cvService },
         { provide: CvNormalizedRepository, useValue: normalizedRepo },
+        { provide: MediaService, useValue: { ensureThumbnail } },
       ],
     }).compile();
 
@@ -231,6 +237,16 @@ describe('CvItemService', () => {
     const result = await service.updateBasics(user, 'cv-1', { name: 'Jane Doe' });
 
     expect(result.item).toMatchObject({ name: 'Jane Doe', label: 'Developer' });
+    expect(ensureThumbnail).not.toHaveBeenCalled();
+  });
+
+  it('regenerates media thumbnail when basics image is owned media URL', async () => {
+    const mediaId = 'aef8297a-2786-4575-9d6c-52d5c93c4c4c';
+    await service.updateBasics(user, 'cv-1', {
+      image: `http://localhost:3001/media/${mediaId}`,
+    });
+
+    expect(ensureThumbnail).toHaveBeenCalledWith(mediaId);
   });
 
   it('creates, updates, and deletes profiles', async () => {

@@ -99,6 +99,16 @@ describe('E2E — CV REST (local Supabase)', () => {
     expect(state.profilePhotoAssignments).toHaveLength(state.cvs.length);
   });
 
+  it('GET /media/:id/thumbnail returns WebP preview for seeded profile photos', async () => {
+    const assignment = state.profilePhotoAssignments[0];
+    const response = await request(app.getHttpServer())
+      .get(`/media/${assignment.mediaId}/thumbnail`)
+      .expect(200);
+
+    expect(response.headers['content-type']).toMatch(/image\/webp/);
+    expect(response.body.length).toBeGreaterThan(0);
+  });
+
   it('POST /cv rejects invalid resume JSON', async () => {
     await request(app.getHttpServer())
       .post('/cv')

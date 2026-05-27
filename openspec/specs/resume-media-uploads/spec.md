@@ -74,18 +74,17 @@ The `public.media` table SHALL include nullable `crop jsonb` (rectangle `{ x, y,
 
 ### Requirement: GET media by id MUST serve cropped bytes when available
 
-`GET /media/:id` SHALL stream bytes from `cropped_storage_path` when set; otherwise SHALL stream from `storage_path`. Content-Type SHALL reflect the served object.
+`GET /media/:id` SHALL stream bytes from `cropped_storage_path` when set; otherwise SHALL stream from `storage_path`. Content-Type SHALL reflect the served object. This route serves the **full** display derivative for `basics.image` and crop editing—not the editor thumbnail.
 
-#### Scenario: Display cropped profile photo
+#### Scenario: Display cropped profile photo at full resolution
 
-- **WHEN** a browser requests `GET /media/{id}` for a row with `cropped_storage_path` populated
-- **THEN** the response body SHALL be the cropped derivative
-- **AND** `Content-Type` SHALL match the cropped object
+- **WHEN** a client loads `basics.image` or the crop dialog preview URL
+- **THEN** `GET /media/:id` SHALL return the cropped (or original) full-resolution bytes
 
-#### Scenario: Uncropped media fallback
+#### Scenario: Thumbnail is separate from display URL
 
-- **WHEN** a browser requests `GET /media/{id}` for a row without `cropped_storage_path`
-- **THEN** the response SHALL serve the original upload from `storage_path`
+- **WHEN** the Basics profile photo thumbnail renders in the editor
+- **THEN** it SHALL use `GET /media/:id/thumbnail`, not `GET /media/:id`
 
 ### Requirement: The API MUST expose authenticated crop update for media
 
@@ -126,3 +125,19 @@ Nest SHALL provide **`GET /media/:id/meta`** (Bearer required, owner-only) retur
 
 - **WHEN** the owner requests metadata for their media id with saved crop
 - **THEN** the response SHALL include the stored crop rectangle
+
+### Requirement: Original upload MUST remain retrievable separately from derivatives
+
+`GET /media/:id/original` SHALL stream bytes from `storage_path` only, regardless of `cropped_storage_path` or `thumbnail_storage_path`. Thumbnail generation SHALL write only to `thumbnail_storage_path` and SHALL NOT modify or replace `storage_path` or `cropped_storage_path`.
+
+#### Scenario: Crop editor loads full upload
+
+- **WHEN** the SPA opens edit-crop for owned media
+- **THEN** the crop dialog image source SHALL be `GET /media/{id}/original`
+- **AND** `GET /media/{id}` MAY continue to serve the cropped display derivative for `basics.image`
+
+#### Scenario: Thumbnail refresh preserves original object
+
+- **WHEN** `ensureThumbnail` runs after basics save or crop
+- **THEN** only `thumbnail_storage_path` SHALL be created or replaced
+- **AND** `storage_path` SHALL remain the unchanged original upload

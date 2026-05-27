@@ -14,6 +14,8 @@ describe('MediaController', () => {
   let controller: MediaController;
   const uploadObject = jest.fn();
   const loadMediaPayload = jest.fn();
+  const loadThumbnailPayload = jest.fn();
+  const loadOriginalPayload = jest.fn();
   const cropMedia = jest.fn();
   const deleteMedia = jest.fn();
   const getMediaMeta = jest.fn();
@@ -21,6 +23,8 @@ describe('MediaController', () => {
   beforeEach(async () => {
     uploadObject.mockReset();
     loadMediaPayload.mockReset();
+    loadThumbnailPayload.mockReset();
+    loadOriginalPayload.mockReset();
     cropMedia.mockReset();
     deleteMedia.mockReset();
     getMediaMeta.mockReset();
@@ -38,7 +42,15 @@ describe('MediaController', () => {
       providers: [
         {
           provide: MediaService,
-          useValue: { uploadObject, loadMediaPayload, cropMedia, deleteMedia, getMediaMeta },
+          useValue: {
+            uploadObject,
+            loadMediaPayload,
+            loadThumbnailPayload,
+            loadOriginalPayload,
+            cropMedia,
+            deleteMedia,
+            getMediaMeta,
+          },
         },
       ],
     })
@@ -127,6 +139,32 @@ describe('MediaController', () => {
 
     await expect(controller.delete(req, id)).resolves.toBeUndefined();
     expect(deleteMedia).toHaveBeenCalledWith('user-test-1', id);
+  });
+
+  it('streams original bytes via MediaService.loadOriginalPayload', async () => {
+    const id = '123e4567-e89b-12d3-a456-426614174000';
+    loadOriginalPayload.mockResolvedValue({
+      buffer: Buffer.from([9, 8, 7]),
+      contentType: 'image/png',
+    });
+
+    const result = await controller.streamOriginal(id);
+
+    expect(result).toBeInstanceOf(StreamableFile);
+    expect(loadOriginalPayload).toHaveBeenCalledWith(id);
+  });
+
+  it('streams thumbnail bytes via MediaService.loadThumbnailPayload', async () => {
+    const id = '123e4567-e89b-12d3-a456-426614174000';
+    loadThumbnailPayload.mockResolvedValue({
+      buffer: Buffer.from([1, 2, 3]),
+      contentType: 'image/webp',
+    });
+
+    const result = await controller.streamThumbnail(id);
+
+    expect(result).toBeInstanceOf(StreamableFile);
+    expect(loadThumbnailPayload).toHaveBeenCalledWith(id);
   });
 
   it('delegates meta lookup to MediaService.getMediaMeta', async () => {

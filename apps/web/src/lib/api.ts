@@ -144,6 +144,23 @@ export function parseMediaIdFromImageUrl(url: string | undefined): string | null
   return match ? match[1] : null;
 }
 
+/** Public preview URL for owned media (≤150×150 derivative). */
+export function thumbnailUrlForMediaId(mediaId: string): string {
+  return `${apiUrl}/media/${mediaId}/thumbnail`;
+}
+
+/** Full original upload URL (for crop editor; coordinates are in original-image space). */
+export function originalUrlForMediaId(mediaId: string): string {
+  return `${apiUrl}/media/${mediaId}/original`;
+}
+
+/** Profile photo preview src: thumbnail for owned media, full URL otherwise. */
+export function profilePhotoPreviewUrl(imageUrl: string | undefined): string | undefined {
+  if (!imageUrl) return undefined;
+  const mediaId = parseMediaIdFromImageUrl(imageUrl);
+  return mediaId ? thumbnailUrlForMediaId(mediaId) : imageUrl;
+}
+
 export function listCvs() {
   return dedupeGetRequest('GET /cv', () => apiFetch<CvRecord[]>('/cv'));
 }
