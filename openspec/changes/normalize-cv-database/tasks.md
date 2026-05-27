@@ -1,6 +1,6 @@
 ## 1. Database schema and RLS
 
-- [ ] 1.1 Add Supabase migration creating normalized tables (`cv_basics`, `cv_basics_location`, `cv_basics_profile`, `cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`, `cv_project`) per `design.md` ER diagram
+- [ ] 1.1 Add Supabase migration creating normalized tables (`cv_basics` with `location jsonb`, `cv_basics_profile`, `cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`, `cv_project`) per `design.md` ER diagram
 - [ ] 1.2 Add `meta_version`, `meta_canonical`, `meta_last_modified` columns to `cv`; add `(cv_id, sort)` indexes on all multi-valued tables
 - [ ] 1.3 Enable RLS on every new table with policies joining to `cv.user_id = auth.uid()`
 - [ ] 1.4 Add data backfill migration: read existing `cv.data`, disassemble into normalized rows, verify round-trip in migration script or one-off task
@@ -9,7 +9,7 @@
 ## 2. Shared types — assembler / disassembler
 
 - [ ] 2.1 Add normalized row TypeScript types in `packages/types/src/` matching database columns (snake_case DB ↔ camelCase JSON Resume)
-- [ ] 2.2 Implement `disassembleResume(data: Resume): NormalizedCvPayload` mapping all sections including jsonb string lists
+- [ ] 2.2 Implement `disassembleResume(data: Resume): NormalizedCvPayload` mapping all sections including jsonb string lists and `cv_basics.location`
 - [ ] 2.3 Implement `assembleResume(header, sections): Resume` with `ORDER BY sort` for arrays and empty jsonb → `[]` defaults
 - [ ] 2.4 Add unit tests in `packages/types/src/resume-normalized.test.ts` covering round-trip for sample fixtures from `.samples/resumes/jsonresume/`
 

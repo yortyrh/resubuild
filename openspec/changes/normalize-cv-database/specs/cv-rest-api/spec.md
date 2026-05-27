@@ -41,7 +41,7 @@ Under `/cv/:cvId`, authenticated handlers SHALL provide create, update, and dele
 #### Scenario: Update basics
 
 - **WHEN** an authenticated client calls `PATCH /cv/:cvId/basics` with partial basics fields
-- **THEN** the service SHALL merge into `cv_basics` / `cv_basics_location` / related rows, validate, and persist without requiring a full resume body in the request
+- **THEN** the service SHALL merge into `cv_basics` (including `location` jsonb) and related rows, validate, and persist without requiring a full resume body in the request
 
 #### Scenario: Create reference entry
 

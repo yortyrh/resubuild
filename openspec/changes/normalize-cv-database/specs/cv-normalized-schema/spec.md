@@ -2,7 +2,7 @@
 
 ### Requirement: CV content SHALL be stored in normalized relational tables keyed by `cv.id`
 
-The system MUST persist resume body fields across dedicated tables (`cv_basics`, `cv_basics_location`, `cv_basics_profile`, `cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`, `cv_project`) instead of a monolithic `cv.data` jsonb document. The `cv` header row MUST retain `id`, `user_id`, `title`, timestamps, and flattened meta columns (`meta_version`, `meta_canonical`, `meta_last_modified`).
+The system MUST persist resume body fields across dedicated tables (`cv_basics`, `cv_basics_profile`, `cv_work`, `cv_volunteer`, `cv_education`, `cv_award`, `cv_certificate`, `cv_publication`, `cv_skill`, `cv_language`, `cv_interest`, `cv_reference`, `cv_project`) instead of a monolithic `cv.data` jsonb document. The `cv_basics` row MUST include a `location jsonb` column for nested basics location fields. The `cv` header row MUST retain `id`, `user_id`, `title`, timestamps, and flattened meta columns (`meta_version`, `meta_canonical`, `meta_last_modified`).
 
 #### Scenario: Schema includes all section tables
 
@@ -36,7 +36,9 @@ Parent entity tables MUST store these JSON Resume string arrays as `jsonb` defau
 - `cv_skill.keywords`, `cv_interest.keywords`
 - `cv_project.highlights`, `cv_project.keywords`, `cv_project.roles`
 
-Application code MUST treat missing or null database values as empty arrays when assembling JSON Resume output.
+`cv_basics.location` MUST store the JSON Resume `basics.location` object as `jsonb` defaulting to `'{}'::jsonb`.
+
+Application code MUST treat missing or null database values as empty arrays when assembling JSON Resume output, and an empty object for missing `cv_basics.location`.
 
 #### Scenario: Work highlights persist as jsonb
 
@@ -48,9 +50,14 @@ Application code MUST treat missing or null database values as empty arrays when
 - **WHEN** a skill row is created without keywords
 - **THEN** `cv_skill.keywords` SHALL be `'[]'::jsonb` after insert
 
-### Requirement: Singleton basics SHALL use one-row-per-CV tables
+#### Scenario: Empty location default
 
-`cv_basics` and `cv_basics_location` SHALL use `cv_id` as primary key (one row maximum per CV). Creating a CV SHALL insert an empty `cv_basics` row. Location fields MAY be absent until the user provides address data.
+- **WHEN** a CV is created without basics location data
+- **THEN** `cv_basics.location` SHALL be `'{}'::jsonb` after insert
+
+### Requirement: Singleton basics SHALL use one row per CV
+
+`cv_basics` SHALL use `cv_id` as primary key (one row maximum per CV). Creating a CV SHALL insert an empty `cv_basics` row with `location = '{}'::jsonb`. Location fields inside the jsonb object MAY be absent until the user provides address data.
 
 #### Scenario: New CV gets empty basics row
 

@@ -11,7 +11,7 @@ Constraints: Supabase Postgres with RLS; SPA talks only to Nest (no direct Supab
 **Goals:**
 
 - Normalize CV content into relational tables with one row per multi-valued entity and explicit `sort` ordering.
-- Store string-list attributes as `jsonb` arrays on the parent entity row.
+- Store string-list attributes as `jsonb` arrays on the parent entity row; store nested singleton objects (`basics.location`) as `jsonb` on the parent row when they do not warrant a separate table.
 - Enable section-scoped reads and writes so editor views fetch only the data they need.
 - Assemble a full JSON Resume document on demand for preview, export, import verification, and full-document validation.
 - Preserve RLS isolation per user across all new tables.
@@ -21,6 +21,7 @@ Constraints: Supabase Postgres with RLS; SPA talks only to Nest (no direct Supab
 **Non-Goals:**
 
 - Normalizing string-list items (`highlights`, `courses`, `keywords`, `roles`) into child tables — they stay as `jsonb` on the parent row.
+- Normalizing `basics.location` into its own table — it stays as a `jsonb` object on `cv_basics`.
 - Changing the JSON Resume interchange schema or public export format.
 - Real-time collaboration or CRDT-based merging.
 - Client-side direct Supabase access.
@@ -34,7 +35,6 @@ Constraints: Supabase Postgres with RLS; SPA talks only to Nest (no direct Supab
 erDiagram
     auth_users ||--o{ cv : owns
     cv ||--o| cv_basics : has
-    cv_basics ||--o| cv_basics_location : has
     cv ||--o{ cv_basics_profile : contains
     cv ||--o{ cv_work : contains
     cv ||--o{ cv_volunteer : contains
@@ -60,7 +60,7 @@ erDiagram
     }
 
     cv_basics {
-        uuid cv_id PK_FK
+        uuid cv_id PK
         text name
         text label
         text image
@@ -68,15 +68,7 @@ erDiagram
         text phone
         text url
         text summary
-    }
-
-    cv_basics_location {
-        uuid cv_id PK_FK
-        text address
-        text postal_code
-        text city
-        text country_code
-        text region
+        jsonb location
     }
 
     cv_basics_profile {
@@ -213,33 +205,32 @@ erDiagram
 
 ### Table Dictionary
 
-| Table                | Cardinality    | `sort` | `jsonb` string lists              | Notes                                                                                    |
-| -------------------- | -------------- | ------ | --------------------------------- | ---------------------------------------------------------------------------------------- |
-| `cv`                 | 1 per document | —      | —                                 | Header row; holds `title` and flattened `meta_*` columns; `data` dropped after migration |
-| `cv_basics`          | 0–1 per CV     | —      | —                                 | Singleton; created empty on CV insert                                                    |
-| `cv_basics_location` | 0–1 per CV     | —      | —                                 | Optional; FK to `cv_id` (same as basics)                                                 |
-| `cv_basics_profile`  | 0–N            | yes    | —                                 | Ordered social profiles                                                                  |
-| `cv_work`            | 0–N            | yes    | `highlights`                      | ISO8601 dates as text                                                                    |
-| `cv_volunteer`       | 0–N            | yes    | `highlights`                      |                                                                                          |
-| `cv_education`       | 0–N            | yes    | `courses`                         |                                                                                          |
-| `cv_award`           | 0–N            | yes    | —                                 |                                                                                          |
-| `cv_certificate`     | 0–N            | yes    | —                                 |                                                                                          |
-| `cv_publication`     | 0–N            | yes    | —                                 |                                                                                          |
-| `cv_skill`           | 0–N            | yes    | `keywords`                        |                                                                                          |
-| `cv_language`        | 0–N            | yes    | —                                 |                                                                                          |
-| `cv_interest`        | 0–N            | yes    | `keywords`                        |                                                                                          |
-| `cv_reference`       | 0–N            | yes    | —                                 | Column `reference` holds the quote text                                                  |
-| `cv_project`         | 0–N            | yes    | `highlights`, `keywords`, `roles` |                                                                                          |
+| Table               | Cardinality    | `sort` | `jsonb` string lists              | Notes                                                                                             |
+| ------------------- | -------------- | ------ | --------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `cv`                | 1 per document | —      | —                                 | Header row; holds `title` and flattened `meta_*` columns; `data` dropped after migration          |
+| `cv_basics`         | 0–1 per CV     | —      | `location`                        | Singleton; `location` jsonb holds JSON Resume `basics.location` shape; created empty on CV insert |
+| `cv_basics_profile` | 0–N            | yes    | —                                 | Ordered social profiles                                                                           |
+| `cv_work`           | 0–N            | yes    | `highlights`                      | ISO8601 dates as text                                                                             |
+| `cv_volunteer`      | 0–N            | yes    | `highlights`                      |                                                                                                   |
+| `cv_education`      | 0–N            | yes    | `courses`                         |                                                                                                   |
+| `cv_award`          | 0–N            | yes    | —                                 |                                                                                                   |
+| `cv_certificate`    | 0–N            | yes    | —                                 |                                                                                                   |
+| `cv_publication`    | 0–N            | yes    | —                                 |                                                                                                   |
+| `cv_skill`          | 0–N            | yes    | `keywords`                        |                                                                                                   |
+| `cv_language`       | 0–N            | yes    | —                                 |                                                                                                   |
+| `cv_interest`       | 0–N            | yes    | `keywords`                        |                                                                                                   |
+| `cv_reference`      | 0–N            | yes    | —                                 | Column `reference` holds the quote text                                                           |
+| `cv_project`        | 0–N            | yes    | `highlights`, `keywords`, `roles` |                                                                                                   |
 
 **Indexes:** `(cv_id, sort)` on every multi-valued table; `(user_id, updated_at desc)` remains on `cv`. **RLS:** each child table policy joins to `cv` and checks `cv.user_id = auth.uid()`.
 
-**Default `jsonb`:** string-list columns default to `'[]'::jsonb`; never `null` in application code.
+**Default `jsonb`:** string-list columns default to `'[]'::jsonb`; `cv_basics.location` defaults to `'{}'::jsonb`; never `null` in application code.
 
 ## Decisions
 
 ### 1. Normalized tables instead of JSONB document blob
 
-**Choice:** One Postgres table per JSON Resume section (plus basics split into singleton + location + profiles).
+**Choice:** One Postgres table per JSON Resume section (plus basics split into singleton row with nested `location` jsonb + ordered profiles table).
 
 **Rationale:** Section-scoped SELECT/INSERT/UPDATE/DELETE; smaller write payloads; future reorder only touches `sort` values; clearer query plans for list endpoints.
 
@@ -261,7 +252,7 @@ erDiagram
 
 ### 3. String lists as `jsonb`, not child tables
 
-**Choice:** `highlights`, `courses`, `keywords`, and `roles` stored as `jsonb` string arrays on the parent row, matching JSON Resume shape when assembled.
+**Choice:** `highlights`, `courses`, `keywords`, and `roles` stored as `jsonb` string arrays on the parent row. `basics.location` stored as a `jsonb` object on `cv_basics`, matching JSON Resume shape when assembled.
 
 **Rationale:** User requirement; avoids join explosion for bullet lists; TagsInput already edits arrays on parent save; nested highlight/course CRUD routes become in-row array mutations (same API semantics).
 

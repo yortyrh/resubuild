@@ -4,7 +4,7 @@ Resumind stores each CV as a monolithic JSONB document in `public.cv.data`. Ever
 
 ## What Changes
 
-- Replace the single `data jsonb` blob with normalized Postgres tables for `basics`, `basics_location`, `basics_profile`, and one table per top-level JSON Resume array section (`cv_work`, `cv_education`, etc.).
+- Replace the single `data jsonb` blob with normalized Postgres tables for `basics` (including nested `location` as `jsonb`), `basics_profile`, and one table per top-level JSON Resume array section (`cv_work`, `cv_education`, etc.).
 - Add a `sort` integer column on every multi-valued entity table (work, volunteer, education, skills, projects, awards, certificates, publications, languages, interests, references, profiles) to preserve display order without array-index coupling.
 - Store string-list fields (`highlights`, `courses`, `keywords`, `roles`) as `jsonb` arrays on their parent row instead of child tables.
 - Introduce a server-side assembler that builds a full JSON Resume document from normalized rows only when needed (export, preview, schema validation on full document, import bulk write).
