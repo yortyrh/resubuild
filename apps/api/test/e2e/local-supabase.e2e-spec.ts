@@ -106,6 +106,85 @@ describe('E2E — CV REST (local Supabase)', () => {
       .send({ data: { work: [{ name: 123 }] } })
       .expect(400);
   });
+
+  it('GET /cv/:cvId/work returns work section array', async () => {
+    const target = state.cvs[0];
+    const response = await request(app.getHttpServer())
+      .get(`/cv/${target.id}/work`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(Array.isArray(response.body)).toBe(true);
+    if (response.body.length > 0) {
+      expect(response.body[0].name).toEqual(expect.any(String));
+    }
+  });
+
+  it('GET /cv/:cvId/skills returns skills section array', async () => {
+    const target = state.cvs[0];
+    const response = await request(app.getHttpServer())
+      .get(`/cv/${target.id}/skills`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(Array.isArray(response.body)).toBe(true);
+  });
+
+  it('creates skills, reorders via PUT, and asserts GET order', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/cv')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ data: { basics: { name: 'Reorder Test' }, skills: [] } })
+      .expect(201);
+
+    const cvId = created.body.id;
+    let currentVersion = created.body.data.meta.version as string;
+
+    const skillNames = ['Alpha', 'Beta', 'Gamma'];
+    const ids: string[] = [];
+
+    for (const name of skillNames) {
+      const res = await request(app.getHttpServer())
+        .post(`/cv/${cvId}/skills`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ skill: { name }, version: currentVersion })
+        .expect(201);
+      ids.push(res.body.item.id);
+      currentVersion = res.body.version;
+    }
+
+    const listBefore = await request(app.getHttpServer())
+      .get(`/cv/${cvId}/skills`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    const rowIds = listBefore.body.map((row: { id: string }) => row.id);
+
+    const latestVersion = (
+      await request(app.getHttpServer())
+        .get(`/cv/${cvId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+    ).body.data.meta.version;
+
+    const reordered = await request(app.getHttpServer())
+      .put(`/cv/${cvId}/skills/reorder`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ order: [rowIds[2], rowIds[0], rowIds[1]], version: latestVersion })
+      .expect(200);
+
+    expect(reordered.body.items.map((s: { name: string }) => s.name)).toEqual([
+      'Gamma',
+      'Alpha',
+      'Beta',
+    ]);
+
+    const listAfter = await request(app.getHttpServer())
+      .get(`/cv/${cvId}/skills`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(listAfter.body.map((s: { name: string }) => s.name)).toEqual(['Gamma', 'Alpha', 'Beta']);
+  });
 });
 
 describe('E2E — media service (local Supabase)', () => {

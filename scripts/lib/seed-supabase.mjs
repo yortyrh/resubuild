@@ -277,19 +277,27 @@ export function applyResumeMetaForUpdate(data, options) {
 export async function insertCv(admin, userId, resumeData, appUrl) {
   const cvId = randomUUID();
   const dataWithMeta = applyResumeMetaForCreate(resumeData, { cvId, baseUrl: appUrl });
-  const basics = dataWithMeta.basics;
-  const title =
-    basics && typeof basics === 'object'
-      ? deriveCvTitleFromBasics(basics)
-      : deriveCvTitleFromBasics(undefined);
+  const basics =
+    dataWithMeta.basics && typeof dataWithMeta.basics === 'object' ? dataWithMeta.basics : {};
+  const meta = dataWithMeta.meta && typeof dataWithMeta.meta === 'object' ? dataWithMeta.meta : {};
+  const title = deriveCvTitleFromBasics(basics);
 
   const { data, error } = await admin
     .from('cv')
     .insert({
       id: cvId,
       user_id: userId,
-      title,
-      data: dataWithMeta,
+      name: basics.name ?? null,
+      label: basics.label ?? null,
+      image: basics.image ?? null,
+      email: basics.email ?? null,
+      phone: basics.phone ?? null,
+      url: basics.url ?? null,
+      summary: basics.summary ?? null,
+      location: basics.location ?? {},
+      meta_version: meta.version ?? null,
+      meta_canonical: meta.canonical ?? null,
+      meta_last_modified: meta.lastModified ?? null,
     })
     .select('*')
     .single();
@@ -298,7 +306,223 @@ export async function insertCv(admin, userId, resumeData, appUrl) {
     throw new Error(`CV insert failed: ${error.message}`);
   }
 
-  return data;
+  await insertNormalizedSections(admin, cvId, dataWithMeta);
+
+  return { ...data, title };
+}
+
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} admin
+ * @param {string} cvId
+ * @param {Record<string, unknown>} dataWithMeta
+ */
+async function insertNormalizedSections(admin, cvId, dataWithMeta) {
+  const basics =
+    dataWithMeta.basics && typeof dataWithMeta.basics === 'object' ? dataWithMeta.basics : {};
+
+  const profiles = Array.isArray(basics.profiles) ? basics.profiles : [];
+  if (profiles.length > 0) {
+    const { error } = await admin.from('cv_profile').insert(
+      profiles.map((p, i) => ({
+        cv_id: cvId,
+        sort: i,
+        network: p.network ?? null,
+        username: p.username ?? null,
+        url: p.url ?? null,
+      })),
+    );
+    if (error) throw new Error(`cv_profile insert failed: ${error.message}`);
+  }
+
+  await insertDateSection(admin, cvId, 'cv_work', dataWithMeta.work, mapWorkRow);
+  await insertDateSection(admin, cvId, 'cv_volunteer', dataWithMeta.volunteer, mapVolunteerRow);
+  await insertDateSection(admin, cvId, 'cv_education', dataWithMeta.education, mapEducationRow);
+  await insertDateSection(admin, cvId, 'cv_award', dataWithMeta.awards, mapAwardRow);
+  await insertDateSection(
+    admin,
+    cvId,
+    'cv_certificate',
+    dataWithMeta.certificates,
+    mapCertificateRow,
+  );
+  await insertDateSection(
+    admin,
+    cvId,
+    'cv_publication',
+    dataWithMeta.publications,
+    mapPublicationRow,
+  );
+  await insertDateSection(admin, cvId, 'cv_project', dataWithMeta.projects, mapProjectRow);
+
+  await insertSortSection(admin, cvId, 'cv_skill', dataWithMeta.skills, mapSkillRow);
+  await insertSortSection(admin, cvId, 'cv_language', dataWithMeta.languages, mapLanguageRow);
+  await insertSortSection(admin, cvId, 'cv_interest', dataWithMeta.interests, mapInterestRow);
+  await insertSortSection(admin, cvId, 'cv_reference', dataWithMeta.references, mapReferenceRow);
+}
+
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} admin
+ * @param {string} cvId
+ * @param {string} table
+ * @param {unknown} items
+ * @param {(item: Record<string, unknown>, cvId: string) => Record<string, unknown>} mapper
+ */
+async function insertDateSection(admin, cvId, table, items, mapper) {
+  if (!Array.isArray(items) || items.length === 0) return;
+  const rows = items.map((item) => mapper(item, cvId));
+  const { error } = await admin.from(table).insert(rows);
+  if (error) throw new Error(`${table} insert failed: ${error.message}`);
+}
+
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} admin
+ * @param {string} cvId
+ * @param {string} table
+ * @param {unknown} items
+ * @param {(item: Record<string, unknown>, cvId: string, sort: number) => Record<string, unknown>} mapper
+ */
+async function insertSortSection(admin, cvId, table, items, mapper) {
+  if (!Array.isArray(items) || items.length === 0) return;
+  const rows = items.map((item, i) => mapper(item, cvId, i));
+  const { error } = await admin.from(table).insert(rows);
+  if (error) throw new Error(`${table} insert failed: ${error.message}`);
+}
+
+/** @param {Record<string, unknown>} w @param {string} cvId */
+function mapWorkRow(w, cvId) {
+  return {
+    cv_id: cvId,
+    name: w.name ?? null,
+    location: w.location ?? null,
+    description: w.description ?? null,
+    position: w.position ?? null,
+    url: w.url ?? null,
+    start_date: w.startDate ?? null,
+    end_date: w.endDate ?? null,
+    summary: w.summary ?? null,
+    highlights: Array.isArray(w.highlights) ? w.highlights : [],
+  };
+}
+
+/** @param {Record<string, unknown>} v @param {string} cvId */
+function mapVolunteerRow(v, cvId) {
+  return {
+    cv_id: cvId,
+    organization: v.organization ?? null,
+    position: v.position ?? null,
+    url: v.url ?? null,
+    start_date: v.startDate ?? null,
+    end_date: v.endDate ?? null,
+    summary: v.summary ?? null,
+    highlights: Array.isArray(v.highlights) ? v.highlights : [],
+  };
+}
+
+/** @param {Record<string, unknown>} e @param {string} cvId */
+function mapEducationRow(e, cvId) {
+  return {
+    cv_id: cvId,
+    institution: e.institution ?? null,
+    url: e.url ?? null,
+    area: e.area ?? null,
+    study_type: e.studyType ?? null,
+    start_date: e.startDate ?? null,
+    end_date: e.endDate ?? null,
+    score: e.score ?? null,
+    courses: Array.isArray(e.courses) ? e.courses : [],
+  };
+}
+
+/** @param {Record<string, unknown>} a @param {string} cvId */
+function mapAwardRow(a, cvId) {
+  return {
+    cv_id: cvId,
+    title: a.title ?? null,
+    date: a.date ?? null,
+    awarder: a.awarder ?? null,
+    summary: a.summary ?? null,
+  };
+}
+
+/** @param {Record<string, unknown>} c @param {string} cvId */
+function mapCertificateRow(c, cvId) {
+  return {
+    cv_id: cvId,
+    name: c.name ?? null,
+    date: c.date ?? null,
+    url: c.url ?? null,
+    issuer: c.issuer ?? null,
+  };
+}
+
+/** @param {Record<string, unknown>} p @param {string} cvId */
+function mapPublicationRow(p, cvId) {
+  return {
+    cv_id: cvId,
+    name: p.name ?? null,
+    publisher: p.publisher ?? null,
+    release_date: p.releaseDate ?? null,
+    url: p.url ?? null,
+    summary: p.summary ?? null,
+  };
+}
+
+/** @param {Record<string, unknown>} p @param {string} cvId */
+function mapProjectRow(p, cvId) {
+  return {
+    cv_id: cvId,
+    name: p.name ?? null,
+    description: p.description ?? null,
+    start_date: p.startDate ?? null,
+    end_date: p.endDate ?? null,
+    url: p.url ?? null,
+    entity: p.entity ?? null,
+    type: p.type ?? null,
+    highlights: Array.isArray(p.highlights) ? p.highlights : [],
+    keywords: Array.isArray(p.keywords) ? p.keywords : [],
+    roles: Array.isArray(p.roles) ? p.roles : [],
+  };
+}
+
+/** @param {Record<string, unknown>} s @param {string} cvId @param {number} sort */
+function mapSkillRow(s, cvId, sort) {
+  return {
+    cv_id: cvId,
+    sort,
+    name: s.name ?? null,
+    level: s.level ?? null,
+    keywords: Array.isArray(s.keywords) ? s.keywords : [],
+  };
+}
+
+/** @param {Record<string, unknown>} l @param {string} cvId @param {number} sort */
+function mapLanguageRow(l, cvId, sort) {
+  return {
+    cv_id: cvId,
+    sort,
+    language: l.language ?? null,
+    fluency: l.fluency ?? null,
+  };
+}
+
+/** @param {Record<string, unknown>} i @param {string} cvId @param {number} sort */
+function mapInterestRow(i, cvId, sort) {
+  return {
+    cv_id: cvId,
+    sort,
+    name: i.name ?? null,
+    keywords: Array.isArray(i.keywords) ? i.keywords : [],
+  };
+}
+
+/** @param {Record<string, unknown>} r @param {string} cvId @param {number} sort */
+function mapReferenceRow(r, cvId, sort) {
+  return {
+    cv_id: cvId,
+    sort,
+    name: r.name ?? null,
+    reference: r.reference ?? null,
+  };
 }
 
 /**
@@ -364,33 +588,44 @@ export async function insertMedia(
  * @param {string} imageUrl
  * @param {string} appUrl
  */
-export async function assignProfilePhoto(admin, cvId, userId, data, imageUrl, appUrl) {
-  const nextData = structuredClone(data);
-  if (!nextData.basics || typeof nextData.basics !== 'object') {
-    nextData.basics = {};
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} admin
+ * @param {string} cvId
+ * @param {string} userId
+ * @param {string} imageUrl
+ * @param {string} appUrl
+ */
+export async function assignProfilePhoto(admin, cvId, userId, imageUrl, appUrl) {
+  const { data: row, error: fetchError } = await admin
+    .from('cv')
+    .select('meta_version')
+    .eq('id', cvId)
+    .eq('user_id', userId)
+    .single();
+
+  if (fetchError || !row) {
+    throw new Error(`Profile photo update failed: ${fetchError?.message ?? 'CV not found'}`);
   }
-  nextData.basics.image = imageUrl;
 
-  const currentVersion =
-    nextData.meta && typeof nextData.meta === 'object' && 'version' in nextData.meta
-      ? String(nextData.meta.version)
-      : undefined;
-
-  const dataWithMeta = applyResumeMetaForUpdate(nextData, {
-    cvId,
-    baseUrl: appUrl,
-    currentVersion,
-  });
-
-  const title = deriveCvTitleFromBasics(
-    dataWithMeta.basics && typeof dataWithMeta.basics === 'object'
-      ? dataWithMeta.basics
-      : undefined,
+  const dataWithMeta = applyResumeMetaForUpdate(
+    {},
+    {
+      cvId,
+      baseUrl: appUrl,
+      currentVersion: row.meta_version ?? undefined,
+    },
   );
 
-  const { data: row, error } = await admin
+  const meta = dataWithMeta.meta && typeof dataWithMeta.meta === 'object' ? dataWithMeta.meta : {};
+
+  const { data: updated, error } = await admin
     .from('cv')
-    .update({ data: dataWithMeta, title })
+    .update({
+      image: imageUrl,
+      meta_version: meta.version ?? null,
+      meta_canonical: meta.canonical ?? null,
+      meta_last_modified: meta.lastModified ?? null,
+    })
     .eq('id', cvId)
     .eq('user_id', userId)
     .select('*')
@@ -400,7 +635,8 @@ export async function assignProfilePhoto(admin, cvId, userId, data, imageUrl, ap
     throw new Error(`Profile photo update failed: ${error.message}`);
   }
 
-  return row;
+  const title = deriveCvTitleFromBasics({ name: updated.name, label: updated.label });
+  return { ...updated, title };
 }
 
 /**

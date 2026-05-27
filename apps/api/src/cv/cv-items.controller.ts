@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CvItemService } from './cv-item.service';
 import {
@@ -12,6 +23,7 @@ import {
   ProjectItemDto,
   PublicationItemDto,
   ReferenceItemDto,
+  ReorderSectionDto,
   SkillItemDto,
   StringValueDto,
   VolunteerItemDto,
@@ -22,6 +34,116 @@ import {
 @UseGuards(SupabaseAuthGuard)
 export class CvItemsController {
   constructor(private readonly cvItemService: CvItemService) {}
+
+  @Get('basics')
+  getBasics(@Req() req: AuthenticatedRequest, @Param('cvId') cvId: string) {
+    return this.cvItemService.getBasics(req.user, cvId);
+  }
+
+  @Get('profiles')
+  getProfiles(@Req() req: AuthenticatedRequest, @Param('cvId') cvId: string) {
+    return this.cvItemService.getSection(req.user, cvId, 'profiles');
+  }
+
+  @Get('work')
+  getWork(@Req() req: AuthenticatedRequest, @Param('cvId') cvId: string) {
+    return this.cvItemService.getSection(req.user, cvId, 'work');
+  }
+
+  @Get('volunteer')
+  getVolunteer(@Req() req: AuthenticatedRequest, @Param('cvId') cvId: string) {
+    return this.cvItemService.getSection(req.user, cvId, 'volunteer');
+  }
+
+  @Get('education')
+  getEducation(@Req() req: AuthenticatedRequest, @Param('cvId') cvId: string) {
+    return this.cvItemService.getSection(req.user, cvId, 'education');
+  }
+
+  @Get('skills')
+  getSkills(@Req() req: AuthenticatedRequest, @Param('cvId') cvId: string) {
+    return this.cvItemService.getSection(req.user, cvId, 'skills');
+  }
+
+  @Get('projects')
+  getProjects(@Req() req: AuthenticatedRequest, @Param('cvId') cvId: string) {
+    return this.cvItemService.getSection(req.user, cvId, 'projects');
+  }
+
+  @Get('awards')
+  getAwards(@Req() req: AuthenticatedRequest, @Param('cvId') cvId: string) {
+    return this.cvItemService.getSection(req.user, cvId, 'awards');
+  }
+
+  @Get('certificates')
+  getCertificates(@Req() req: AuthenticatedRequest, @Param('cvId') cvId: string) {
+    return this.cvItemService.getSection(req.user, cvId, 'certificates');
+  }
+
+  @Get('publications')
+  getPublications(@Req() req: AuthenticatedRequest, @Param('cvId') cvId: string) {
+    return this.cvItemService.getSection(req.user, cvId, 'publications');
+  }
+
+  @Get('languages')
+  getLanguages(@Req() req: AuthenticatedRequest, @Param('cvId') cvId: string) {
+    return this.cvItemService.getSection(req.user, cvId, 'languages');
+  }
+
+  @Get('interests')
+  getInterests(@Req() req: AuthenticatedRequest, @Param('cvId') cvId: string) {
+    return this.cvItemService.getSection(req.user, cvId, 'interests');
+  }
+
+  @Get('references')
+  getReferences(@Req() req: AuthenticatedRequest, @Param('cvId') cvId: string) {
+    return this.cvItemService.getSection(req.user, cvId, 'references');
+  }
+
+  @Put('profiles/reorder')
+  reorderProfiles(
+    @Req() req: AuthenticatedRequest,
+    @Param('cvId') cvId: string,
+    @Body() dto: ReorderSectionDto,
+  ) {
+    return this.cvItemService.reorderSection(req.user, cvId, 'profiles', dto.order, dto.version);
+  }
+
+  @Put('skills/reorder')
+  reorderSkills(
+    @Req() req: AuthenticatedRequest,
+    @Param('cvId') cvId: string,
+    @Body() dto: ReorderSectionDto,
+  ) {
+    return this.cvItemService.reorderSection(req.user, cvId, 'skills', dto.order, dto.version);
+  }
+
+  @Put('languages/reorder')
+  reorderLanguages(
+    @Req() req: AuthenticatedRequest,
+    @Param('cvId') cvId: string,
+    @Body() dto: ReorderSectionDto,
+  ) {
+    return this.cvItemService.reorderSection(req.user, cvId, 'languages', dto.order, dto.version);
+  }
+
+  @Put('interests/reorder')
+  reorderInterests(
+    @Req() req: AuthenticatedRequest,
+    @Param('cvId') cvId: string,
+    @Body() dto: ReorderSectionDto,
+  ) {
+    return this.cvItemService.reorderSection(req.user, cvId, 'interests', dto.order, dto.version);
+  }
+
+  @Put('references/reorder')
+  reorderReferences(
+    @Req() req: AuthenticatedRequest,
+    @Param('cvId') cvId: string,
+    @Body() dto: ReorderSectionDto,
+  ) {
+    return this.cvItemService.reorderSection(req.user, cvId, 'references', dto.order, dto.version);
+  }
 
   @Patch('basics')
   updateBasics(

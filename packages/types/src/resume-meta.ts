@@ -1,4 +1,5 @@
 import type { Resume, ResumeMeta } from './resume';
+import type { CvHeaderRow } from './resume-normalized';
 
 export function formatResumeLastModified(date = new Date()): string {
   return date.toISOString().slice(0, 19);
@@ -12,6 +13,23 @@ export function getResumeMetaVersion(data: Record<string, unknown>): string | un
 
   const version = (meta as ResumeMeta).version;
   return typeof version === 'string' && version.length > 0 ? version : undefined;
+}
+
+export function getCvMetaVersion(header: Pick<CvHeaderRow, 'meta_version'>): string | undefined {
+  const version = header.meta_version;
+  return typeof version === 'string' && version.length > 0 ? version : undefined;
+}
+
+export function metaFromCvHeader(header: CvHeaderRow): ResumeMeta | undefined {
+  if (!header.meta_version && !header.meta_canonical && !header.meta_last_modified) {
+    return undefined;
+  }
+
+  return {
+    version: header.meta_version ?? undefined,
+    canonical: header.meta_canonical ?? undefined,
+    lastModified: header.meta_last_modified ?? undefined,
+  };
 }
 
 export function bumpResumeMetaVersion(version: string): string {

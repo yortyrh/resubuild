@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { highlightBody } from './cv-sections';
+import { highlightBody } from './cv-section-helpers';
 
 describe('highlightBody', () => {
   it('renders markdown emphasis in bullets when markdown is true', () => {

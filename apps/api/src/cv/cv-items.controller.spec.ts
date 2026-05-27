@@ -26,6 +26,9 @@ describe('CvItemsController', () => {
       createNestedString: jest.fn().mockResolvedValue(resolved),
       updateNestedString: jest.fn().mockResolvedValue(resolved),
       deleteNestedString: jest.fn().mockResolvedValue(resolved),
+      getSection: jest.fn().mockResolvedValue([]),
+      getBasics: jest.fn().mockResolvedValue({ name: 'Jane' }),
+      reorderSection: jest.fn().mockResolvedValue({ items: [], version: 'v1.0.1' }),
     } as never;
 
     controller = new CvItemsController(service);
@@ -262,6 +265,23 @@ describe('CvItemsController', () => {
       );
     },
   );
+
+  it('delegates section GET routes to service', async () => {
+    await controller.getBasics(req, cvId);
+    expect(service.getBasics).toHaveBeenCalledWith(user, cvId);
+
+    await controller.getWork(req, cvId);
+    expect(service.getSection).toHaveBeenCalledWith(user, cvId, 'work');
+
+    await controller.getSkills(req, cvId);
+    expect(service.getSection).toHaveBeenCalledWith(user, cvId, 'skills');
+  });
+
+  it('delegates reorder routes to service', async () => {
+    const order = ['id-1', 'id-2'];
+    await controller.reorderSkills(req, cvId, { order, version });
+    expect(service.reorderSection).toHaveBeenCalledWith(user, cvId, 'skills', order, version);
+  });
 
   it('delegates education course CRUD to service', async () => {
     await controller.createEducationCourse(req, cvId, '0', { value: 'CS101', version });

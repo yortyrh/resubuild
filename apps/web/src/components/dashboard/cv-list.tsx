@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { DeleteItemDialog } from '@/components/cv/cv-item-ui';
 import { CvListSkeleton } from '@/components/dashboard/cv-list-skeleton';
@@ -18,15 +18,37 @@ export function CvList() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const loadCvs = () =>
-    listCvs()
+  const loadCvs = useCallback(() => {
+    return listCvs()
       .then(setCvs)
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load CVs'))
       .finally(() => setLoading(false));
+  }, []);
 
   useEffect(() => {
-    loadCvs();
-  }, [loadCvs]);
+    let cancelled = false;
+
+    listCvs()
+      .then((data) => {
+        if (!cancelled) {
+          setCvs(data);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load CVs');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const pendingDelete = deleteId ? cvs.find((cv) => cv.id === deleteId) : undefined;
 

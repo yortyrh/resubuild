@@ -110,6 +110,10 @@ function CvGenericSectionSkeleton() {
   );
 }
 
+export function CvSectionSkeleton({ section = 'basics' }: CvEditorSkeletonProps) {
+  return section === 'basics' ? <CvBasicsSectionSkeleton /> : <CvGenericSectionSkeleton />;
+}
+
 export function CvEditorSkeleton({ section = 'basics' }: CvEditorSkeletonProps) {
   const activeIndex = Math.max(
     0,
@@ -134,7 +138,7 @@ export function CvEditorSkeleton({ section = 'basics' }: CvEditorSkeletonProps) 
             <CvEditorBreadcrumbSkeleton section={section} />
           </div>
           <CvSectionContent>
-            {section === 'basics' ? <CvBasicsSectionSkeleton /> : <CvGenericSectionSkeleton />}
+            <CvSectionSkeleton section={section} />
           </CvSectionContent>
         </div>
       </div>

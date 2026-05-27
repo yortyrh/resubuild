@@ -11,6 +11,7 @@ import {
 import { useCvItemMutation } from '@/components/cv/use-cv-item-mutation';
 import { Button } from '@/components/ui/button';
 import type { CvItemMutationResponse } from '@/lib/cv-item-api';
+import { insertAtIndex, replaceAtSortedIndex } from '@/lib/cv-section-order';
 
 interface ArraySectionApi {
   create: (
@@ -92,10 +93,9 @@ export function ManagedArraySection<T>({
     }
     await run(
       (v) => api.update(cvId, editingIndex, sanitizeResumeItemPayload(toPayload(draft)), v),
-      () => {
-        const next = [...items];
-        next[editingIndex] = draft;
-        onItemsChange(next);
+      (result) => {
+        const updated = (result.item ?? draft) as T;
+        onItemsChange(replaceAtSortedIndex(items, editingIndex, updated, result.index));
         cancelEdit();
       },
       successMessages?.update ?? `${entityLabel} updated`,
@@ -124,7 +124,7 @@ export function ManagedArraySection<T>({
       (v) => api.create(cvId, sanitizeResumeItemPayload(toPayload(createDraft)), v),
       (result) => {
         const created = (result.item ?? createDraft) as T;
-        onItemsChange([...items, created]);
+        onItemsChange(insertAtIndex(items, created, result.index));
         cancelCreate();
       },
       successMessages?.create ?? `${entityLabel} added`,

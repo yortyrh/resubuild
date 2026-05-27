@@ -1,4 +1,12 @@
-import { IsArray, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class VersionedDto {
   @IsOptional()
@@ -82,4 +90,11 @@ export class StringListDto extends VersionedDto {
   @IsArray()
   @IsString({ each: true })
   values!: string[];
+}
+
+export class ReorderSectionDto extends VersionedDto {
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUUID('4', { each: true })
+  order!: string[];
 }

@@ -3,53 +3,122 @@
  */
 
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { type CvRecord, CvService } from './cv.service';
+import { CvService } from './cv.service';
 import { CvItemService } from './cv-item.service';
+import { CvNormalizedRepository } from './cv-normalized.repository';
+import { createMockNormalizedRepo, mockCvHeader } from './cv-test.helpers';
 
 describe('CvItemService', () => {
   let service: CvItemService;
-  let cvService: jest.Mocked<Pick<CvService, 'findOne' | 'persistValidatedData'>>;
+  let cvService: jest.Mocked<Pick<CvService, 'getHeader' | 'bumpVersion'>>;
+  let normalizedRepo: ReturnType<typeof createMockNormalizedRepo>;
 
   const user = { id: 'user-1', email: 'u@test.com', accessToken: 'jwt-access-token' };
+  const supabaseStub = {};
 
-  const baseRow = (data: Record<string, unknown>): CvRecord => ({
-    id: 'cv-1',
-    user_id: user.id,
-    title: 'CV',
-    data,
-    created_at: 'c',
-    updated_at: 'u',
-  });
+  let workRows: Record<string, unknown>[] = [];
+  let profileRows: Record<string, unknown>[] = [];
+  let skillRows: Record<string, unknown>[] = [];
+  let educationRows: Record<string, unknown>[] = [];
+  let versionCounter = 0;
 
-  const meta = {
-    version: 'v1.0.0',
-    canonical: 'http://app.test/dashboard/cv/cv-1',
-  };
+  function nextVersion(): string {
+    versionCounter += 1;
+    return `v1.0.${versionCounter}`;
+  }
+
+  function resetStore() {
+    workRows = [];
+    profileRows = [];
+    skillRows = [];
+    educationRows = [];
+    versionCounter = 0;
+  }
+
+  let currentMetaVersion = 'v1.0.0';
+
+  function setupListMock(section: string, rows: Record<string, unknown>[]) {
+    normalizedRepo.listSectionRows.mockImplementation(async (_sb, _cvId, key) => {
+      if (key === section) return rows as never;
+      if (key === 'profiles') return profileRows as never;
+      if (key === 'work') return workRows as never;
+      if (key === 'skills') return skillRows as never;
+      if (key === 'education') return educationRows as never;
+      return [] as never;
+    });
+  }
 
   beforeEach(async () => {
+    resetStore();
+    currentMetaVersion = 'v1.0.0';
     cvService = {
-      findOne: jest.fn(),
-      persistValidatedData: jest.fn(),
+      getHeader: jest
+        .fn()
+        .mockImplementation(async () => mockCvHeader({ meta_version: currentMetaVersion })),
+      bumpVersion: jest.fn().mockImplementation(async () => {
+        currentMetaVersion = nextVersion();
+        return currentMetaVersion;
+      }),
     };
+    normalizedRepo = createMockNormalizedRepo();
+    normalizedRepo.createClientForUser.mockReturnValue(supabaseStub as never);
+
+    normalizedRepo.insertSectionRow.mockImplementation(async (_sb, _cvId, section, item) => {
+      const row = {
+        id: crypto.randomUUID(),
+        cv_id: 'cv-1',
+        sort: section === 'profiles' ? profileRows.length : skillRows.length,
+        ...item,
+      };
+      if (section === 'work') workRows.push(row);
+      if (section === 'profiles') profileRows.push(row);
+      if (section === 'skills') skillRows.push(row);
+      if (section === 'education') educationRows.push(row);
+      return row;
+    });
+
+    normalizedRepo.updateSectionRow.mockImplementation(async (_sb, _cvId, section, rowId, item) => {
+      const store =
+        section === 'work'
+          ? workRows
+          : section === 'profiles'
+            ? profileRows
+            : section === 'skills'
+              ? skillRows
+              : educationRows;
+      const index = store.findIndex((r) => r.id === rowId);
+      if (index < 0) throw new NotFoundException('Not found');
+      store[index] = { ...store[index], ...item };
+      return store[index];
+    });
+
+    normalizedRepo.deleteSectionRow.mockImplementation(async (_sb, _cvId, section, rowId) => {
+      const store =
+        section === 'work'
+          ? workRows
+          : section === 'profiles'
+            ? profileRows
+            : section === 'skills'
+              ? skillRows
+              : educationRows;
+      const index = store.findIndex((r) => r.id === rowId);
+      if (index < 0) throw new NotFoundException('Not found');
+      store.splice(index, 1);
+    });
+
+    normalizedRepo.updateBasicsHeader.mockImplementation(async (_sb, _cvId, basics) =>
+      mockCvHeader({
+        name: (basics.name as string) ?? 'Jane',
+        label: (basics.label as string) ?? 'Developer',
+      }),
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CvItemService,
-        {
-          provide: CvService,
-          useValue: cvService,
-        },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: (key: string) => {
-              if (key === 'APP_URL') return 'http://app.test';
-              return undefined;
-            },
-          },
-        },
+        { provide: CvService, useValue: cvService },
+        { provide: CvNormalizedRepository, useValue: normalizedRepo },
       ],
     }).compile();
 
@@ -57,13 +126,7 @@ describe('CvItemService', () => {
   });
 
   it('creates a work entry and returns index with bumped version', async () => {
-    cvService.findOne.mockResolvedValue(baseRow({ meta, work: [] }));
-    cvService.persistValidatedData.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.1' },
-        work: [{ name: 'Acme', position: 'Engineer' }],
-      }),
-    );
+    setupListMock('work', workRows);
 
     const result = await service.createArrayItem(
       user,
@@ -75,17 +138,11 @@ describe('CvItemService', () => {
 
     expect(result.index).toBe(0);
     expect(result.version).toBe('v1.0.1');
-    expect(cvService.persistValidatedData).toHaveBeenCalled();
+    expect(normalizedRepo.insertSectionRow).toHaveBeenCalled();
   });
 
   it('strips empty optional url before persisting work entries', async () => {
-    cvService.findOne.mockResolvedValue(baseRow({ meta, work: [] }));
-    cvService.persistValidatedData.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.1' },
-        work: [{ name: 'TechNova', position: 'Senior Software Engineer' }],
-      }),
-    );
+    setupListMock('work', workRows);
 
     await service.createArrayItem(
       user,
@@ -100,28 +157,20 @@ describe('CvItemService', () => {
       'v1.0.0',
     );
 
-    expect(cvService.persistValidatedData).toHaveBeenCalledWith(
-      user,
+    expect(normalizedRepo.insertSectionRow).toHaveBeenCalledWith(
+      supabaseStub,
       'cv-1',
+      'work',
       expect.objectContaining({
-        work: [
-          {
-            name: 'TechNova',
-            position: 'Senior Software Engineer',
-            highlights: ['Shipped features'],
-          },
-        ],
+        name: 'TechNova',
+        position: 'Senior Software Engineer',
+        highlights: ['Shipped features'],
       }),
     );
   });
 
   it('throws 409 when client version is stale', async () => {
-    cvService.findOne.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v2.0.0' },
-        work: [],
-      }),
-    );
+    cvService.getHeader.mockResolvedValue(mockCvHeader({ meta_version: 'v2.0.0' }));
 
     await expect(
       service.createArrayItem(user, 'cv-1', 'work', { name: 'Acme' }, 'v1.0.0'),
@@ -129,7 +178,7 @@ describe('CvItemService', () => {
   });
 
   it('throws 404 when deleting missing education entry', async () => {
-    cvService.findOne.mockResolvedValue(baseRow({ meta, education: [] }));
+    setupListMock('education', []);
 
     await expect(
       service.deleteArrayItem(user, 'cv-1', 'education', '0', 'Education entry', 'v1.0.0'),
@@ -137,18 +186,16 @@ describe('CvItemService', () => {
   });
 
   it('creates nested work highlight', async () => {
-    cvService.findOne.mockResolvedValue(
-      baseRow({
-        meta,
-        work: [{ name: 'Acme', highlights: [] }],
-      }),
-    );
-    cvService.persistValidatedData.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.1' },
-        work: [{ name: 'Acme', highlights: ['Shipped feature X'] }],
-      }),
-    );
+    workRows = [
+      {
+        id: 'work-1',
+        cv_id: 'cv-1',
+        name: 'Acme',
+        highlights: [],
+        start_date: '2020-01',
+      },
+    ];
+    setupListMock('work', workRows);
 
     const result = await service.createNestedString(
       user,
@@ -167,33 +214,17 @@ describe('CvItemService', () => {
   });
 
   it('updates basics and merges with existing data', async () => {
-    cvService.findOne.mockResolvedValue(
-      baseRow({
-        meta,
-        basics: { name: 'Jane', label: 'Developer' },
-      }),
-    );
-    cvService.persistValidatedData.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.1' },
-        basics: { name: 'Jane Doe', label: 'Developer' },
-      }),
-    );
+    cvService.getHeader.mockResolvedValue(mockCvHeader({ name: 'Jane', label: 'Developer' }));
+    setupListMock('profiles', []);
 
     const result = await service.updateBasics(user, 'cv-1', { name: 'Jane Doe' }, 'v1.0.0');
 
-    expect(result.item).toEqual({ name: 'Jane Doe', label: 'Developer' });
+    expect(result.item).toMatchObject({ name: 'Jane Doe', label: 'Developer' });
     expect(result.version).toBe('v1.0.1');
   });
 
   it('creates, updates, and deletes profiles', async () => {
-    cvService.findOne.mockResolvedValue(baseRow({ meta, basics: { profiles: [] } }));
-    cvService.persistValidatedData.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.1' },
-        basics: { profiles: [{ network: 'GitHub', username: 'jane' }] },
-      }),
-    );
+    setupListMock('profiles', profileRows);
 
     const created = await service.createProfile(
       user,
@@ -203,19 +234,7 @@ describe('CvItemService', () => {
     );
     expect(created.index).toBe(0);
 
-    cvService.findOne.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.1' },
-        basics: { profiles: [{ network: 'GitHub', username: 'jane' }] },
-      }),
-    );
-    cvService.persistValidatedData.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.2' },
-        basics: { profiles: [{ network: 'GitHub', username: 'jane-doe' }] },
-      }),
-    );
-
+    setupListMock('profiles', profileRows);
     const updated = await service.updateProfile(
       user,
       'cv-1',
@@ -223,27 +242,15 @@ describe('CvItemService', () => {
       { username: 'jane-doe' },
       'v1.0.1',
     );
-    expect(updated.item).toEqual({ network: 'GitHub', username: 'jane-doe' });
+    expect(updated.item).toMatchObject({ network: 'GitHub', username: 'jane-doe' });
 
-    cvService.findOne.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.2' },
-        basics: { profiles: [{ network: 'GitHub', username: 'jane-doe' }] },
-      }),
-    );
-    cvService.persistValidatedData.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.3' },
-        basics: { profiles: [] },
-      }),
-    );
-
+    setupListMock('profiles', profileRows);
     const deleted = await service.deleteProfile(user, 'cv-1', '0', 'v1.0.2');
     expect(deleted.index).toBe(0);
   });
 
   it('throws 404 when profile index is out of range', async () => {
-    cvService.findOne.mockResolvedValue(baseRow({ meta, basics: { profiles: [] } }));
+    setupListMock('profiles', []);
 
     await expect(
       service.updateProfile(user, 'cv-1', '0', { username: 'x' }, 'v1.0.0'),
@@ -251,18 +258,10 @@ describe('CvItemService', () => {
   });
 
   it('updates and deletes array items', async () => {
-    cvService.findOne.mockResolvedValue(
-      baseRow({
-        meta,
-        skills: [{ name: 'TypeScript', level: 'Expert' }],
-      }),
-    );
-    cvService.persistValidatedData.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.1' },
-        skills: [{ name: 'TypeScript', level: 'Master' }],
-      }),
-    );
+    skillRows = [
+      { id: 'skill-1', cv_id: 'cv-1', sort: 0, name: 'TypeScript', level: 'Expert', keywords: [] },
+    ];
+    setupListMock('skills', skillRows);
 
     const updated = await service.updateArrayItem(
       user,
@@ -273,38 +272,24 @@ describe('CvItemService', () => {
       'Skill',
       'v1.0.0',
     );
-    expect(updated.item).toEqual({ name: 'TypeScript', level: 'Master' });
+    expect(updated.item).toMatchObject({ name: 'TypeScript', level: 'Master' });
 
-    cvService.findOne.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.1' },
-        skills: [{ name: 'TypeScript', level: 'Master' }],
-      }),
-    );
-    cvService.persistValidatedData.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.2' },
-        skills: [],
-      }),
-    );
-
+    setupListMock('skills', skillRows);
     const deleted = await service.deleteArrayItem(user, 'cv-1', 'skills', '0', 'Skill', 'v1.0.1');
     expect(deleted.index).toBe(0);
   });
 
   it('updates and deletes nested strings', async () => {
-    cvService.findOne.mockResolvedValue(
-      baseRow({
-        meta,
-        work: [{ name: 'Acme', highlights: ['Built API'] }],
-      }),
-    );
-    cvService.persistValidatedData.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.1' },
-        work: [{ name: 'Acme', highlights: ['Built REST API'] }],
-      }),
-    );
+    workRows = [
+      {
+        id: 'work-1',
+        cv_id: 'cv-1',
+        name: 'Acme',
+        highlights: ['Built API'],
+        start_date: '2020-01',
+      },
+    ];
+    setupListMock('work', workRows);
 
     const updated = await service.updateNestedString(
       user,
@@ -319,19 +304,7 @@ describe('CvItemService', () => {
     );
     expect(updated.value).toBe('Built REST API');
 
-    cvService.findOne.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.1' },
-        work: [{ name: 'Acme', highlights: ['Built REST API'] }],
-      }),
-    );
-    cvService.persistValidatedData.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.2' },
-        work: [{ name: 'Acme', highlights: [] }],
-      }),
-    );
-
+    setupListMock('work', workRows);
     const deleted = await service.deleteNestedString(
       user,
       'cv-1',
@@ -346,12 +319,8 @@ describe('CvItemService', () => {
   });
 
   it('throws 404 when nested string index is out of range', async () => {
-    cvService.findOne.mockResolvedValue(
-      baseRow({
-        meta,
-        work: [{ name: 'Acme', highlights: [] }],
-      }),
-    );
+    workRows = [{ id: 'work-1', cv_id: 'cv-1', name: 'Acme', highlights: [], start_date: '2020' }];
+    setupListMock('work', workRows);
 
     await expect(
       service.updateNestedString(
@@ -368,110 +337,147 @@ describe('CvItemService', () => {
     ).rejects.toThrow(NotFoundException);
   });
 
-  it('throws BadRequestException for invalid index', () => {
+  it('throws BadRequestException for invalid index', async () => {
+    try {
+      await service.deleteArrayItem(user, 'cv-1', 'work', 'bad', 'Work entry', 'v1.0.0');
+      throw new Error('expected BadRequestException');
+    } catch (error) {
+      expect(error).toBeInstanceOf(BadRequestException);
+    }
+  });
+
+  it('reorders skills and returns updated order', async () => {
+    skillRows = [
+      { id: 'a', cv_id: 'cv-1', sort: 0, name: 'A', keywords: [] },
+      { id: 'b', cv_id: 'cv-1', sort: 1, name: 'B', keywords: [] },
+      { id: 'c', cv_id: 'cv-1', sort: 2, name: 'C', keywords: [] },
+    ];
+    normalizedRepo.reorderSection.mockImplementation(async () => [
+      { id: 'c', cv_id: 'cv-1', sort: 0, name: 'C', keywords: [] },
+      { id: 'a', cv_id: 'cv-1', sort: 1, name: 'A', keywords: [] },
+      { id: 'b', cv_id: 'cv-1', sort: 2, name: 'B', keywords: [] },
+    ]);
+
+    const result = await service.reorderSection(user, 'cv-1', 'skills', ['c', 'a', 'b'], 'v1.0.0');
+
+    expect(result.items.map((i) => i.name)).toEqual(['C', 'A', 'B']);
+    expect(result.version).toBe('v1.0.1');
+  });
+
+  it('getSection returns assembled items for a section', async () => {
+    workRows = [{ id: 'w1', cv_id: 'cv-1', name: 'Acme', start_date: '2022-01', highlights: [] }];
+    setupListMock('work', workRows);
+
+    const items = await service.getSection(user, 'cv-1', 'work');
+    expect(items).toHaveLength(1);
+    expect(items[0].name).toBe('Acme');
+  });
+
+  it('getBasics returns header fields and profiles', async () => {
+    cvService.getHeader.mockResolvedValue(
+      mockCvHeader({
+        name: 'Alex',
+        label: 'Dev',
+        location: { city: 'Paris' },
+      }),
+    );
+    profileRows = [{ id: 'p1', cv_id: 'cv-1', sort: 0, network: 'GitHub', username: 'alex' }];
+    setupListMock('profiles', profileRows);
+
+    const basics = await service.getBasics(user, 'cv-1');
+    expect(basics.name).toBe('Alex');
+    expect(basics.label).toBe('Dev');
+    expect(basics.location).toEqual({ city: 'Paris' });
+    expect(basics.profiles).toHaveLength(1);
+  });
+
+  it('reorderSection rejects non sort-backed sections', async () => {
+    await expect(service.reorderSection(user, 'cv-1', 'work', ['a'], 'v1.0.0')).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('reorderSection throws 409 on stale version', async () => {
+    await expect(service.reorderSection(user, 'cv-1', 'skills', ['a'], 'v9.9.9')).rejects.toThrow(
+      ConflictException,
+    );
+  });
+
+  it('deleteProfile throws 404 when profile index is missing', async () => {
+    profileRows = [];
+    setupListMock('profiles', profileRows);
+
+    await expect(service.deleteProfile(user, 'cv-1', '0', 'v1.0.0')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('createArrayItem rejects unknown section key', () => {
+    expect(() => service.createArrayItem(user, 'cv-1', 'unknown', {}, 'v1.0.0')).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('updateArrayItem rejects unknown section key', () => {
     expect(() =>
-      service.deleteArrayItem(user, 'cv-1', 'work', 'bad', 'Work entry', 'v1.0.0'),
+      service.updateArrayItem(user, 'cv-1', 'unknown', '0', {}, 'Item', 'v1.0.0'),
     ).toThrow(BadRequestException);
   });
 
-  it('initializes missing resume structures while mutating', async () => {
-    cvService.findOne.mockResolvedValue(baseRow({ meta }));
-    cvService.persistValidatedData.mockImplementation(async (_user, _id, data) =>
-      baseRow({ ...data, meta: { ...meta, version: 'v1.0.1' } }),
+  it('deleteArrayItem rejects unknown section key', () => {
+    expect(() => service.deleteArrayItem(user, 'cv-1', 'unknown', '0', 'Item', 'v1.0.0')).toThrow(
+      BadRequestException,
     );
-
-    await service.createProfile(user, 'cv-1', { network: 'LinkedIn' }, 'v1.0.0');
-    expect(cvService.persistValidatedData).toHaveBeenCalledWith(
-      user,
-      'cv-1',
-      expect.objectContaining({
-        basics: expect.objectContaining({
-          profiles: [{ network: 'LinkedIn' }],
-        }),
-      }),
-    );
-
-    cvService.findOne.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.1' },
-        work: [{ highlights: 'not-an-array' }],
-      }),
-    );
-
-    const nested = await service.createNestedString(
-      user,
-      'cv-1',
-      'work',
-      '0',
-      'highlights',
-      'First highlight',
-      'Work entry',
-      'v1.0.1',
-    );
-    expect(nested.value).toBe('First highlight');
   });
 
-  it('throws 404 when deleting missing profile or nested item', async () => {
-    cvService.findOne.mockResolvedValue(
-      baseRow({
-        meta,
-        basics: { profiles: [{ network: 'GitHub' }] },
-      }),
-    );
-
-    await expect(service.deleteProfile(user, 'cv-1', '1', 'v1.0.0')).rejects.toThrow(
-      NotFoundException,
-    );
-
-    cvService.findOne.mockResolvedValue(
-      baseRow({
-        meta,
-        work: [{ name: 'Acme', highlights: ['One'] }],
-      }),
-    );
+  it('updateArrayItem throws 404 when index is out of range', async () => {
+    workRows = [];
+    setupListMock('work', workRows);
 
     await expect(
-      service.deleteNestedString(
+      service.updateArrayItem(user, 'cv-1', 'work', '0', { name: 'X' }, 'Work entry', 'v1.0.0'),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('deleteArrayItem throws 404 when index is out of range', async () => {
+    workRows = [];
+    setupListMock('work', workRows);
+
+    await expect(
+      service.deleteArrayItem(user, 'cv-1', 'work', '0', 'Work entry', 'v1.0.0'),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('nested string mutation throws for unknown section or missing parent', async () => {
+    await expect(
+      service.updateNestedString(
+        user,
+        'cv-1',
+        'unknown',
+        '0',
+        'highlights',
+        '0',
+        'text',
+        'Parent',
+        'v1.0.0',
+      ),
+    ).rejects.toThrow(BadRequestException);
+
+    workRows = [];
+    setupListMock('work', workRows);
+
+    await expect(
+      service.updateNestedString(
         user,
         'cv-1',
         'work',
         '0',
         'highlights',
-        '1',
+        '0',
+        'text',
         'Work entry',
         'v1.0.0',
       ),
     ).rejects.toThrow(NotFoundException);
-  });
-
-  it('falls back to CORS_ORIGIN when APP_URL is unset', async () => {
-    const module = await Test.createTestingModule({
-      providers: [
-        CvItemService,
-        { provide: CvService, useValue: cvService },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: (key: string) => {
-              if (key === 'CORS_ORIGIN') return 'http://cors.test,http://other.test';
-              return undefined;
-            },
-          },
-        },
-      ],
-    }).compile();
-
-    const corsService = module.get(CvItemService);
-    cvService.findOne.mockResolvedValue(baseRow({ meta, work: [] }));
-    cvService.persistValidatedData.mockResolvedValue(
-      baseRow({
-        meta: { ...meta, version: 'v1.0.1', canonical: 'http://cors.test/dashboard/cv/cv-1' },
-        work: [{ name: 'Acme' }],
-      }),
-    );
-
-    await corsService.createArrayItem(user, 'cv-1', 'work', { name: 'Acme' }, 'v1.0.0');
-
-    expect(cvService.persistValidatedData).toHaveBeenCalled();
   });
 });

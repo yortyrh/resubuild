@@ -38,8 +38,38 @@ vi.mock('@/lib/api', () => ({
   uploadResumeMedia: vi.fn(),
 }));
 
-import { CvSections } from './cv-sections';
+const useCvEditorMock = vi.fn();
+
+vi.mock('./cv-editor-provider', () => ({
+  useCvEditor: () => useCvEditorMock(),
+}));
+
+import { AwardsSection } from './sections/awards-section';
+import { CertificatesSection } from './sections/certificates-section';
+import { EducationSection } from './sections/education-section';
+import { InterestsSection } from './sections/interests-section';
+import { LanguagesSection } from './sections/languages-section';
+import { ProjectsSection } from './sections/projects-section';
+import { PublicationsSection } from './sections/publications-section';
+import { SkillsSection } from './sections/skills-section';
+import { VolunteerSection } from './sections/volunteer-section';
+import { WorkSection } from './sections/work-section';
 import { roleTagPillClassName, tagPillClassName } from './tags-input';
+
+const SECTION_COMPONENTS = {
+  work: WorkSection,
+  volunteer: VolunteerSection,
+  education: EducationSection,
+  skills: SkillsSection,
+  projects: ProjectsSection,
+  awards: AwardsSection,
+  certificates: CertificatesSection,
+  publications: PublicationsSection,
+  languages: LanguagesSection,
+  interests: InterestsSection,
+} as const;
+
+type RenderableSection = keyof typeof SECTION_COMPONENTS;
 
 function fullyPopulatedResume(): Resume {
   return {
@@ -142,15 +172,24 @@ function fullyPopulatedResume(): Resume {
   };
 }
 
-const defaultProps = {
-  cvId: 'cv-1',
-  version: 'v1',
-  onVersionChange: vi.fn(),
-  onResumeChange: vi.fn(),
-};
+function setupEditor(resume: Resume) {
+  useCvEditorMock.mockReturnValue({
+    cvId: 'cv-1',
+    resume,
+    version: 'v1',
+    loading: false,
+    error: null,
+    setResume: vi.fn(),
+    setVersion: vi.fn(),
+    mountedSection: null,
+    setMountedSection: vi.fn(),
+  });
+}
 
-function renderSection(activeSection: CvSectionSlug, resume: Resume) {
-  render(<CvSections {...defaultProps} activeSection={activeSection} resume={resume} />);
+function renderSection(activeSection: RenderableSection, resume: Resume) {
+  setupEditor(resume);
+  const Section = SECTION_COMPONENTS[activeSection];
+  return render(<Section />);
 }
 
 function expectLinkedTitle(label: string, href: string) {
@@ -163,6 +202,7 @@ function expectLinkedTitle(label: string, href: string) {
 describe('CvSections field coverage', () => {
   afterEach(() => {
     cleanup();
+    useCvEditorMock.mockReset();
   });
 
   describe('Work view', () => {
@@ -189,9 +229,7 @@ describe('CvSections field coverage', () => {
           highlights: ['**Reduced API latency by 40%**'],
         },
       ];
-      const { container } = render(
-        <CvSections {...defaultProps} activeSection="work" resume={resume} />,
-      );
+      const { container } = renderSection('work', resume);
 
       const strong = container.querySelector('strong');
       expect(strong).not.toBeNull();
@@ -265,9 +303,7 @@ describe('CvSections field coverage', () => {
 
     it('renders keywords as labeled tag pills without comma-separated prefix', () => {
       const resume = fullyPopulatedResume();
-      const { container } = render(
-        <CvSections {...defaultProps} activeSection="projects" resume={resume} />,
-      );
+      const { container } = renderSection('projects', resume);
 
       expect(screen.getByText('Keywords')).toBeInTheDocument();
       expect(screen.getByText('React')).toBeInTheDocument();
@@ -355,3 +391,6 @@ describe('CvSections field coverage', () => {
     });
   });
 });
+
+// Keep type usage to ensure CvSectionSlug stays a valid import target
+type _ = CvSectionSlug;

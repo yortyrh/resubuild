@@ -75,6 +75,8 @@ Workflow runs in background (`setImmediate` / Nest `@nestjs/bull` optional follo
    - If invalid, LLM **repair** step receives AJV errors + prior JSON and returns patched document
 4. **Finalize** — `prepareImportedResume(draft)` → `CvService.create(user, { data })` → attach `cvId` to job
 
+> **Dependency (`normalize-cv-database`):** After normalized CV storage lands, `CvService.create` disassembles JSON Resume into relational tables via `disassembleResume`. No change to the import agent's finalize contract—still pass assembled `data`; persistence is handled inside `CvService`.
+
 **Rationale:** Separates extraction from reasoning; verification tools are deterministic and reusable for future chat (“fix my dates”).
 
 **Alternatives considered:**

@@ -9,7 +9,7 @@ Sample files in `.samples/resumes/jsonresume/` demonstrate real-world imports: f
 **Goals:**
 
 - Let signed-in users create a CV by uploading or pasting a JSON Resume file.
-- Reuse existing `POST /cv` + schema validation—no parallel persistence path.
+- Reuse existing `POST /cv` + schema validation—no parallel persistence path. After `normalize-cv-database`, `CvService.create` writes normalized rows via `disassembleResume` internally; importers still send assembled JSON Resume `data`.
 - Normalize imported payloads in `@resumind/types` so web (and future API clients) share one import contract.
 - Show actionable errors for invalid JSON and schema validation failures.
 - Navigate to the editor after successful import with server-derived title from basics.

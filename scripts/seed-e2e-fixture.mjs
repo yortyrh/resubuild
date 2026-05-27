@@ -111,17 +111,7 @@ async function seedFixtureAccount(admin, config, fixture, credentials, label) {
       throw new Error(`Media not uploaded for ${cv.sourceFile}: ${mediaFile}`);
     }
 
-    const { data: cvRow, error: cvFetchError } = await admin
-      .from('cv')
-      .select('*')
-      .eq('id', cv.id)
-      .single();
-
-    if (cvFetchError || !cvRow) {
-      throw new Error(`Could not load CV ${cv.id}: ${cvFetchError?.message}`);
-    }
-
-    await assignProfilePhoto(admin, cv.id, user.id, cvRow.data, targetMedia.url, config.appUrl);
+    await assignProfilePhoto(admin, cv.id, user.id, targetMedia.url, config.appUrl);
     profilePhotoAssignments.push({
       cvId: cv.id,
       cvSourceFile: cv.sourceFile,
