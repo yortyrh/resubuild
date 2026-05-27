@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-### Requirement: Array item identity in URLs SHALL map to section list order
+### Requirement: Array item identity in URLs SHALL use stable row UUIDs
 
 Array item update and delete routes SHALL identify rows by their normalized table primary key (UUID). Path segments previously named `:index` SHALL be `:itemId` and MUST be a valid UUID belonging to the target CV and section. The service SHALL resolve the row with a direct lookup by `(cv_id, id)` and SHALL NOT require fetching the full ordered section list to perform update or delete.
 

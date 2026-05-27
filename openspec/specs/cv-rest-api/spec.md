@@ -78,17 +78,24 @@ Nest SHALL classify **`POST /media/upload`** under `MediaController` guarded by 
 
 ### Requirement: The API SHALL expose item-scoped authenticated routes for CV resume content
 
-Under `/cv/:cvId`, authenticated handlers SHALL provide create, update, and delete operations for each resume collection defined in `cv-item-crud`, plus `PATCH /cv/:cvId/basics` for the singleton basics object. Handlers MUST read and write normalized section tables and basics columns on `cv` (not `cv.data`), validate entity DTOs, assemble for schema validation when required, and apply optimistic concurrency via `cv.meta_version`.
+Under `/cv/:cvId`, authenticated handlers SHALL provide create, update, and delete operations for each resume collection defined in `cv-item-crud`, plus `PATCH /cv/:cvId/basics` for the singleton basics object. Array-item update and delete routes SHALL use `:itemId` (row UUID) in the path instead of a numeric index. Handlers MUST read and write normalized section tables and basics columns on `cv` (not `cv.data`), validate entity DTOs, assemble for schema validation when required, and apply optimistic concurrency via `cv.meta_version`.
+
+Nested string routes under work, volunteer, education, and projects SHALL use `:parentId` (parent row UUID) instead of `:parentIndex` for the parent segment; child highlight/course position MAY remain a numeric `:childIndex` within the parent jsonb array.
 
 #### Scenario: Create work entry
 
 - **WHEN** an authenticated client calls `POST /cv/:cvId/work` with a valid work payload and current version
-- **THEN** the service SHALL insert a row into `cv_work`, validate, persist, and return the created entry with its array index (position by date order) and updated version metadata
+- **THEN** the service SHALL insert a row into `cv_work`, validate, persist, and return the created entry including its row `id` and updated version metadata
 
-#### Scenario: Delete education course
+#### Scenario: Update work entry by id
 
-- **WHEN** an authenticated client calls `DELETE /cv/:cvId/education/:educationIndex/courses/:courseIndex` (legacy nested route, if retained)
-- **THEN** the service SHALL remove that course string from the `cv_education.courses` jsonb array, validate, persist, and return the updated education entry or courses list
+- **WHEN** an authenticated client calls `PATCH /cv/:cvId/work/:itemId` with a valid work row uuid
+- **THEN** the service SHALL update that row by primary key lookup and return the updated entry with the same `id`
+
+#### Scenario: Delete education course (legacy nested route)
+
+- **WHEN** an authenticated client calls `DELETE /cv/:cvId/education/:parentId/courses/:courseIndex` (legacy nested route, if retained)
+- **THEN** the service SHALL resolve the education row by `parentId`, remove that course string from `cv_education.courses` jsonb, validate, persist, and return the updated education entry
 
 #### Scenario: Update basics
 
@@ -98,7 +105,7 @@ Under `/cv/:cvId`, authenticated handlers SHALL provide create, update, and dele
 #### Scenario: Create reference entry
 
 - **WHEN** an authenticated client calls `POST /cv/:cvId/references` with a valid reference payload and current version
-- **THEN** the service SHALL insert into `cv_reference` with auto-assigned `sort`, validate, persist, and return the created entry with its array index and updated version metadata
+- **THEN** the service SHALL insert into `cv_reference` with auto-assigned `sort`, validate, persist, and return the created entry including its row `id` and updated version metadata
 
 #### Scenario: Unauthorized item mutation
 
@@ -107,12 +114,17 @@ Under `/cv/:cvId`, authenticated handlers SHALL provide create, update, and dele
 
 ### Requirement: Item mutation responses SHALL include enough data for the client to refresh UI state
 
-Successful item create and update responses SHALL include the affected entity, its index (for array items), and the new `meta.version`. Delete responses SHALL confirm removal and return the new version; optional section snapshots MAY be included to simplify client re-render.
+Successful item create and update responses SHALL include the affected entity (with stable row `id` for array items) and the new `meta.version`. Delete responses SHALL confirm removal and return the new version. Responses SHALL NOT require a numeric array `index` for the client to apply update or delete locally; clients SHALL match rows by `id`.
 
-#### Scenario: Work highlight update response
+#### Scenario: Work item update response
 
-- **WHEN** a client successfully patches a work highlight
-- **THEN** the response SHALL include the highlight value, parent work index, highlight index, and updated `meta.version`
+- **WHEN** a client successfully patches a work entry by item id
+- **THEN** the response SHALL include the updated work object with `id` and updated `meta.version`
+
+#### Scenario: Work highlight update response (legacy nested route)
+
+- **WHEN** a client successfully patches a work highlight via nested route
+- **THEN** the response SHALL include the highlight value, parent work `id`, highlight index, and updated `meta.version`
 
 ### Requirement: CV title SHALL be computed from basics on read and after basics mutations
 

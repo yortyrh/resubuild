@@ -47,4 +47,4 @@
 
 ## 7. Documentation
 
-- [ ] 7.1 Archive change with `openspec archive section-items-by-id` after implementation merges spec deltas into `openspec/specs/`
+- [x] 7.1 Archive change with `openspec archive section-items-by-id` after implementation merges spec deltas into `openspec/specs/`
