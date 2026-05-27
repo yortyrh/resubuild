@@ -116,7 +116,7 @@ body {
 }
 
 .rich-text-editor--inline > .border > div > div:first-child {
-  height: calc(1.9em + 1px) !important;
+  height: 2.25em !important;
   margin-bottom: 0 !important;
 }
 
@@ -156,14 +156,17 @@ body {
 }
 
 .rich-text-editor--inline [data-slate-editor='true'] {
-  padding: 0.3125rem 0.4375rem !important;
-  min-height: 1.5rem;
+  padding: 0.5rem !important;
+  min-height: 2.5rem;
 }
 
-.rich-text-editor--inline [data-slate-node='element'] {
-  margin-block: 0;
-  padding-block: 0;
-  line-height: 1.4;
+/* Inline markdown rows in string lists — room for overlaid remove icon */
+.string-list-markdown-editor .rich-text-editor--inline > .border > div > div:first-child {
+  padding-right: 1.75rem !important;
+}
+
+.string-list-markdown-editor .rich-text-editor--inline [data-slate-editor='true'] {
+  padding-right: 1.75rem !important;
 }
 
 /* Markdown view – read-only rendered markdown in resume-preview rows */

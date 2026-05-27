@@ -105,6 +105,26 @@ describe('StringListField', () => {
     expect(document.activeElement).not.toBe(editables[1]);
   });
 
+  it('uses an icon remove control for markdown rows', () => {
+    render(
+      <StringListField
+        label="Highlights"
+        markdown
+        values={['First highlight']}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const remove = screen.getByRole('button', { name: 'Remove' });
+    expect(remove).not.toHaveTextContent('Remove');
+  });
+
+  it('keeps labeled Remove button for plain-text rows', () => {
+    render(<StringListField label="Courses" values={['First']} onChange={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Remove' })).toHaveTextContent('Remove');
+  });
+
   it('does not add a highlight when Enter is pressed in the editor', () => {
     const onChange = vi.fn();
     render(

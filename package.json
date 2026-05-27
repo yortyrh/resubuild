@@ -38,6 +38,9 @@
       "sharp",
       "esbuild",
       "@nestjs/core"
-    ]
+    ],
+    "patchedDependencies": {
+      "@wysimark/react@3.0.20": "patches/@wysimark__react@3.0.20.patch"
+    }
   }
 }

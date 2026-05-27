@@ -1,5 +1,6 @@
 'use client';
 
+import { Trash2 } from 'lucide-react';
 import { type KeyboardEvent, useEffect, useRef } from 'react';
 import { MarkdownEditor } from '@/components/cv/markdown-editor';
 import { Button } from '@/components/ui/button';
@@ -138,16 +139,28 @@ export function StringListField({
       <Label>{label}</Label>
       {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
       <div className="space-y-3">
-        {values.map((value, index) => (
-          <div key={index} className="flex items-start gap-2">
-            <div className="min-w-0 flex-1">
-              {markdown ? (
-                <MarkdownEditor
-                  value={value}
-                  onChange={(next) => updateItem(index, next)}
-                  variant="inline"
-                />
-              ) : (
+        {values.map((value, index) =>
+          markdown ? (
+            <div key={index} className="string-list-markdown-editor relative">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1 z-10 size-7"
+                aria-label="Remove"
+                onClick={() => removeItem(index)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+              <MarkdownEditor
+                value={value}
+                onChange={(next) => updateItem(index, next)}
+                variant="inline"
+              />
+            </div>
+          ) : (
+            <div key={index} className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
                 <Input
                   ref={(element) => {
                     inputRefs.current[index] = element;
@@ -158,18 +171,18 @@ export function StringListField({
                     handleItemEnter(index, event);
                   }}
                 />
-              )}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="shrink-0"
+                onClick={() => removeItem(index)}
+              >
+                Remove
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="shrink-0"
-              onClick={() => removeItem(index)}
-            >
-              Remove
-            </Button>
-          </div>
-        ))}
+          ),
+        )}
         <Button type="button" variant="secondary" onClick={addItem}>
           Add {label}
         </Button>
