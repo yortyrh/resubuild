@@ -67,7 +67,7 @@ Nest SHALL classify **`POST /media/upload`** under `MediaController` guarded by 
 
 Under `/cv/:cvId`, authenticated handlers SHALL provide create, update, and delete operations for each resume collection defined in `cv-item-crud`, plus `PATCH /cv/:cvId/basics` for the singleton basics object. Array-item update and delete routes SHALL use `:itemId` (row UUID) in the path instead of a numeric index. Handlers MUST read and write normalized section tables and basics columns on `cv` (not `cv.data`), validate entity DTOs, and assemble for schema validation when required. Handlers SHALL NOT read, write, or bump `cv.meta_*` columns.
 
-Nested string routes under work, volunteer, education, and projects SHALL use `:parentId` (parent row UUID) instead of `:parentIndex` for the parent segment; child highlight/course position MAY remain a numeric `:childIndex` within the parent jsonb array.
+Parent create and update payloads for work, volunteer, education, and projects SHALL accept full `highlights` and `courses` string arrays as jsonb fields on the parent row. The API SHALL NOT expose separate nested routes for individual highlight or course strings.
 
 #### Scenario: Create work entry
 
@@ -79,10 +79,11 @@ Nested string routes under work, volunteer, education, and projects SHALL use `:
 - **WHEN** an authenticated client calls `PATCH /cv/:cvId/work/:itemId` with a valid work row uuid
 - **THEN** the service SHALL update that row by primary key lookup and return the updated entry with the same `id`
 
-#### Scenario: Delete education course (legacy nested route)
+#### Scenario: Update work entry with highlights array
 
-- **WHEN** an authenticated client calls `DELETE /cv/:cvId/education/:parentId/courses/:courseIndex` (legacy nested route, if retained)
-- **THEN** the service SHALL resolve the education row by `parentId`, remove that course string from `cv_education.courses` jsonb, validate, persist, and return the updated education entry
+- **WHEN** an authenticated client calls `PATCH /cv/:cvId/work/:itemId` with a payload containing a full `highlights` string array
+- **THEN** the service SHALL replace `cv_work.highlights` jsonb with that array atomically
+- **AND** SHALL NOT require nested highlight sub-routes
 
 #### Scenario: Update basics
 
@@ -107,11 +108,6 @@ Successful item create and update responses SHALL include the affected entity (w
 
 - **WHEN** a client successfully patches a work entry by item id
 - **THEN** the response SHALL include the updated work object with `id`
-
-#### Scenario: Work highlight update response (legacy nested route)
-
-- **WHEN** a client successfully patches a work highlight via nested route
-- **THEN** the response SHALL include the highlight value, parent work `id`, and highlight index
 
 ### Requirement: CV title SHALL be computed from basics on read and after basics mutations
 
@@ -140,7 +136,7 @@ The API service SHALL compute `title` from `cv.name` and `cv.label` using the sh
 
 ### Requirement: The API SHALL expose section-scoped GET routes for editor views
 
-For each multi-valued resume section, the API SHALL provide `GET /cv/:cvId/{section}` (e.g. `work`, `skills`, `education`) returning an ordered JSON array of that section only, assembled from normalized tables. `GET /cv/:id` SHALL return slim CV `data` with basics only for editor bootstrap; full JSON Resume assembly for export or preview SHALL use a dedicated export endpoint when implemented.
+For each multi-valued resume section, the API SHALL provide `GET /cv/:cvId/{section}` (e.g. `work`, `skills`, `education`, `profiles`) returning an ordered JSON array of that section only, assembled from the corresponding normalized table. `GET /cv/:id` SHALL NOT load or return those section arrays; it SHALL return slim CV `data` with basics only for editor bootstrap. Clients SHALL use section routes or a future export endpoint for full JSON Resume documents.
 
 #### Scenario: Fetch work section only
 
@@ -150,8 +146,15 @@ For each multi-valued resume section, the API SHALL provide `GET /cv/:cvId/{sect
 #### Scenario: Detail bootstrap excludes section arrays
 
 - **WHEN** an authenticated client calls `GET /cv/:id` for editor bootstrap
-- **THEN** the response `data` SHALL contain basics only
-- **AND** SHALL NOT contain section arrays such as `work` or `skills`
+- **THEN** the service SHALL return CV metadata and slim `data` containing basics from the `cv` header row only
+- **AND** SHALL NOT query child section tables for that request
+- **AND** the response `data` SHALL NOT contain section arrays such as `work` or `skills`
+
+#### Scenario: Detail response excludes section arrays when rows exist
+
+- **WHEN** a CV has work and skills rows in normalized tables
+- **THEN** `GET /cv/:id` SHALL NOT include `data.work` or `data.skills`
+- **AND** `GET /cv/:cvId/work` SHALL return the work array when the client needs it
 
 ### Requirement: Full CV reads SHALL assemble JSON Resume from normalized storage
 

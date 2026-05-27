@@ -96,6 +96,22 @@ When an item create, update, or delete API call fails, the UI SHALL surface an e
 - **WHEN** the API returns a non-success status during an item update
 - **THEN** the client SHALL show an error message and SHALL NOT update local state as if the save succeeded
 
+### Requirement: Nested string arrays SHALL NOT have dedicated API routes
+
+The Nest API SHALL NOT expose separate create, update, or delete routes for individual strings within `work[].highlights`, `volunteer[].highlights`, `education[].courses`, or `projects[].highlights`. All mutations to those arrays SHALL occur only when the parent work, volunteer, education, or project entry is created or updated with the full string array in the request payload.
+
+#### Scenario: Highlight change via parent update only
+
+- **WHEN** a client needs to add, edit, or remove a work highlight
+- **THEN** it SHALL call `PATCH /cv/:cvId/work/:itemId` with the complete updated `highlights` array
+- **AND** SHALL NOT call a nested `/highlights/:index` route
+
+#### Scenario: Course change via parent update only
+
+- **WHEN** a client needs to add, edit, or remove an education course line
+- **THEN** it SHALL call `PATCH /cv/:cvId/education/:itemId` with the complete updated `courses` array
+- **AND** SHALL NOT call a nested `/courses/:index` route
+
 ### Requirement: Highlights and courses SHALL persist on parent entity save
 
 Work, Volunteer, and Project `highlights`, and Education `courses`, SHALL be edited as ordered string arrays on the parent entity form and SHALL persist when the user saves the parent Work, Volunteer, Project, or Education entry. The editor SHALL NOT call Work Highlight, Volunteer Highlight, Project Highlight, or Education Course nested create/update/delete APIs during normal authoring flows.
@@ -152,6 +168,23 @@ When the API exposes section GET routes, each editor tab SHOULD load only its se
 
 - **WHEN** a user exports or previews the complete CV
 - **THEN** the client SHALL use the full assembled CV from `GET /cv/:id` or equivalent export endpoint
+
+### Requirement: Basics read routes SHALL return header columns only
+
+`GET /cv/:cvId/basics` SHALL return basics fields stored on the `cv` row (name, label, image, email, phone, url, summary, location). It SHALL NOT query `cv_profiles` or include a `profiles` array. Clients needing profiles SHALL call `GET /cv/:cvId/profiles`.
+
+#### Scenario: Fetch basics without profiles query
+
+- **WHEN** an authenticated client calls `GET /cv/:cvId/basics`
+- **THEN** the response SHALL include basics scalar fields and location from the `cv` row
+- **AND** the response SHALL NOT include a `profiles` property
+- **AND** the service SHALL NOT list profile rows for that request
+
+#### Scenario: Update basics response excludes profiles
+
+- **WHEN** an authenticated client calls `PATCH /cv/:cvId/basics` with partial basics fields
+- **THEN** the mutation response `item` SHALL contain only updated basics fields from the header row
+- **AND** SHALL NOT embed profiles loaded from `cv_profiles`
 
 ### Requirement: Array item identity in URLs SHALL use stable row UUIDs
 
