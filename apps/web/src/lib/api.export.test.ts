@@ -8,12 +8,7 @@ vi.mock('@/lib/auth-session', () => ({
   getValidAccessToken: getValidAccessTokenMock,
 }));
 
-import {
-  downloadCvPdf,
-  getCvExportHtml,
-  listCvTemplates,
-  updateCvTemplate,
-} from './api';
+import { downloadCvPdf, getCvExportHtml, listCvTemplates, updateCvTemplate } from './api';
 
 describe('cv export api helpers', () => {
   beforeEach(() => {
@@ -92,7 +87,9 @@ describe('cv export api helpers', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
         JSON.stringify({
-          templates: [{ id: 'mit-classic', label: 'MIT Classic', description: '', category: 'default' }],
+          templates: [
+            { id: 'mit-classic', label: 'MIT Classic', description: '', category: 'default' },
+          ],
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       ),

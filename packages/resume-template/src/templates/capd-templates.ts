@@ -55,7 +55,8 @@ export const capdDesign = createCapdTemplate({
   sectionOrder: ['summary', 'work', 'projects', 'education', 'skills'],
   headingStyle: 'sentence',
   headerStyle: 'design',
-  articleClass: 'max-w-[8.5in] mx-auto my-6 print:my-0 bg-white text-neutral-900 font-resume text-[11pt] leading-relaxed shadow-sm print:shadow-none p-[0.6in] print:p-0',
+  articleClass:
+    'max-w-[8.5in] mx-auto my-6 print:my-0 bg-white text-neutral-900 font-resume text-[11pt] leading-relaxed shadow-sm print:shadow-none p-[0.6in] print:p-0',
 });
 
 export const capdGlobal = createCapdTemplate({

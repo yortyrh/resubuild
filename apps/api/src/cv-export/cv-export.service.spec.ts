@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Resume } from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';

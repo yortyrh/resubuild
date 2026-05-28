@@ -1,4 +1,3 @@
-export { renderMarkdownField } from './render-markdown-field';
 export {
   DEFAULT_TEMPLATE_ID,
   getTemplate,
@@ -8,11 +7,12 @@ export {
   TEMPLATE_IDS,
   toMeta,
 } from './registry';
+export { renderMarkdownField } from './render-markdown-field';
 export { PDF_EXPORT_OPTIONS, renderResumeHtml } from './render-resume-html';
 export type {
   CapdTemplateConfig,
-  HeadingStyle,
   HeaderStyle,
+  HeadingStyle,
   RenderOptions,
   ResumeTemplate,
   ResumeTemplateMeta,

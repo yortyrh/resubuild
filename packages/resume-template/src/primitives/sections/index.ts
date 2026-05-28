@@ -16,13 +16,7 @@ import type {
   ResumeWork,
 } from '@resumind/types';
 import type { HeaderStyle, HeadingStyle, SectionKey } from '../../types';
-import {
-  escapeHtml,
-  formatDateRange,
-  formatIsoDate,
-  hasItems,
-  normalizeUrl,
-} from '../html';
+import { escapeHtml, formatDateRange, formatIsoDate, hasItems, normalizeUrl } from '../html';
 import { renderMarkdownField } from '../markdown';
 
 export interface SectionRenderContext {
@@ -185,7 +179,10 @@ export function renderSummarySection(
   </section>`;
 }
 
-export function renderWorkSection(work: ResumeWork[] | undefined, ctx: SectionRenderContext): string {
+export function renderWorkSection(
+  work: ResumeWork[] | undefined,
+  ctx: SectionRenderContext,
+): string {
   if (!hasItems(work)) return '';
   const items = work;
   const label = sectionLabel('work', ctx);
@@ -270,7 +267,10 @@ export function renderEducationSection(
   </section>`;
 }
 
-export function renderSkillsSection(skills: ResumeSkill[] | undefined, ctx: SectionRenderContext): string {
+export function renderSkillsSection(
+  skills: ResumeSkill[] | undefined,
+  ctx: SectionRenderContext,
+): string {
   if (!hasItems(skills)) return '';
   const items = skills;
   const label = sectionLabel('skills', ctx);
@@ -321,7 +321,10 @@ export function renderProjectsSection(
   </section>`;
 }
 
-export function renderAwardsSection(awards: ResumeAward[] | undefined, ctx: SectionRenderContext): string {
+export function renderAwardsSection(
+  awards: ResumeAward[] | undefined,
+  ctx: SectionRenderContext,
+): string {
   if (!hasItems(awards)) return '';
   const items = awards;
   const label = sectionLabel('awards', ctx);

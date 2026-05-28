@@ -29,13 +29,17 @@ describe('CvExportController', () => {
       { id: 'mit-classic', label: 'MIT Classic', description: '', category: 'default' },
     ]);
     expect(controller.listTemplates()).toEqual({
-      templates: [{ id: 'mit-classic', label: 'MIT Classic', description: '', category: 'default' }],
+      templates: [
+        { id: 'mit-classic', label: 'MIT Classic', description: '', category: 'default' },
+      ],
     });
   });
 
   it('exportHtml delegates to CvExportService.renderHtml with optional template', async () => {
     exportService.renderHtml.mockResolvedValue('<html>Jane</html>');
-    await expect(controller.exportHtml(req, 'cv-1', 'capd-alum')).resolves.toBe('<html>Jane</html>');
+    await expect(controller.exportHtml(req, 'cv-1', 'capd-alum')).resolves.toBe(
+      '<html>Jane</html>',
+    );
     expect(exportService.renderHtml).toHaveBeenCalledWith(userCtx, 'cv-1', 'capd-alum');
   });
 });

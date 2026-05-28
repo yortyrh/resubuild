@@ -260,9 +260,7 @@ describe('CvService', () => {
         eq: jest.fn().mockResolvedValue({ error: null }),
       }));
       (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({ update }));
-      normalizedRepo.fetchHeader.mockResolvedValue(
-        mockCvHeader({ template_id: 'capd-alum' }),
-      );
+      normalizedRepo.fetchHeader.mockResolvedValue(mockCvHeader({ template_id: 'capd-alum' }));
 
       const result = await service.update(user, 'cv-1', { templateId: 'capd-alum' });
 

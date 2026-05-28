@@ -24,7 +24,10 @@ export function formatIsoDate(value: string | undefined): string {
   return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
-export function formatDateRange(startDate: string | undefined, endDate: string | undefined): string {
+export function formatDateRange(
+  startDate: string | undefined,
+  endDate: string | undefined,
+): string {
   const start = formatIsoDate(startDate);
   const end = endDate ? formatIsoDate(endDate) : 'Present';
   if (!start && !endDate) return '';

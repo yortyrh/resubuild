@@ -129,7 +129,7 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
           <Label htmlFor="cv-template-select">Template</Label>
           <select
             id="cv-template-select"
-            className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
             value={selectedTemplateId}
             onChange={(event) => void handleTemplateChange(event.target.value)}
             disabled={templates.length === 0}

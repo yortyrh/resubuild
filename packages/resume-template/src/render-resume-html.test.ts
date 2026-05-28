@@ -1,4 +1,3 @@
-import type { Resume } from '@resumind/types';
 import { describe, expect, it } from 'vitest';
 import { renderMarkdownField } from './render-markdown-field';
 import { renderResumeHtml } from './render-resume-html';
