@@ -13,9 +13,8 @@ import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { getCvWork } from '@/lib/api';
+import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvWorkApi } from '@/lib/cv-item-api';
-import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
 
 type WorkItem = SectionItem<ResumeWork>;
 
@@ -26,9 +25,9 @@ export function WorkSection() {
   return (
     <ManagedArraySection<WorkItem>
       cvId={cvId}
+      sectionKey="work"
       items={resume.work ?? []}
       onItemsChange={(work) => setResume((prev) => ({ ...prev, work }))}
-      refetchItems={createSectionRefetch<WorkItem>(getCvWork, cvId)}
       entityLabel="Work entry"
       addLabel="Add work experience"
       createEmpty={() => ({ highlights: [] })}

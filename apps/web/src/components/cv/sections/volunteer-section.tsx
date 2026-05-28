@@ -13,9 +13,8 @@ import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { getCvVolunteer } from '@/lib/api';
+import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvVolunteerApi } from '@/lib/cv-item-api';
-import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
 
 type VolunteerItem = SectionItem<ResumeVolunteer>;
 
@@ -26,9 +25,9 @@ export function VolunteerSection() {
   return (
     <ManagedArraySection<VolunteerItem>
       cvId={cvId}
+      sectionKey="volunteer"
       items={resume.volunteer ?? []}
       onItemsChange={(volunteer) => setResume((prev) => ({ ...prev, volunteer }))}
-      refetchItems={createSectionRefetch<VolunteerItem>(getCvVolunteer, cvId)}
       entityLabel="Volunteer entry"
       addLabel="Add volunteer experience"
       createEmpty={() => ({ highlights: [] })}

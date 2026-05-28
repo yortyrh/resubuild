@@ -62,21 +62,6 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   return JSON.parse(text) as T;
 }
 
-const inflightGetRequests = new Map<string, Promise<unknown>>();
-
-function dedupeGetRequest<T>(key: string, request: () => Promise<T>): Promise<T> {
-  const existing = inflightGetRequests.get(key) as Promise<T> | undefined;
-  if (existing) {
-    return existing;
-  }
-
-  const promise = request().finally(() => {
-    inflightGetRequests.delete(key);
-  });
-  inflightGetRequests.set(key, promise);
-  return promise;
-}
-
 export interface MediaUploadResult {
   /** Opaque media id (UUID v4). */
   id: string;
@@ -176,11 +161,11 @@ export function profilePhotoPreviewUrl(imageUrl: string | undefined): string | u
 }
 
 export function listCvs() {
-  return dedupeGetRequest('GET /cv', () => apiFetch<CvRecord[]>('/cv'));
+  return apiFetch<CvRecord[]>('/cv');
 }
 
 export function getCv(id: string) {
-  return dedupeGetRequest(`GET /cv/${id}`, () => apiFetch<CvRecord>(`/cv/${id}`));
+  return apiFetch<CvRecord>(`/cv/${id}`);
 }
 
 export function createCv(payload: { title?: string; data: Record<string, unknown> }) {
@@ -205,8 +190,8 @@ export function updateCvTemplate(id: string, templateId: string) {
 }
 
 export function listCvTemplates() {
-  return dedupeGetRequest('GET /cv/export/templates', () =>
-    apiFetch<{ templates: CvTemplateMeta[] }>('/cv/export/templates').then((r) => r.templates),
+  return apiFetch<{ templates: CvTemplateMeta[] }>('/cv/export/templates').then(
+    (r) => r.templates,
   );
 }
 
@@ -368,81 +353,55 @@ export function getPdfImportJob(jobId: string) {
 }
 
 export function getCvBasics(cvId: string) {
-  return dedupeGetRequest(`GET /cv/${cvId}/basics`, () =>
-    apiFetch<Record<string, unknown>>(`/cv/${cvId}/basics`),
-  );
+  return apiFetch<Record<string, unknown>>(`/cv/${cvId}/basics`);
 }
 
 export function getCvWork(cvId: string) {
-  return dedupeGetRequest(`GET /cv/${cvId}/work`, () =>
-    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/work`),
-  );
+  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/work`);
 }
 
 export function getCvVolunteer(cvId: string) {
-  return dedupeGetRequest(`GET /cv/${cvId}/volunteer`, () =>
-    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/volunteer`),
-  );
+  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/volunteer`);
 }
 
 export function getCvEducation(cvId: string) {
-  return dedupeGetRequest(`GET /cv/${cvId}/education`, () =>
-    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/education`),
-  );
+  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/education`);
 }
 
 export function getCvSkills(cvId: string) {
-  return dedupeGetRequest(`GET /cv/${cvId}/skills`, () =>
-    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/skills`),
-  );
+  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/skills`);
 }
 
 export function getCvProjects(cvId: string) {
-  return dedupeGetRequest(`GET /cv/${cvId}/projects`, () =>
-    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/projects`),
-  );
+  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/projects`);
 }
 
 export function getCvAwards(cvId: string) {
-  return dedupeGetRequest(`GET /cv/${cvId}/awards`, () =>
-    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/awards`),
-  );
+  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/awards`);
 }
 
 export function getCvCertificates(cvId: string) {
-  return dedupeGetRequest(`GET /cv/${cvId}/certificates`, () =>
-    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/certificates`),
-  );
+  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/certificates`);
 }
 
 export function getCvPublications(cvId: string) {
-  return dedupeGetRequest(`GET /cv/${cvId}/publications`, () =>
-    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/publications`),
-  );
+  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/publications`);
 }
 
 export function getCvLanguages(cvId: string) {
-  return dedupeGetRequest(`GET /cv/${cvId}/languages`, () =>
-    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/languages`),
-  );
+  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/languages`);
 }
 
 export function getCvInterests(cvId: string) {
-  return dedupeGetRequest(`GET /cv/${cvId}/interests`, () =>
-    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/interests`),
-  );
+  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/interests`);
 }
 
 export function getCvReferences(cvId: string) {
-  return dedupeGetRequest(`GET /cv/${cvId}/references`, () =>
-    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/references`),
-  );
+  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/references`);
 }
 
 export function getCvProfiles(cvId: string) {
-  return dedupeGetRequest(`GET /cv/${cvId}/profiles`, () =>
-    apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/profiles`),
-  );
+  return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/profiles`);
 }
 
 export async function getCvExportHtml(cvId: string, templateId?: string): Promise<string> {

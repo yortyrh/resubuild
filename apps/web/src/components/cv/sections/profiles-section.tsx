@@ -6,9 +6,8 @@ import { ExternalLink } from '@/components/cv/external-link';
 import { TextField } from '@/components/cv/form-fields';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { getCvProfiles } from '@/lib/api';
 import { createCvProfile, deleteCvProfile, updateCvProfile } from '@/lib/cv-item-api';
-import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
+import { type SectionItem } from '@/lib/cv-section-refetch';
 
 type ProfileItem = SectionItem<ResumeProfile>;
 
@@ -25,13 +24,13 @@ export function ProfilesSection() {
   return (
     <SortableManagedArraySection<ProfileItem>
       cvId={cvId}
+      sectionKey="profiles"
       reorderSection="profiles"
       reorderSectionLabel="social profile"
       items={resume.basics?.profiles ?? []}
       onItemsChange={(profiles) =>
         setResume((prev) => ({ ...prev, basics: { ...prev.basics, profiles } }))
       }
-      refetchItems={createSectionRefetch<ProfileItem>(getCvProfiles, cvId)}
       entityLabel="Profile"
       addLabel="Add social profile"
       createEmpty={() => ({})}

@@ -1,54 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { useState } from 'react';
 import { DeleteItemDialog } from '@/components/cv/cv-item-ui';
 import { CvListSkeleton } from '@/components/dashboard/cv-list-skeleton';
 import { Button } from '@/components/ui/button';
-import type { CvRecord } from '@/lib/api';
-import { deleteCv, listCvs } from '@/lib/api';
+import { useDeleteCv } from '@/lib/queries/cv-mutations';
+import { useCvList } from '@/lib/queries/cv-queries';
 
 export function CvList() {
-  const router = useRouter();
-  const [cvs, setCvs] = useState<CvRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: cvs = [], isLoading, error } = useCvList();
+  const deleteCvMutation = useDeleteCv();
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const loadCvs = useCallback(() => {
-    return listCvs()
-      .then(setCvs)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load CVs'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    listCvs()
-      .then((data) => {
-        if (!cancelled) {
-          setCvs(data);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load CVs');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const pendingDelete = deleteId ? cvs.find((cv) => cv.id === deleteId) : undefined;
 
@@ -57,26 +20,24 @@ export function CvList() {
       return;
     }
 
-    setDeleting(true);
     try {
-      await deleteCv(deleteId);
-      toast.success('CV deleted');
+      await deleteCvMutation.mutateAsync(deleteId);
       setDeleteId(null);
-      await loadCvs();
-      router.refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete CV');
-    } finally {
-      setDeleting(false);
+    } catch {
+      // Toast handled in mutation hook.
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return <CvListSkeleton />;
   }
 
   if (error) {
-    return <p className="text-destructive">{error}</p>;
+    return (
+      <p className="text-destructive">
+        {error instanceof Error ? error.message : 'Failed to load CVs'}
+      </p>
+    );
   }
 
   if (cvs.length === 0) {
@@ -139,10 +100,10 @@ export function CvList() {
               ? `"${pendingDelete.title}" will be permanently removed. This cannot be undone.`
               : 'This CV will be permanently removed. This cannot be undone.'
           }
-          confirming={deleting}
+          confirming={deleteCvMutation.isPending}
           onConfirm={confirmDelete}
           onCancel={() => {
-            if (!deleting) {
+            if (!deleteCvMutation.isPending) {
               setDeleteId(null);
             }
           }}

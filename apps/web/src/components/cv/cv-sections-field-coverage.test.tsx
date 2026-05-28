@@ -2,6 +2,7 @@
 import type { Resume } from '@resumind/types';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { QueryProvider } from '@/components/providers/query-provider';
 import type { CvSectionSlug } from './cv-section-nav';
 
 vi.mock('sonner', () => ({
@@ -221,7 +222,11 @@ function setupEditor(resume: Resume) {
 function renderSection(activeSection: RenderableSection, resume: Resume) {
   setupEditor(resume);
   const Section = SECTION_COMPONENTS[activeSection];
-  return render(<Section />);
+  return render(
+    <QueryProvider>
+      <Section />
+    </QueryProvider>,
+  );
 }
 
 function expectLinkedTitle(label: string, href: string) {

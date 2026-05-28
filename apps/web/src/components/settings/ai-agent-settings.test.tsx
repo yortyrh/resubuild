@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { QueryProvider } from '@/components/providers/query-provider';
 
 const mockGetAiAgentProviders = vi.fn();
 const mockGetAiAgentModels = vi.fn();
@@ -10,18 +11,30 @@ const mockCreateAiAgentAccount = vi.fn();
 const mockUpdateAiAgentAccount = vi.fn();
 const mockSetAiAgentActive = vi.fn();
 
-vi.mock('@/lib/api', () => ({
-  getAiAgentProviders: (...args: unknown[]) => mockGetAiAgentProviders(...args),
-  getAiAgentModels: (...args: unknown[]) => mockGetAiAgentModels(...args),
-  getAiAgentAccounts: (...args: unknown[]) => mockGetAiAgentAccounts(...args),
-  getAiAgentActive: vi.fn(),
-  createAiAgentAccount: (...args: unknown[]) => mockCreateAiAgentAccount(...args),
-  updateAiAgentAccount: (...args: unknown[]) => mockUpdateAiAgentAccount(...args),
-  deleteAiAgentAccount: vi.fn(),
-  setAiAgentActive: (...args: unknown[]) => mockSetAiAgentActive(...args),
-}));
+vi.mock('@/lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api')>();
+  return {
+    ...actual,
+    getAiAgentProviders: (...args: unknown[]) => mockGetAiAgentProviders(...args),
+    getAiAgentModels: (...args: unknown[]) => mockGetAiAgentModels(...args),
+    getAiAgentAccounts: (...args: unknown[]) => mockGetAiAgentAccounts(...args),
+    getAiAgentActive: vi.fn(),
+    createAiAgentAccount: (...args: unknown[]) => mockCreateAiAgentAccount(...args),
+    updateAiAgentAccount: (...args: unknown[]) => mockUpdateAiAgentAccount(...args),
+    deleteAiAgentAccount: vi.fn(),
+    setAiAgentActive: (...args: unknown[]) => mockSetAiAgentActive(...args),
+  };
+});
 
 import { AiAgentSettings } from './ai-agent-settings';
+
+function renderSettings() {
+  return render(
+    <QueryProvider>
+      <AiAgentSettings />
+    </QueryProvider>,
+  );
+}
 
 describe('AiAgentSettings', () => {
   afterEach(() => {
@@ -40,7 +53,7 @@ describe('AiAgentSettings', () => {
     ]);
     mockGetAiAgentAccounts.mockResolvedValue([]);
 
-    render(<AiAgentSettings />);
+    renderSettings();
 
     expect(await screen.findByRole('button', { name: 'Add account' })).toBeInTheDocument();
   });
@@ -61,7 +74,7 @@ describe('AiAgentSettings', () => {
     mockCreateAiAgentAccount.mockResolvedValue({ id: 'acc-1' });
 
     const user = userEvent.setup({ delay: null });
-    render(<AiAgentSettings />);
+    renderSettings();
 
     await user.click(await screen.findByRole('button', { name: 'Add account' }));
     await user.selectOptions(screen.getByLabelText('Provider'), 'openai');
@@ -73,10 +86,12 @@ describe('AiAgentSettings', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
-      expect(mockCreateAiAgentAccount).toHaveBeenCalledWith({
-        modelId: 'openai/gpt-4o-mini',
-        apiKey: 'sk-test',
-      });
+      expect(mockCreateAiAgentAccount.mock.calls[0]?.[0]).toEqual(
+        expect.objectContaining({
+          modelId: 'openai/gpt-4o-mini',
+          apiKey: 'sk-test',
+        }),
+      );
     });
   });
 
@@ -95,7 +110,7 @@ describe('AiAgentSettings', () => {
       },
     ]);
 
-    render(<AiAgentSettings />);
+    renderSettings();
 
     expect(
       await screen.findByText(/cannot be read after an encryption key change/i),

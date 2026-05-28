@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { QueryProvider } from '@/components/providers/query-provider';
 
 const mockCreateCv = vi.fn();
 const mockReplace = vi.fn();
@@ -12,12 +13,16 @@ const mockResolveImportedResumeData = vi.fn(
   async (data: Record<string, unknown>, _options?: { useGravatar?: boolean }) => data,
 );
 
-vi.mock('@/lib/api', () => ({
-  createCv: (...args: unknown[]) => mockCreateCv(...args),
-  getAiAgentActive: (...args: unknown[]) => mockGetAiAgentActive(...args),
-  startPdfImport: vi.fn(),
-  getPdfImportJob: vi.fn(),
-}));
+vi.mock('@/lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api')>();
+  return {
+    ...actual,
+    createCv: (...args: unknown[]) => mockCreateCv(...args),
+    getAiAgentActive: (...args: unknown[]) => mockGetAiAgentActive(...args),
+    startPdfImport: vi.fn(),
+    getPdfImportJob: vi.fn(),
+  };
+});
 
 vi.mock('@/lib/import-cv-media', () => ({
   resolveImportedResumeData: (data: Record<string, unknown>, options?: { useGravatar?: boolean }) =>
@@ -75,6 +80,14 @@ vi.mock('next/navigation', () => ({
 
 import { NewCvPageClient } from './new-cv-page-client';
 
+function renderNewCvPage() {
+  return render(
+    <QueryProvider>
+      <NewCvPageClient />
+    </QueryProvider>,
+  );
+}
+
 describe('NewCvPageClient', () => {
   beforeEach(() => {
     mockGetAiAgentActive.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
@@ -86,13 +99,13 @@ describe('NewCvPageClient', () => {
   });
 
   it('does not auto-create a CV on load', () => {
-    render(<NewCvPageClient />);
+    renderNewCvPage();
     expect(mockCreateCv).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
   it('defaults to the PDF import tab and orders tabs PDF, manual, JSON', async () => {
-    render(<NewCvPageClient />);
+    renderNewCvPage();
 
     const tabs = screen.getAllByRole('tab');
     expect(tabs.map((tab) => tab.textContent)).toEqual([
@@ -107,7 +120,7 @@ describe('NewCvPageClient', () => {
   it('creates a CV from import and navigates to the editor', async () => {
     mockCreateCv.mockResolvedValue({ id: 'cv-import-1' });
     const user = userEvent.setup({ delay: null });
-    render(<NewCvPageClient />);
+    renderNewCvPage();
 
     await user.click(screen.getByRole('tab', { name: 'Import JSON' }));
     await user.click(screen.getByRole('button', { name: 'Edit JSON…' }));
@@ -144,7 +157,7 @@ describe('NewCvPageClient', () => {
   it('creates a CV and navigates to the editor when Save succeeds', async () => {
     mockCreateCv.mockResolvedValue({ id: 'cv-new-1' });
     const user = userEvent.setup({ delay: null });
-    render(<NewCvPageClient />);
+    renderNewCvPage();
 
     await user.click(screen.getByRole('tab', { name: 'Create manually' }));
     const textboxes = screen.getAllByRole('textbox');

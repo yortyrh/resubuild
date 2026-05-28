@@ -7,13 +7,14 @@ import { CreateCvForm } from '@/components/cv/create-cv-form';
 import { ImportCvForm } from '@/components/cv/import-cv-form';
 import { ImportPdfCvForm } from '@/components/cv/import-pdf-cv-form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { createCv } from '@/lib/api';
 import { resolveImportedResumeData } from '@/lib/import-cv-media';
+import { useCreateCv } from '@/lib/queries/cv-mutations';
 
 type Basics = NonNullable<ReturnType<typeof createEmptyResume>['basics']>;
 
 export function NewCvPageClient() {
   const router = useRouter();
+  const createCvMutation = useCreateCv();
   const [activeTab, setActiveTab] = useState('import-pdf');
 
   const navigateToEditor = (id: string) => {
@@ -21,7 +22,7 @@ export function NewCvPageClient() {
   };
 
   const handleManualSave = async ({ basics }: { basics: Basics }) => {
-    const created = await createCv({
+    const created = await createCvMutation.mutateAsync({
       data: { ...createEmptyResume(), basics } as Record<string, unknown>,
     });
     navigateToEditor(created.id);
@@ -35,7 +36,7 @@ export function NewCvPageClient() {
     useGravatar: boolean;
   }) => {
     const resolved = await resolveImportedResumeData(data, { useGravatar });
-    const created = await createCv({ data: resolved });
+    const created = await createCvMutation.mutateAsync({ data: resolved });
     navigateToEditor(created.id);
   };
 

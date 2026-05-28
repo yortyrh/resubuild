@@ -6,9 +6,8 @@ import { TextField } from '@/components/cv/form-fields';
 import { LanguageField } from '@/components/cv/language-field';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { getCvLanguages } from '@/lib/api';
+import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvLanguageApi } from '@/lib/cv-item-api';
-import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
 
 type LanguageItem = SectionItem<ResumeLanguage>;
 
@@ -19,11 +18,11 @@ export function LanguagesSection() {
   return (
     <SortableManagedArraySection<LanguageItem>
       cvId={cvId}
+      sectionKey="languages"
       reorderSection="languages"
       reorderSectionLabel="language"
       items={resume.languages ?? []}
       onItemsChange={(languages) => setResume((prev) => ({ ...prev, languages }))}
-      refetchItems={createSectionRefetch<LanguageItem>(getCvLanguages, cvId)}
       entityLabel="Language"
       addLabel="Add language"
       createEmpty={() => ({})}

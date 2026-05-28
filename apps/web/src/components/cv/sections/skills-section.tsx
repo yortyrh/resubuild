@@ -7,9 +7,8 @@ import { SortableManagedArraySection } from '@/components/cv/sortable-managed-ar
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { getCvSkills } from '@/lib/api';
+import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvSkillApi } from '@/lib/cv-item-api';
-import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
 
 type SkillItem = SectionItem<ResumeSkill>;
 
@@ -20,11 +19,11 @@ export function SkillsSection() {
   return (
     <SortableManagedArraySection<SkillItem>
       cvId={cvId}
+      sectionKey="skills"
       reorderSection="skills"
       reorderSectionLabel="skill"
       items={resume.skills ?? []}
       onItemsChange={(skills) => setResume((prev) => ({ ...prev, skills }))}
-      refetchItems={createSectionRefetch<SkillItem>(getCvSkills, cvId)}
       entityLabel="Skill"
       addLabel="Add skill"
       createEmpty={() => ({ keywords: [] })}
