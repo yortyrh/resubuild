@@ -101,6 +101,9 @@ describe('AiAgentService', () => {
   });
 
   it('updates account using stored key when keepExistingApiKey is set', async () => {
+    repository.getAccountRow.mockResolvedValue({
+      model_id: 'openai/gpt-4o-mini',
+    } as never);
     repository.getDecryptedAccount.mockResolvedValue({
       apiKey: 'sk-stored',
       modelId: 'openai/gpt-4o-mini',
