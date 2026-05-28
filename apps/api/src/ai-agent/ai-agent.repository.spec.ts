@@ -431,6 +431,7 @@ describe('AiAgentRepository', () => {
 
   it('marks accounts that cannot decrypt as reconfigurationRequired', async () => {
     const accountId = 'acc-1';
+    const wrongKeyEncrypted = encryptSecret('sk-test', 'different-encryption-key-32-chars-min!!');
 
     normalizedRepo.createUserClient.mockReturnValue({
       from: jest.fn((table: string) => {
@@ -458,7 +459,7 @@ describe('AiAgentRepository', () => {
                     label: 'Default',
                     provider_id: 'openai',
                     model_id: 'openai/gpt-4o-mini',
-                    api_key_encrypted: 'invalid-ciphertext',
+                    api_key_encrypted: wrongKeyEncrypted,
                     created_at: '2026-01-01T00:00:00.000Z',
                     updated_at: '2026-01-01T00:00:00.000Z',
                   },
@@ -478,6 +479,7 @@ describe('AiAgentRepository', () => {
 
   it('returns reconfigurationRequired active status when key cannot decrypt', async () => {
     const accountId = 'acc-1';
+    const wrongKeyEncrypted = encryptSecret('sk-test', 'different-encryption-key-32-chars-min!!');
 
     normalizedRepo.createUserClient.mockReturnValue({
       from: jest.fn((table: string) => {
@@ -505,7 +507,7 @@ describe('AiAgentRepository', () => {
                     label: 'Default',
                     provider_id: 'openai',
                     model_id: 'openai/gpt-4o-mini',
-                    api_key_encrypted: 'invalid-ciphertext',
+                    api_key_encrypted: wrongKeyEncrypted,
                     created_at: '2026-01-01T00:00:00.000Z',
                     updated_at: '2026-01-01T00:00:00.000Z',
                   },
