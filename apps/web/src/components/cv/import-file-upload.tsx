@@ -44,9 +44,7 @@ function isFileAccepted(file: File, accept: ImportFileAccept): boolean {
     return true;
   }
 
-  const extension = file.name.includes('.')
-    ? `.${file.name.split('.').pop()?.toLowerCase()}`
-    : '';
+  const extension = file.name.includes('.') ? `.${file.name.split('.').pop()?.toLowerCase()}` : '';
   return extensions.includes(extension);
 }
 
@@ -199,7 +197,11 @@ export function ImportFileUpload({
         </div>
       )}
       {validationError ? (
-        <p id={`${inputId}-error`} className="text-destructive text-sm" data-testid="import-file-upload-error">
+        <p
+          id={`${inputId}-error`}
+          className="text-destructive text-sm"
+          data-testid="import-file-upload-error"
+        >
           {validationError}
         </p>
       ) : null}
