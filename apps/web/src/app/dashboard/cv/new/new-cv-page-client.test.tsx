@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockCreateCv = vi.fn();
 const mockReplace = vi.fn();
 const mockPush = vi.fn();
+const mockGetImportLlmConfig = vi.fn();
 
 const mockResolveImportedResumeData = vi.fn(
   async (data: Record<string, unknown>, _options?: { useGravatar?: boolean }) => data,
@@ -13,6 +14,9 @@ const mockResolveImportedResumeData = vi.fn(
 
 vi.mock('@/lib/api', () => ({
   createCv: (...args: unknown[]) => mockCreateCv(...args),
+  getImportLlmConfig: (...args: unknown[]) => mockGetImportLlmConfig(...args),
+  startPdfImport: vi.fn(),
+  getPdfImportJob: vi.fn(),
 }));
 
 vi.mock('@/lib/import-cv-media', () => ({
@@ -72,6 +76,10 @@ vi.mock('next/navigation', () => ({
 import { NewCvPageClient } from './new-cv-page-client';
 
 describe('NewCvPageClient', () => {
+  beforeEach(() => {
+    mockGetImportLlmConfig.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
+  });
+
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -83,10 +91,17 @@ describe('NewCvPageClient', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('shows manual and import tabs without creating on load', () => {
+  it('defaults to the PDF import tab and orders tabs PDF, manual, JSON', async () => {
     render(<NewCvPageClient />);
-    expect(screen.getByRole('tab', { name: 'Create manually' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Import JSON' })).toBeInTheDocument();
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      'Import PDF',
+      'Create manually',
+      'Import JSON',
+    ]);
+    expect(screen.getByRole('tab', { name: 'Import PDF' })).toHaveAttribute('data-state', 'active');
+    expect(await screen.findByTestId('import-file-upload')).toBeInTheDocument();
   });
 
   it('creates a CV from import and navigates to the editor', async () => {
@@ -95,12 +110,13 @@ describe('NewCvPageClient', () => {
     render(<NewCvPageClient />);
 
     await user.click(screen.getByRole('tab', { name: 'Import JSON' }));
-    await user.click(screen.getByLabelText(/Edit JSON manually/i));
+    await user.click(screen.getByRole('button', { name: 'Edit JSON…' }));
     fireEvent.change(screen.getByLabelText('JSON source'), {
       target: {
         value: JSON.stringify({ basics: { name: 'Jane Doe', label: 'Engineer' } }),
       },
     });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Import' })).toBeEnabled();
     });
@@ -130,6 +146,7 @@ describe('NewCvPageClient', () => {
     const user = userEvent.setup({ delay: null });
     render(<NewCvPageClient />);
 
+    await user.click(screen.getByRole('tab', { name: 'Create manually' }));
     const textboxes = screen.getAllByRole('textbox');
     await user.type(textboxes[0], 'Alex Smith');
     await user.click(screen.getByRole('button', { name: 'Save' }));

@@ -46,8 +46,12 @@ vi.mock('@/lib/import-cv-preview', async (importOriginal) => {
   };
 });
 
-async function enableManualJsonEdit(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByLabelText(/Edit JSON manually/i));
+async function openEditJsonDialog(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Edit JSON…' }));
+}
+
+async function saveEditJsonDialog(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Save' }));
 }
 
 describe('ImportCvForm', () => {
@@ -64,7 +68,7 @@ describe('ImportCvForm', () => {
     expect(mockOnImport).not.toHaveBeenCalled();
   });
 
-  it('hides the JSON editor until manual edit is enabled', () => {
+  it('does not show the JSON editor on the main form', () => {
     render(<ImportCvForm onImport={mockOnImport} onCancel={mockOnCancel} />);
     expect(screen.queryByLabelText('JSON source')).not.toBeInTheDocument();
   });
@@ -72,11 +76,12 @@ describe('ImportCvForm', () => {
   it('disables Import for invalid JSON and shows an error', async () => {
     const user = userEvent.setup({ delay: null });
     render(<ImportCvForm onImport={mockOnImport} onCancel={mockOnCancel} />);
-    await enableManualJsonEdit(user);
+    await openEditJsonDialog(user);
 
     fireEvent.change(screen.getByLabelText('JSON source'), {
       target: { value: '{ not json' },
     });
+    await saveEditJsonDialog(user);
 
     await waitFor(() => {
       expect(screen.getByText('Invalid JSON file')).toBeInTheDocument();
@@ -89,7 +94,7 @@ describe('ImportCvForm', () => {
   it('disables Import for schema-invalid JSON and lists schema errors', async () => {
     const user = userEvent.setup({ delay: null });
     render(<ImportCvForm onImport={mockOnImport} onCancel={mockOnCancel} />);
-    await enableManualJsonEdit(user);
+    await openEditJsonDialog(user);
 
     fireEvent.change(screen.getByLabelText('JSON source'), {
       target: {
@@ -98,6 +103,7 @@ describe('ImportCvForm', () => {
         }),
       },
     });
+    await saveEditJsonDialog(user);
 
     await waitFor(() => {
       expect(screen.getByText(/does not match the JSON Resume schema/i)).toBeInTheDocument();
@@ -107,16 +113,17 @@ describe('ImportCvForm', () => {
     expect(screen.getByRole('button', { name: 'Import' })).toBeDisabled();
   });
 
-  it('enables Import for valid JSON', async () => {
+  it('enables Import for valid JSON saved from the dialog', async () => {
     const user = userEvent.setup({ delay: null });
     render(<ImportCvForm onImport={mockOnImport} onCancel={mockOnCancel} />);
-    await enableManualJsonEdit(user);
+    await openEditJsonDialog(user);
 
     fireEvent.change(screen.getByLabelText('JSON source'), {
       target: {
         value: JSON.stringify({ basics: { name: 'Alex' } }),
       },
     });
+    await saveEditJsonDialog(user);
 
     await waitFor(() => {
       expect(screen.getByText(/JSON Resume file is valid/i)).toBeInTheDocument();
@@ -133,7 +140,7 @@ describe('ImportCvForm', () => {
     const file = new File([JSON.stringify(payload)], 'resume.json', {
       type: 'application/json',
     });
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = screen.getByTestId('import-file-upload-input');
 
     await user.upload(input, file);
 
@@ -146,7 +153,7 @@ describe('ImportCvForm', () => {
     expect(screen.getByRole('button', { name: 'Import' })).toBeEnabled();
   });
 
-  it('shows editor with file content when manual edit is enabled', async () => {
+  it('discards dialog edits when canceled', async () => {
     const user = userEvent.setup({ delay: null });
     render(<ImportCvForm onImport={mockOnImport} onCancel={mockOnCancel} />);
 
@@ -154,19 +161,26 @@ describe('ImportCvForm', () => {
     const file = new File([JSON.stringify(payload)], 'resume.json', {
       type: 'application/json',
     });
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(screen.getByTestId('import-file-upload-input'), file);
 
-    await user.upload(input, file);
-    await enableManualJsonEdit(user);
+    await waitFor(() => {
+      expect(screen.getByText(/JSON Resume file is valid/i)).toBeInTheDocument();
+    });
 
-    const editor = screen.getByLabelText('JSON source') as HTMLTextAreaElement;
-    expect(JSON.parse(editor.value)).toEqual(payload);
+    await openEditJsonDialog(user);
+    fireEvent.change(screen.getByLabelText('JSON source'), {
+      target: { value: JSON.stringify({ basics: { name: 'Changed' } }) },
+    });
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByText(/Changed/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Import' })).toBeEnabled();
   });
 
   it('shows Gravatar option when profile photo URL is missing', async () => {
     const user = userEvent.setup({ delay: null });
     render(<ImportCvForm onImport={mockOnImport} onCancel={mockOnCancel} />);
-    await enableManualJsonEdit(user);
+    await openEditJsonDialog(user);
 
     fireEvent.change(screen.getByLabelText('JSON source'), {
       target: {
@@ -175,6 +189,7 @@ describe('ImportCvForm', () => {
         }),
       },
     });
+    await saveEditJsonDialog(user);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/Use Gravatar profile photo/i)).toBeInTheDocument();
@@ -187,12 +202,10 @@ describe('ImportCvForm', () => {
 
     const bigContent = 'x'.repeat(MAX_IMPORT_FILE_BYTES + 1);
     const file = new File([bigContent], 'big.json', { type: 'application/json' });
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-
-    await user.upload(input, file);
+    await user.upload(screen.getByTestId('import-file-upload-input'), file);
 
     await waitFor(() => {
-      expect(screen.getByText(/too large/i)).toBeInTheDocument();
+      expect(screen.getByTestId('import-file-upload-error')).toHaveTextContent(/too large/i);
     });
     expect(mockOnImport).not.toHaveBeenCalled();
   });
@@ -201,7 +214,7 @@ describe('ImportCvForm', () => {
     mockOnImport.mockResolvedValue(undefined);
     const user = userEvent.setup({ delay: null });
     render(<ImportCvForm onImport={mockOnImport} onCancel={mockOnCancel} />);
-    await enableManualJsonEdit(user);
+    await openEditJsonDialog(user);
 
     fireEvent.change(screen.getByLabelText('JSON source'), {
       target: {
@@ -210,6 +223,7 @@ describe('ImportCvForm', () => {
         }),
       },
     });
+    await saveEditJsonDialog(user);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Import' })).toBeEnabled();

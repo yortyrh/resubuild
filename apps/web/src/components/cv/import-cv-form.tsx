@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
-import { formatJsonForEditor, JsonResumeEditor } from '@/components/cv/json-resume-editor';
+import { useEffect, useId, useState } from 'react';
+import { ImportFileUpload } from '@/components/cv/import-file-upload';
+import { ImportJsonEditDialog } from '@/components/cv/import-json-edit-dialog';
+import { formatJsonForEditor } from '@/components/cv/json-resume-editor';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { checkImportableMediaUrl } from '@/lib/import-cv-media';
 import {
   gravatarOptionForImageStatus,
   type ImportImagePreviewStatus,
-  type ImportJsonPreview,
   type ImportSourcePreview,
   imageStatusLabel,
   parseImportJsonSource,
@@ -16,6 +17,10 @@ import {
 } from '@/lib/import-cv-preview';
 
 export const MAX_IMPORT_FILE_BYTES = 1024 * 1024;
+
+const JSON_FILE_ACCEPT = {
+  'application/json': ['.json'],
+};
 
 export interface ImportCvFormProps {
   onImport: (payload: { data: Record<string, unknown>; useGravatar: boolean }) => Promise<void>;
@@ -30,14 +35,11 @@ function normalizeImportError(err: unknown): string {
 }
 
 export function ImportCvForm({ onImport, onCancel }: ImportCvFormProps) {
-  const fileInputId = useId();
   const editorDescribedById = useId();
-  const editJsonOptionId = useId();
   const gravatarOptionId = useId();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [jsonText, setJsonText] = useState('');
-  const [editJsonManually, setEditJsonManually] = useState(false);
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -97,30 +99,22 @@ export function ImportCvForm({ onImport, onCancel }: ImportCvFormProps) {
     };
   }, [jsonText]);
 
-  const readFile = async (file: File): Promise<string> => {
-    if (file.size > MAX_IMPORT_FILE_BYTES) {
-      throw new Error('File is too large (max 1 MB)');
-    }
-    return file.text();
-  };
-
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleFileSelect = async (file: File | null) => {
     setFileError(null);
     setImportError(null);
-    setSelectedFileName(null);
+    setSelectedFile(file);
 
     if (!file) {
+      setJsonText('');
       return;
     }
 
     try {
-      const text = await readFile(file);
-      setSelectedFileName(file.name);
+      const text = await file.text();
       setJsonText(formatJsonForEditor(text));
     } catch (err) {
       setFileError(normalizeImportError(err));
-      event.target.value = '';
+      setSelectedFile(null);
     }
   };
 
@@ -153,125 +147,103 @@ export function ImportCvForm({ onImport, onCancel }: ImportCvFormProps) {
       : null;
 
   return (
-    <form
-      className="space-y-6"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (canImport) {
-          void handleImport();
-        }
-      }}
-    >
-      <div className="space-y-2">
-        <Label htmlFor={fileInputId}>JSON Resume file</Label>
-        <input
-          ref={fileInputRef}
-          id={fileInputId}
-          type="file"
-          accept=".json,application/json"
-          className="sr-only"
-          onChange={(event) => {
-            void handleFileChange(event);
+    <>
+      <form
+        className="space-y-6"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (canImport) {
+            void handleImport();
+          }
+        }}
+      >
+        <ImportFileUpload
+          accept={JSON_FILE_ACCEPT}
+          maxBytes={MAX_IMPORT_FILE_BYTES}
+          label="JSON Resume file"
+          hint="Drag and drop a JSON Resume file or browse…"
+          disabled={importing}
+          value={selectedFile}
+          onFileSelect={(file) => {
+            void handleFileSelect(file);
           }}
         />
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={importing}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Choose file
-          </Button>
-          {selectedFileName ? (
-            <span className="text-muted-foreground text-sm">{selectedFileName}</span>
-          ) : null}
-        </div>
         <p className="text-muted-foreground text-sm">
           Choose a JSON Resume file to import. Validation runs automatically after the file is
           loaded.
         </p>
-      </div>
 
-      <div className="flex items-start gap-2">
-        <input
-          id={editJsonOptionId}
-          type="checkbox"
-          className="border-input mt-1 size-4 rounded border"
-          checked={editJsonManually}
-          disabled={importing}
-          onChange={(event) => setEditJsonManually(event.target.checked)}
-        />
-        <Label htmlFor={editJsonOptionId} className="font-normal leading-snug">
-          Edit JSON manually (advanced)
-        </Label>
-      </div>
+        {fileError ? <p className="text-destructive text-sm">{fileError}</p> : null}
+        {jsonError ? <p className="text-destructive text-sm">{jsonError}</p> : null}
+        {schemaErrors && schemaErrors.length > 0 ? (
+          <div
+            className="border-destructive/30 bg-destructive/5 rounded-md border p-3"
+            role="alert"
+            aria-labelledby={editorDescribedById}
+          >
+            <p id={editorDescribedById} className="text-destructive mb-2 text-sm font-medium">
+              Fix these schema issues before importing:
+            </p>
+            <ul className="text-destructive list-inside list-disc space-y-1 text-sm">
+              {schemaErrors.map((entry) => (
+                <li key={entry}>{entry}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {preview?.valid ? (
+          <p className="text-muted-foreground text-sm">JSON Resume file is valid.</p>
+        ) : null}
+        {imageHint ? <p className="text-muted-foreground text-sm">{imageHint}</p> : null}
 
-      {editJsonManually ? (
-        <JsonResumeEditor
-          label="JSON source"
-          value={jsonText}
-          disabled={importing}
-          aria-describedby={editorDescribedById}
-          onChange={(value) => {
-            setJsonText(value);
-            setImportError(null);
-          }}
-        />
-      ) : null}
+        {preview?.valid && preview.showGravatarOption ? (
+          <div className="flex items-start gap-2">
+            <input
+              id={gravatarOptionId}
+              type="checkbox"
+              className="border-input mt-1 size-4 rounded border"
+              checked={useGravatar}
+              disabled={importing}
+              onChange={(event) => setUseGravatar(event.target.checked)}
+            />
+            <Label htmlFor={gravatarOptionId} className="font-normal leading-snug">
+              Use Gravatar profile photo
+              {preview.basicsEmail ? ` (${preview.basicsEmail})` : ''}
+            </Label>
+          </div>
+        ) : null}
 
-      {fileError ? <p className="text-destructive text-sm">{fileError}</p> : null}
-      {jsonError ? <p className="text-destructive text-sm">{jsonError}</p> : null}
-      {schemaErrors && schemaErrors.length > 0 ? (
-        <div
-          className="border-destructive/30 bg-destructive/5 rounded-md border p-3"
-          role="alert"
-          aria-labelledby={editorDescribedById}
-        >
-          <p id={editorDescribedById} className="text-destructive mb-2 text-sm font-medium">
-            Fix these schema issues before importing:
-          </p>
-          <ul className="text-destructive list-inside list-disc space-y-1 text-sm">
-            {schemaErrors.map((entry) => (
-              <li key={entry}>{entry}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      {preview?.valid ? (
-        <p className="text-muted-foreground text-sm">JSON Resume file is valid.</p>
-      ) : null}
-      {imageHint ? <p className="text-muted-foreground text-sm">{imageHint}</p> : null}
+        {importError ? (
+          <p className="text-destructive whitespace-pre-wrap text-sm">{importError}</p>
+        ) : null}
 
-      {preview?.valid && preview.showGravatarOption ? (
-        <div className="flex items-start gap-2">
-          <input
-            id={gravatarOptionId}
-            type="checkbox"
-            className="border-input mt-1 size-4 rounded border"
-            checked={useGravatar}
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" disabled={!canImport}>
+            {importing ? 'Importing…' : 'Import'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
             disabled={importing}
-            onChange={(event) => setUseGravatar(event.target.checked)}
-          />
-          <Label htmlFor={gravatarOptionId} className="font-normal leading-snug">
-            Use Gravatar profile photo
-            {preview.basicsEmail ? ` (${preview.basicsEmail})` : ''}
-          </Label>
+            onClick={() => setEditDialogOpen(true)}
+          >
+            Edit JSON…
+          </Button>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={importing}>
+            Cancel
+          </Button>
         </div>
-      ) : null}
+      </form>
 
-      {importError ? (
-        <p className="text-destructive whitespace-pre-wrap text-sm">{importError}</p>
-      ) : null}
-
-      <div className="flex gap-2">
-        <Button type="submit" disabled={!canImport}>
-          {importing ? 'Importing…' : 'Import'}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={importing}>
-          Cancel
-        </Button>
-      </div>
-    </form>
+      <ImportJsonEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        value={jsonText}
+        onSave={(value) => {
+          setJsonText(value);
+          setImportError(null);
+        }}
+      />
+    </>
   );
 }
