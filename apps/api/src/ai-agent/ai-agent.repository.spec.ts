@@ -662,4 +662,147 @@ describe('AiAgentRepository', () => {
       }),
     ).resolves.toMatchObject({ modelId: 'openai/gpt-4o' });
   });
+
+  it('throws when listAccounts query fails', async () => {
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn((table: string) => {
+        if (table === 'ai_agent_preference') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          };
+        }
+
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({ data: null, error: { message: 'list failed' } }),
+            }),
+          }),
+        };
+      }),
+    });
+
+    await expect(repository.listAccounts(user)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('throws when account lookup query fails', async () => {
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              maybeSingle: jest.fn().mockResolvedValue({ data: null, error: { message: 'lookup failed' } }),
+            }),
+          }),
+        }),
+      }),
+    });
+
+    await expect(repository.getAccountRow(user, 'acc-1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('throws when create insert fails', async () => {
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn((table: string) => {
+        if (table === 'ai_agent_preference') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+          };
+        }
+
+        return {
+          insert: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({ data: null, error: { message: 'insert failed' } }),
+            }),
+          }),
+        };
+      }),
+    });
+
+    await expect(
+      repository.createAccount(user, {
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('throws when delete fails', async () => {
+    const encryptionKey = 'encryption-key-at-least-32-characters-long';
+    const encrypted = encryptSecret('sk-test', encryptionKey);
+    const accountId = 'acc-1';
+    const row = {
+      id: accountId,
+      user_id: user.id,
+      label: 'Default',
+      provider_id: 'openai',
+      model_id: 'openai/gpt-4o-mini',
+      api_key_encrypted: encrypted,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    };
+
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              maybeSingle: jest.fn().mockResolvedValue({ data: row, error: null }),
+            }),
+          }),
+        }),
+        delete: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ error: { message: 'delete failed' } }),
+          }),
+        }),
+      }),
+    });
+
+    await expect(repository.deleteAccount(user, accountId)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('returns null decrypted account when ciphertext cannot be read', async () => {
+    const accountId = 'acc-1';
+    const wrongKeyEncrypted = encryptSecret('sk-test', 'different-encryption-key-32-chars-min!!');
+
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              maybeSingle: jest.fn().mockResolvedValue({
+                data: {
+                  id: accountId,
+                  user_id: user.id,
+                  label: 'Default',
+                  provider_id: 'openai',
+                  model_id: 'openai/gpt-4o-mini',
+                  api_key_encrypted: wrongKeyEncrypted,
+                  created_at: '2026-01-01T00:00:00.000Z',
+                  updated_at: '2026-01-01T00:00:00.000Z',
+                },
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      }),
+    });
+
+    await expect(repository.getDecryptedAccount(user, accountId)).resolves.toBeNull();
+  });
 });
