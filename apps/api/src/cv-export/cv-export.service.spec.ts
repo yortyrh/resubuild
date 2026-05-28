@@ -15,7 +15,9 @@ const puppeteer = jest.requireMock('puppeteer') as {
 
 describe('CvExportService', () => {
   let service: CvExportService;
-  let normalizedRepo: jest.Mocked<Pick<CvNormalizedRepository, 'createClientForUser' | 'fetchHeader' | 'fetchSections'>>;
+  let normalizedRepo: jest.Mocked<
+    Pick<CvNormalizedRepository, 'createClientForUser' | 'fetchHeader' | 'fetchSections'>
+  >;
   let configService: jest.Mocked<Pick<ConfigService, 'get'>>;
 
   const userCtx: AuthenticatedRequest['user'] = {
@@ -70,9 +72,7 @@ describe('CvExportService', () => {
 
   it('renderHtml throws NotFoundException when CV is missing', async () => {
     normalizedRepo.fetchHeader.mockResolvedValue(null);
-    await expect(service.renderHtml(userCtx, 'missing')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(service.renderHtml(userCtx, 'missing')).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('renderPdfFromHtml uses puppeteer with html from renderResumeHtml', async () => {

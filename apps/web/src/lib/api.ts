@@ -379,9 +379,7 @@ function parseContentDispositionFilename(header: string | null): string | null {
   return match?.[1] ?? null;
 }
 
-export async function downloadCvPdf(
-  cvId: string,
-): Promise<{ blob: Blob; filename: string }> {
+export async function downloadCvPdf(cvId: string): Promise<{ blob: Blob; filename: string }> {
   const token = await getValidAccessToken(apiUrl);
   const response = await fetch(`${apiUrl}/cv/${cvId}/export/pdf`, {
     headers: {

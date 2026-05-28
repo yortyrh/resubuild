@@ -148,21 +148,21 @@ Git hooks (Lefthook): **pre-commit** (Biome + Prettier on staged files), **pre-p
 
 Authenticate with Bearer tokens from **`POST /auth/login`** / **`POST /auth/register`**. The UI stores tokens in **`sessionStorage`**.
 
-| Method | Path                                       | Description                                 |
-| ------ | ------------------------------------------ | ------------------------------------------- |
-| GET    | `/cv`                                      | List user's CVs                             |
-| GET    | `/cv/:id`                                  | Get one CV                                  |
-| POST   | `/cv`                                      | Create `{ title?, data }`                   |
-| PATCH  | `/cv/:id`                                  | Update `{ title?, data? }`                  |
-| DELETE | `/cv/:id`                                  | Delete CV                                   |
-| GET    | `/cv/:id/export/html`                      | Full MIT-format HTML document (auth)        |
-| GET    | `/cv/:id/export/pdf`                       | PDF bytes (`Content-Disposition` attachment)|
-| GET    | `/import/llm/providers`                    | List PDF import LLM providers               |
-| GET    | `/import/llm/providers/:providerId/models` | List models for a provider                  |
-| GET    | `/import/llm/config`                       | Current user's import LLM settings          |
-| PUT    | `/import/llm/config`                       | Save provider/model/API key                 |
-| POST   | `/cv/import/pdf`                           | Start async PDF import (`202`, `{ jobId }`) |
-| GET    | `/cv/import/:jobId`                        | Poll PDF import job status                  |
+| Method | Path                                       | Description                                  |
+| ------ | ------------------------------------------ | -------------------------------------------- |
+| GET    | `/cv`                                      | List user's CVs                              |
+| GET    | `/cv/:id`                                  | Get one CV                                   |
+| POST   | `/cv`                                      | Create `{ title?, data }`                    |
+| PATCH  | `/cv/:id`                                  | Update `{ title?, data? }`                   |
+| DELETE | `/cv/:id`                                  | Delete CV                                    |
+| GET    | `/cv/:id/export/html`                      | Full MIT-format HTML document (auth)         |
+| GET    | `/cv/:id/export/pdf`                       | PDF bytes (`Content-Disposition` attachment) |
+| GET    | `/import/llm/providers`                    | List PDF import LLM providers                |
+| GET    | `/import/llm/providers/:providerId/models` | List models for a provider                   |
+| GET    | `/import/llm/config`                       | Current user's import LLM settings           |
+| PUT    | `/import/llm/config`                       | Save provider/model/API key                  |
+| POST   | `/cv/import/pdf`                           | Start async PDF import (`202`, `{ jobId }`)  |
+| GET    | `/cv/import/:jobId`                        | Poll PDF import job status                   |
 
 ## Security
 
