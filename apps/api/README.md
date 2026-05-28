@@ -47,6 +47,25 @@ In **production**, if `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `MEDIA_BU
 
 All `/cv*` routes remain behind `Authorization: Bearer` as before.
 
+## AI agent accounts (BYOK)
+
+Per-user LLM credentials for PDF import and other Mastra workflows live in `ai_agent_account` with an active selection in `ai_agent_preference`. API keys are encrypted at rest with `AI_AGENT_ENCRYPTION_KEY` (falls back to `IMPORT_LLM_CONFIG_ENCRYPTION_KEY`).
+
+**Bring your own key (BYOK) only** — use API keys from Anthropic, OpenAI, Google, or OpenRouter. Cursor IDE or ChatGPT Plus subscriptions do not expose user API keys; there is no Cursor OAuth integration in v1.
+
+| Method   | Path                              | Notes                       |
+| -------- | --------------------------------- | --------------------------- |
+| `GET`    | `/ai/agents/providers`            | Provider catalog            |
+| `GET`    | `/ai/agents/providers/:id/models` | Models for provider         |
+| `GET`    | `/ai/agents/accounts`             | List accounts (no raw keys) |
+| `POST`   | `/ai/agents/accounts`             | Create account (probes key) |
+| `PATCH`  | `/ai/agents/accounts/:id`         | Update account              |
+| `DELETE` | `/ai/agents/accounts/:id`         | Delete account              |
+| `GET`    | `/ai/agents/active`               | Active account summary      |
+| `PUT`    | `/ai/agents/active`               | Set active by `accountId`   |
+
+Deprecated aliases under `/import/llm/*` delegate to the same services for one release cycle.
+
 ## Scripts
 
 See `package.json`: `pnpm dev`, `pnpm build`, `pnpm test`.

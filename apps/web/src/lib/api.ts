@@ -192,43 +192,108 @@ export function deleteCv(id: string) {
   return apiFetch<void>(`/cv/${id}`, { method: 'DELETE' });
 }
 
-export interface ImportLlmProvider {
+export interface AiAgentProvider {
   id: string;
   displayName: string;
   apiKeyEnvVar: string;
   apiKeyLabel: string;
 }
 
-export interface ImportLlmModel {
+export interface AiAgentModel {
   id: string;
   displayName: string;
   recommendedForPdfImport: boolean;
 }
 
-export interface ImportLlmConfigStatus {
+export interface AiAgentAccount {
+  id: string;
+  label: string | null;
+  providerId: string;
+  modelId: string;
+  isActive: boolean;
+  reconfigurationRequired?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AiAgentActiveStatus {
   configured: boolean;
+  accountId?: string;
+  label?: string | null;
+  providerId?: string;
   modelId?: string;
   configuredAt?: string;
   reconfigurationRequired?: boolean;
 }
 
-export interface PdfImportJobStatus {
-  status: 'queued' | 'running' | 'succeeded' | 'failed';
-  progress?: string;
-  cvId?: string;
-  errors?: string[];
+/** @deprecated Use AiAgentProvider */
+export type ImportLlmProvider = AiAgentProvider;
+
+/** @deprecated Use AiAgentModel */
+export type ImportLlmModel = AiAgentModel;
+
+/** @deprecated Use AiAgentActiveStatus */
+export type ImportLlmConfigStatus = AiAgentActiveStatus;
+
+export function getAiAgentProviders() {
+  return apiFetch<AiAgentProvider[]>('/ai/agents/providers');
+}
+
+export function getAiAgentModels(providerId: string) {
+  return apiFetch<AiAgentModel[]>(`/ai/agents/providers/${providerId}/models`);
+}
+
+export function getAiAgentAccounts() {
+  return apiFetch<AiAgentAccount[]>('/ai/agents/accounts');
+}
+
+export function createAiAgentAccount(payload: { label?: string; modelId: string; apiKey: string }) {
+  return apiFetch<AiAgentAccount>('/ai/agents/accounts', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateAiAgentAccount(
+  id: string,
+  payload: {
+    label?: string;
+    modelId?: string;
+    apiKey?: string;
+    keepExistingApiKey?: boolean;
+  },
+) {
+  return apiFetch<AiAgentAccount>(`/ai/agents/accounts/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteAiAgentAccount(id: string) {
+  return apiFetch<void>(`/ai/agents/accounts/${id}`, { method: 'DELETE' });
+}
+
+export function getAiAgentActive() {
+  return apiFetch<AiAgentActiveStatus>('/ai/agents/active');
+}
+
+export function setAiAgentActive(accountId: string) {
+  return apiFetch<AiAgentActiveStatus>('/ai/agents/active', {
+    method: 'PUT',
+    body: JSON.stringify({ accountId }),
+  });
 }
 
 export function getImportLlmProviders() {
-  return apiFetch<ImportLlmProvider[]>('/import/llm/providers');
+  return getAiAgentProviders();
 }
 
 export function getImportLlmModels(providerId: string) {
-  return apiFetch<ImportLlmModel[]>(`/import/llm/providers/${providerId}/models`);
+  return getAiAgentModels(providerId);
 }
 
 export function getImportLlmConfig() {
-  return apiFetch<ImportLlmConfigStatus>('/import/llm/config');
+  return getAiAgentActive();
 }
 
 export function saveImportLlmConfig(payload: {
@@ -240,6 +305,13 @@ export function saveImportLlmConfig(payload: {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
+}
+
+export interface PdfImportJobStatus {
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  progress?: string;
+  cvId?: string;
+  errors?: string[];
 }
 
 export async function startPdfImport(file: File): Promise<{ jobId: string }> {

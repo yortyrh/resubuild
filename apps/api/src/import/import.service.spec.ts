@@ -20,11 +20,11 @@ describe('ImportService', () => {
   } as AuthenticatedRequest['user'];
 
   let service: ImportService;
-  let importLlmConfigRepository: { getDecryptedConfig: jest.Mock };
+  let aiAgentCredentialService: { getActiveCredentials: jest.Mock };
   let cvService: { create: jest.Mock };
 
   beforeEach(() => {
-    importLlmConfigRepository = { getDecryptedConfig: jest.fn() };
+    aiAgentCredentialService = { getActiveCredentials: jest.fn() };
     cvService = { create: jest.fn() };
 
     service = new ImportService(
@@ -35,13 +35,15 @@ describe('ImportService', () => {
           return undefined;
         }),
       } as never,
-      importLlmConfigRepository as never,
+      aiAgentCredentialService as never,
       cvService as never,
     );
   });
 
-  it('rejects import when LLM config is missing', async () => {
-    importLlmConfigRepository.getDecryptedConfig.mockResolvedValue(null);
+  it('rejects import when AI agent config is missing', async () => {
+    aiAgentCredentialService.getActiveCredentials.mockRejectedValue(
+      new UnprocessableEntityException('Active AI agent configuration is required'),
+    );
 
     await expect(
       service.startPdfImport(user, {
@@ -53,10 +55,10 @@ describe('ImportService', () => {
   });
 
   it('rejects non-pdf uploads', async () => {
-    importLlmConfigRepository.getDecryptedConfig.mockResolvedValue({
+    aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
       modelId: 'openai/gpt-4o-mini',
       apiKey: 'sk-test',
-      configuredAt: 'now',
+      accountId: 'acc-1',
     });
 
     await expect(
@@ -73,10 +75,10 @@ describe('ImportService', () => {
   });
 
   it('enqueues a job when config and mime type are valid', async () => {
-    importLlmConfigRepository.getDecryptedConfig.mockResolvedValue({
+    aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
       modelId: 'openai/gpt-4o-mini',
       apiKey: 'sk-test',
-      configuredAt: 'now',
+      accountId: 'acc-1',
     });
     jest.mocked(runPdfImportWorkflow).mockResolvedValue({ cvId: 'cv-1', errors: [] });
 
@@ -100,7 +102,7 @@ describe('ImportService', () => {
           return undefined;
         }),
       } as never,
-      importLlmConfigRepository as never,
+      aiAgentCredentialService as never,
       cvService as never,
     );
 
@@ -114,10 +116,10 @@ describe('ImportService', () => {
   });
 
   it('rejects oversize uploads', async () => {
-    importLlmConfigRepository.getDecryptedConfig.mockResolvedValue({
+    aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
       modelId: 'openai/gpt-4o-mini',
       apiKey: 'sk-test',
-      configuredAt: 'now',
+      accountId: 'acc-1',
     });
 
     await expect(
@@ -130,10 +132,10 @@ describe('ImportService', () => {
   });
 
   it('marks job failed when workflow returns validation errors', async () => {
-    importLlmConfigRepository.getDecryptedConfig.mockResolvedValue({
+    aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
       modelId: 'openai/gpt-4o-mini',
       apiKey: 'sk-test',
-      configuredAt: 'now',
+      accountId: 'acc-1',
     });
     jest.mocked(runPdfImportWorkflow).mockResolvedValue({ errors: ['/basics: invalid'] });
 
@@ -151,10 +153,10 @@ describe('ImportService', () => {
   });
 
   it('marks job failed with LLM settings hint on auth-like errors', async () => {
-    importLlmConfigRepository.getDecryptedConfig.mockResolvedValue({
+    aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
       modelId: 'openai/gpt-4o-mini',
       apiKey: 'sk-test',
-      configuredAt: 'now',
+      accountId: 'acc-1',
     });
     jest.mocked(runPdfImportWorkflow).mockRejectedValue(new Error('401 invalid api key'));
 
@@ -165,14 +167,14 @@ describe('ImportService', () => {
     } as Express.Multer.File);
 
     await new Promise((resolve) => setImmediate(resolve));
-    expect(service.getJob(user, result.jobId).errors?.[0]).toMatch(/LLM settings/i);
+    expect(service.getJob(user, result.jobId).errors?.[0]).toMatch(/AI agent settings/i);
   });
 
   it('creates CV through workflow finalize callback', async () => {
-    importLlmConfigRepository.getDecryptedConfig.mockResolvedValue({
+    aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
       modelId: 'openai/gpt-4o-mini',
       apiKey: 'sk-test',
-      configuredAt: 'now',
+      accountId: 'acc-1',
     });
     cvService.create.mockResolvedValue({ id: 'cv-final' });
     jest.mocked(runPdfImportWorkflow).mockImplementation(async (input) => {
@@ -192,10 +194,10 @@ describe('ImportService', () => {
   });
 
   it('marks job failed with generic workflow errors', async () => {
-    importLlmConfigRepository.getDecryptedConfig.mockResolvedValue({
+    aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
       modelId: 'openai/gpt-4o-mini',
       apiKey: 'sk-test',
-      configuredAt: 'now',
+      accountId: 'acc-1',
     });
     jest.mocked(runPdfImportWorkflow).mockRejectedValue(new Error('parse failed'));
 
@@ -210,10 +212,10 @@ describe('ImportService', () => {
   });
 
   it('marks job failed when workflow succeeds without cvId', async () => {
-    importLlmConfigRepository.getDecryptedConfig.mockResolvedValue({
+    aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
       modelId: 'openai/gpt-4o-mini',
       apiKey: 'sk-test',
-      configuredAt: 'now',
+      accountId: 'acc-1',
     });
     jest.mocked(runPdfImportWorkflow).mockResolvedValue({ errors: [] });
 
@@ -231,10 +233,10 @@ describe('ImportService', () => {
   });
 
   it('handles non-error workflow rejections', async () => {
-    importLlmConfigRepository.getDecryptedConfig.mockResolvedValue({
+    aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
       modelId: 'openai/gpt-4o-mini',
       apiKey: 'sk-test',
-      configuredAt: 'now',
+      accountId: 'acc-1',
     });
     jest.mocked(runPdfImportWorkflow).mockRejectedValue('bad');
 

@@ -3,12 +3,12 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mockGetImportLlmConfig = vi.fn();
+const mockGetAiAgentActive = vi.fn();
 const mockStartPdfImport = vi.fn();
 const mockGetPdfImportJob = vi.fn();
 
 vi.mock('@/lib/api', () => ({
-  getImportLlmConfig: (...args: unknown[]) => mockGetImportLlmConfig(...args),
+  getAiAgentActive: (...args: unknown[]) => mockGetAiAgentActive(...args),
   startPdfImport: (...args: unknown[]) => mockStartPdfImport(...args),
   getPdfImportJob: (...args: unknown[]) => mockGetPdfImportJob(...args),
 }));
@@ -25,7 +25,7 @@ describe('ImportPdfCvForm', () => {
   });
 
   it('renders the shared file upload drop zone', async () => {
-    mockGetImportLlmConfig.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
+    mockGetAiAgentActive.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
     render(<ImportPdfCvForm onSuccess={onSuccess} onCancel={onCancel} pollIntervalMs={0} />);
 
     expect(await screen.findByTestId('import-file-upload')).toBeInTheDocument();
@@ -33,15 +33,15 @@ describe('ImportPdfCvForm', () => {
   });
 
   it('shows setup prompt when LLM config is missing', async () => {
-    mockGetImportLlmConfig.mockResolvedValue({ configured: false });
+    mockGetAiAgentActive.mockResolvedValue({ configured: false });
     render(<ImportPdfCvForm onSuccess={onSuccess} onCancel={onCancel} pollIntervalMs={0} />);
 
-    expect(await screen.findByText(/Configure LLM settings/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Open AI agent settings/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Import PDF' })).not.toBeInTheDocument();
   });
 
   it('does not upload until import is confirmed', async () => {
-    mockGetImportLlmConfig.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
+    mockGetAiAgentActive.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
     render(<ImportPdfCvForm onSuccess={onSuccess} onCancel={onCancel} pollIntervalMs={0} />);
 
     await waitFor(() => {
@@ -51,7 +51,7 @@ describe('ImportPdfCvForm', () => {
   });
 
   it('polls until success and calls onSuccess', async () => {
-    mockGetImportLlmConfig.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
+    mockGetAiAgentActive.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
     mockStartPdfImport.mockResolvedValue({ jobId: 'job-1' });
     mockGetPdfImportJob
       .mockResolvedValueOnce({ status: 'running', progress: 'drafting' })
@@ -71,7 +71,7 @@ describe('ImportPdfCvForm', () => {
   });
 
   it('shows failure message when job fails', async () => {
-    mockGetImportLlmConfig.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
+    mockGetAiAgentActive.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
     mockStartPdfImport.mockResolvedValue({ jobId: 'job-2' });
     mockGetPdfImportJob.mockResolvedValue({
       status: 'failed',

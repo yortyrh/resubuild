@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ImportFileUpload } from '@/components/cv/import-file-upload';
 import { Button } from '@/components/ui/button';
-import { getImportLlmConfig, getPdfImportJob, startPdfImport } from '@/lib/api';
+import { getAiAgentActive, getPdfImportJob, startPdfImport } from '@/lib/api';
 
 export const MAX_PDF_IMPORT_BYTES = 5 * 1024 * 1024;
 
@@ -37,7 +37,7 @@ export function ImportPdfCvForm({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void getImportLlmConfig()
+    void getAiAgentActive()
       .then((config) => setConfigured(config.configured))
       .catch(() => setConfigured(false));
   }, []);
@@ -103,11 +103,12 @@ export function ImportPdfCvForm({
     return (
       <div className="space-y-4 rounded-lg border p-4">
         <p className="text-muted-foreground text-sm">
-          PDF import requires LLM settings. Configure a provider, model, and API key first.
+          PDF import requires an active AI agent account. Open the user menu (top right) → AI agent
+          settings to add a provider, model, and API key.
         </p>
         <div className="flex gap-3">
           <Button asChild>
-            <Link href="/dashboard/settings/import-llm">Configure LLM settings</Link>
+            <Link href="/dashboard/settings/ai-agent">Open AI agent settings</Link>
           </Button>
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel

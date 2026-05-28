@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { SessionGate } from '@/components/auth/session-gate';
-import { SignOutButton } from '@/components/dashboard/sign-out-button';
+import { UserMenu } from '@/components/dashboard/user-menu';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -18,7 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </Link>
               </nav>
             </div>
-            <SignOutButton />
+            <UserMenu />
           </div>
         </header>
         <main className="p-4.5 mx-auto max-w-6xl pt-2">{children}</main>

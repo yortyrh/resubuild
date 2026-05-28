@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mockCreateCv = vi.fn();
 const mockReplace = vi.fn();
 const mockPush = vi.fn();
-const mockGetImportLlmConfig = vi.fn();
+const mockGetAiAgentActive = vi.fn();
 
 const mockResolveImportedResumeData = vi.fn(
   async (data: Record<string, unknown>, _options?: { useGravatar?: boolean }) => data,
@@ -14,7 +14,7 @@ const mockResolveImportedResumeData = vi.fn(
 
 vi.mock('@/lib/api', () => ({
   createCv: (...args: unknown[]) => mockCreateCv(...args),
-  getImportLlmConfig: (...args: unknown[]) => mockGetImportLlmConfig(...args),
+  getAiAgentActive: (...args: unknown[]) => mockGetAiAgentActive(...args),
   startPdfImport: vi.fn(),
   getPdfImportJob: vi.fn(),
 }));
@@ -77,7 +77,7 @@ import { NewCvPageClient } from './new-cv-page-client';
 
 describe('NewCvPageClient', () => {
   beforeEach(() => {
-    mockGetImportLlmConfig.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
+    mockGetAiAgentActive.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
   });
 
   afterEach(() => {
