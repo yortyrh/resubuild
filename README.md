@@ -9,6 +9,7 @@ Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authenti
 - **apps/import-agent** — Mastra PDF import workflow and reusable verification tools
 - **packages/schemas** — official resume JSON schema
 - **packages/types** — shared TypeScript resume types
+- **packages/resume-template** — MIT-format HTML renderer for preview and PDF export
 - **packages/import-models** — pinned Mastra provider/model catalog for PDF import settings
 - **supabase/migrations** — `cv` table + RLS policies
 
@@ -51,6 +52,14 @@ pnpm dev            # web :3000 + api :3001
 ```
 
 Open http://localhost:3000, sign in with the developer account, and you should see 10 sample CVs on the dashboard.
+
+### CV preview and PDF export
+
+From any CV editor, use **Preview** to open `/dashboard/cv/[id]/preview` — a print-faithful MIT-format HTML view of the assembled resume (experience before education, ruled section headings). **Print** uses the browser; **Download PDF** calls `GET /cv/:id/export/pdf` on the API.
+
+PDF generation uses headless Chromium (Puppeteer) in `apps/api`. For local dev, Puppeteer downloads its own browser. In production Docker, set `CHROMIUM_EXECUTABLE_PATH` to a system Chromium binary if the bundled browser is unavailable. HTML preview works without Chromium; PDF returns `503` when launch fails.
+
+Regenerate sample PDFs from JSON fixtures: `pnpm samples:pdf` (builds `@resumind/resume-template` first).
 
 ### PDF import smoke (optional)
 
@@ -146,6 +155,8 @@ Authenticate with Bearer tokens from **`POST /auth/login`** / **`POST /auth/regi
 | POST   | `/cv`                                      | Create `{ title?, data }`                   |
 | PATCH  | `/cv/:id`                                  | Update `{ title?, data? }`                  |
 | DELETE | `/cv/:id`                                  | Delete CV                                   |
+| GET    | `/cv/:id/export/html`                      | Full MIT-format HTML document (auth)        |
+| GET    | `/cv/:id/export/pdf`                       | PDF bytes (`Content-Disposition` attachment)|
 | GET    | `/import/llm/providers`                    | List PDF import LLM providers               |
 | GET    | `/import/llm/providers/:providerId/models` | List models for a provider                  |
 | GET    | `/import/llm/config`                       | Current user's import LLM settings          |
@@ -167,6 +178,7 @@ apps/
   web/          Next.js frontend
 packages/
   import-models/ pinned Mastra provider/model catalog
+  resume-template/ MIT HTML renderer for preview/PDF export
   schemas/      resume.schema.json
   types/        shared Resume types
 supabase/

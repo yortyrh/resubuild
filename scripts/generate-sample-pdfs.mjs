@@ -2,14 +2,14 @@
 /**
  * Generate MIT CAPD-style PDFs from JSON Resume sample files.
  *
- * Usage: node scripts/generate-sample-pdfs.mjs
+ * Usage: pnpm samples:pdf
  */
 
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PDF_EXPORT_OPTIONS, renderResumeHtml } from '@resumind/resume-template';
 import puppeteer from 'puppeteer';
-import { renderMitTemplateHtml } from './lib/mit-template-renderer.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
@@ -30,9 +30,7 @@ async function renderPdf(browser, html, outputPath) {
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.pdf({
       path: outputPath,
-      format: 'Letter',
-      printBackground: true,
-      margin: { top: '0.5in', right: '0.5in', bottom: '0.5in', left: '0.5in' },
+      ...PDF_EXPORT_OPTIONS,
     });
   } finally {
     await page.close();
@@ -58,7 +56,7 @@ async function main() {
 
       const raw = await readFile(jsonPath, 'utf8');
       const resume = JSON.parse(raw);
-      const html = renderMitTemplateHtml(resume);
+      const html = renderResumeHtml(resume);
 
       await writeFile(htmlPath, html, 'utf8');
       await renderPdf(browser, html, pdfPath);

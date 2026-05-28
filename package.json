@@ -16,7 +16,7 @@
     "dev:api": "pnpm --filter @resumind/api dev",
     "dev:types": "pnpm --filter @resumind/types dev",
     "setup:env": "bash scripts/setup-local-env.sh",
-    "samples:pdf": "node scripts/generate-sample-pdfs.mjs",
+    "samples:pdf": "pnpm --filter @resumind/resume-template build && node scripts/generate-sample-pdfs.mjs",
     "import-models:sync": "node scripts/sync-import-models.mjs",
     "samples:seed": "node scripts/seed-e2e-fixture.mjs",
     "local:credentials": "node scripts/show-local-credentials.mjs",
