@@ -1,12 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { ImportFileUpload } from '@/components/cv/import-file-upload';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { getImportLlmConfig, getPdfImportJob, startPdfImport } from '@/lib/api';
 
 export const MAX_PDF_IMPORT_BYTES = 5 * 1024 * 1024;
+
+const PDF_FILE_ACCEPT = {
+  'application/pdf': ['.pdf'],
+};
 
 export interface ImportPdfCvFormProps {
   onSuccess: (cvId: string) => void;
@@ -26,8 +30,6 @@ export function ImportPdfCvForm({
   onCancel,
   pollIntervalMs = 2000,
 }: ImportPdfCvFormProps) {
-  const fileInputId = useId();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
@@ -46,25 +48,8 @@ export function ImportPdfCvForm({
     };
   }, []);
 
-  const handleFileChange = (file: File | null) => {
+  const handleFileSelect = (file: File | null) => {
     setError(null);
-    if (!file) {
-      setSelectedFile(null);
-      return;
-    }
-
-    if (file.type !== 'application/pdf') {
-      setSelectedFile(null);
-      setError('Only PDF files are supported.');
-      return;
-    }
-
-    if (file.size > MAX_PDF_IMPORT_BYTES) {
-      setSelectedFile(null);
-      setError('PDF exceeds the maximum upload size.');
-      return;
-    }
-
     setSelectedFile(file);
   };
 
@@ -134,24 +119,34 @@ export function ImportPdfCvForm({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor={fileInputId}>PDF résumé</Label>
-        <input
-          id={fileInputId}
-          ref={fileInputRef}
-          type="file"
-          accept="application/pdf,.pdf"
-          className="block w-full text-sm"
-          disabled={importing}
-          onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)}
-        />
-        {selectedFile ? (
-          <p className="text-muted-foreground text-sm">Selected: {selectedFile.name}</p>
-        ) : null}
-      </div>
+      <ImportFileUpload
+        accept={PDF_FILE_ACCEPT}
+        maxBytes={MAX_PDF_IMPORT_BYTES}
+        label="PDF résumé"
+        hint="Drag and drop a PDF résumé or browse…"
+        disabled={importing}
+        value={selectedFile}
+        onFileSelect={handleFileSelect}
+      />
 
-      {progress ? <p className="text-muted-foreground text-sm">Status: {progress}</p> : null}
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
+      {progress ? (
+        <div
+          className="border-muted bg-muted/30 rounded-md border px-3 py-2"
+          role="status"
+          data-testid="import-pdf-progress"
+        >
+          <p className="text-muted-foreground text-sm">Import in progress: {progress}</p>
+        </div>
+      ) : null}
+      {error ? (
+        <div
+          className="border-destructive/30 bg-destructive/5 rounded-md border px-3 py-2"
+          role="alert"
+          data-testid="import-pdf-error"
+        >
+          <p className="text-destructive text-sm">{error}</p>
+        </div>
+      ) : null}
 
       <div className="flex gap-3">
         <Button

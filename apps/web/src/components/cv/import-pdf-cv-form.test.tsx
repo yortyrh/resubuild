@@ -24,6 +24,14 @@ describe('ImportPdfCvForm', () => {
     vi.clearAllMocks();
   });
 
+  it('renders the shared file upload drop zone', async () => {
+    mockGetImportLlmConfig.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
+    render(<ImportPdfCvForm onSuccess={onSuccess} onCancel={onCancel} pollIntervalMs={0} />);
+
+    expect(await screen.findByTestId('import-file-upload')).toBeInTheDocument();
+    expect(screen.getByLabelText('PDF résumé')).toBeInTheDocument();
+  });
+
   it('shows setup prompt when LLM config is missing', async () => {
     mockGetImportLlmConfig.mockResolvedValue({ configured: false });
     render(<ImportPdfCvForm onSuccess={onSuccess} onCancel={onCancel} pollIntervalMs={0} />);
@@ -53,7 +61,7 @@ describe('ImportPdfCvForm', () => {
     render(<ImportPdfCvForm onSuccess={onSuccess} onCancel={onCancel} pollIntervalMs={0} />);
 
     const file = new File(['%PDF'], 'resume.pdf', { type: 'application/pdf' });
-    const input = await screen.findByLabelText('PDF résumé');
+    const input = await screen.findByTestId('import-file-upload-input');
     await user.upload(input, file);
     await user.click(screen.getByRole('button', { name: 'Import PDF' }));
 
@@ -74,11 +82,13 @@ describe('ImportPdfCvForm', () => {
     render(<ImportPdfCvForm onSuccess={onSuccess} onCancel={onCancel} pollIntervalMs={0} />);
 
     const file = new File(['%PDF'], 'resume.pdf', { type: 'application/pdf' });
-    const input = await screen.findByLabelText('PDF résumé');
+    const input = await screen.findByTestId('import-file-upload-input');
     await user.upload(input, file);
     await user.click(screen.getByRole('button', { name: 'Import PDF' }));
 
-    expect(await screen.findByText(/Schema validation failed/i)).toBeInTheDocument();
+    expect(await screen.findByTestId('import-pdf-error')).toHaveTextContent(
+      /Schema validation failed/i,
+    );
     expect(onSuccess).not.toHaveBeenCalled();
   });
 });
