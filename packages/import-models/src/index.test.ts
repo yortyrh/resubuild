@@ -62,7 +62,7 @@ describe('validateImportModelId', () => {
 describe('catalog helpers', () => {
   it('lists providers with api key labels', () => {
     const providers = listCatalogProviders(testCatalog);
-    expect(providers.map((entry) => entry.id)).toEqual(['openai', 'anthropic', 'google']);
+    expect(providers.map((entry) => entry.id)).toEqual(['openai', 'anthropic', 'google', 'openrouter']);
     expect(getProviderApiKeyLabel('openai', testCatalog)).toBe('OpenAI API key');
   });
 

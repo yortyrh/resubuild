@@ -3,7 +3,7 @@
   "providers": [
     {
       "id": "openai",
-      "displayName": "OpenAI",
+      "displayName": "OpenAI (BYOK — API key from platform.openai.com)",
       "apiKeyEnvVar": "OPENAI_API_KEY",
       "apiKeyLabel": "OpenAI API key",
       "models": [
@@ -16,12 +16,27 @@
           "id": "openai/gpt-4o",
           "displayName": "GPT-4o",
           "recommendedForPdfImport": false
+        },
+        {
+          "id": "openai/gpt-4.1",
+          "displayName": "GPT-4.1",
+          "recommendedForPdfImport": false
+        },
+        {
+          "id": "openai/gpt-4.1-mini",
+          "displayName": "GPT-4.1 Mini",
+          "recommendedForPdfImport": false
+        },
+        {
+          "id": "openai/codex-mini-latest",
+          "displayName": "Codex Mini (latest)",
+          "recommendedForPdfImport": false
         }
       ]
     },
     {
       "id": "anthropic",
-      "displayName": "Anthropic",
+      "displayName": "Anthropic (BYOK — API key from console.anthropic.com)",
       "apiKeyEnvVar": "ANTHROPIC_API_KEY",
       "apiKeyLabel": "Anthropic API key",
       "models": [
@@ -39,7 +54,7 @@
     },
     {
       "id": "google",
-      "displayName": "Google",
+      "displayName": "Google (BYOK — API key from aistudio.google.com)",
       "apiKeyEnvVar": "GOOGLE_GENERATIVE_AI_API_KEY",
       "apiKeyLabel": "Google API key",
       "models": [
@@ -51,6 +66,29 @@
         {
           "id": "google/gemini-2.5-pro",
           "displayName": "Gemini 2.5 Pro",
+          "recommendedForPdfImport": false
+        }
+      ]
+    },
+    {
+      "id": "openrouter",
+      "displayName": "OpenRouter (BYOK — gateway key from openrouter.ai; no Cursor OAuth)",
+      "apiKeyEnvVar": "OPENROUTER_API_KEY",
+      "apiKeyLabel": "OpenRouter API key",
+      "models": [
+        {
+          "id": "openrouter/anthropic/claude-sonnet-4-6",
+          "displayName": "Claude Sonnet 4.6 (via OpenRouter)",
+          "recommendedForPdfImport": true
+        },
+        {
+          "id": "openrouter/openai/gpt-4o-mini",
+          "displayName": "GPT-4o Mini (via OpenRouter)",
+          "recommendedForPdfImport": false
+        },
+        {
+          "id": "openrouter/google/gemini-2.5-flash",
+          "displayName": "Gemini 2.5 Flash (via OpenRouter)",
           "recommendedForPdfImport": false
         }
       ]

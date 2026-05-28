@@ -11,7 +11,7 @@ import catalog from '@resumind/import-models/catalog.json';
 import { prepareImportedResume } from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvService } from '../cv/cv.service';
-import { ImportLlmConfigRepository } from '../import-llm-config/import-llm-config.service';
+import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
 import { ImportJobStore } from './import-job.store';
 
 export const PDF_IMPORT_MAX_BYTES_DEFAULT = 5 * 1024 * 1024;
@@ -25,7 +25,7 @@ export class ImportService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly importLlmConfigRepository: ImportLlmConfigRepository,
+    private readonly aiAgentCredentialService: AiAgentCredentialService,
     private readonly cvService: CvService,
   ) {}
 
@@ -44,10 +44,7 @@ export class ImportService {
       throw new ForbiddenException('PDF import is disabled');
     }
 
-    const llmConfig = await this.importLlmConfigRepository.getDecryptedConfig(user);
-    if (!llmConfig) {
-      throw new UnprocessableEntityException('Import LLM configuration is required');
-    }
+    const llmConfig = await this.aiAgentCredentialService.getActiveCredentials(user);
 
     if (file.mimetype !== 'application/pdf') {
       throw new BadRequestException('Only PDF files are supported');
@@ -152,7 +149,7 @@ export class ImportService {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Import failed';
       const errors = /auth|api key|401|403/i.test(message)
-        ? ['Import failed. Update your LLM settings and verify the API key.']
+        ? ['Import failed. Update your AI agent settings and verify the API key.']
         : [message];
       this.jobStore.update(jobId, { status: 'failed', errors });
     }
