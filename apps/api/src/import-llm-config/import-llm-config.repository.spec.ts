@@ -126,4 +126,125 @@ describe('ImportLlmConfigRepository', () => {
       repository.saveConfig(user, 'openai/gpt-4o-mini', 'sk-test'),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('throws when getStatus query fails', async () => {
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockResolvedValue({ data: null, error: { message: 'db down' } }),
+          }),
+        }),
+      }),
+    });
+
+    await expect(repository.getStatus(user)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('returns null from getDecryptedConfig when row is missing', async () => {
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        }),
+      }),
+    });
+
+    await expect(repository.getDecryptedConfig(user)).resolves.toBeNull();
+  });
+
+  it('throws when getDecryptedConfig query fails', async () => {
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockResolvedValue({ data: null, error: { message: 'db down' } }),
+          }),
+        }),
+      }),
+    });
+
+    await expect(repository.getDecryptedConfig(user)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('returns decrypted config when row exists', async () => {
+    const encryptionKey = 'encryption-key-at-least-32-characters-long';
+    const encrypted = encryptSecret('sk-test', encryptionKey);
+
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockResolvedValue({
+              data: {
+                model_id: 'openai/gpt-4o-mini',
+                api_key_encrypted: encrypted,
+                configured_at: '2026-01-01T00:00:00.000Z',
+              },
+              error: null,
+            }),
+          }),
+        }),
+      }),
+    });
+
+    await expect(repository.getDecryptedConfig(user)).resolves.toEqual({
+      modelId: 'openai/gpt-4o-mini',
+      apiKey: 'sk-test',
+      configuredAt: '2026-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('persists encrypted config on save', async () => {
+    const upsert = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        single: jest.fn().mockResolvedValue({
+          data: {
+            model_id: 'openai/gpt-4o-mini',
+            configured_at: '2026-01-01T00:00:00.000Z',
+          },
+          error: null,
+        }),
+      }),
+    });
+
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn().mockReturnValue({ upsert }),
+    });
+
+    await expect(repository.saveConfig(user, 'openai/gpt-4o-mini', 'sk-test')).resolves.toEqual({
+      configured: true,
+      modelId: 'openai/gpt-4o-mini',
+      configuredAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: user.id,
+        model_id: 'openai/gpt-4o-mini',
+      }),
+      { onConflict: 'user_id' },
+    );
+  });
+
+  it('throws when save upsert fails', async () => {
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        upsert: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({
+              data: null,
+              error: { message: 'upsert failed' },
+            }),
+          }),
+        }),
+      }),
+    });
+
+    await expect(
+      repository.saveConfig(user, 'openai/gpt-4o-mini', 'sk-test'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
 });
