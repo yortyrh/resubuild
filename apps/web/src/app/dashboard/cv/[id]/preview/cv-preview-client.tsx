@@ -74,7 +74,7 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
       {html ? (
         <div
           className="cv-export-preview overflow-x-auto rounded-md border bg-white"
-          // HTML is fetched from our authenticated API export route only.
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted HTML from authenticated API export only
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : null}

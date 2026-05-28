@@ -1,6 +1,6 @@
+import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvExportController } from './cv-export.controller';
 import type { CvExportService } from './cv-export.service';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 
 describe('CvExportController', () => {
   let controller: CvExportController;
