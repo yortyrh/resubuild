@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ImportFileUpload } from '@/components/cv/import-file-upload';
 import { Button } from '@/components/ui/button';
-import { getAiAgentActive, getPdfImportJob, startPdfImport } from '@/lib/api';
+import { startPdfImport } from '@/lib/api';
+import { useAiAgentActive, usePdfImportJob } from '@/lib/queries/ai-agent-queries';
 
 export const MAX_PDF_IMPORT_BYTES = 5 * 1024 * 1024;
 
@@ -30,49 +31,54 @@ export function ImportPdfCvForm({
   onCancel,
   pollIntervalMs = 2000,
 }: ImportPdfCvFormProps) {
-  const [configured, setConfigured] = useState<boolean | null>(null);
+  const { data: activeStatus, isLoading: activeLoading } = useAiAgentActive();
+  const configured = activeStatus?.configured ?? null;
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    void getAiAgentActive()
-      .then((config) => setConfigured(config.configured))
-      .catch(() => setConfigured(false));
-  }, []);
+  const { data: jobStatus, error: jobError } = usePdfImportJob(jobId, pollIntervalMs);
 
   useEffect(() => {
-    return () => {
+    if (!jobStatus) {
+      return;
+    }
+
+    if (jobStatus.progress) {
+      setProgress(jobStatus.progress);
+    }
+
+    if (jobStatus.status === 'succeeded' && jobStatus.cvId) {
       setImporting(false);
-    };
-  }, []);
+      setJobId(null);
+      setProgress(null);
+      onSuccess(jobStatus.cvId);
+      return;
+    }
+
+    if (jobStatus.status === 'failed') {
+      setImporting(false);
+      setJobId(null);
+      setProgress(null);
+      setError(jobStatus.errors?.join('\n') ?? 'PDF import failed');
+    }
+  }, [jobStatus, onSuccess]);
+
+  useEffect(() => {
+    if (jobError) {
+      setImporting(false);
+      setJobId(null);
+      setProgress(null);
+      setError(normalizeImportError(jobError));
+    }
+  }, [jobError]);
 
   const handleFileSelect = (file: File | null) => {
     setError(null);
     setSelectedFile(file);
-  };
-
-  const pollJob = async (jobId: string) => {
-    for (let attempt = 0; attempt < 120; attempt += 1) {
-      const job = await getPdfImportJob(jobId);
-      if (job.progress) {
-        setProgress(job.progress);
-      }
-
-      if (job.status === 'succeeded' && job.cvId) {
-        onSuccess(job.cvId);
-        return;
-      }
-
-      if (job.status === 'failed') {
-        throw new Error(job.errors?.join('\n') ?? 'PDF import failed');
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
-    }
-
-    throw new Error('PDF import timed out');
   };
 
   const handleImport = async () => {
@@ -85,17 +91,16 @@ export function ImportPdfCvForm({
     setProgress('uploading');
 
     try {
-      const { jobId } = await startPdfImport(selectedFile);
-      await pollJob(jobId);
+      const { jobId: nextJobId } = await startPdfImport(selectedFile);
+      setJobId(nextJobId);
     } catch (err) {
-      setError(normalizeImportError(err));
-    } finally {
       setImporting(false);
       setProgress(null);
+      setError(normalizeImportError(err));
     }
   };
 
-  if (configured === null) {
+  if (activeLoading || configured === null) {
     return <p className="text-muted-foreground text-sm">Checking import settings…</p>;
   }
 

@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { QueryProvider } from '@/components/providers/query-provider';
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -32,6 +33,10 @@ import { SortableManagedArraySection } from './sortable-managed-array-section';
 
 type SkillItem = { id: string; name?: string };
 
+function renderSection(ui: React.ReactElement) {
+  return render(<QueryProvider>{ui}</QueryProvider>);
+}
+
 describe('SortableManagedArraySection', () => {
   afterEach(() => {
     cleanup();
@@ -53,12 +58,12 @@ describe('SortableManagedArraySection', () => {
       ],
     });
 
-    render(
+    renderSection(
       <SortableManagedArraySection<SkillItem>
         cvId="cv-1"
+        sectionKey="skills"
         items={items}
         onItemsChange={onItemsChange}
-        refetchItems={async () => items}
         entityLabel="Skill"
         addLabel="Add skill"
         reorderSection="skills"
@@ -104,12 +109,12 @@ describe('SortableManagedArraySection', () => {
 
     reorderCvSection.mockRejectedValue(new Error('Network error'));
 
-    render(
+    renderSection(
       <SortableManagedArraySection<SkillItem>
         cvId="cv-1"
+        sectionKey="skills"
         items={items}
         onItemsChange={onItemsChange}
-        refetchItems={async () => items}
         entityLabel="Skill"
         addLabel="Add skill"
         reorderSection="skills"
@@ -140,12 +145,12 @@ describe('SortableManagedArraySection', () => {
       { id: 'id-b', name: 'Beta' },
     ];
 
-    render(
+    renderSection(
       <SortableManagedArraySection<SkillItem>
         cvId="cv-1"
+        sectionKey="skills"
         items={items}
         onItemsChange={vi.fn()}
-        refetchItems={async () => items}
         entityLabel="Skill"
         addLabel="Add skill"
         reorderSection="skills"

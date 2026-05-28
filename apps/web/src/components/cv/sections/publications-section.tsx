@@ -8,9 +8,8 @@ import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { getCvPublications } from '@/lib/api';
+import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvPublicationApi } from '@/lib/cv-item-api';
-import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
 
 type PublicationItem = SectionItem<ResumePublication>;
 
@@ -21,9 +20,9 @@ export function PublicationsSection() {
   return (
     <ManagedArraySection<PublicationItem>
       cvId={cvId}
+      sectionKey="publications"
       items={resume.publications ?? []}
       onItemsChange={(publications) => setResume((prev) => ({ ...prev, publications }))}
-      refetchItems={createSectionRefetch<PublicationItem>(getCvPublications, cvId)}
       entityLabel="Publication"
       addLabel="Add publication"
       createEmpty={() => ({})}

@@ -12,17 +12,16 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { AiAgentAccount } from '@/lib/api';
 import {
-  type AiAgentAccount,
-  type AiAgentProvider,
-  createAiAgentAccount,
-  deleteAiAgentAccount,
-  getAiAgentAccounts,
-  getAiAgentModels,
-  getAiAgentProviders,
-  setAiAgentActive,
-  updateAiAgentAccount,
-} from '@/lib/api';
+  useAiAgentAccounts,
+  useAiAgentModels,
+  useAiAgentProviders,
+  useCreateAiAgentAccount,
+  useDeleteAiAgentAccount,
+  useSetAiAgentActive,
+  useUpdateAiAgentAccount,
+} from '@/lib/queries/ai-agent-queries';
 
 type DialogMode = 'create' | 'edit' | null;
 
@@ -32,42 +31,45 @@ export function AiAgentSettings() {
   const modelSelectId = useId();
   const apiKeyInputId = useId();
 
-  const [providers, setProviders] = useState<AiAgentProvider[]>([]);
-  const [accounts, setAccounts] = useState<AiAgentAccount[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const {
+    data: providers = [],
+    isLoading: providersLoading,
+    error: providersError,
+  } = useAiAgentProviders();
+  const {
+    data: accounts = [],
+    isLoading: accountsLoading,
+    error: accountsError,
+  } = useAiAgentAccounts();
+
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [editingAccount, setEditingAccount] = useState<AiAgentAccount | null>(null);
-  const [models, setModels] = useState<Array<{ id: string; displayName: string }>>([]);
   const [selectedProvider, setSelectedProvider] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
   const [label, setLabel] = useState('');
   const [apiKeyLabel, setApiKeyLabel] = useState('API key');
   const [apiKey, setApiKey] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AiAgentAccount | null>(null);
 
-  const loadData = async () => {
-    const [providerList, accountList] = await Promise.all([
-      getAiAgentProviders(),
-      getAiAgentAccounts(),
-    ]);
-    setProviders(providerList);
-    setAccounts(accountList);
-  };
+  const { data: models = [] } = useAiAgentModels(selectedProvider, {
+    enabled: Boolean(selectedProvider),
+  });
+
+  const createAccount = useCreateAiAgentAccount();
+  const updateAccount = useUpdateAiAgentAccount();
+  const deleteAccount = useDeleteAiAgentAccount();
+  const setActiveAccount = useSetAiAgentActive();
+
+  const loading = providersLoading || accountsLoading;
+  const loadError = providersError ?? accountsError;
 
   useEffect(() => {
-    void (async () => {
-      try {
-        await loadData();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load AI agent settings');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+    if (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Failed to load AI agent settings');
+    }
+  }, [loadError]);
 
   const openCreateDialog = () => {
     setDialogMode('create');
@@ -76,12 +78,11 @@ export function AiAgentSettings() {
     setSelectedModel('');
     setLabel('');
     setApiKey('');
-    setModels([]);
     setError(null);
     setSuccess(null);
   };
 
-  const openEditDialog = async (account: AiAgentAccount) => {
+  const openEditDialog = (account: AiAgentAccount) => {
     setDialogMode('edit');
     setEditingAccount(account);
     setSelectedProvider(account.providerId);
@@ -92,49 +93,44 @@ export function AiAgentSettings() {
     setSuccess(null);
     const provider = providers.find((entry) => entry.id === account.providerId);
     setApiKeyLabel(provider?.apiKeyLabel ?? 'API key');
-    const modelList = await getAiAgentModels(account.providerId);
-    setModels(modelList);
   };
 
-  const handleProviderChange = async (providerId: string) => {
+  const handleProviderChange = (providerId: string) => {
     setSelectedProvider(providerId);
     setSelectedModel('');
     const provider = providers.find((entry) => entry.id === providerId);
     setApiKeyLabel(provider?.apiKeyLabel ?? 'API key');
-    const modelList = await getAiAgentModels(providerId);
-    setModels(modelList);
   };
 
   const handleSaveDialog = async () => {
-    setSaving(true);
     setError(null);
     setSuccess(null);
     try {
       if (dialogMode === 'create') {
-        await createAiAgentAccount({
+        await createAccount.mutateAsync({
           label: label.trim() || undefined,
           modelId: selectedModel,
           apiKey: apiKey.trim(),
         });
         setSuccess('AI agent account created.');
       } else if (editingAccount) {
-        await updateAiAgentAccount(editingAccount.id, {
-          label: label.trim() || undefined,
-          modelId: selectedModel || undefined,
-          ...(apiKey.trim()
-            ? { apiKey: apiKey.trim() }
-            : editingAccount.reconfigurationRequired
-              ? {}
-              : { keepExistingApiKey: true }),
+        await updateAccount.mutateAsync({
+          id: editingAccount.id,
+          payload: {
+            label: label.trim() || undefined,
+            modelId: selectedModel || undefined,
+            ...(apiKey.trim()
+              ? { apiKey: apiKey.trim() }
+              : editingAccount.reconfigurationRequired
+                ? {}
+                : { keepExistingApiKey: true }),
+          },
         });
         setSuccess('AI agent account updated.');
       }
       setDialogMode(null);
-      await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save account');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -142,9 +138,8 @@ export function AiAgentSettings() {
     setError(null);
     setSuccess(null);
     try {
-      await setAiAgentActive(accountId);
+      await setActiveAccount.mutateAsync(accountId);
       setSuccess('Active account updated.');
-      await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to set active account');
     }
@@ -152,19 +147,21 @@ export function AiAgentSettings() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    setSaving(true);
     setError(null);
     try {
-      await deleteAiAgentAccount(deleteTarget.id);
+      await deleteAccount.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
       setSuccess('Account deleted.');
-      await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete account');
-    } finally {
-      setSaving(false);
     }
   };
+
+  const saving =
+    createAccount.isPending ||
+    updateAccount.isPending ||
+    deleteAccount.isPending ||
+    setActiveAccount.isPending;
 
   const canKeepExistingKey =
     dialogMode === 'edit' && editingAccount && !editingAccount.reconfigurationRequired;
@@ -240,7 +237,7 @@ export function AiAgentSettings() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => void openEditDialog(account)}
+                    onClick={() => openEditDialog(account)}
                   >
                     Edit
                   </Button>
@@ -291,7 +288,7 @@ export function AiAgentSettings() {
                 id={providerSelectId}
                 className="bg-background w-full rounded-md border px-3 py-2 text-sm"
                 value={selectedProvider}
-                onChange={(event) => void handleProviderChange(event.target.value)}
+                onChange={(event) => handleProviderChange(event.target.value)}
               >
                 <option value="">Select a provider</option>
                 {providers.map((provider) => (

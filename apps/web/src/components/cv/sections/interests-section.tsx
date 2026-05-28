@@ -7,9 +7,8 @@ import { SortableManagedArraySection } from '@/components/cv/sortable-managed-ar
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { getCvInterests } from '@/lib/api';
+import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvInterestApi } from '@/lib/cv-item-api';
-import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
 
 type InterestItem = SectionItem<ResumeInterest>;
 
@@ -20,11 +19,11 @@ export function InterestsSection() {
   return (
     <SortableManagedArraySection<InterestItem>
       cvId={cvId}
+      sectionKey="interests"
       reorderSection="interests"
       reorderSectionLabel="interest"
       items={resume.interests ?? []}
       onItemsChange={(interests) => setResume((prev) => ({ ...prev, interests }))}
-      refetchItems={createSectionRefetch<InterestItem>(getCvInterests, cvId)}
       entityLabel="Interest"
       addLabel="Add interest"
       createEmpty={() => ({ keywords: [] })}

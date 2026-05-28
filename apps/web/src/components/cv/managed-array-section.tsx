@@ -33,7 +33,6 @@ import {
   ResumeItemRow,
   SectionCreateForm,
 } from '@/components/cv/cv-item-ui';
-import { useCvItemMutation } from '@/components/cv/use-cv-item-mutation';
 import { Button } from '@/components/ui/button';
 import {
   type CvItemMutationResponse,
@@ -52,6 +51,9 @@ import {
   type WithItemId,
 } from '@/lib/cv-section-order';
 import { sectionItemsNeedHydration } from '@/lib/cv-section-refetch';
+import { useSectionItemMutations } from '@/lib/queries/cv-mutations';
+import type { CvArraySectionKey } from '@/lib/queries/cv-queries';
+import { useCvSection } from '@/lib/queries/cv-queries';
 
 interface SectionReorderConfig {
   section: ReorderableCvSection;
@@ -98,9 +100,9 @@ interface ArraySectionApi {
 
 export interface ManagedArraySectionProps<T extends WithItemId> {
   cvId: string;
+  sectionKey: CvArraySectionKey;
   items: T[];
   onItemsChange: (items: T[]) => void;
-  refetchItems: () => Promise<T[]>;
   entityLabel: string;
   addLabel: string;
   createEmpty: () => T;
@@ -119,9 +121,9 @@ export interface ManagedArraySectionProps<T extends WithItemId> {
 
 export function ManagedArraySection<T extends WithItemId>({
   cvId,
+  sectionKey,
   items,
   onItemsChange,
-  refetchItems,
   entityLabel,
   addLabel,
   createEmpty,
@@ -132,7 +134,16 @@ export function ManagedArraySection<T extends WithItemId>({
   successMessages,
   reorder,
 }: ManagedArraySectionProps<T>) {
-  const { saving, error, setError, run } = useCvItemMutation();
+  const needsHydration = sectionItemsNeedHydration(items);
+  const {
+    data: sectionData,
+    isLoading: sectionLoading,
+    error: sectionQueryError,
+  } = useCvSection<T>(cvId, sectionKey, { enabled: needsHydration });
+  const { saving, error, setError, run, refetchSectionItems } = useSectionItemMutations(
+    cvId,
+    sectionKey,
+  );
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -142,15 +153,11 @@ export function ManagedArraySection<T extends WithItemId>({
   const [creating, setCreating] = useState(false);
   const [createDraft, setCreateDraft] = useState<T | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [itemsLoading, setItemsLoading] = useState(() => sectionItemsNeedHydration(items));
   const reorderSeqRef = useRef(0);
-  const refetchItemsRef = useRef(refetchItems);
   const onItemsChangeRef = useRef(onItemsChange);
   const setErrorRef = useRef(setError);
   const hydratedForCvIdRef = useRef<string | null>(null);
-  const needsHydration = sectionItemsNeedHydration(items);
 
-  refetchItemsRef.current = refetchItems;
   onItemsChangeRef.current = onItemsChange;
   setErrorRef.current = setError;
 
@@ -161,46 +168,26 @@ export function ManagedArraySection<T extends WithItemId>({
   }, [cvId]);
 
   useEffect(() => {
-    if (!needsHydration) {
-      setItemsLoading(false);
+    if (!needsHydration || !sectionData) {
       return;
     }
     if (hydratedForCvIdRef.current === cvId) {
-      setItemsLoading(false);
       return;
     }
 
-    setItemsLoading(true);
-    let cancelled = false;
+    hydratedForCvIdRef.current = cvId;
+    onItemsChangeRef.current(sectionData);
+  }, [cvId, needsHydration, sectionData]);
 
-    void refetchItemsRef
-      .current()
-      .then((refetched) => {
-        if (cancelled) {
-          return;
-        }
-        hydratedForCvIdRef.current = cvId;
-        onItemsChangeRef.current(refetched);
-      })
-      .catch((err) => {
-        if (cancelled) {
-          return;
-        }
-        hydratedForCvIdRef.current = null;
-        setErrorRef.current(
-          err instanceof Error ? err.message : 'Failed to refresh section entries',
-        );
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setItemsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [cvId, needsHydration]);
+  useEffect(() => {
+    if (sectionQueryError) {
+      setErrorRef.current(
+        sectionQueryError instanceof Error
+          ? sectionQueryError.message
+          : 'Failed to refresh section entries',
+      );
+    }
+  }, [sectionQueryError]);
 
   const startEdit = (item: T) => {
     setCreating(false);
@@ -234,6 +221,7 @@ export function ManagedArraySection<T extends WithItemId>({
         cancelEdit();
       },
       successMessages?.update ?? `${entityLabel} updated`,
+      { mergeItem: true },
     );
   };
 
@@ -258,10 +246,11 @@ export function ManagedArraySection<T extends WithItemId>({
     await run(
       () => api.create(cvId, sanitizeResumeItemPayload(toPayload(createDraft))),
       async () => {
-        onItemsChange(await refetchItems());
+        onItemsChange(await refetchSectionItems<T>());
         cancelCreate();
       },
       successMessages?.create ?? `${entityLabel} added`,
+      { invalidateSection: true },
     );
   };
 
@@ -280,6 +269,7 @@ export function ManagedArraySection<T extends WithItemId>({
         }
       },
       successMessages?.delete ?? `${entityLabel} deleted`,
+      { invalidateSection: true },
     );
   };
 
@@ -333,7 +323,7 @@ export function ManagedArraySection<T extends WithItemId>({
         setError(message);
       }
     },
-    [cvId, entityLabel, onItemsChange, refetchItems, reorder, setError],
+    [cvId, entityLabel, onItemsChange, reorder, setError],
   );
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -416,7 +406,7 @@ export function ManagedArraySection<T extends WithItemId>({
     return rowElement();
   };
 
-  if (itemsLoading) {
+  if (needsHydration && sectionLoading) {
     return (
       <div
         className="space-y-4"

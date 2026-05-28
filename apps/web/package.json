@@ -22,6 +22,7 @@
     "@radix-ui/react-tabs": "^1.1.12",
     "@resumind/schemas": "workspace:*",
     "@resumind/types": "workspace:*",
+    "@tanstack/react-query": "^5.100.14",
     "@uiw/react-textarea-code-editor": "^3.1.1",
     "@wysimark/react": "^3.0.20",
     "class-variance-authority": "^0.7.1",
@@ -43,6 +44,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@tanstack/react-query-devtools": "^5.100.14",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

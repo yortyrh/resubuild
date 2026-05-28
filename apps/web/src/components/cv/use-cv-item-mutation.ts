@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import type { CvItemMutationResponse } from '@/lib/cv-item-api';
 
+/** Standalone mutation runner for sections without a query cache (e.g. basics). */
 export function useCvItemMutation() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

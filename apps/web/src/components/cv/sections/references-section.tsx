@@ -6,9 +6,8 @@ import { TextField } from '@/components/cv/form-fields';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { getCvReferences } from '@/lib/api';
+import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvReferenceApi } from '@/lib/cv-item-api';
-import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
 
 type ReferenceItem = SectionItem<ResumeReference>;
 
@@ -19,11 +18,11 @@ export function ReferencesSection() {
   return (
     <SortableManagedArraySection<ReferenceItem>
       cvId={cvId}
+      sectionKey="references"
       reorderSection="references"
       reorderSectionLabel="reference"
       items={resume.references ?? []}
       onItemsChange={(references) => setResume((prev) => ({ ...prev, references }))}
-      refetchItems={createSectionRefetch<ReferenceItem>(getCvReferences, cvId)}
       entityLabel="Reference"
       addLabel="Add reference"
       createEmpty={() => ({})}

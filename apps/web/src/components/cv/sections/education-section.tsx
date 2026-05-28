@@ -8,9 +8,8 @@ import { StringListField, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { getCvEducation } from '@/lib/api';
+import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvEducationApi } from '@/lib/cv-item-api';
-import { createSectionRefetch, type SectionItem } from '@/lib/cv-section-refetch';
 
 type EducationItem = SectionItem<ResumeEducation>;
 
@@ -21,9 +20,9 @@ export function EducationSection() {
   return (
     <ManagedArraySection<EducationItem>
       cvId={cvId}
+      sectionKey="education"
       items={resume.education ?? []}
       onItemsChange={(education) => setResume((prev) => ({ ...prev, education }))}
-      refetchItems={createSectionRefetch<EducationItem>(getCvEducation, cvId)}
       entityLabel="Education entry"
       addLabel="Add education"
       createEmpty={() => ({ courses: [] })}
