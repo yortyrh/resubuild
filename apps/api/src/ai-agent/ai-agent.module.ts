@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { CvModule } from '../cv/cv.module';
-import { AiAgentCredentialService } from './ai-agent-credential.service';
 import { AiAgentController } from './ai-agent.controller';
 import { AiAgentRepository } from './ai-agent.repository';
 import { AiAgentService } from './ai-agent.service';
+import { AiAgentCredentialService } from './ai-agent-credential.service';
 
 @Module({
   imports: [CvModule],

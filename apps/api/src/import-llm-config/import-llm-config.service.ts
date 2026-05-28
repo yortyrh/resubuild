@@ -1,8 +1,8 @@
-import { UnprocessableEntityException, Injectable } from '@nestjs/common';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import type { AiAgentActiveStatus } from '../ai-agent/ai-agent.repository';
 import { AiAgentRepository } from '../ai-agent/ai-agent.repository';
 import { AiAgentService } from '../ai-agent/ai-agent.service';
+import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 
 /** @deprecated Use AiAgentActiveStatus */
 export type ImportLlmConfigStatus = AiAgentActiveStatus & {

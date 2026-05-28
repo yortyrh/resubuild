@@ -13,14 +13,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  type AiAgentAccount,
+  type AiAgentProvider,
   createAiAgentAccount,
   deleteAiAgentAccount,
   getAiAgentAccounts,
   getAiAgentModels,
   getAiAgentProviders,
   setAiAgentActive,
-  type AiAgentAccount,
-  type AiAgentProvider,
   updateAiAgentAccount,
 } from '@/lib/api';
 

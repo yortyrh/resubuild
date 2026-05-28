@@ -15,7 +15,7 @@ import {
 } from '@resumind/import-models';
 import catalog from '@resumind/import-models/catalog.json';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
-import type { AiAgentActiveStatus, AiAgentAccountSummary } from './ai-agent.repository';
+import type { AiAgentAccountSummary, AiAgentActiveStatus } from './ai-agent.repository';
 import { AiAgentRepository } from './ai-agent.repository';
 
 @Injectable()

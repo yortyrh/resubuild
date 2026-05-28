@@ -11,10 +11,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { AiAgentService } from './ai-agent.service';
 import { CreateAiAgentAccountDto } from './dto/create-ai-agent-account.dto';
 import { SetActiveAiAgentAccountDto } from './dto/set-active-ai-agent-account.dto';
 import { UpdateAiAgentAccountDto } from './dto/update-ai-agent-account.dto';
-import { AiAgentService } from './ai-agent.service';
 
 @Controller('ai/agents')
 @UseGuards(SupabaseAuthGuard)

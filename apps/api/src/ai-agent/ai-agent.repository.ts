@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { resolveProviderId, parseMastraModelId } from '@resumind/import-models';
+import { parseMastraModelId, resolveProviderId } from '@resumind/import-models';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
 import {

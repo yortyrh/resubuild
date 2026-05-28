@@ -9,9 +9,9 @@ import { ConfigService } from '@nestjs/config';
 import { type ImportJobProgress, runPdfImportWorkflow } from '@resumind/import-agent';
 import catalog from '@resumind/import-models/catalog.json';
 import { prepareImportedResume } from '@resumind/types';
+import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvService } from '../cv/cv.service';
-import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
 import { ImportJobStore } from './import-job.store';
 
 export const PDF_IMPORT_MAX_BYTES_DEFAULT = 5 * 1024 * 1024;
