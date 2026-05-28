@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
-import { CvEditorChrome } from '@/components/cv/cv-editor-chrome';
-import { CvEditorProvider } from '@/components/cv/cv-editor-provider';
+import { CvLayoutShell } from '@/components/cv/cv-layout-shell';
 
 export default async function CvEditorLayout({
   params,
@@ -11,9 +10,5 @@ export default async function CvEditorLayout({
 }) {
   const { id } = await params;
 
-  return (
-    <CvEditorProvider cvId={id}>
-      <CvEditorChrome cvId={id}>{children}</CvEditorChrome>
-    </CvEditorProvider>
-  );
+  return <CvLayoutShell cvId={id}>{children}</CvLayoutShell>;
 }

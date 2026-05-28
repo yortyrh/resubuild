@@ -1,5 +1,7 @@
 'use client';
 
+import { Eye } from 'lucide-react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { CvEditorBreadcrumb } from '@/components/cv/cv-editor-breadcrumb';
@@ -8,6 +10,7 @@ import { CvSectionSkeleton } from '@/components/cv/cv-editor-skeleton';
 import { CvSectionContent } from '@/components/cv/cv-section-content';
 import { CvSectionLayout, CvSectionNavToggle } from '@/components/cv/cv-section-layout';
 import { resolveActiveSectionFromPathname } from '@/components/cv/cv-section-nav';
+import { Button } from '@/components/ui/button';
 
 interface CvEditorChromeProps {
   cvId: string;
@@ -28,7 +31,7 @@ export function CvEditorChrome({ cvId, children }: CvEditorChromeProps) {
   return (
     <CvSectionLayout cvId={cvId}>
       <div className="space-y-6">
-        <div className="mt-2 flex items-center gap-x-0">
+        <div className="mt-2 flex items-center gap-x-2">
           <CvSectionNavToggle />
           <CvEditorBreadcrumb
             cvId={cvId}
@@ -36,6 +39,12 @@ export function CvEditorChrome({ cvId, children }: CvEditorChromeProps) {
             activeSection={activeSection}
             className="mt-0 min-w-0 flex-1"
           />
+          <Button type="button" variant="outline" size="sm" className="no-print shrink-0" asChild>
+            <Link href={`/dashboard/cv/${cvId}/preview`}>
+              <Eye className="mr-1.5 size-4" aria-hidden />
+              Preview
+            </Link>
+          </Button>
         </div>
         <CvSectionContent>
           {error ? (

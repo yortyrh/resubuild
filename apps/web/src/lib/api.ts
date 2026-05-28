@@ -350,3 +350,58 @@ export function getCvProfiles(cvId: string) {
     apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/profiles`),
   );
 }
+
+export async function getCvExportHtml(cvId: string): Promise<string> {
+  const token = await getValidAccessToken(apiUrl);
+  const response = await fetch(`${apiUrl}/cv/${cvId}/export/html`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { message?: string | string[] };
+    const message =
+      typeof body.message === 'string'
+        ? body.message
+        : Array.isArray(body.message)
+          ? body.message.join(', ')
+          : `Request failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  return response.text();
+}
+
+function parseContentDispositionFilename(header: string | null): string | null {
+  if (!header) return null;
+  const match = header.match(/filename="([^"]+)"/i);
+  return match?.[1] ?? null;
+}
+
+export async function downloadCvPdf(cvId: string): Promise<{ blob: Blob; filename: string }> {
+  const token = await getValidAccessToken(apiUrl);
+  const response = await fetch(`${apiUrl}/cv/${cvId}/export/pdf`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { message?: string | string[] };
+    const message =
+      typeof body.message === 'string'
+        ? body.message
+        : Array.isArray(body.message)
+          ? body.message.join(', ')
+          : response.status === 503
+            ? 'PDF export is temporarily unavailable. Try Print instead.'
+            : `Request failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  const blob = await response.blob();
+  const filename =
+    parseContentDispositionFilename(response.headers.get('Content-Disposition')) ?? 'resume.pdf';
+  return { blob, filename };
+}
