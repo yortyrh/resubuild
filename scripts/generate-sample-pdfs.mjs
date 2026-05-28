@@ -2,19 +2,29 @@
 /**
  * Generate MIT CAPD-style PDFs from JSON Resume sample files.
  *
- * Usage: pnpm samples:pdf
+ * Usage:
+ *   pnpm samples:pdf
+ *   pnpm samples:pdf -- --template capd-alum
+ *   pnpm samples:pdf -- --all-templates
  */
 
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PDF_EXPORT_OPTIONS, renderResumeHtml } from '@resumind/resume-template';
+import { listTemplates, PDF_EXPORT_OPTIONS, renderResumeHtml } from '@resumind/resume-template';
 import puppeteer from 'puppeteer';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 const inputDir = path.join(repoRoot, '.samples/resumes/jsonresume');
 const outputDir = path.join(repoRoot, '.samples/resumes/pdf');
+
+function parseArgs(argv) {
+  const templateIdx = argv.indexOf('--template');
+  const templateId = templateIdx >= 0 ? argv[templateIdx + 1] : undefined;
+  const allTemplates = argv.includes('--all-templates');
+  return { templateId, allTemplates };
+}
 
 async function listJsonResumes(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -38,6 +48,11 @@ async function renderPdf(browser, html, outputPath) {
 }
 
 async function main() {
+  const { templateId, allTemplates } = parseArgs(process.argv.slice(2));
+  const templateIds = allTemplates
+    ? listTemplates().map((t) => t.id)
+    : [templateId ?? 'mit-classic'];
+
   await mkdir(outputDir, { recursive: true });
 
   const jsonFiles = await listJsonResumes(inputDir);
@@ -47,27 +62,32 @@ async function main() {
   }
 
   const browser = await puppeteer.launch({ headless: true });
+  let generated = 0;
 
   try {
-    for (const jsonPath of jsonFiles) {
-      const baseName = path.basename(jsonPath, '.json');
-      const pdfPath = path.join(outputDir, `${baseName}.pdf`);
-      const htmlPath = path.join(outputDir, `${baseName}.html`);
+    for (const id of templateIds) {
+      for (const jsonPath of jsonFiles) {
+        const baseName = path.basename(jsonPath, '.json');
+        const suffix = templateIds.length > 1 ? `.${id}` : id === 'mit-classic' ? '' : `.${id}`;
+        const pdfPath = path.join(outputDir, `${baseName}${suffix}.pdf`);
+        const htmlPath = path.join(outputDir, `${baseName}${suffix}.html`);
 
-      const raw = await readFile(jsonPath, 'utf8');
-      const resume = JSON.parse(raw);
-      const html = renderResumeHtml(resume);
+        const raw = await readFile(jsonPath, 'utf8');
+        const resume = JSON.parse(raw);
+        const html = renderResumeHtml(resume, id);
 
-      await writeFile(htmlPath, html, 'utf8');
-      await renderPdf(browser, html, pdfPath);
+        await writeFile(htmlPath, html, 'utf8');
+        await renderPdf(browser, html, pdfPath);
 
-      console.log(`✓ ${baseName}.pdf`);
+        console.log(`✓ ${path.basename(pdfPath)}`);
+        generated += 1;
+      }
     }
   } finally {
     await browser.close();
   }
 
-  console.log(`\nGenerated ${jsonFiles.length} PDF(s) in ${outputDir}`);
+  console.log(`\nGenerated ${generated} PDF(s) in ${outputDir}`);
 }
 
 main().catch((error) => {

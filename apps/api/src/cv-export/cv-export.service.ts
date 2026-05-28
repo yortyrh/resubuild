@@ -1,6 +1,18 @@
-import { Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PDF_EXPORT_OPTIONS, renderResumeHtml } from '@resumind/resume-template';
+import {
+  DEFAULT_TEMPLATE_ID,
+  isValidTemplateId,
+  listTemplates,
+  PDF_EXPORT_OPTIONS,
+  renderResumeHtml,
+} from '@resumind/resume-template';
 import type { Resume } from '@resumind/types';
 import { assembleResume, deriveCvTitleFromBasics } from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
@@ -10,6 +22,11 @@ import { slugifyExportFilename, toAbsoluteMediaUrl } from './cv-export.util';
 export interface CvExportPdfResult {
   buffer: Buffer;
   filename: string;
+}
+
+export interface CvExportContext {
+  resume: Resume;
+  templateId: string;
 }
 
 @Injectable()
@@ -29,10 +46,23 @@ export class CvExportService {
     );
   }
 
-  private async loadResumeForExport(
+  resolveTemplateId(storedTemplateId: string | null | undefined, queryTemplate?: string): string {
+    const candidate = queryTemplate?.trim() || storedTemplateId?.trim() || DEFAULT_TEMPLATE_ID;
+    if (!isValidTemplateId(candidate)) {
+      throw new BadRequestException(`Unknown template id: ${candidate}`);
+    }
+    return candidate;
+  }
+
+  listTemplateCatalog() {
+    return listTemplates();
+  }
+
+  private async loadExportContext(
     user: AuthenticatedRequest['user'],
     cvId: string,
-  ): Promise<Resume> {
+    queryTemplate?: string,
+  ): Promise<CvExportContext> {
     const supabase = this.normalizedRepo.createClientForUser(user);
     const header = await this.normalizedRepo.fetchHeader(supabase, cvId);
 
@@ -40,9 +70,11 @@ export class CvExportService {
       throw new NotFoundException('CV not found');
     }
 
+    const templateId = this.resolveTemplateId(header.template_id, queryTemplate);
     const sections = await this.normalizedRepo.fetchSections(supabase, cvId);
-    const resume = assembleResume(header, sections);
-    return this.withAbsoluteImageUrls(resume);
+    const resume = this.withAbsoluteImageUrls(assembleResume(header, sections));
+
+    return { resume, templateId };
   }
 
   withAbsoluteImageUrls(resume: Resume): Resume {
@@ -58,14 +90,22 @@ export class CvExportService {
     };
   }
 
-  async renderHtml(user: AuthenticatedRequest['user'], cvId: string): Promise<string> {
-    const resume = await this.loadResumeForExport(user, cvId);
-    return renderResumeHtml(resume);
+  async renderHtml(
+    user: AuthenticatedRequest['user'],
+    cvId: string,
+    queryTemplate?: string,
+  ): Promise<string> {
+    const { resume, templateId } = await this.loadExportContext(user, cvId, queryTemplate);
+    return renderResumeHtml(resume, templateId);
   }
 
-  async renderPdf(user: AuthenticatedRequest['user'], cvId: string): Promise<CvExportPdfResult> {
-    const resume = await this.loadResumeForExport(user, cvId);
-    const html = renderResumeHtml(resume);
+  async renderPdf(
+    user: AuthenticatedRequest['user'],
+    cvId: string,
+    queryTemplate?: string,
+  ): Promise<CvExportPdfResult> {
+    const { resume, templateId } = await this.loadExportContext(user, cvId, queryTemplate);
+    const html = renderResumeHtml(resume, templateId);
     const buffer = await this.renderPdfFromHtml(html);
     const title = deriveCvTitleFromBasics(resume.basics);
     const filename = `${slugifyExportFilename(title)}.pdf`;

@@ -254,6 +254,25 @@ describe('CvService', () => {
       expect(normalizedRepo.replaceNormalizedCv).toHaveBeenCalled();
       expect(result.title).toBe('Updated — Role');
     });
+
+    it('persists valid templateId', async () => {
+      const update = jest.fn(() => ({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      }));
+      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({ update }));
+      normalizedRepo.fetchHeader.mockResolvedValue(mockCvHeader({ template_id: 'capd-alum' }));
+
+      const result = await service.update(user, 'cv-1', { templateId: 'capd-alum' });
+
+      expect(update).toHaveBeenCalledWith({ template_id: 'capd-alum' });
+      expect(result.templateId).toBe('capd-alum');
+    });
+
+    it('rejects unknown templateId with BadRequestException', async () => {
+      await expect(
+        service.update(user, 'cv-1', { templateId: 'not-a-real-template' }),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 
   it('persistValidatedData validates and replaces normalized cv', async () => {
