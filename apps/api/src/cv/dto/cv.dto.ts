@@ -19,4 +19,9 @@ export class UpdateCvDto {
   @IsOptional()
   @IsObject()
   data?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  templateId?: string;
 }

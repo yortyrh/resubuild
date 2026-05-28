@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { isValidTemplateId } from '@resumind/resume-template';
 import type { Resume } from '@resumind/types';
 import { type CvHeaderRow, deriveCvTitleFromBasics, headerToSlimCvData } from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
@@ -10,6 +11,7 @@ export interface CvRecord {
   id: string;
   user_id: string;
   title: string;
+  templateId: string;
   data: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -34,6 +36,7 @@ export class CvService {
       id: header.id,
       user_id: header.user_id,
       title: this.deriveTitleFromHeader(header),
+      templateId: header.template_id ?? 'mit-classic',
       data: headerToSlimCvData(header),
       created_at: header.created_at ?? '',
       updated_at: header.updated_at ?? '',
@@ -111,6 +114,19 @@ export class CvService {
     dto: UpdateCvDto,
   ): Promise<CvRecord> {
     const supabase = this.normalizedRepo.createClientForUser(user);
+
+    if (dto.templateId !== undefined) {
+      if (!isValidTemplateId(dto.templateId)) {
+        throw new BadRequestException(`Unknown template id: ${dto.templateId}`);
+      }
+      const { error } = await supabase
+        .from('cv')
+        .update({ template_id: dto.templateId })
+        .eq('id', id);
+      if (error) {
+        throw new BadRequestException(error.message);
+      }
+    }
 
     if (dto.data !== undefined) {
       this.resumeValidator.validate(dto.data as unknown as Record<string, unknown>);

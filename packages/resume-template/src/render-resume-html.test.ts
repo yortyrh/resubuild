@@ -2,39 +2,10 @@ import type { Resume } from '@resumind/types';
 import { describe, expect, it } from 'vitest';
 import { renderMarkdownField } from './render-markdown-field';
 import { renderResumeHtml } from './render-resume-html';
-
-const sampleResume: Resume = {
-  basics: {
-    name: 'Jane Doe',
-    summary: 'Experienced engineer.',
-  },
-  work: [
-    {
-      name: 'Acme Corp',
-      position: 'Senior Engineer',
-      startDate: '2020-01',
-      endDate: '2024-06',
-    },
-  ],
-  education: [
-    {
-      institution: 'MIT',
-      studyType: 'B.S.',
-      area: 'Computer Science',
-      startDate: '2014-09',
-      endDate: '2018-06',
-    },
-  ],
-  skills: [
-    {
-      name: 'Languages',
-      keywords: ['TypeScript', 'Python'],
-    },
-  ],
-};
+import { sampleResume } from './templates/capd-factory';
 
 describe('renderResumeHtml', () => {
-  it('orders experience before education when both are present', () => {
+  it('orders experience before education when both are present (default template)', () => {
     const html = renderResumeHtml(sampleResume);
     const experienceIndex = html.indexOf('id="experience-heading"');
     const educationIndex = html.indexOf('id="education-heading"');
@@ -58,7 +29,12 @@ describe('renderResumeHtml', () => {
   it('includes visible SUMMARY section heading', () => {
     const html = renderResumeHtml(sampleResume);
     expect(html).toContain('id="summary-heading"');
-    expect(html).toContain('>Summary<');
+    expect(html).toContain('>SUMMARY<');
+  });
+
+  it('accepts explicit template id', () => {
+    const html = renderResumeHtml(sampleResume, 'capd-global');
+    expect(html).toContain('data-template="capd-global"');
   });
 });
 

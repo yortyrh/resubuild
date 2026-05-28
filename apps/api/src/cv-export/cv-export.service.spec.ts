@@ -1,4 +1,4 @@
-import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Resume } from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
@@ -44,11 +44,28 @@ describe('CvExportService', () => {
     puppeteer.launch.mockReset();
   });
 
+  it('listTemplateCatalog returns registered templates', () => {
+    const templates = service.listTemplateCatalog();
+    expect(templates.length).toBeGreaterThanOrEqual(15);
+    expect(templates.some((t) => t.id === 'mit-classic')).toBe(true);
+  });
+
+  it('resolveTemplateId prefers query param over stored value', () => {
+    expect(service.resolveTemplateId('mit-classic', 'capd-alum')).toBe('capd-alum');
+  });
+
+  it('resolveTemplateId throws BadRequestException for unknown id', () => {
+    expect(() => service.resolveTemplateId('mit-classic', 'invalid-template')).toThrow(
+      BadRequestException,
+    );
+  });
+
   it('renderHtml returns document containing basics name', async () => {
     normalizedRepo.fetchHeader.mockResolvedValue({
       id: 'cv-1',
       user_id: 'u42',
       name: 'Jane Doe',
+      template_id: 'mit-classic',
     });
     normalizedRepo.fetchSections.mockResolvedValue({
       profiles: [],
@@ -70,9 +87,63 @@ describe('CvExportService', () => {
     expect(html).toContain('Jane Doe');
   });
 
+  it('renderHtml uses query template override', async () => {
+    normalizedRepo.fetchHeader.mockResolvedValue({
+      id: 'cv-1',
+      user_id: 'u42',
+      name: 'Jane Doe',
+      template_id: 'mit-classic',
+    });
+    normalizedRepo.fetchSections.mockResolvedValue({
+      profiles: [],
+      work: [
+        {
+          id: 'w1',
+          cv_id: 'cv-1',
+          name: 'Acme',
+          position: 'Eng',
+          start_date: '2020-01',
+        },
+      ],
+      volunteer: [],
+      education: [
+        {
+          id: 'e1',
+          cv_id: 'cv-1',
+          institution: 'MIT',
+          start_date: '2014-09',
+        },
+      ],
+      awards: [],
+      certificates: [],
+      publications: [],
+      skills: [],
+      languages: [],
+      interests: [],
+      references: [],
+      projects: [],
+    });
+
+    const html = await service.renderHtml(userCtx, 'cv-1', 'capd-undergraduate-standard');
+    const educationIndex = html.indexOf('id="education-heading"');
+    const experienceIndex = html.indexOf('id="experience-heading"');
+    expect(educationIndex).toBeLessThan(experienceIndex);
+  });
+
   it('renderHtml throws NotFoundException when CV is missing', async () => {
     normalizedRepo.fetchHeader.mockResolvedValue(null);
     await expect(service.renderHtml(userCtx, 'missing')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('renderHtml throws BadRequestException for invalid template query', async () => {
+    normalizedRepo.fetchHeader.mockResolvedValue({
+      id: 'cv-1',
+      user_id: 'u42',
+      name: 'Jane Doe',
+    });
+    await expect(service.renderHtml(userCtx, 'cv-1', 'not-a-template')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 
   it('renderPdfFromHtml uses puppeteer with html from renderResumeHtml', async () => {

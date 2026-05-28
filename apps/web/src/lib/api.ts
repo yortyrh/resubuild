@@ -8,9 +8,18 @@ export interface CvRecord {
   id: string;
   user_id: string;
   title: string;
+  templateId: string;
   data: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+export interface CvTemplateMeta {
+  id: string;
+  label: string;
+  description: string;
+  category: string;
+  capdPage?: number | string;
 }
 
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -181,11 +190,24 @@ export function createCv(payload: { title?: string; data: Record<string, unknown
   });
 }
 
-export function updateCv(id: string, payload: { title?: string; data?: Record<string, unknown> }) {
+export function updateCv(
+  id: string,
+  payload: { title?: string; data?: Record<string, unknown>; templateId?: string },
+) {
   return apiFetch<CvRecord>(`/cv/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
+}
+
+export function updateCvTemplate(id: string, templateId: string) {
+  return updateCv(id, { templateId });
+}
+
+export function listCvTemplates() {
+  return dedupeGetRequest('GET /cv/export/templates', () =>
+    apiFetch<{ templates: CvTemplateMeta[] }>('/cv/export/templates').then((r) => r.templates),
+  );
 }
 
 export function deleteCv(id: string) {
@@ -423,9 +445,10 @@ export function getCvProfiles(cvId: string) {
   );
 }
 
-export async function getCvExportHtml(cvId: string): Promise<string> {
+export async function getCvExportHtml(cvId: string, templateId?: string): Promise<string> {
   const token = await getValidAccessToken(apiUrl);
-  const response = await fetch(`${apiUrl}/cv/${cvId}/export/html`, {
+  const query = templateId ? `?template=${encodeURIComponent(templateId)}` : '';
+  const response = await fetch(`${apiUrl}/cv/${cvId}/export/html${query}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -451,9 +474,13 @@ function parseContentDispositionFilename(header: string | null): string | null {
   return match?.[1] ?? null;
 }
 
-export async function downloadCvPdf(cvId: string): Promise<{ blob: Blob; filename: string }> {
+export async function downloadCvPdf(
+  cvId: string,
+  templateId?: string,
+): Promise<{ blob: Blob; filename: string }> {
   const token = await getValidAccessToken(apiUrl);
-  const response = await fetch(`${apiUrl}/cv/${cvId}/export/pdf`, {
+  const query = templateId ? `?template=${encodeURIComponent(templateId)}` : '';
+  const response = await fetch(`${apiUrl}/cv/${cvId}/export/pdf${query}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

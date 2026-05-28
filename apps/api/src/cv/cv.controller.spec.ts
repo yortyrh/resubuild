@@ -38,6 +38,7 @@ describe('CvController', () => {
     id: 'cv-1',
     user_id: 'u42',
     title: 'Doc',
+    templateId: 'mit-classic',
     data: {},
     created_at: 'c',
     updated_at: 'c',

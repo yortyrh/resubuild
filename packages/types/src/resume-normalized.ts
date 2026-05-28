@@ -31,6 +31,7 @@ export interface CvHeaderRow {
   meta_version?: string | null;
   meta_canonical?: string | null;
   meta_last_modified?: string | null;
+  template_id?: string | null;
   created_at?: string;
   updated_at?: string;
 }
