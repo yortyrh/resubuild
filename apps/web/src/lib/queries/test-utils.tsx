@@ -15,7 +15,9 @@ export function createQueryWrapper(queryClient = createTestQueryClient()) {
 
 export function renderHookWithQueryClient<Result, Props>(
   hook: (props: Props) => Result,
-  options?: Omit<RenderHookOptions<Props>, 'wrapper'> & { queryClient?: ReturnType<typeof createTestQueryClient> },
+  options?: Omit<RenderHookOptions<Props>, 'wrapper'> & {
+    queryClient?: ReturnType<typeof createTestQueryClient>;
+  },
 ) {
   const queryClient = options?.queryClient ?? createTestQueryClient();
   return renderHook(hook, {

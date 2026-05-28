@@ -19,9 +19,7 @@ describe('createQueryClient', () => {
     const retry = client.getDefaultOptions().queries?.retry;
 
     expect(typeof retry).toBe('function');
-    expect((retry as (count: number, error: Error) => boolean)(0, new Error('network'))).toBe(
-      true,
-    );
+    expect((retry as (count: number, error: Error) => boolean)(0, new Error('network'))).toBe(true);
     expect((retry as (count: number, error: Error) => boolean)(1, new Error('network'))).toBe(
       false,
     );

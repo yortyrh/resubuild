@@ -190,9 +190,7 @@ export function updateCvTemplate(id: string, templateId: string) {
 }
 
 export function listCvTemplates() {
-  return apiFetch<{ templates: CvTemplateMeta[] }>('/cv/export/templates').then(
-    (r) => r.templates,
-  );
+  return apiFetch<{ templates: CvTemplateMeta[] }>('/cv/export/templates').then((r) => r.templates);
 }
 
 export function deleteCv(id: string) {

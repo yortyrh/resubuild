@@ -8,8 +8,7 @@ import { createQueryClient } from '@/lib/queries/query-client';
 const ReactQueryDevtools =
   process.env.NODE_ENV === 'development' && process.env.VITEST !== 'true'
     ? dynamic(
-        () =>
-          import('@tanstack/react-query-devtools').then((module) => module.ReactQueryDevtools),
+        () => import('@tanstack/react-query-devtools').then((module) => module.ReactQueryDevtools),
         { ssr: false },
       )
     : () => null;

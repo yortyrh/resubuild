@@ -54,7 +54,8 @@ export function CvEditorProvider({ cvId, children }: { cvId: string; children: R
     setMountedSectionState(slug);
   }, []);
 
-  const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load CV' : null;
+  const error =
+    queryError instanceof Error ? queryError.message : queryError ? 'Failed to load CV' : null;
 
   const value = useMemo<CvEditorState>(
     () => ({
