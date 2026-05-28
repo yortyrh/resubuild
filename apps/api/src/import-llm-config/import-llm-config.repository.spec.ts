@@ -22,10 +22,7 @@ describe('ImportLlmConfigRepository', () => {
       getDecryptedActiveAccount: jest.fn(),
     };
     aiAgentService = { saveLegacyConfig: jest.fn() };
-    repository = new ImportLlmConfigRepository(
-      aiAgentRepository as never,
-      aiAgentService as never,
-    );
+    repository = new ImportLlmConfigRepository(aiAgentRepository as never, aiAgentService as never);
   });
 
   it('returns status from ai agent repository', async () => {

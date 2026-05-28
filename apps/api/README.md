@@ -53,16 +53,16 @@ Per-user LLM credentials for PDF import and other Mastra workflows live in `ai_a
 
 **Bring your own key (BYOK) only** — use API keys from Anthropic, OpenAI, Google, or OpenRouter. Cursor IDE or ChatGPT Plus subscriptions do not expose user API keys; there is no Cursor OAuth integration in v1.
 
-| Method   | Path                              | Notes                          |
-| -------- | --------------------------------- | ------------------------------ |
-| `GET`    | `/ai/agents/providers`            | Provider catalog               |
-| `GET`    | `/ai/agents/providers/:id/models`   | Models for provider            |
-| `GET`    | `/ai/agents/accounts`             | List accounts (no raw keys)    |
-| `POST`   | `/ai/agents/accounts`             | Create account (probes key)    |
-| `PATCH`  | `/ai/agents/accounts/:id`         | Update account                 |
-| `DELETE` | `/ai/agents/accounts/:id`         | Delete account                 |
-| `GET`    | `/ai/agents/active`               | Active account summary         |
-| `PUT`    | `/ai/agents/active`               | Set active by `accountId`      |
+| Method   | Path                              | Notes                       |
+| -------- | --------------------------------- | --------------------------- |
+| `GET`    | `/ai/agents/providers`            | Provider catalog            |
+| `GET`    | `/ai/agents/providers/:id/models` | Models for provider         |
+| `GET`    | `/ai/agents/accounts`             | List accounts (no raw keys) |
+| `POST`   | `/ai/agents/accounts`             | Create account (probes key) |
+| `PATCH`  | `/ai/agents/accounts/:id`         | Update account              |
+| `DELETE` | `/ai/agents/accounts/:id`         | Delete account              |
+| `GET`    | `/ai/agents/active`               | Active account summary      |
+| `PUT`    | `/ai/agents/active`               | Set active by `accountId`   |
 
 Deprecated aliases under `/import/llm/*` delegate to the same services for one release cycle.
 
