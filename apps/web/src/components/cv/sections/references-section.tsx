@@ -6,8 +6,8 @@ import { TextField } from '@/components/cv/form-fields';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvReferenceApi } from '@/lib/cv-item-api';
+import type { SectionItem } from '@/lib/cv-section-refetch';
 
 type ReferenceItem = SectionItem<ResumeReference>;
 

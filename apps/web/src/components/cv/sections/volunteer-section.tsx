@@ -13,8 +13,8 @@ import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvVolunteerApi } from '@/lib/cv-item-api';
+import type { SectionItem } from '@/lib/cv-section-refetch';
 
 type VolunteerItem = SectionItem<ResumeVolunteer>;
 

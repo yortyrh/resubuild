@@ -7,8 +7,8 @@ import { SortableManagedArraySection } from '@/components/cv/sortable-managed-ar
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvSkillApi } from '@/lib/cv-item-api';
+import type { SectionItem } from '@/lib/cv-section-refetch';
 
 type SkillItem = SectionItem<ResumeSkill>;
 

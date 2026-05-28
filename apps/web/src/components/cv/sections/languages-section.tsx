@@ -6,8 +6,8 @@ import { TextField } from '@/components/cv/form-fields';
 import { LanguageField } from '@/components/cv/language-field';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvLanguageApi } from '@/lib/cv-item-api';
+import type { SectionItem } from '@/lib/cv-section-refetch';
 
 type LanguageItem = SectionItem<ResumeLanguage>;
 

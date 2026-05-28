@@ -7,7 +7,7 @@ import { TextField } from '@/components/cv/form-fields';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { createCvProfile, deleteCvProfile, updateCvProfile } from '@/lib/cv-item-api';
-import { type SectionItem } from '@/lib/cv-section-refetch';
+import type { SectionItem } from '@/lib/cv-section-refetch';
 
 type ProfileItem = SectionItem<ResumeProfile>;
 

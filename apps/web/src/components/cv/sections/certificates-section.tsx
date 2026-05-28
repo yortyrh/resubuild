@@ -7,8 +7,8 @@ import { TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvCertificateApi } from '@/lib/cv-item-api';
+import type { SectionItem } from '@/lib/cv-section-refetch';
 
 type CertificateItem = SectionItem<ResumeCertificate>;
 

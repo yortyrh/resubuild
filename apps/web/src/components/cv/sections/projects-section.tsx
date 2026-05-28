@@ -12,8 +12,8 @@ import { MetadataFieldGroup, MetadataTextField } from '@/components/cv/metadata-
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
 import { useSectionMount } from '@/components/cv/use-section-mount';
-import { type SectionItem } from '@/lib/cv-section-refetch';
 import { cvProjectApi } from '@/lib/cv-item-api';
+import type { SectionItem } from '@/lib/cv-section-refetch';
 
 type ProjectItem = SectionItem<ResumeProject>;
 
