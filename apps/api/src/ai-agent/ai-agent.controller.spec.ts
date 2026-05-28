@@ -73,8 +73,8 @@ describe('AiAgentController', () => {
 
   it('sets active account', async () => {
     service.setActiveAccount.mockResolvedValue({ configured: true, accountId: 'acc-1' });
-    await expect(
-      controller.setActive(req, { accountId: 'acc-1' }),
-    ).resolves.toMatchObject({ configured: true });
+    await expect(controller.setActive(req, { accountId: 'acc-1' })).resolves.toMatchObject({
+      configured: true,
+    });
   });
 });

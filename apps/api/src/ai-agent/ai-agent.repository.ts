@@ -73,9 +73,7 @@ export class AiAgentRepository {
     return this.normalizedRepo.createUserClient(user.accessToken);
   }
 
-  private async getActiveAccountId(
-    user: AuthenticatedRequest['user'],
-  ): Promise<string | null> {
+  private async getActiveAccountId(user: AuthenticatedRequest['user']): Promise<string | null> {
     const supabase = this.createClient(user);
     const { data, error } = await supabase
       .from('ai_agent_preference')
@@ -90,10 +88,7 @@ export class AiAgentRepository {
     return data?.active_account_id ?? null;
   }
 
-  private toSummary(
-    row: AiAgentAccountRow,
-    activeAccountId: string | null,
-  ): AiAgentAccountSummary {
+  private toSummary(row: AiAgentAccountRow, activeAccountId: string | null): AiAgentAccountSummary {
     const apiKey = tryDecryptSecret(row.api_key_encrypted, this.getEncryptionKey());
     return {
       id: row.id,
@@ -113,7 +108,9 @@ export class AiAgentRepository {
 
     const { data, error } = await supabase
       .from('ai_agent_account')
-      .select('id, user_id, label, provider_id, model_id, api_key_encrypted, created_at, updated_at')
+      .select(
+        'id, user_id, label, provider_id, model_id, api_key_encrypted, created_at, updated_at',
+      )
       .eq('user_id', user.id)
       .order('created_at', { ascending: true });
 
@@ -131,7 +128,9 @@ export class AiAgentRepository {
     const supabase = this.createClient(user);
     const { data, error } = await supabase
       .from('ai_agent_account')
-      .select('id, user_id, label, provider_id, model_id, api_key_encrypted, created_at, updated_at')
+      .select(
+        'id, user_id, label, provider_id, model_id, api_key_encrypted, created_at, updated_at',
+      )
       .eq('user_id', user.id)
       .eq('id', accountId)
       .maybeSingle();
@@ -165,7 +164,9 @@ export class AiAgentRepository {
         model_id: input.modelId,
         api_key_encrypted: encrypted,
       })
-      .select('id, user_id, label, provider_id, model_id, api_key_encrypted, created_at, updated_at')
+      .select(
+        'id, user_id, label, provider_id, model_id, api_key_encrypted, created_at, updated_at',
+      )
       .single();
 
     if (error) {
@@ -209,7 +210,9 @@ export class AiAgentRepository {
       .update(updates)
       .eq('user_id', user.id)
       .eq('id', accountId)
-      .select('id, user_id, label, provider_id, model_id, api_key_encrypted, created_at, updated_at')
+      .select(
+        'id, user_id, label, provider_id, model_id, api_key_encrypted, created_at, updated_at',
+      )
       .single();
 
     if (error) {

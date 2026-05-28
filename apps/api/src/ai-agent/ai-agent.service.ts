@@ -98,14 +98,17 @@ export class AiAgentService {
       apiKey = existing.apiKey;
     }
 
-    const resolvedModelId = modelId ?? (await this.repository.getAccountRow(user, accountId)).model_id;
+    const resolvedModelId =
+      modelId ?? (await this.repository.getAccountRow(user, accountId)).model_id;
 
     if (apiKey) {
       await this.probeApiKey(resolvedModelId, apiKey);
     } else if (modelId) {
       const existing = await this.repository.getDecryptedAccount(user, accountId);
       if (!existing) {
-        throw new BadRequestException('API key is required when changing model without a stored key');
+        throw new BadRequestException(
+          'API key is required when changing model without a stored key',
+        );
       }
       await this.probeApiKey(resolvedModelId, existing.apiKey);
     }

@@ -25,9 +25,7 @@ export function encryptSecret(plaintext: string, secret: string): string {
 
 export class AiAgentDecryptionError extends Error {
   constructor() {
-    super(
-      'Unable to decrypt AI agent configuration — re-save your API key in AI agent settings',
-    );
+    super('Unable to decrypt AI agent configuration — re-save your API key in AI agent settings');
     this.name = 'AiAgentDecryptionError';
   }
 }

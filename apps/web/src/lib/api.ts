@@ -247,11 +247,7 @@ export function getAiAgentAccounts() {
   return apiFetch<AiAgentAccount[]>('/ai/agents/accounts');
 }
 
-export function createAiAgentAccount(payload: {
-  label?: string;
-  modelId: string;
-  apiKey: string;
-}) {
+export function createAiAgentAccount(payload: { label?: string; modelId: string; apiKey: string }) {
   return apiFetch<AiAgentAccount>('/ai/agents/accounts', {
     method: 'POST',
     body: JSON.stringify(payload),

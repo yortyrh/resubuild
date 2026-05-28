@@ -167,9 +167,7 @@ export function AiAgentSettings() {
   };
 
   const canKeepExistingKey =
-    dialogMode === 'edit' &&
-    editingAccount &&
-    !editingAccount.reconfigurationRequired;
+    dialogMode === 'edit' && editingAccount && !editingAccount.reconfigurationRequired;
 
   if (loading) {
     return <p className="text-muted-foreground text-sm">Loading AI agent settings…</p>;
@@ -204,7 +202,9 @@ export function AiAgentSettings() {
         </div>
 
         {accounts.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No accounts yet. Add one to enable AI features.</p>
+          <p className="text-muted-foreground text-sm">
+            No accounts yet. Add one to enable AI features.
+          </p>
         ) : (
           <ul className="space-y-3">
             {accounts.map((account) => (
@@ -360,14 +360,19 @@ export function AiAgentSettings() {
             <DialogTitle>Delete account?</DialogTitle>
           </DialogHeader>
           <p className="text-muted-foreground text-sm">
-            This removes the saved credentials for{' '}
-            {deleteTarget?.label || deleteTarget?.providerId}. This cannot be undone.
+            This removes the saved credentials for {deleteTarget?.label || deleteTarget?.providerId}
+            . This cannot be undone.
           </p>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
               Cancel
             </Button>
-            <Button type="button" variant="destructive" disabled={saving} onClick={() => void handleDelete()}>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={saving}
+              onClick={() => void handleDelete()}
+            >
               Delete
             </Button>
           </DialogFooter>
