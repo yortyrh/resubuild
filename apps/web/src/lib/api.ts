@@ -192,6 +192,87 @@ export function deleteCv(id: string) {
   return apiFetch<void>(`/cv/${id}`, { method: 'DELETE' });
 }
 
+export interface ImportLlmProvider {
+  id: string;
+  displayName: string;
+  apiKeyEnvVar: string;
+  apiKeyLabel: string;
+}
+
+export interface ImportLlmModel {
+  id: string;
+  displayName: string;
+  recommendedForPdfImport: boolean;
+}
+
+export interface ImportLlmConfigStatus {
+  configured: boolean;
+  modelId?: string;
+  configuredAt?: string;
+  reconfigurationRequired?: boolean;
+}
+
+export interface PdfImportJobStatus {
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  progress?: string;
+  cvId?: string;
+  errors?: string[];
+}
+
+export function getImportLlmProviders() {
+  return apiFetch<ImportLlmProvider[]>('/import/llm/providers');
+}
+
+export function getImportLlmModels(providerId: string) {
+  return apiFetch<ImportLlmModel[]>(`/import/llm/providers/${providerId}/models`);
+}
+
+export function getImportLlmConfig() {
+  return apiFetch<ImportLlmConfigStatus>('/import/llm/config');
+}
+
+export function saveImportLlmConfig(payload: {
+  modelId: string;
+  apiKey?: string;
+  keepExistingApiKey?: boolean;
+}) {
+  return apiFetch<ImportLlmConfigStatus>('/import/llm/config', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function startPdfImport(file: File): Promise<{ jobId: string }> {
+  const token = await getValidAccessToken(apiUrl);
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${apiUrl}/cv/import/pdf`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { message?: string | string[] };
+    const message =
+      typeof body.message === 'string'
+        ? body.message
+        : Array.isArray(body.message)
+          ? body.message.join(', ')
+          : `Request failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<{ jobId: string }>;
+}
+
+export function getPdfImportJob(jobId: string) {
+  return apiFetch<PdfImportJobStatus>(`/cv/import/${jobId}`);
+}
+
 export function getCvBasics(cvId: string) {
   return dedupeGetRequest(`GET /cv/${cvId}/basics`, () =>
     apiFetch<Record<string, unknown>>(`/cv/${cvId}/basics`),

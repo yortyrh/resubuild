@@ -61,6 +61,38 @@ On `POST`, the service SHALL insert a `cv` row with empty basics columns and emp
 - **THEN** the API SHALL respond with 400 and structured validation errors
 - **AND** SHALL NOT leave a partially populated CV row
 
+#### Scenario: PDF import finalize uses create flow
+
+- **WHEN** a PDF import job reaches finalize with schema-valid prepared data
+- **THEN** the service SHALL persist the CV using the same create implementation as `POST /cv`
+- **AND** the job result SHALL include the new `cvId`
+
+### Requirement: The API SHALL expose authenticated PDF import job endpoints
+
+Under `/cv/import`, authenticated handlers SHALL provide `POST /cv/import/pdf` (multipart PDF upload, returns `{ jobId }` with 202) and `GET /cv/import/:jobId` (job status for the owning user). Handlers MUST use the caller's Supabase user client for ownership checks on created CVs. Import success SHALL create a CV through the same service path as `POST /cv` after `prepareImportedResume` and schema validation inside the agent finalize step. Import SHALL require valid per-user LLM configuration per `import-llm-config`.
+
+Under `/import/llm`, authenticated handlers SHALL provide:
+
+- `GET /import/llm/providers` — supported providers with API key field labels
+- `GET /import/llm/providers/:providerId/models` — allowlisted Mastra model ids for that provider
+- `GET /import/llm/config` — current user config status (model id, configured flag; never raw API key)
+- `PUT /import/llm/config` — save model + API key with catalog validation and key probe
+
+#### Scenario: Import creates CV via shared create semantics
+
+- **WHEN** a PDF import job completes successfully
+- **THEN** the persisted CV SHALL match the same meta, validation, and title derivation rules as direct `POST /cv`
+
+#### Scenario: Import job unauthorized
+
+- **WHEN** a client calls import routes without a bearer token
+- **THEN** the response SHALL be 401
+
+#### Scenario: Invalid model rejected on config save
+
+- **WHEN** a client calls `PUT /import/llm/config` with a model id not in the pinned catalog
+- **THEN** the API SHALL return `400` and SHALL NOT persist settings
+
 ### Requirement: Media routes MUST inherit CV-grade authentication on upload and public read on stream
 
 Nest SHALL classify **`POST /media/upload`** under `MediaController` guarded by the identical Supabase-derived authentication strategy used for `/cv`. **`GET /media/:id`** SHALL be public (no Bearer) and stream stored objects by registry id. Upload handlers MUST remain tenant-isolated via authenticated user id embedded in Storage paths and registry rows.

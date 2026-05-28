@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "providers": [
+    {
+      "id": "openai",
+      "displayName": "OpenAI",
+      "apiKeyEnvVar": "OPENAI_API_KEY",
+      "apiKeyLabel": "OpenAI API key",
+      "models": [
+        {
+          "id": "openai/gpt-4o-mini",
+          "displayName": "GPT-4o Mini",
+          "recommendedForPdfImport": true
+        },
+        {
+          "id": "openai/gpt-4o",
+          "displayName": "GPT-4o",
+          "recommendedForPdfImport": false
+        }
+      ]
+    },
+    {
+      "id": "anthropic",
+      "displayName": "Anthropic",
+      "apiKeyEnvVar": "ANTHROPIC_API_KEY",
+      "apiKeyLabel": "Anthropic API key",
+      "models": [
+        {
+          "id": "anthropic/claude-sonnet-4-6",
+          "displayName": "Claude Sonnet 4.6",
+          "recommendedForPdfImport": true
+        },
+        {
+          "id": "anthropic/claude-haiku-4-5",
+          "displayName": "Claude Haiku 4.5",
+          "recommendedForPdfImport": false
+        }
+      ]
+    },
+    {
+      "id": "google",
+      "displayName": "Google",
+      "apiKeyEnvVar": "GOOGLE_GENERATIVE_AI_API_KEY",
+      "apiKeyLabel": "Google API key",
+      "models": [
+        {
+          "id": "google/gemini-2.5-flash",
+          "displayName": "Gemini 2.5 Flash",
+          "recommendedForPdfImport": true
+        },
+        {
+          "id": "google/gemini-2.5-pro",
+          "displayName": "Gemini 2.5 Pro",
+          "recommendedForPdfImport": false
+        }
+      ]
+    }
+  ]
+}

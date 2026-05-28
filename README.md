@@ -6,8 +6,10 @@ Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authenti
 
 - **apps/web** — Next.js App Router, shadcn-style UI, token session in `sessionStorage`, calls Nest at `NEXT_PUBLIC_API_URL`
 - **apps/api** — NestJS REST API, `/auth/*` issuance + JWT guard, AJV validation against [JSON Resume schema](https://raw.githubusercontent.com/jsonresume/resume-schema/refs/heads/master/schema.json)
+- **apps/import-agent** — Mastra PDF import workflow and reusable verification tools
 - **packages/schemas** — official resume JSON schema
 - **packages/types** — shared TypeScript resume types
+- **packages/import-models** — pinned Mastra provider/model catalog for PDF import settings
 - **supabase/migrations** — `cv` table + RLS policies
 
 ## Prerequisites
@@ -27,7 +29,7 @@ From the repo root:
 ```bash
 pnpm install
 supabase start
-pnpm setup:env      # writes apps/api/.env and apps/web/.env from supabase status
+pnpm setup:env      # writes apps/api/.env and apps/web/.env (Supabase + PDF import defaults)
 pnpm samples:seed   # creates dev + E2E accounts, sample CVs, and media (no API needed)
 ```
 
@@ -49,6 +51,21 @@ pnpm dev            # web :3000 + api :3001
 ```
 
 Open http://localhost:3000, sign in with the developer account, and you should see 10 sample CVs on the dashboard.
+
+### PDF import smoke (optional)
+
+Requires a real provider API key in import LLM settings. `pnpm setup:env` generates `IMPORT_LLM_CONFIG_ENCRYPTION_KEY` and optionally prompts for a Tavily `SEARCH_API_KEY` (web lookup during import).
+
+1. Open `/dashboard/settings/import-llm`, pick provider → model → API key, and save.
+2. Generate sample PDFs if needed: `pnpm samples:pdf`
+3. On `/dashboard/cv/new`, use **Import PDF** with a file from `.samples/resumes/pdf/`.
+4. Wait for the job to finish and confirm the editor shows extracted sections.
+
+Manual checks:
+
+- Invalid model id → settings save error, PDF import stays gated.
+- Valid model + bad API key → `422`, PDF import stays disabled.
+- Non-PDF or oversize upload → client/API error, no CV created.
 
 ### Optional — verify the stack
 
@@ -122,13 +139,19 @@ Git hooks (Lefthook): **pre-commit** (Biome + Prettier on staged files), **pre-p
 
 Authenticate with Bearer tokens from **`POST /auth/login`** / **`POST /auth/register`**. The UI stores tokens in **`sessionStorage`**.
 
-| Method | Path      | Description                |
-| ------ | --------- | -------------------------- |
-| GET    | `/cv`     | List user's CVs            |
-| GET    | `/cv/:id` | Get one CV                 |
-| POST   | `/cv`     | Create `{ title?, data }`  |
-| PATCH  | `/cv/:id` | Update `{ title?, data? }` |
-| DELETE | `/cv/:id` | Delete CV                  |
+| Method | Path                                       | Description                                 |
+| ------ | ------------------------------------------ | ------------------------------------------- |
+| GET    | `/cv`                                      | List user's CVs                             |
+| GET    | `/cv/:id`                                  | Get one CV                                  |
+| POST   | `/cv`                                      | Create `{ title?, data }`                   |
+| PATCH  | `/cv/:id`                                  | Update `{ title?, data? }`                  |
+| DELETE | `/cv/:id`                                  | Delete CV                                   |
+| GET    | `/import/llm/providers`                    | List PDF import LLM providers               |
+| GET    | `/import/llm/providers/:providerId/models` | List models for a provider                  |
+| GET    | `/import/llm/config`                       | Current user's import LLM settings          |
+| PUT    | `/import/llm/config`                       | Save provider/model/API key                 |
+| POST   | `/cv/import/pdf`                           | Start async PDF import (`202`, `{ jobId }`) |
+| GET    | `/cv/import/:jobId`                        | Poll PDF import job status                  |
 
 ## Security
 
@@ -140,8 +163,10 @@ Authenticate with Bearer tokens from **`POST /auth/login`** / **`POST /auth/regi
 ```
 apps/
   api/          NestJS REST API
+  import-agent/ Mastra PDF import workflow
   web/          Next.js frontend
 packages/
+  import-models/ pinned Mastra provider/model catalog
   schemas/      resume.schema.json
   types/        shared Resume types
 supabase/

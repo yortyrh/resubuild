@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { CreateCvForm } from '@/components/cv/create-cv-form';
 import { ImportCvForm } from '@/components/cv/import-cv-form';
+import { ImportPdfCvForm } from '@/components/cv/import-pdf-cv-form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { createCv } from '@/lib/api';
 import { resolveImportedResumeData } from '@/lib/import-cv-media';
@@ -47,12 +48,16 @@ export function NewCvPageClient() {
       <TabsList>
         <TabsTrigger value="manual">Create manually</TabsTrigger>
         <TabsTrigger value="import">Import JSON</TabsTrigger>
+        <TabsTrigger value="import-pdf">Import PDF</TabsTrigger>
       </TabsList>
       <TabsContent value="manual" className="mt-6">
         <CreateCvForm onSave={handleManualSave} onCancel={handleCancel} />
       </TabsContent>
       <TabsContent value="import" className="mt-6">
         <ImportCvForm onImport={handleImport} onCancel={handleCancel} />
+      </TabsContent>
+      <TabsContent value="import-pdf" className="mt-6">
+        <ImportPdfCvForm onSuccess={navigateToEditor} onCancel={handleCancel} />
       </TabsContent>
     </Tabs>
   );

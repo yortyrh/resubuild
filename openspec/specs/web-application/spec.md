@@ -33,7 +33,7 @@ The App Router under `src/app/` MUST provide public entry and auth pages (`/`, `
 
 The new CV route (`/dashboard/cv/new`) SHALL NOT call `POST /cv` on page load. It SHALL render a simplified create form collecting JSON Resume `basics` fields only—**without** a separate CV title field. The client SHALL invoke `createCv` with resume `data` containing `basics` only (no `meta`) when the user activates an explicit Save (or Create) control; the API SHALL derive `cv.title` from the submitted basics. On successful create, the UI SHALL navigate to `/dashboard/cv/:id` for full editing. Navigating away or canceling before Save SHALL NOT create a CV row.
 
-The new CV route SHALL ALSO expose an **Import from JSON** workflow per `cv-json-import`: file selection, optional manual JSON editing (advanced), normalization via `prepareImportedResume`, client-side schema validation where practical, and `createCv` on explicit user confirmation. Manual create and import are separate paths on the same page; neither SHALL POST until the user confirms.
+The new CV route SHALL ALSO expose **Import from JSON** per `cv-json-import` and **Import from PDF** per `cv-pdf-import`. JSON import uses client-side parse + `prepareImportedResume` + `createCv`. PDF import requires completed **Import LLM settings** per `import-llm-config`, then uploads to `POST /cv/import/pdf`, polls job status, and navigates to the editor when the job succeeds with a `cvId`. The dashboard SHALL expose a settings surface (e.g. `/dashboard/settings/import-llm` or equivalent) for provider → model → API key configuration. Manual create, JSON import, and PDF import are separate paths on the same page; none SHALL POST or start import until the user confirms.
 
 The per-CV editor bootstrap (`GET /cv/:id`) SHALL merge slim `data.basics` into local editor state and SHALL NOT depend on `data.meta` or `meta.version` for saves.
 
@@ -64,6 +64,17 @@ The per-CV editor bootstrap (`GET /cv/:id`) SHALL merge slim `data.basics` into 
 
 - **WHEN** a signed-in user selects a valid JSON Resume file on `/dashboard/cv/new` and confirms import
 - **THEN** the client SHALL normalize the document, call `createCv` with full resume `data`, and navigate to `/dashboard/cv/:id` on success
+
+#### Scenario: User imports CV from PDF file
+
+- **WHEN** a signed-in user with valid import LLM settings selects a PDF on `/dashboard/cv/new` and confirms import
+- **THEN** the client SHALL start a PDF import job, poll until success or failure, and navigate to `/dashboard/cv/:id` on success
+
+#### Scenario: User configures import LLM before PDF import
+
+- **WHEN** a signed-in user opens import LLM settings
+- **THEN** the UI SHALL present provider selection, then model selection from server catalog, then provider-labeled API key entry
+- **AND** on successful save SHALL enable PDF import on the new CV page
 
 ### Requirement: Shared types and schema packages SHALL inform the client and server contract
 
