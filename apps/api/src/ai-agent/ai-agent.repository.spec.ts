@@ -695,7 +695,9 @@ describe('AiAgentRepository', () => {
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
-              maybeSingle: jest.fn().mockResolvedValue({ data: null, error: { message: 'lookup failed' } }),
+              maybeSingle: jest
+                .fn()
+                .mockResolvedValue({ data: null, error: { message: 'lookup failed' } }),
             }),
           }),
         }),
@@ -723,7 +725,9 @@ describe('AiAgentRepository', () => {
         return {
           insert: jest.fn().mockReturnValue({
             select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({ data: null, error: { message: 'insert failed' } }),
+              single: jest
+                .fn()
+                .mockResolvedValue({ data: null, error: { message: 'insert failed' } }),
             }),
           }),
         };
