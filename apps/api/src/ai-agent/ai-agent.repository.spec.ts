@@ -428,4 +428,236 @@ describe('AiAgentRepository', () => {
     await expect(repository.getDecryptedActiveAccount(user)).resolves.toBeNull();
     await expect(repository.getDecryptedAccount(user, 'missing')).resolves.toBeNull();
   });
+
+  it('marks accounts that cannot decrypt as reconfigurationRequired', async () => {
+    const accountId = 'acc-1';
+
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn((table: string) => {
+        if (table === 'ai_agent_preference') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                maybeSingle: jest.fn().mockResolvedValue({
+                  data: { active_account_id: accountId },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: accountId,
+                    user_id: user.id,
+                    label: 'Default',
+                    provider_id: 'openai',
+                    model_id: 'openai/gpt-4o-mini',
+                    api_key_encrypted: 'invalid-ciphertext',
+                    created_at: '2026-01-01T00:00:00.000Z',
+                    updated_at: '2026-01-01T00:00:00.000Z',
+                  },
+                ],
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }),
+    });
+
+    await expect(repository.listAccounts(user)).resolves.toEqual([
+      expect.objectContaining({ reconfigurationRequired: true }),
+    ]);
+  });
+
+  it('returns reconfigurationRequired active status when key cannot decrypt', async () => {
+    const accountId = 'acc-1';
+
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn((table: string) => {
+        if (table === 'ai_agent_preference') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                maybeSingle: jest.fn().mockResolvedValue({
+                  data: { active_account_id: accountId },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                maybeSingle: jest.fn().mockResolvedValue({
+                  data: {
+                    id: accountId,
+                    user_id: user.id,
+                    label: 'Default',
+                    provider_id: 'openai',
+                    model_id: 'openai/gpt-4o-mini',
+                    api_key_encrypted: 'invalid-ciphertext',
+                    created_at: '2026-01-01T00:00:00.000Z',
+                    updated_at: '2026-01-01T00:00:00.000Z',
+                  },
+                  error: null,
+                }),
+              }),
+            }),
+          }),
+        };
+      }),
+    });
+
+    await expect(repository.getActiveStatus(user)).resolves.toEqual({
+      configured: false,
+      accountId,
+      label: 'Default',
+      providerId: 'openai',
+      modelId: 'openai/gpt-4o-mini',
+      configuredAt: '2026-01-01T00:00:00.000Z',
+      reconfigurationRequired: true,
+    });
+  });
+
+  it('throws BadRequestException when supabase returns errors', async () => {
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockResolvedValue({ data: null, error: { message: 'db down' } }),
+          }),
+        }),
+      }),
+    });
+
+    await expect(repository.getActiveStatus(user)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('creates account without changing active preference when one already exists', async () => {
+    const encryptionKey = 'encryption-key-at-least-32-characters-long';
+    const activeId = 'acc-active';
+    const newId = 'acc-new';
+
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn((table: string) => {
+        if (table === 'ai_agent_preference') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                maybeSingle: jest.fn().mockResolvedValue({
+                  data: { active_account_id: activeId },
+                  error: null,
+                }),
+              }),
+            }),
+            upsert: jest.fn(),
+          };
+        }
+
+        return {
+          insert: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({
+                data: {
+                  id: newId,
+                  user_id: user.id,
+                  label: null,
+                  provider_id: 'openai',
+                  model_id: 'openai/gpt-4o-mini',
+                  api_key_encrypted: encryptSecret('sk-test', encryptionKey),
+                  created_at: '2026-01-01T00:00:00.000Z',
+                  updated_at: '2026-01-01T00:00:00.000Z',
+                },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }),
+    });
+
+    await expect(
+      repository.createAccount(user, {
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+      }),
+    ).resolves.toMatchObject({ id: newId, isActive: false });
+  });
+
+  it('updates model and api key together', async () => {
+    const encryptionKey = 'encryption-key-at-least-32-characters-long';
+    const encrypted = encryptSecret('sk-old', encryptionKey);
+    const accountId = 'acc-1';
+    const row = {
+      id: accountId,
+      user_id: user.id,
+      label: 'Default',
+      provider_id: 'openai',
+      model_id: 'openai/gpt-4o-mini',
+      api_key_encrypted: encrypted,
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    };
+
+    normalizedRepo.createUserClient.mockReturnValue({
+      from: jest.fn((table: string) => {
+        if (table === 'ai_agent_preference') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                maybeSingle: jest.fn().mockResolvedValue({
+                  data: { active_account_id: accountId },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                maybeSingle: jest.fn().mockResolvedValue({ data: row, error: null }),
+              }),
+            }),
+          }),
+          update: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                select: jest.fn().mockReturnValue({
+                  single: jest.fn().mockResolvedValue({
+                    data: {
+                      ...row,
+                      model_id: 'openai/gpt-4o',
+                      provider_id: 'openai',
+                      api_key_encrypted: encryptSecret('sk-new', encryptionKey),
+                    },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          }),
+        };
+      }),
+    });
+
+    await expect(
+      repository.updateAccount(user, accountId, {
+        modelId: 'openai/gpt-4o',
+        apiKey: 'sk-new',
+      }),
+    ).resolves.toMatchObject({ modelId: 'openai/gpt-4o' });
+  });
 });

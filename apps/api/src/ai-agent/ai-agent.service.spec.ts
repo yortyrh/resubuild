@@ -238,6 +238,25 @@ describe('AiAgentService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('delegates getActiveStatus and setActiveAccount', async () => {
+    repository.getActiveStatus.mockResolvedValue({ configured: true, accountId: 'acc-1' });
+    repository.setActiveAccount.mockResolvedValue({ configured: true, accountId: 'acc-1' });
+
+    await expect(service.getActiveStatus(user)).resolves.toMatchObject({ configured: true });
+    await expect(service.setActiveAccount(user, 'acc-1')).resolves.toMatchObject({
+      accountId: 'acc-1',
+    });
+  });
+
+  it('rejects legacy save without API key', async () => {
+    repository.listAccounts.mockResolvedValue([{ id: 'acc-1' } as never]);
+    repository.getActiveStatus.mockResolvedValue({ configured: true, accountId: 'acc-1' });
+
+    await expect(
+      service.saveLegacyConfig(user, { modelId: 'openai/gpt-4o-mini' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('delegates deleteAccount', async () => {
     repository.deleteAccount.mockResolvedValue(undefined);
     await service.deleteAccount(user, 'acc-1');
