@@ -5,7 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { type ImportJobProgress, runPdfImportWorkflow } from '@resumind/import-agent';
+import {
+  type ImportJobProgress,
+  runPdfImportWorkflow,
+  runTextImportWorkflow,
+} from '@resumind/import-agent';
 import { InvalidImportedResumeError, prepareImportedResume } from '@resumind/types';
 import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
@@ -13,9 +17,12 @@ import { CvService } from '../cv/cv.service';
 import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 import { ImportJobStore } from './import-job.store';
-import { validateImportUrl } from './import-url.util';
+import { resolveImportUrl, validateImportUrl } from './import-url.util';
 
 export const PDF_IMPORT_MAX_BYTES_DEFAULT = 5 * 1024 * 1024;
+export const MARKDOWN_IMPORT_MAX_BYTES_DEFAULT = 512 * 1024;
+
+const MARKDOWN_MIME_TYPES = new Set(['text/markdown', 'text/plain', 'text/x-markdown']);
 
 @Injectable()
 export class ImportService {
@@ -39,6 +46,13 @@ export class ImportService {
     );
   }
 
+  getMarkdownMaxBytes(): number {
+    return Number(
+      this.configService.get<string>('MARKDOWN_IMPORT_MAX_BYTES') ??
+        MARKDOWN_IMPORT_MAX_BYTES_DEFAULT,
+    );
+  }
+
   async startPdfImport(user: AuthenticatedRequest['user'], file: Express.Multer.File) {
     if (!this.isEnabled()) {
       throw new ForbiddenException('PDF import is disabled');
@@ -56,7 +70,37 @@ export class ImportService {
 
     const job = this.jobStore.create(user.id);
     setImmediate(() => {
-      void this.runJob(user, job.id, file.buffer, llmConfig.modelId, llmConfig.apiKey);
+      void this.runPdfJob(user, job.id, file.buffer, llmConfig.modelId, llmConfig.apiKey);
+    });
+
+    return { jobId: job.id };
+  }
+
+  async startMarkdownImport(user: AuthenticatedRequest['user'], file: Express.Multer.File) {
+    if (!this.isEnabled()) {
+      throw new ForbiddenException('Markdown import is disabled');
+    }
+
+    const llmConfig = await this.aiAgentCredentialService.getActiveCredentials(user);
+
+    if (!MARKDOWN_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException('Only Markdown files are supported');
+    }
+
+    if (file.size > this.getMarkdownMaxBytes()) {
+      throw new BadRequestException(
+        `Markdown file exceeds maximum size of ${this.getMarkdownMaxBytes()} bytes`,
+      );
+    }
+
+    const sourceText = file.buffer.toString('utf8').trim();
+    if (!sourceText) {
+      throw new BadRequestException('Markdown file is empty');
+    }
+
+    const job = this.jobStore.create(user.id);
+    setImmediate(() => {
+      void this.runTextJob(user, job.id, sourceText, llmConfig.modelId, llmConfig.apiKey);
     });
 
     return { jobId: job.id };
@@ -77,7 +121,7 @@ export class ImportService {
   }
 
   async importFromUrl(user: AuthenticatedRequest['user'], rawUrl: string) {
-    const url = validateImportUrl(rawUrl);
+    const url = resolveImportUrl(validateImportUrl(rawUrl));
 
     let fetched: Response;
     try {
@@ -160,7 +204,7 @@ export class ImportService {
     }
   }
 
-  private async runJob(
+  private async runPdfJob(
     user: AuthenticatedRequest['user'],
     jobId: string,
     pdfBuffer: Buffer,
@@ -187,23 +231,64 @@ export class ImportService {
         });
       });
 
-      if (result.errors.length > 0 || !result.cvId) {
-        const errors = result.errors.length ? result.errors : ['Import failed before CV creation'];
-        this.jobStore.update(jobId, { status: 'failed', errors });
-        return;
-      }
-
-      this.jobStore.update(jobId, {
-        status: 'succeeded',
-        cvId: result.cvId,
-        progress: 'finalizing',
-      });
+      this.finishJob(jobId, result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Import failed';
-      const errors = /auth|api key|401|403/i.test(message)
-        ? ['Import failed. Update your AI agent settings and verify the API key.']
-        : [message];
-      this.jobStore.update(jobId, { status: 'failed', errors });
+      this.failJob(jobId, error);
     }
+  }
+
+  private async runTextJob(
+    user: AuthenticatedRequest['user'],
+    jobId: string,
+    sourceText: string,
+    modelId: string,
+    apiKey: string,
+  ) {
+    this.jobStore.update(jobId, { status: 'running', progress: 'drafting' });
+
+    try {
+      const result = await this.withScopedApiKey(modelId, apiKey, async () => {
+        return runTextImportWorkflow({
+          sourceText,
+          modelId,
+          apiKey,
+          searchApiKey: this.configService.get<string>('SEARCH_API_KEY'),
+          onProgress: (progress: ImportJobProgress) => {
+            this.jobStore.update(jobId, { progress });
+          },
+          finalize: async (draft: Record<string, unknown>) => {
+            const prepared = prepareImportedResume(draft);
+            const created = await this.cvService.create(user, { data: prepared });
+            return created.id;
+          },
+        });
+      });
+
+      this.finishJob(jobId, result);
+    } catch (error) {
+      this.failJob(jobId, error);
+    }
+  }
+
+  private finishJob(jobId: string, result: { cvId?: string; errors: string[] }) {
+    if (result.errors.length > 0 || !result.cvId) {
+      const errors = result.errors.length ? result.errors : ['Import failed before CV creation'];
+      this.jobStore.update(jobId, { status: 'failed', errors });
+      return;
+    }
+
+    this.jobStore.update(jobId, {
+      status: 'succeeded',
+      cvId: result.cvId,
+      progress: 'finalizing',
+    });
+  }
+
+  private failJob(jobId: string, error: unknown) {
+    const message = error instanceof Error ? error.message : 'Import failed';
+    const errors = /auth|api key|401|403/i.test(message)
+      ? ['Import failed. Update your AI agent settings and verify the API key.']
+      : [message];
+    this.jobStore.update(jobId, { status: 'failed', errors });
   }
 }

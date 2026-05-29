@@ -4,7 +4,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { runPdfImportWorkflow } from '@resumind/import-agent';
+import { runPdfImportWorkflow, runTextImportWorkflow } from '@resumind/import-agent';
 import type { ImportModelCatalog } from '@resumind/import-models';
 import catalog from '@resumind/import-models/catalog.json';
 import { InvalidImportedResumeError, prepareImportedResume } from '@resumind/types';
@@ -16,6 +16,7 @@ const testCatalog = catalog as ImportModelCatalog;
 
 jest.mock('@resumind/import-agent', () => ({
   runPdfImportWorkflow: jest.fn(),
+  runTextImportWorkflow: jest.fn(),
 }));
 
 jest.mock('@resumind/types', () => {
@@ -477,6 +478,127 @@ describe('ImportService', () => {
       await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toThrow(
         'prepare failed',
       );
+    });
+
+    it('rewrites registry profile URLs before fetching', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: { get: () => 'application/json' },
+        json: jest.fn().mockResolvedValue({ basics: { name: 'Registry User' } }),
+      }) as never;
+
+      schemaValidator.validate.mockReturnValue(undefined);
+
+      const result = await service.importFromUrl(
+        user,
+        'https://registry.jsonresume.org/thomasdavis',
+      );
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://registry.jsonresume.org/thomasdavis.json',
+        expect.any(Object),
+      );
+      expect(result.data).toMatchObject({ basics: { name: 'Registry User' } });
+    });
+  });
+
+  describe('startMarkdownImport', () => {
+    it('rejects non-markdown uploads', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+
+      await expect(
+        service.startMarkdownImport(user, {
+          mimetype: 'application/pdf',
+          size: 100,
+          buffer: Buffer.from('# Hello'),
+        } as Express.Multer.File),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects empty markdown files', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+
+      await expect(
+        service.startMarkdownImport(user, {
+          mimetype: 'text/markdown',
+          size: 0,
+          buffer: Buffer.from('   '),
+        } as Express.Multer.File),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('enqueues a markdown import job', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(runTextImportWorkflow).mockResolvedValue({ cvId: 'cv-md-1', errors: [] });
+
+      const result = await service.startMarkdownImport(user, {
+        mimetype: 'text/markdown',
+        size: 20,
+        buffer: Buffer.from('# Jane Doe\nEngineer'),
+      } as Express.Multer.File);
+
+      expect(result.jobId).toEqual(expect.any(String));
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(runTextImportWorkflow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sourceText: '# Jane Doe\nEngineer',
+        }),
+      );
+      expect(service.getJob(user, result.jobId).status).toBe('succeeded');
+    });
+
+    it('rejects when feature flag is disabled', async () => {
+      service = new ImportService(
+        {
+          get: jest.fn((key: string) => {
+            if (key === 'PDF_IMPORT_ENABLED') return 'false';
+            return undefined;
+          }),
+        } as never,
+        aiAgentCredentialService as never,
+        cvService as never,
+        catalogService as never,
+        schemaValidator as never,
+      );
+
+      await expect(
+        service.startMarkdownImport(user, {
+          mimetype: 'text/markdown',
+          size: 20,
+          buffer: Buffer.from('# Jane'),
+        } as Express.Multer.File),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('marks markdown job failed on workflow errors', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(runTextImportWorkflow).mockRejectedValue(new Error('markdown parse failed'));
+
+      const result = await service.startMarkdownImport(user, {
+        mimetype: 'text/plain',
+        size: 20,
+        buffer: Buffer.from('# Jane Doe'),
+      } as Express.Multer.File);
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(service.getJob(user, result.jobId).errors).toEqual(['markdown parse failed']);
     });
   });
 

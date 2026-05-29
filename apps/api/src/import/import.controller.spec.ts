@@ -16,11 +16,14 @@ describe('ImportController', () => {
   const req = { user } as AuthenticatedRequest;
 
   let controller: ImportController;
-  let service: jest.Mocked<Pick<ImportService, 'startPdfImport' | 'getJob'>>;
+  let service: jest.Mocked<
+    Pick<ImportService, 'startPdfImport' | 'startMarkdownImport' | 'getJob'>
+  >;
 
   beforeEach(() => {
     service = {
       startPdfImport: jest.fn(),
+      startMarkdownImport: jest.fn(),
       getJob: jest.fn(),
     };
     controller = new ImportController(service as never);
@@ -39,6 +42,21 @@ describe('ImportController', () => {
 
   it('requires multipart file field', async () => {
     expect(() => controller.startPdfImport(req, undefined)).toThrow(BadRequestException);
+  });
+
+  it('returns 202 payload from startMarkdownImport', async () => {
+    service.startMarkdownImport.mockResolvedValue({ jobId: 'job-md-1' });
+    const file = {
+      mimetype: 'text/markdown',
+      size: 10,
+      buffer: Buffer.from('# Jane'),
+    } as Express.Multer.File;
+
+    await expect(controller.startMarkdownImport(req, file)).resolves.toEqual({ jobId: 'job-md-1' });
+  });
+
+  it('requires markdown multipart file field', async () => {
+    expect(() => controller.startMarkdownImport(req, undefined)).toThrow(BadRequestException);
   });
 
   it('proxies getJob to service', () => {

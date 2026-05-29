@@ -31,6 +31,29 @@ export function validateImportUrl(rawUrl: string): URL {
   return url;
 }
 
+/**
+ * Rewrites JSON Resume Registry profile URLs to their `.json` endpoints.
+ */
+export function resolveImportUrl(url: URL): URL {
+  const host = url.hostname.toLowerCase();
+  if (host !== 'registry.jsonresume.org') {
+    return url;
+  }
+
+  if (url.pathname.endsWith('.json')) {
+    return url;
+  }
+
+  const pathname = url.pathname.replace(/\/$/, '');
+  if (!pathname || pathname === '/') {
+    return url;
+  }
+
+  const resolved = new URL(url);
+  resolved.pathname = `${pathname}.json`;
+  return resolved;
+}
+
 function isIpAddress(host: string): boolean {
   // Plain IPv4 (e.g. 192.168.1.1, 127.0.0.1, 10.0.0.1)
   if (/^(?:\d{1,3}(?:\.\d{1,3}){3})$/.test(host)) return true;

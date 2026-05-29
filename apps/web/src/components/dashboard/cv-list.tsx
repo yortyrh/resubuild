@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { DeleteItemDialog } from '@/components/cv/cv-item-ui';
 import { CvListSkeleton } from '@/components/dashboard/cv-list-skeleton';
+import { NewCvDropdown } from '@/components/dashboard/new-cv-dropdown';
 import { Button } from '@/components/ui/button';
 import { useDeleteCv } from '@/lib/queries/cv-mutations';
 import { useCvList } from '@/lib/queries/cv-queries';
@@ -50,9 +51,7 @@ export function CvList() {
           </div>
         </div>
         <div className="divider-soft mt-4 flex gap-2 border-t pt-4">
-          <Button asChild>
-            <Link href="/dashboard/cv/new">Create CV</Link>
-          </Button>
+          <NewCvDropdown label="Create CV" />
         </div>
       </article>
     );
@@ -67,9 +66,7 @@ export function CvList() {
             Create and edit CVs that follow the JSON Resume schema.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/cv/new">New CV</Link>
-        </Button>
+        <NewCvDropdown />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

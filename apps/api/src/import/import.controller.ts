@@ -16,7 +16,11 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ImportFromUrlDto } from './dto/import-from-url.dto';
-import { ImportService, PDF_IMPORT_MAX_BYTES_DEFAULT } from './import.service';
+import {
+  ImportService,
+  MARKDOWN_IMPORT_MAX_BYTES_DEFAULT,
+  PDF_IMPORT_MAX_BYTES_DEFAULT,
+} from './import.service';
 
 @Controller('cv/import')
 @UseGuards(SupabaseAuthGuard)
@@ -39,6 +43,29 @@ export class ImportController {
     }
 
     return this.importService.startPdfImport(req.user, file);
+  }
+
+  @Post('markdown')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: {
+        fileSize: Number(
+          process.env.MARKDOWN_IMPORT_MAX_BYTES ?? MARKDOWN_IMPORT_MAX_BYTES_DEFAULT,
+        ),
+      },
+    }),
+  )
+  startMarkdownImport(
+    @Req() req: AuthenticatedRequest,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Expected multipart field "file"');
+    }
+
+    return this.importService.startMarkdownImport(req.user, file);
   }
 
   @Post('from-url')

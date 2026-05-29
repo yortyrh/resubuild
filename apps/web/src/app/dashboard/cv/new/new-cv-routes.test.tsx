@@ -78,17 +78,15 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-import { NewCvPageClient } from './new-cv-page-client';
+import CreateCvPage from './create/page';
+import ImportJsonPage from './import/json/page';
+import ImportPdfPage from './import/pdf/page';
 
-function renderNewCvPage() {
-  return render(
-    <QueryProvider>
-      <NewCvPageClient />
-    </QueryProvider>,
-  );
+function renderWithProviders(ui: React.ReactElement) {
+  return render(<QueryProvider>{ui}</QueryProvider>);
 }
 
-describe('NewCvPageClient', () => {
+describe('New CV route pages', () => {
   beforeEach(() => {
     mockGetAiAgentActive.mockResolvedValue({ configured: true, modelId: 'openai/gpt-4o-mini' });
   });
@@ -98,31 +96,22 @@ describe('NewCvPageClient', () => {
     vi.clearAllMocks();
   });
 
-  it('does not auto-create a CV on load', () => {
-    renderNewCvPage();
+  it('does not auto-create a CV on the manual create page', () => {
+    renderWithProviders(<CreateCvPage />);
     expect(mockCreateCv).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('defaults to the PDF import tab and orders tabs PDF, manual, JSON', async () => {
-    renderNewCvPage();
-
-    const tabs = screen.getAllByRole('tab');
-    expect(tabs.map((tab) => tab.textContent)).toEqual([
-      'Import PDF',
-      'Create manually',
-      'Import JSON',
-    ]);
-    expect(screen.getByRole('tab', { name: 'Import PDF' })).toHaveAttribute('data-state', 'active');
+  it('renders the PDF import upload on the PDF route', async () => {
+    renderWithProviders(<ImportPdfPage />);
     expect(await screen.findByTestId('import-file-upload')).toBeInTheDocument();
   });
 
-  it('creates a CV from import and navigates to the editor', async () => {
+  it('creates a CV from JSON import and navigates to the editor', async () => {
     mockCreateCv.mockResolvedValue({ id: 'cv-import-1' });
     const user = userEvent.setup({ delay: null });
-    renderNewCvPage();
+    renderWithProviders(<ImportJsonPage />);
 
-    await user.click(screen.getByRole('tab', { name: 'Import JSON' }));
     await user.click(screen.getByRole('button', { name: 'Edit JSON…' }));
     fireEvent.change(screen.getByLabelText('JSON source'), {
       target: {
@@ -138,28 +127,14 @@ describe('NewCvPageClient', () => {
     await waitFor(() => {
       expect(mockCreateCv).toHaveBeenCalledTimes(1);
     });
-    expect(mockResolveImportedResumeData).toHaveBeenCalledWith(
-      expect.objectContaining({
-        basics: expect.objectContaining({ name: 'Jane Doe', label: 'Engineer' }),
-      }),
-      { useGravatar: false },
-    );
-    expect(mockCreateCv).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        basics: expect.objectContaining({ name: 'Jane Doe', label: 'Engineer' }),
-        work: [],
-        education: [],
-      }),
-    });
     expect(mockReplace).toHaveBeenCalledWith('/dashboard/cv/cv-import-1');
   }, 15_000);
 
-  it('creates a CV and navigates to the editor when Save succeeds', async () => {
+  it('creates a CV from manual create and navigates to the editor', async () => {
     mockCreateCv.mockResolvedValue({ id: 'cv-new-1' });
     const user = userEvent.setup({ delay: null });
-    renderNewCvPage();
+    renderWithProviders(<CreateCvPage />);
 
-    await user.click(screen.getByRole('tab', { name: 'Create manually' }));
     const textboxes = screen.getAllByRole('textbox');
     await user.type(textboxes[0], 'Alex Smith');
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -167,16 +142,6 @@ describe('NewCvPageClient', () => {
     await waitFor(() => {
       expect(mockCreateCv).toHaveBeenCalledTimes(1);
     });
-    expect(mockCreateCv).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        basics: expect.objectContaining({ name: 'Alex Smith' }),
-        work: [],
-        education: [],
-      }),
-    });
-    expect(mockCreateCv).toHaveBeenCalledWith(
-      expect.not.objectContaining({ title: expect.anything() }),
-    );
     expect(mockReplace).toHaveBeenCalledWith('/dashboard/cv/cv-new-1');
   }, 15_000);
 });

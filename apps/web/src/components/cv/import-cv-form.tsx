@@ -1,14 +1,11 @@
 'use client';
 
-import { Link, Upload } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { ImportFileUpload } from '@/components/cv/import-file-upload';
 import { ImportJsonEditDialog } from '@/components/cv/import-json-edit-dialog';
 import { formatJsonForEditor } from '@/components/cv/json-resume-editor';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { importCvFromUrl } from '@/lib/api';
 import { checkImportableMediaUrl } from '@/lib/import-cv-media';
 import {
   gravatarOptionForImageStatus,
@@ -42,9 +39,6 @@ export function ImportCvForm({ onImport, onCancel }: ImportCvFormProps) {
   const gravatarOptionId = useId();
   const [jsonText, setJsonText] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [urlInput, setUrlInput] = useState('');
-  const [urlFetching, setUrlFetching] = useState(false);
-  const [urlFetchError, setUrlFetchError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -109,7 +103,6 @@ export function ImportCvForm({ onImport, onCancel }: ImportCvFormProps) {
     setFileError(null);
     setImportError(null);
     setSelectedFile(file);
-    setUrlInput('');
 
     if (!file) {
       setJsonText('');
@@ -122,29 +115,6 @@ export function ImportCvForm({ onImport, onCancel }: ImportCvFormProps) {
     } catch (err) {
       setFileError(normalizeImportError(err));
       setSelectedFile(null);
-    }
-  };
-
-  const handleUrlFetch = async () => {
-    const trimmed = urlInput.trim();
-    if (!trimmed) return;
-
-    setUrlFetchError(null);
-    setImportError(null);
-    setSelectedFile(null);
-    setJsonText('');
-    setPreview(null);
-    setUrlFetching(true);
-
-    try {
-      const result = await importCvFromUrl(trimmed);
-      setJsonText(formatJsonForEditor(JSON.stringify(result.data)));
-      setPreview(parseImportJsonSource(JSON.stringify(result.data)));
-      setUseGravatar(false);
-    } catch (err) {
-      setUrlFetchError(err instanceof Error ? err.message : 'Failed to fetch URL');
-    } finally {
-      setUrlFetching(false);
     }
   };
 
@@ -187,53 +157,6 @@ export function ImportCvForm({ onImport, onCancel }: ImportCvFormProps) {
           }
         }}
       >
-        <div className="space-y-4 rounded-lg border border-dashed p-4">
-          <div className="space-y-1">
-            <Label htmlFor="url-import">Import from URL</Label>
-            <p className="text-muted-foreground text-sm">
-              Paste any publicly accessible HTTPS URL that returns JSON Resume data. See the{' '}
-              <a
-                href="https://jsonresume.org/schema"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline underline-offset-2"
-              >
-                JSON Resume schema
-              </a>{' '}
-              for the format.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Input
-              id="url-import"
-              type="url"
-              placeholder="https://example.com/resume.json"
-              value={urlInput}
-              disabled={importing || urlFetching}
-              onChange={(e) => setUrlInput(e.target.value)}
-              className="flex-1"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!urlInput.trim() || importing || urlFetching}
-              onClick={() => void handleUrlFetch()}
-            >
-              {urlFetching ? 'Fetching…' : 'Fetch'}
-            </Button>
-          </div>
-          {urlFetchError ? <p className="text-destructive text-sm">{urlFetchError}</p> : null}
-        </div>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background text-muted-foreground px-2">or import a file</span>
-          </div>
-        </div>
-
         <ImportFileUpload
           accept={JSON_FILE_ACCEPT}
           maxBytes={MAX_IMPORT_FILE_BYTES}

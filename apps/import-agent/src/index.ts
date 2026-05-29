@@ -8,4 +8,5 @@ export {
   createPdfImportWorkflow,
   createResumeChatWorkflow,
   runPdfImportWorkflow,
+  runTextImportWorkflow,
 } from './workflows/pdf-import.workflow';

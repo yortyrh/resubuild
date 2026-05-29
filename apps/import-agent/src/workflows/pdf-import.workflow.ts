@@ -4,7 +4,12 @@ import { extractPdfTextTool } from '../tools/extract-pdf-text.tool';
 import { normalizeDatesTool } from '../tools/normalize-dates.tool';
 import { validateResumeSchemaTool } from '../tools/validate-resume-schema.tool';
 import { webLookupTool } from '../tools/web-lookup.tool';
-import type { PdfImportWorkflowInput, PdfImportWorkflowResult } from '../types';
+import type {
+  PdfImportWorkflowInput,
+  PdfImportWorkflowResult,
+  TextImportWorkflowInput,
+  TextImportWorkflowResult,
+} from '../types';
 
 const MAX_REPAIR_ATTEMPTS = 3;
 
@@ -31,7 +36,7 @@ async function generateJsonFromPrompt(
   apiKey: string,
   instructions: string,
   prompt: string,
-  generate?: PdfImportWorkflowInput['generateDraft'],
+  generate?: TextImportWorkflowInput['generateDraft'],
 ): Promise<Record<string, unknown>> {
   if (generate) {
     return generate(prompt);
@@ -57,20 +62,17 @@ async function generateJsonFromPrompt(
   return JSON.parse(text.slice(jsonStart, jsonEnd + 1)) as Record<string, unknown>;
 }
 
-export async function runPdfImportWorkflow(
-  input: PdfImportWorkflowInput,
-): Promise<PdfImportWorkflowResult> {
+export async function runTextImportWorkflow(
+  input: TextImportWorkflowInput,
+): Promise<TextImportWorkflowResult> {
   const errors: string[] = [];
-
-  input.onProgress?.('extracting');
-  const extracted = await extractPdfTextTool(input.pdfBuffer);
 
   input.onProgress?.('drafting');
   let draft = await generateJsonFromPrompt(
     input.modelId,
     input.apiKey,
     DRAFT_INSTRUCTIONS,
-    `Resume text:\n\n${extracted.text}`,
+    `Resume text:\n\n${input.sourceText}`,
     input.generateDraft,
   );
 
@@ -128,6 +130,24 @@ export async function runPdfImportWorkflow(
   }
 
   return { draft, errors };
+}
+
+export async function runPdfImportWorkflow(
+  input: PdfImportWorkflowInput,
+): Promise<PdfImportWorkflowResult> {
+  input.onProgress?.('extracting');
+  const extracted = await extractPdfTextTool(input.pdfBuffer);
+
+  return runTextImportWorkflow({
+    sourceText: extracted.text,
+    modelId: input.modelId,
+    apiKey: input.apiKey,
+    searchApiKey: input.searchApiKey,
+    onProgress: input.onProgress,
+    finalize: input.finalize,
+    generateDraft: input.generateDraft,
+    repairDraft: input.repairDraft,
+  });
 }
 
 export function createPdfImportWorkflow(options: { modelId: string; apiKey: string }) {

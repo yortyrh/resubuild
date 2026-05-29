@@ -14,6 +14,26 @@ export interface ImportJobResult {
   errors?: string[];
 }
 
+export interface TextImportWorkflowInput {
+  sourceText: string;
+  modelId: string;
+  apiKey: string;
+  searchApiKey?: string;
+  onProgress?: (progress: ImportJobProgress) => void;
+  finalize?: (draft: Record<string, unknown>) => Promise<string>;
+  generateDraft?: (text: string) => Promise<Record<string, unknown>>;
+  repairDraft?: (
+    draft: Record<string, unknown>,
+    errors: string[],
+  ) => Promise<Record<string, unknown>>;
+}
+
+export interface TextImportWorkflowResult {
+  cvId?: string;
+  draft?: Record<string, unknown>;
+  errors: string[];
+}
+
 export interface PdfImportWorkflowInput {
   pdfBuffer: Buffer;
   modelId: string;
@@ -28,11 +48,7 @@ export interface PdfImportWorkflowInput {
   ) => Promise<Record<string, unknown>>;
 }
 
-export interface PdfImportWorkflowResult {
-  cvId?: string;
-  draft?: Record<string, unknown>;
-  errors: string[];
-}
+export interface PdfImportWorkflowResult extends TextImportWorkflowResult {}
 
 export interface ToolRegistry {
   extractPdfText: typeof import('./tools/extract-pdf-text.tool').extractPdfTextTool;

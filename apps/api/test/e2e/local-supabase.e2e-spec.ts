@@ -605,4 +605,60 @@ describe('E2E — import URL validation (local Supabase)', () => {
       .send({ url: 'not-a-url' })
       .expect(400);
   });
+
+  it('POST /cv/import/from-url resolves registry profile URLs', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: { get: () => 'application/json' },
+      json: jest.fn().mockResolvedValue({ basics: { name: 'Registry User' } }),
+    }) as never;
+
+    const response = await request(app.getHttpServer())
+      .post('/cv/import/from-url')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ url: 'https://registry.jsonresume.org/thomasdavis' })
+      .expect(200);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://registry.jsonresume.org/thomasdavis.json',
+      expect.any(Object),
+    );
+    expect(response.body.data).toMatchObject({ basics: { name: 'Registry User' } });
+  });
+});
+
+describe('E2E — markdown import (local Supabase)', () => {
+  let app: INestApplication;
+  let accessToken: string;
+  const fixture = loadFixture();
+
+  beforeAll(async () => {
+    app = await createE2eApp();
+    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
+    accessToken = login.body.access_token;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('POST /cv/import/markdown rejects missing file', async () => {
+    await request(app.getHttpServer())
+      .post('/cv/import/markdown')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(400);
+  });
+
+  it('POST /cv/import/markdown rejects when LLM is not configured', async () => {
+    await request(app.getHttpServer())
+      .post('/cv/import/markdown')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .attach('file', Buffer.from('# Jane Doe\nEngineer'), {
+        filename: 'resume.md',
+        contentType: 'text/markdown',
+      })
+      .expect(422);
+  });
 });

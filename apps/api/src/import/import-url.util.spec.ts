@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { validateImportUrl } from './import-url.util';
+import { resolveImportUrl, validateImportUrl } from './import-url.util';
 
 describe('validateImportUrl', () => {
   it('accepts a valid HTTPS URL', () => {
@@ -66,5 +66,36 @@ describe('validateImportUrl', () => {
 
   it('rejects URL without protocol', () => {
     expect(() => validateImportUrl('example.com/resume.json')).toThrow(BadRequestException);
+  });
+});
+
+describe('resolveImportUrl', () => {
+  it('rewrites registry profile URLs to .json endpoints', () => {
+    const url = resolveImportUrl(validateImportUrl('https://registry.jsonresume.org/thomasdavis'));
+    expect(url.href).toBe('https://registry.jsonresume.org/thomasdavis.json');
+  });
+
+  it('preserves query strings when rewriting registry URLs', () => {
+    const url = resolveImportUrl(
+      validateImportUrl('https://registry.jsonresume.org/thomasdavis?v=1'),
+    );
+    expect(url.href).toBe('https://registry.jsonresume.org/thomasdavis.json?v=1');
+  });
+
+  it('leaves registry .json URLs unchanged', () => {
+    const url = resolveImportUrl(
+      validateImportUrl('https://registry.jsonresume.org/thomasdavis.json'),
+    );
+    expect(url.href).toBe('https://registry.jsonresume.org/thomasdavis.json');
+  });
+
+  it('leaves non-registry URLs unchanged', () => {
+    const url = resolveImportUrl(validateImportUrl('https://example.com/resume.json'));
+    expect(url.href).toBe('https://example.com/resume.json');
+  });
+
+  it('leaves registry root URL unchanged', () => {
+    const url = resolveImportUrl(validateImportUrl('https://registry.jsonresume.org/'));
+    expect(url.href).toBe('https://registry.jsonresume.org/');
   });
 });
