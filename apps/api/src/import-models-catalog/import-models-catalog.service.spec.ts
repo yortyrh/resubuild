@@ -141,4 +141,24 @@ describe('ImportModelsCatalogService', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(service.getStatus().source).toBe('fallback');
   });
+
+  it('records non-Error failures from models.dev', async () => {
+    fetchMock.mockRejectedValue('network down');
+
+    const service = createService();
+    await service.refreshCatalog('startup');
+
+    expect(service.getStatus().source).toBe('fallback');
+    expect(service.getStatus().lastRefreshError).toBe('network down');
+  });
+
+  it('reports zero counts before catalog is loaded', () => {
+    const service = createService();
+
+    expect(service.getStatus()).toMatchObject({
+      providerCount: 0,
+      modelCount: 0,
+      lastRefreshedAt: null,
+    });
+  });
 });

@@ -294,3 +294,315 @@ describe('E2E — media service (local Supabase)', () => {
     await request(app.getHttpServer()).post('/media/upload').expect(401);
   });
 });
+
+describe('E2E — CV export (local Supabase)', () => {
+  let app: INestApplication;
+  let accessToken: string;
+  const fixture = loadFixture();
+  const state = loadE2eAccountState();
+
+  beforeAll(async () => {
+    app = await createE2eApp();
+    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
+    accessToken = login.body.access_token;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('GET /cv/export/templates returns template catalog', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/cv/export/templates')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(Array.isArray(response.body.templates)).toBe(true);
+    expect(response.body.templates.length).toBeGreaterThan(0);
+    expect(response.body.templates[0]).toMatchObject({
+      id: expect.any(String),
+      label: expect.any(String),
+    });
+  });
+
+  it('GET /cv/:id/export/html returns rendered HTML for seeded CV', async () => {
+    const target = state.cvs[0];
+    const response = await request(app.getHttpServer())
+      .get(`/cv/${target.id}/export/html`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(response.headers['content-type']).toMatch(/text\/html/);
+    expect(response.text).toContain('<');
+    expect(response.text.length).toBeGreaterThan(100);
+  });
+});
+
+describe('E2E — CV template presentation (local Supabase)', () => {
+  let app: INestApplication;
+  let accessToken: string;
+  const fixture = loadFixture();
+  const state = loadE2eAccountState();
+
+  beforeAll(async () => {
+    app = await createE2eApp();
+    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
+    accessToken = login.body.access_token;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('GET /cv/:id/template-presentation returns defaults for seeded CV', async () => {
+    const target = state.cvs[0];
+    const response = await request(app.getHttpServer())
+      .get(`/cv/${target.id}/template-presentation`)
+      .query({ template: 'classic' })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(response.body.templateId).toBe('classic');
+    expect(response.body.config).toEqual(
+      expect.objectContaining({ sectionOrder: expect.any(Array) }),
+    );
+  });
+
+  it('PATCH /cv/:id/template-presentation persists hidden sections', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/cv')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ data: { basics: { name: 'Presentation Test' } } })
+      .expect(201);
+
+    const cvId = created.body.id;
+
+    const patched = await request(app.getHttpServer())
+      .patch(`/cv/${cvId}/template-presentation`)
+      .query({ template: 'classic' })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ config: { hiddenSections: ['interests'] } })
+      .expect(200);
+
+    expect(patched.body.config.hiddenSections).toContain('interests');
+
+    const fetched = await request(app.getHttpServer())
+      .get(`/cv/${cvId}/template-presentation`)
+      .query({ template: 'classic' })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(fetched.body.config.hiddenSections).toContain('interests');
+  });
+});
+
+describe('E2E — CV lifecycle (local Supabase)', () => {
+  let app: INestApplication;
+  let accessToken: string;
+  const fixture = loadFixture();
+
+  beforeAll(async () => {
+    app = await createE2eApp();
+    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
+    accessToken = login.body.access_token;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('PATCH /cv/:id updates template and basics sections', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/cv')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ data: { basics: { name: 'Lifecycle Test', label: 'Engineer' } } })
+      .expect(201);
+
+    const cvId = created.body.id;
+
+    const patched = await request(app.getHttpServer())
+      .patch(`/cv/${cvId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        templateId: 'classic',
+        data: { basics: { name: 'Lifecycle Updated', label: 'Lead' } },
+      })
+      .expect(200);
+
+    expect(patched.body.templateId).toBe('classic');
+    expect(patched.body.data.basics?.name).toBe('Lifecycle Updated');
+
+    await request(app.getHttpServer())
+      .delete(`/cv/${cvId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+  });
+});
+
+describe('E2E — CV sections coverage (local Supabase)', () => {
+  let app: INestApplication;
+  let accessToken: string;
+  const fixture = loadFixture();
+  const state = loadE2eAccountState();
+
+  beforeAll(async () => {
+    app = await createE2eApp();
+    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
+    accessToken = login.body.access_token;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('GET /cv/:id/basics returns basics for seeded CV', async () => {
+    const target = state.cvs[0];
+    const response = await request(app.getHttpServer())
+      .get(`/cv/${target.id}/basics`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(response.body.name).toEqual(expect.any(String));
+  });
+
+  it('GET /cv/:id/education and /languages return arrays for seeded CV', async () => {
+    const target = state.cvs[0];
+
+    const education = await request(app.getHttpServer())
+      .get(`/cv/${target.id}/education`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    const languages = await request(app.getHttpServer())
+      .get(`/cv/${target.id}/languages`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(Array.isArray(education.body)).toBe(true);
+    expect(Array.isArray(languages.body)).toBe(true);
+  });
+
+  it('creates and deletes a work entry by row id', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/cv')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ data: { basics: { name: 'Work Delete Test' }, work: [] } })
+      .expect(201);
+
+    const cvId = created.body.id;
+
+    const work = await request(app.getHttpServer())
+      .post(`/cv/${cvId}/work`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ work: { name: 'Temp Co', position: 'Dev', startDate: '2024-01' } })
+      .expect(201);
+
+    const workId = work.body.item.id as string;
+
+    await request(app.getHttpServer())
+      .delete(`/cv/${cvId}/work/${workId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    const list = await request(app.getHttpServer())
+      .get(`/cv/${cvId}/work`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(list.body).toHaveLength(0);
+  });
+});
+
+describe('E2E — AI agent catalog (local Supabase)', () => {
+  let app: INestApplication;
+  let accessToken: string;
+  const fixture = loadFixture();
+
+  beforeAll(async () => {
+    app = await createE2eApp();
+    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
+    accessToken = login.body.access_token;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('GET /ai/agents/providers returns provider catalog', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/ai/agents/providers')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(Array.isArray(response.body)).toBe(true);
+    expect(response.body.length).toBeGreaterThan(0);
+  });
+
+  it('GET /ai/agents/active returns unconfigured status for fresh fixture user', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/ai/agents/active')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(response.body).toMatchObject({ configured: false });
+  });
+});
+
+describe('E2E — import LLM config (local Supabase)', () => {
+  let app: INestApplication;
+  let accessToken: string;
+  const fixture = loadFixture();
+
+  beforeAll(async () => {
+    app = await createE2eApp();
+    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
+    accessToken = login.body.access_token;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('GET /import/llm/providers returns provider catalog', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/import/llm/providers')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(Array.isArray(response.body)).toBe(true);
+    expect(response.body.length).toBeGreaterThan(0);
+  });
+
+  it('GET /import/llm/config returns not-configured for fresh fixture user', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/import/llm/config')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(response.body.configured).toBe(false);
+  });
+});
+
+describe('E2E — import URL validation (local Supabase)', () => {
+  let app: INestApplication;
+  let accessToken: string;
+  const fixture = loadFixture();
+
+  beforeAll(async () => {
+    app = await createE2eApp();
+    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
+    accessToken = login.body.access_token;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('POST /cv/import/from-url rejects invalid URLs', async () => {
+    await request(app.getHttpServer())
+      .post('/cv/import/from-url')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ url: 'not-a-url' })
+      .expect(400);
+  });
+});

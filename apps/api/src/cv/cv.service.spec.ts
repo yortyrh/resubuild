@@ -74,6 +74,13 @@ describe('CvService', () => {
     await expect(service.getHeader(user, 'gone')).rejects.toThrow(NotFoundException);
   });
 
+  it('getHeader returns header when CV exists', async () => {
+    const header = mockCvHeader({ id: 'cv-found' });
+    normalizedRepo.fetchHeader.mockResolvedValue(header);
+
+    await expect(service.getHeader(user, 'cv-found')).resolves.toEqual(header);
+  });
+
   describe('findOne', () => {
     it('throws NotFoundException when CV is missing', async () => {
       normalizedRepo.fetchHeader.mockResolvedValue(null);
@@ -272,6 +279,19 @@ describe('CvService', () => {
       await expect(
         service.update(user, 'cv-1', { templateId: 'not-a-real-template' }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws BadRequestException when template update fails', async () => {
+      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
+        update: jest.fn(() => ({
+          eq: jest.fn().mockResolvedValue({ error: { message: 'template update failed' } }),
+        })),
+      }));
+      normalizedRepo.fetchHeader.mockResolvedValue(mockCvHeader());
+
+      await expect(service.update(user, 'cv-1', { templateId: 'classic' })).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 

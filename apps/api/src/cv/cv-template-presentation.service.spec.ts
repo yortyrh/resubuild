@@ -64,6 +64,14 @@ describe('CvTemplatePresentationService', () => {
     );
   });
 
+  it('throws when upserting presentation for missing CV', async () => {
+    normalizedRepo.fetchHeader.mockResolvedValue(null);
+
+    await expect(
+      service.upsertPresentation(user, 'cv-1', 'classic', { hiddenSections: ['work'] }),
+    ).rejects.toThrow(NotFoundException);
+  });
+
   it('rejects unknown template ids', async () => {
     await expect(service.getPresentation(user, 'cv-1', 'not-a-real-template')).rejects.toThrow(
       BadRequestException,

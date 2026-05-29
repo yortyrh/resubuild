@@ -42,4 +42,23 @@ describe('CvExportController', () => {
     );
     expect(exportService.renderHtml).toHaveBeenCalledWith(userCtx, 'cv-1', 'capd-alum');
   });
+
+  it('exportPdf sets PDF headers and sends buffer', async () => {
+    const buffer = Buffer.from('%PDF-1.4');
+    exportService.renderPdf.mockResolvedValue({ buffer, filename: 'jane-doe.pdf' });
+    const res = {
+      setHeader: jest.fn(),
+      send: jest.fn(),
+    };
+
+    await controller.exportPdf(req, 'cv-1', 'classic', res as never);
+
+    expect(exportService.renderPdf).toHaveBeenCalledWith(userCtx, 'cv-1', 'classic');
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'application/pdf');
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'Content-Disposition',
+      'attachment; filename="jane-doe.pdf"',
+    );
+    expect(res.send).toHaveBeenCalledWith(buffer);
+  });
 });

@@ -173,6 +173,30 @@ describe('MediaService', () => {
     await moduleRef.close();
   });
 
+  it('uploadBuffer rejects missing user id', async () => {
+    const { service, moduleRef } = await bootstrapModule(true);
+
+    await expect(service.uploadBuffer('  ', Buffer.from([1]), 'image/png')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+
+    await moduleRef.close();
+  });
+
+  it('uploadBuffer rejects empty files and oversize uploads', async () => {
+    process.env.MEDIA_MAX_BYTES = '10';
+    const { service, moduleRef } = await bootstrapModule(true);
+
+    await expect(service.uploadBuffer('user-123', Buffer.alloc(0), 'image/png')).rejects.toThrow(
+      'Empty upload',
+    );
+    await expect(service.uploadBuffer('user-123', Buffer.alloc(11), 'image/png')).rejects.toThrow(
+      'File exceeds max size',
+    );
+
+    await moduleRef.close();
+  });
+
   it('PUBLIC_API_URL overrides default viewer URL host', async () => {
     uploadFn.mockResolvedValue({ error: null });
     insertFn.mockImplementation(() => Promise.resolve({ error: null }));
@@ -917,6 +941,23 @@ describe('MediaService', () => {
       downloadFn.mockResolvedValueOnce({ data: null, error: { message: 'missing' } });
       await expect(service.loadOriginalPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
         NotFoundException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws BadRequestException when original lookup fails', async () => {
+      const { service, moduleRef } = await bootstrapModule(true);
+      maybeSingleFn.mockResolvedValueOnce({ data: null, error: { message: 'lookup failed' } });
+      await expect(service.loadOriginalPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      await moduleRef.close();
+    });
+
+    it('throws ServiceUnavailableException when MEDIA_BUCKET is missing', async () => {
+      const { service, moduleRef } = await bootstrapModule('bucket-only');
+      await expect(service.loadOriginalPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
       );
       await moduleRef.close();
     });

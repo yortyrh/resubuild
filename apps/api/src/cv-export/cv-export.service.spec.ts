@@ -264,6 +264,13 @@ describe('CvExportService', () => {
     );
   });
 
+  it('renderPdfFromHtml logs non-Error launch failures', async () => {
+    puppeteer.launch.mockRejectedValue('launch failed');
+    await expect(service.renderPdfFromHtml('<html></html>')).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+  });
+
   it('withAbsoluteImageUrls rewrites relative media paths', () => {
     const resume: Resume = {
       basics: { name: 'Jane', image: '/media/abc-123' },

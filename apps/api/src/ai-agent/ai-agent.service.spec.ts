@@ -10,6 +10,12 @@ import type { ImportModelsCatalogService } from '../import-models-catalog/import
 import type { AiAgentRepository } from './ai-agent.repository';
 import { AiAgentService } from './ai-agent.service';
 
+jest.mock('@mastra/core/agent', () => ({
+  Agent: jest.fn().mockImplementation(() => ({
+    generate: jest.fn().mockResolvedValue(undefined),
+  })),
+}));
+
 const testCatalog = catalog as ImportModelCatalog;
 
 describe('AiAgentService', () => {
@@ -249,6 +255,52 @@ describe('AiAgentService', () => {
         keepExistingApiKey: true,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects legacy save when stored key cannot be read', async () => {
+    repository.listAccounts.mockResolvedValue([{ id: 'acc-1' } as never]);
+    repository.getActiveStatus.mockResolvedValue({ configured: true, accountId: 'acc-1' });
+    repository.getDecryptedAccount.mockResolvedValue(null);
+
+    await expect(
+      service.saveLegacyConfig(user, {
+        modelId: 'openai/gpt-4o-mini',
+        keepExistingApiKey: true,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rethrows unexpected model validation errors', async () => {
+    catalogService = {
+      getCatalog: () => {
+        throw new Error('catalog unavailable');
+      },
+    };
+    service = new AiAgentService(
+      repository as never,
+      configService as never,
+      catalogService as never,
+    );
+
+    await expect(
+      service.createAccount(user, { modelId: 'openai/gpt-4o-mini', apiKey: 'sk-test' }),
+    ).rejects.toThrow('catalog unavailable');
+  });
+
+  it('probes API keys outside test environment', async () => {
+    configService.get.mockImplementation((key: string) =>
+      key === 'NODE_ENV' ? 'production' : undefined,
+    );
+    repository.createAccount.mockResolvedValue({ id: 'acc-1' } as never);
+
+    await expect(
+      service.createAccount(user, {
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+      }),
+    ).resolves.toMatchObject({ id: 'acc-1' });
+
+    configService.get.mockReturnValue('test');
   });
 
   it('delegates getActiveStatus and setActiveAccount', async () => {

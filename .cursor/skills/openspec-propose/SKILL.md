@@ -116,3 +116,31 @@ After completing all artifacts, summarize:
 - If context is critically unclear, ask the user - but prefer making reasonable decisions to keep momentum
 - If a change with that name already exists, ask if user wants to continue it or create a new one
 - Verify each artifact file exists after writing before proceeding to next
+
+**E2E test impact in tasks.md (required)**
+
+Every `tasks.md` MUST end with an **E2E test impact** section (see `openspec/specs/e2e-testing/spec.md`):
+
+```markdown
+## E2E test impact
+
+### Must pass unchanged
+
+- `local-supabase.e2e-spec.ts` — list scenarios that must not break
+
+### Update required
+
+- None (or list scenarios + why the contract changed)
+
+### Add
+
+- None (or list new scenarios for new behavior)
+```
+
+When scoping the change:
+
+- **UI-only** → state `None — UI-only change`; all existing E2E scenarios stay unchanged.
+- **API contract change** → list affected scenarios under **Update required**; leave unrelated auth/CV/media scenarios under **Must pass unchanged**.
+- **New endpoints/features** → add scenarios under **Add** without rewriting existing regression tests.
+
+Implementation agents MUST treat **Must pass unchanged** as a hard constraint unless the user explicitly approves a contract break.

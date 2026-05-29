@@ -151,6 +151,17 @@ What would you like to do?
 - Pause on errors, blockers, or unclear requirements - don't guess
 - Use contextFiles from CLI output, don't assume specific file names
 
+**E2E test preservation (required)**
+
+Before changing `apps/api/test/e2e/*.e2e-spec.ts`, read the change's **E2E test impact** section in `tasks.md` and `openspec/specs/e2e-testing/spec.md`.
+
+- **Default:** existing E2E scenarios listed under **Must pass unchanged** MUST keep passing with **no edits** to those tests.
+- **Only update E2E specs when:** the change intentionally modifies the REST/auth/media/CV contract covered by that scenario (listed under **Update required** in tasks).
+- **UI-only or internal refactors** (Tailwind, component layout, private helpers) MUST NOT touch E2E files.
+- **New behavior** gets new scenarios under **Add** — append describe blocks; do not rewrite unrelated regression guards.
+- After implementation, if you touched API/auth/CV/media/import code, run `pnpm test:e2e` locally when Supabase is available; otherwise note that E2E was not run.
+- Never weaken assertions or delete scenarios just to greenwash a breaking change — update the OpenSpec artifacts first.
+
 **Fluid Workflow Integration**
 
 This skill supports the "actions on a change" model:

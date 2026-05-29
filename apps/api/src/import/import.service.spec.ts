@@ -7,6 +7,7 @@ import {
 import { runPdfImportWorkflow } from '@resumind/import-agent';
 import type { ImportModelCatalog } from '@resumind/import-models';
 import catalog from '@resumind/import-models/catalog.json';
+import { InvalidImportedResumeError, prepareImportedResume } from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import type { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import { ImportService } from './import.service';
@@ -16,6 +17,14 @@ const testCatalog = catalog as ImportModelCatalog;
 jest.mock('@resumind/import-agent', () => ({
   runPdfImportWorkflow: jest.fn(),
 }));
+
+jest.mock('@resumind/types', () => {
+  const actual = jest.requireActual<typeof import('@resumind/types')>('@resumind/types');
+  return {
+    ...actual,
+    prepareImportedResume: jest.fn(actual.prepareImportedResume),
+  };
+});
 
 describe('ImportService', () => {
   const user = {
@@ -31,6 +40,12 @@ describe('ImportService', () => {
   let schemaValidator: { validate: jest.Mock };
 
   beforeEach(() => {
+    jest
+      .mocked(prepareImportedResume)
+      .mockImplementation(
+        jest.requireActual<typeof import('@resumind/types')>('@resumind/types')
+          .prepareImportedResume,
+      );
     aiAgentCredentialService = { getActiveCredentials: jest.fn() };
     cvService = { create: jest.fn() };
     catalogService = { getCatalog: () => testCatalog };
@@ -91,7 +106,10 @@ describe('ImportService', () => {
       apiKey: 'sk-test',
       accountId: 'acc-1',
     });
-    jest.mocked(runPdfImportWorkflow).mockResolvedValue({ cvId: 'cv-1', errors: [] });
+    jest.mocked(runPdfImportWorkflow).mockImplementation(async ({ onProgress }) => {
+      onProgress?.('extracting');
+      return { cvId: 'cv-1', errors: [] };
+    });
 
     const result = await service.startPdfImport(user, {
       mimetype: 'application/pdf',
@@ -101,8 +119,33 @@ describe('ImportService', () => {
 
     expect(result.jobId).toEqual(expect.any(String));
     await new Promise((resolve) => setImmediate(resolve));
-    expect(runPdfImportWorkflow).toHaveBeenCalled();
+    expect(runPdfImportWorkflow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        onProgress: expect.any(Function),
+      }),
+    );
     expect(service.getJob(user, result.jobId).status).toBe('succeeded');
+  });
+
+  it('uses default max bytes when PDF_IMPORT_MAX_BYTES is unset', () => {
+    expect(service.getMaxBytes()).toBe(5 * 1024 * 1024);
+  });
+
+  it('reads configured max bytes from environment', () => {
+    service = new ImportService(
+      {
+        get: jest.fn((key: string) => {
+          if (key === 'PDF_IMPORT_MAX_BYTES') return '2048';
+          return undefined;
+        }),
+      } as never,
+      aiAgentCredentialService as never,
+      cvService as never,
+      catalogService as never,
+      schemaValidator as never,
+    );
+
+    expect(service.getMaxBytes()).toBe(2048);
   });
 
   it('rejects when feature flag is disabled', async () => {
@@ -358,6 +401,48 @@ describe('ImportService', () => {
       );
     });
 
+    it('rejects unsupported content types with explicit none label', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: { get: () => '' },
+        json: jest.fn(),
+      }) as never;
+
+      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toThrow(
+        'Content-Type: none',
+      );
+    });
+
+    it('accepts text/plain JSON responses', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: { get: () => 'text/plain' },
+        json: jest.fn().mockResolvedValue({ basics: { name: 'Plain Text User' } }),
+      }) as never;
+
+      schemaValidator.validate.mockReturnValue(undefined);
+
+      const result = await service.importFromUrl(user, 'https://example.com/resume.txt');
+      expect(result.data).toMatchObject({ basics: { name: 'Plain Text User' } });
+    });
+
+    it('rejects HTTP error responses from URL import', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        headers: { get: () => 'application/json' },
+      }) as never;
+
+      await expect(service.importFromUrl(user, 'https://example.com/missing')).rejects.toThrow(
+        'URL returned 404 Not Found',
+      );
+    });
+
     it('handles InvalidImportedResumeError from prepareImportedResume', async () => {
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,
@@ -367,13 +452,12 @@ describe('ImportService', () => {
         json: jest.fn().mockResolvedValue({ basics: {} }),
       }) as never;
 
-      const { InvalidImportedResumeError } = require('@resumind/types');
-      schemaValidator.validate.mockImplementation(() => {
+      jest.mocked(prepareImportedResume).mockImplementation(() => {
         throw new InvalidImportedResumeError('missing basics');
       });
 
-      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toBeInstanceOf(
-        BadRequestException,
+      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toThrow(
+        'missing basics',
       );
     });
 
@@ -386,12 +470,12 @@ describe('ImportService', () => {
         json: jest.fn().mockResolvedValue({ basics: {} }),
       }) as never;
 
-      schemaValidator.validate.mockImplementation(() => {
-        throw { unknown: 'error' };
+      jest.mocked(prepareImportedResume).mockImplementation(() => {
+        throw new Error('prepare failed');
       });
 
-      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toBeInstanceOf(
-        BadRequestException,
+      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toThrow(
+        'prepare failed',
       );
     });
   });

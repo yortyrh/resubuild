@@ -102,3 +102,4 @@ Example mermaid block to embed in the PR body:
 - PR mode: ≥1 mermaid diagram in body
 - Rebase siblings only after merge to `main` (not when PR is merely opened)
 - Invoke `opsx-parallel-integrator` subagent for execution; do not skip verify step
+- Do not modify `apps/api/test/e2e/*.e2e-spec.ts` during integration unless the merged change's **E2E test impact** lists those files under **Update required** or **Add**; unrelated E2E failures after merge indicate a contract break — fix the implementation, not the regression test

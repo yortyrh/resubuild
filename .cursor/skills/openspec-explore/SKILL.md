@@ -297,3 +297,4 @@ But this summary is optional. Sometimes the thinking IS the value.
 - **Do visualize** - A good diagram is worth many paragraphs
 - **Do explore the codebase** - Ground discussions in reality
 - **Do question assumptions** - Including the user's and your own
+- **Do preserve E2E regression guards** - When capturing API/UI decisions, note whether existing E2E scenarios in `openspec/specs/e2e-testing/spec.md` must pass unchanged; UI-only ideas should explicitly exclude E2E edits
