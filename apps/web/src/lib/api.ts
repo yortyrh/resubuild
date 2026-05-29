@@ -425,6 +425,17 @@ export function getCvProfiles(cvId: string) {
   return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/profiles`);
 }
 
+export interface ImportFromUrlResult {
+  data: Record<string, unknown>;
+}
+
+export async function importCvFromUrl(url: string): Promise<ImportFromUrlResult> {
+  return apiFetch<ImportFromUrlResult>('/cv/import/from-url', {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+  });
+}
+
 export async function getCvExportHtml(cvId: string, templateId?: string): Promise<string> {
   const token = await getValidAccessToken(apiUrl);
   const query = templateId ? `?template=${encodeURIComponent(templateId)}` : '';

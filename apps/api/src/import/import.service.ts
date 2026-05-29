@@ -6,12 +6,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { type ImportJobProgress, runPdfImportWorkflow } from '@resumind/import-agent';
-import { prepareImportedResume } from '@resumind/types';
+import { InvalidImportedResumeError, prepareImportedResume } from '@resumind/types';
 import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvService } from '../cv/cv.service';
 import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
+import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 import { ImportJobStore } from './import-job.store';
+import { validateImportUrl } from './import-url.util';
 
 export const PDF_IMPORT_MAX_BYTES_DEFAULT = 5 * 1024 * 1024;
 
@@ -24,6 +26,7 @@ export class ImportService {
     private readonly aiAgentCredentialService: AiAgentCredentialService,
     private readonly cvService: CvService,
     private readonly catalogService: ImportModelsCatalogService,
+    private readonly schemaValidator: ResumeSchemaValidator,
   ) {}
 
   isEnabled(): boolean {
@@ -71,6 +74,58 @@ export class ImportService {
       cvId: job.cvId,
       errors: job.errors,
     };
+  }
+
+  async importFromUrl(user: AuthenticatedRequest['user'], rawUrl: string) {
+    const url = validateImportUrl(rawUrl);
+
+    let fetched: Response;
+    try {
+      fetched = await fetch(url.toString(), {
+        signal: AbortSignal.timeout(10_000),
+        headers: { Accept: 'application/json, text/plain' },
+      });
+    } catch (err) {
+      throw new BadRequestException(
+        err instanceof Error ? `Failed to fetch URL: ${err.message}` : 'Failed to fetch URL',
+      );
+    }
+
+    if (!fetched.ok) {
+      throw new BadRequestException(`URL returned ${fetched.status} ${fetched.statusText}`);
+    }
+
+    const contentType = fetched.headers.get('content-type') ?? '';
+    if (!contentType.includes('json') && !contentType.includes('text/plain')) {
+      throw new BadRequestException(
+        `URL did not return JSON (Content-Type: ${contentType || 'none'}). Only JSON endpoints are supported.`,
+      );
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = await fetched.json();
+    } catch {
+      throw new BadRequestException('URL returned invalid JSON');
+    }
+
+    let prepared: Record<string, unknown>;
+    try {
+      prepared = prepareImportedResume(parsed);
+    } catch (err) {
+      if (err instanceof InvalidImportedResumeError) {
+        throw new BadRequestException(err.message);
+      }
+      throw err;
+    }
+
+    try {
+      this.schemaValidator.validate(prepared);
+    } catch {
+      throw new BadRequestException('URL returned data is not a valid JSON Resume');
+    }
+
+    return { data: prepared };
   }
 
   private resolveApiKeyEnvVar(modelId: string): string | null {
