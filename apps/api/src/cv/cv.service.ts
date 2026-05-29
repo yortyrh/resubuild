@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { isValidTemplateId } from '@resumind/resume-template';
+import { isValidTemplateId, resolveCanonicalTemplateId } from '@resumind/resume-template';
 import type { Resume } from '@resumind/types';
 import { type CvHeaderRow, deriveCvTitleFromBasics, headerToSlimCvData } from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
@@ -36,7 +36,7 @@ export class CvService {
       id: header.id,
       user_id: header.user_id,
       title: this.deriveTitleFromHeader(header),
-      templateId: header.template_id ?? 'mit-classic',
+      templateId: header.template_id ?? 'classic',
       data: headerToSlimCvData(header),
       created_at: header.created_at ?? '',
       updated_at: header.updated_at ?? '',
@@ -119,9 +119,10 @@ export class CvService {
       if (!isValidTemplateId(dto.templateId)) {
         throw new BadRequestException(`Unknown template id: ${dto.templateId}`);
       }
+      const canonicalTemplateId = resolveCanonicalTemplateId(dto.templateId);
       const { error } = await supabase
         .from('cv')
-        .update({ template_id: dto.templateId })
+        .update({ template_id: canonicalTemplateId })
         .eq('id', id);
       if (error) {
         throw new BadRequestException(error.message);

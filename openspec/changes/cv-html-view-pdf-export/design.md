@@ -109,13 +109,14 @@ Both guarded by Supabase auth; 404 when CV not owned/found.
 
 ### 5. Web preview UX
 
-**Choice:** Route `/dashboard/cv/[id]/preview` loads HTML via `getCvExportHtml(cvId)` (Bearer auth). Display in a full-width container with `dangerouslySetInnerHTML` **only after** HTML is fetched from trusted API (not user paste). Toolbar: **Print** (`window.print()`), **Download PDF** (blob from `export/pdf`), **Back to editor**.
+**Choice:** Route `/dashboard/cv/[id]/preview` loads HTML via `getCvExportHtml(cvId)` (Bearer auth). Display in an `iframe` with `srcDoc` after fetch (trusted API HTML only). The iframe sits inside a **`surface-soft`** wrapper (see `apps/web/DESIGN.md`) so preview chrome matches CV cards and the layout panel — not `rounded-md border bg-white` on the iframe. Toolbar: **Print** (`window.print()`), **Download PDF** (blob from `export/pdf`), **Back to editor**.
 
-**Rationale:** Same HTML as PDF engine input when preview is API-sourced. Print uses built-in browser PDF path with `@media print` rules already in template.
+**Rationale:** Same HTML as PDF engine input when preview is API-sourced. Print uses built-in browser PDF path with `@media print` rules already in template. App chrome uses design tokens; export HTML keeps its own print styling inside the iframe.
 
 **Alternatives:**
 
 - iframe `src` to API URL — works but complicates auth (blob URL or short-lived token); fetch + srcdoc acceptable v1.
+- `dangerouslySetInnerHTML` on a div — rejected for v1; iframe isolates export CSS and matches print target.
 
 ### 6. Markdown in export HTML
 

@@ -87,9 +87,7 @@ describe('cv export api helpers', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
         JSON.stringify({
-          templates: [
-            { id: 'mit-classic', label: 'MIT Classic', description: '', category: 'default' },
-          ],
+          templates: [{ id: 'classic', label: 'Classic', description: '', category: 'default' }],
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       ),
@@ -97,7 +95,7 @@ describe('cv export api helpers', () => {
 
     const templates = await listCvTemplates();
     expect(templates).toHaveLength(1);
-    expect(templates[0].id).toBe('mit-classic');
+    expect(templates[0].id).toBe('classic');
   });
 
   it('updateCvTemplate patches templateId', async () => {

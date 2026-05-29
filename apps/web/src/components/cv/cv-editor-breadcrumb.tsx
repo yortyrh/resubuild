@@ -20,7 +20,10 @@ import { cn } from '@/lib/utils';
 interface CvEditorBreadcrumbProps {
   cvId: string;
   basics?: CvTitleBasics | null;
-  activeSection: CvSectionSlug;
+  /** Section slug for editor routes; omit when `pageLabel` is set (e.g. Preview). */
+  activeSection?: CvSectionSlug;
+  /** Final breadcrumb segment for non-section pages (e.g. Preview). */
+  pageLabel?: string;
   className?: string;
 }
 
@@ -49,11 +52,14 @@ export function CvEditorBreadcrumb({
   cvId,
   basics,
   activeSection,
+  pageLabel,
   className,
 }: CvEditorBreadcrumbProps) {
   const title = deriveCvTitleFromBasics(basics);
   const isUntitled = title === 'Untitled CV';
-  const onBasics = activeSection === 'basics';
+  const onBasics = !pageLabel && activeSection === 'basics';
+  const showTrailEnd =
+    pageLabel ?? (activeSection && !onBasics ? sectionLabel(activeSection) : null);
   const cvHref = `/dashboard/cv/${cvId}`;
 
   return (
@@ -78,11 +84,11 @@ export function CvEditorBreadcrumb({
             </BreadcrumbLink>
           )}
         </BreadcrumbItem>
-        {!onBasics ? (
+        {showTrailEnd ? (
           <>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>{sectionLabel(activeSection)}</BreadcrumbPage>
+              <BreadcrumbPage>{showTrailEnd}</BreadcrumbPage>
             </BreadcrumbItem>
           </>
         ) : null}

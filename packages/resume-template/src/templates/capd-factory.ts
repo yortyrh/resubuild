@@ -1,58 +1,7 @@
 import type { Resume } from '@resumind/types';
-import { wrapDocument } from '../primitives/document';
 import { escapeHtml } from '../primitives/html';
-import { MIT_CLASSIC_SECTION_ORDER, renderSections } from '../primitives/sections';
-import type { CapdTemplateConfig, RenderOptions, ResumeTemplate } from '../types';
-
-export function createCapdTemplate(config: CapdTemplateConfig): ResumeTemplate {
-  const extraStyles =
-    config.headerStyle === 'design'
-      ? '.font-resume { letter-spacing: 0.02em; } h2 { font-weight: 300; letter-spacing: 0.08em; }'
-      : '';
-
-  return {
-    id: config.id,
-    label: config.label,
-    description: config.description,
-    category: config.category,
-    capdPage: config.capdPage,
-    render(resume: Resume, options?: RenderOptions): string {
-      const title = resume?.basics?.name ? `${resume.basics.name} — Resume` : 'Resume';
-      const body = renderSections(
-        resume,
-        config.sectionOrder,
-        {
-          headingStyle: config.headingStyle,
-          sectionLabels: config.sectionLabels,
-          headerStyle: config.headerStyle,
-          sidebarNote: config.sidebarNote,
-          leadershipVolunteer: config.leadershipVolunteer,
-        },
-        { emphasizeInternational: config.id === 'capd-global' },
-      );
-
-      return wrapDocument({
-        title,
-        body,
-        bodyClass: config.bodyClass,
-        articleClass: [config.articleClass, options?.articleClass].filter(Boolean).join(' '),
-        extraStyles,
-        dataTemplate: config.id,
-      });
-    },
-  };
-}
-
-export const mitClassicTemplate: ResumeTemplate = createCapdTemplate({
-  id: 'mit-classic',
-  label: 'MIT Classic',
-  description: 'Centered header with ALL-CAPS ruled sections; experience before education.',
-  category: 'default',
-  sectionOrder: MIT_CLASSIC_SECTION_ORDER,
-  headingStyle: 'uppercase',
-  headerStyle: 'centered',
-  sectionLabels: { summary: 'Summary' },
-});
+import { getTemplate } from '../registry';
+import type { ResumeTemplate } from '../types';
 
 /** Shared sample resume for template tests. */
 export const sampleResume: Resume = {
@@ -94,4 +43,12 @@ export function assertTemplateRenders(template: ResumeTemplate): string {
     throw new Error(`${template.id} missing basics name`);
   }
   return html;
+}
+
+export function assertTemplateIdRenders(templateId: string): string {
+  const template = getTemplate(templateId);
+  if (!template) {
+    throw new Error(`Unknown template: ${templateId}`);
+  }
+  return assertTemplateRenders(template);
 }

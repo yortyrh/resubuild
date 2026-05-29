@@ -29,31 +29,33 @@ export function TextField({
   markdown,
   placeholder,
 }: TextFieldProps) {
+  const control = markdown ? (
+    <MarkdownEditor
+      value={value}
+      onChange={onChange}
+      variant={markdown}
+      placeholder={placeholder}
+    />
+  ) : multiline ? (
+    <Textarea value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+  ) : (
+    <Input
+      type={type}
+      value={value}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
+
+  const descriptionEl = description ? (
+    <p className="text-muted-foreground text-sm">{description}</p>
+  ) : null;
+
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
-      {markdown ? (
-        <MarkdownEditor
-          value={value}
-          onChange={onChange}
-          variant={markdown}
-          placeholder={placeholder}
-        />
-      ) : multiline ? (
-        <Textarea
-          value={value}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      ) : (
-        <Input
-          type={type}
-          value={value}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )}
+      {control}
+      {descriptionEl}
     </div>
   );
 }
@@ -132,7 +134,7 @@ export function StringListField({
     pendingFocusIndex.current = null;
     focusListItem(inputRefs.current[focusIndex]);
     return undefined;
-  }, [values.length, markdown]);
+  }, [values, markdown]);
 
   return (
     <div className="space-y-2">

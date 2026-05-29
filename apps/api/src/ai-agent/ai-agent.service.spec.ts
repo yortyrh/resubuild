@@ -3,9 +3,14 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import type { ImportModelCatalog } from '@resumind/import-models';
+import catalog from '@resumind/import-models/catalog.json';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import type { AiAgentRepository } from './ai-agent.repository';
 import { AiAgentService } from './ai-agent.service';
+
+const testCatalog = catalog as ImportModelCatalog;
 
 describe('AiAgentService', () => {
   const user = {
@@ -29,8 +34,12 @@ describe('AiAgentService', () => {
     >
   >;
   let configService: { get: jest.Mock };
+  let catalogService: Pick<ImportModelsCatalogService, 'getCatalog'>;
 
   beforeEach(() => {
+    catalogService = {
+      getCatalog: () => testCatalog,
+    };
     repository = {
       listAccounts: jest.fn(),
       getActiveStatus: jest.fn(),
@@ -44,7 +53,11 @@ describe('AiAgentService', () => {
     configService = {
       get: jest.fn().mockReturnValue('test'),
     };
-    service = new AiAgentService(repository as never, configService as never);
+    service = new AiAgentService(
+      repository as never,
+      configService as never,
+      catalogService as never,
+    );
   });
 
   it('lists catalog providers', () => {

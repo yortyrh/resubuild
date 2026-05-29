@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module';
 
 export async function createE2eApp(): Promise<INestApplication> {
+  process.env.IMPORT_MODELS_CATALOG_SOURCE ??= 'static';
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();

@@ -46,6 +46,7 @@ describe('CvList', () => {
 
     renderCvList();
 
-    expect(await screen.findByText('Engineer CV')).toBeInTheDocument();
+    const titleLink = await screen.findByRole('link', { name: 'Engineer CV' });
+    expect(titleLink).toHaveAttribute('href', '/dashboard/cv/cv-1');
   });
 });

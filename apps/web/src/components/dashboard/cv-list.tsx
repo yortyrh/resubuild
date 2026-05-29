@@ -76,7 +76,12 @@ export function CvList() {
         {cvs.map((cv) => (
           <article key={cv.id} className="surface-soft text-card-foreground p-4">
             <div className="min-w-0 flex-1">
-              <div className="font-semibold">{cv.title}</div>
+              <Link
+                href={`/dashboard/cv/${cv.id}`}
+                className="focus-visible:ring-ring rounded-sm font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2"
+              >
+                {cv.title}
+              </Link>
               <div className="text-muted-foreground mt-0 text-sm font-normal leading-snug">
                 Updated {new Date(cv.updated_at).toLocaleString()}
               </div>

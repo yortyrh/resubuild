@@ -161,11 +161,7 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
           onSave={() => saveBasics(draft)}
           onCancel={cancelEdit}
         >
-          <BasicsFormFields
-            value={draft}
-            onChange={setDraft}
-            onProfilePhotoFileSelect={openCropForFile}
-          />
+          <BasicsFormFields value={draft} onChange={setDraft} />
         </ResumeItemForm>
         <ProfilePhotoCropDialog
           open={cropDialogOpen}

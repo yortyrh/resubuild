@@ -12,11 +12,13 @@ import {
   listTemplates,
   PDF_EXPORT_OPTIONS,
   renderResumeHtml,
+  resolveCanonicalTemplateId,
 } from '@resumind/resume-template';
 import type { Resume } from '@resumind/types';
 import { assembleResume, deriveCvTitleFromBasics } from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
+import { CvTemplatePresentationService } from '../cv/cv-template-presentation.service';
 import { slugifyExportFilename, toAbsoluteMediaUrl } from './cv-export.util';
 
 export interface CvExportPdfResult {
@@ -35,6 +37,7 @@ export class CvExportService {
 
   constructor(
     private readonly normalizedRepo: CvNormalizedRepository,
+    private readonly presentationService: CvTemplatePresentationService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -51,7 +54,7 @@ export class CvExportService {
     if (!isValidTemplateId(candidate)) {
       throw new BadRequestException(`Unknown template id: ${candidate}`);
     }
-    return candidate;
+    return resolveCanonicalTemplateId(candidate);
   }
 
   listTemplateCatalog() {
@@ -96,7 +99,12 @@ export class CvExportService {
     queryTemplate?: string,
   ): Promise<string> {
     const { resume, templateId } = await this.loadExportContext(user, cvId, queryTemplate);
-    return renderResumeHtml(resume, templateId);
+    const presentationConfig = await this.presentationService.loadPresentationForExport(
+      user,
+      cvId,
+      templateId,
+    );
+    return renderResumeHtml(resume, templateId, { presentationConfig });
   }
 
   async renderPdf(
@@ -105,7 +113,12 @@ export class CvExportService {
     queryTemplate?: string,
   ): Promise<CvExportPdfResult> {
     const { resume, templateId } = await this.loadExportContext(user, cvId, queryTemplate);
-    const html = renderResumeHtml(resume, templateId);
+    const presentationConfig = await this.presentationService.loadPresentationForExport(
+      user,
+      cvId,
+      templateId,
+    );
+    const html = renderResumeHtml(resume, templateId, { presentationConfig });
     const buffer = await this.renderPdfFromHtml(html);
     const title = deriveCvTitleFromBasics(resume.basics);
     const filename = `${slugifyExportFilename(title)}.pdf`;

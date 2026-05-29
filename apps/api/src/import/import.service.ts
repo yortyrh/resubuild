@@ -3,15 +3,14 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  UnprocessableEntityException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { type ImportJobProgress, runPdfImportWorkflow } from '@resumind/import-agent';
-import catalog from '@resumind/import-models/catalog.json';
 import { prepareImportedResume } from '@resumind/types';
 import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvService } from '../cv/cv.service';
+import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import { ImportJobStore } from './import-job.store';
 
 export const PDF_IMPORT_MAX_BYTES_DEFAULT = 5 * 1024 * 1024;
@@ -19,14 +18,12 @@ export const PDF_IMPORT_MAX_BYTES_DEFAULT = 5 * 1024 * 1024;
 @Injectable()
 export class ImportService {
   private readonly jobStore = new ImportJobStore();
-  private readonly importCatalog = catalog as {
-    providers: Array<{ apiKeyEnvVar: string; models: Array<{ id: string }> }>;
-  };
 
   constructor(
     private readonly configService: ConfigService,
     private readonly aiAgentCredentialService: AiAgentCredentialService,
     private readonly cvService: CvService,
+    private readonly catalogService: ImportModelsCatalogService,
   ) {}
 
   isEnabled(): boolean {
@@ -77,7 +74,7 @@ export class ImportService {
   }
 
   private resolveApiKeyEnvVar(modelId: string): string | null {
-    for (const provider of this.importCatalog.providers) {
+    for (const provider of this.catalogService.getCatalog().providers) {
       if (provider.models.some((model) => model.id === modelId)) {
         return provider.apiKeyEnvVar;
       }

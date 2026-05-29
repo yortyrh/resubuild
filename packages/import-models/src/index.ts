@@ -1,3 +1,19 @@
+export {
+  apiKeyLabelFromEnvVar,
+  assertImportModelCatalog,
+  buildImportModelCatalog,
+  PROVIDER_ORDER,
+  pickApiKeyEnvVar,
+} from './build-catalog';
+export { loadFallbackImportModelCatalog } from './fallback-catalog';
+export { type FetchFn, fetchModelsDevRegistry } from './fetch-models-dev';
+export {
+  MODELS_DEV_API_URL,
+  type ModelsDevModel,
+  type ModelsDevProvider,
+  type ModelsDevRegistry,
+} from './models-dev';
+
 export interface ImportModelEntry {
   id: string;
   displayName: string;
@@ -52,7 +68,7 @@ export function parseMastraModelId(modelId: string): ParsedMastraModelId {
     );
   }
 
-  if (segments.some((segment) => !/^[a-z0-9][a-z0-9._-]*$/i.test(segment))) {
+  if (segments.some((segment) => !/^[a-z0-9@~.+][a-z0-9._:@+()v-]*$/i.test(segment))) {
     throw new InvalidMastraModelIdError('Model id contains invalid segments');
   }
 

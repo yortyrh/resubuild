@@ -5,8 +5,13 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { runPdfImportWorkflow } from '@resumind/import-agent';
+import type { ImportModelCatalog } from '@resumind/import-models';
+import catalog from '@resumind/import-models/catalog.json';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import { ImportService } from './import.service';
+
+const testCatalog = catalog as ImportModelCatalog;
 
 jest.mock('@resumind/import-agent', () => ({
   runPdfImportWorkflow: jest.fn(),
@@ -22,10 +27,12 @@ describe('ImportService', () => {
   let service: ImportService;
   let aiAgentCredentialService: { getActiveCredentials: jest.Mock };
   let cvService: { create: jest.Mock };
+  let catalogService: Pick<ImportModelsCatalogService, 'getCatalog'>;
 
   beforeEach(() => {
     aiAgentCredentialService = { getActiveCredentials: jest.fn() };
     cvService = { create: jest.fn() };
+    catalogService = { getCatalog: () => testCatalog };
 
     service = new ImportService(
       {
@@ -37,6 +44,7 @@ describe('ImportService', () => {
       } as never,
       aiAgentCredentialService as never,
       cvService as never,
+      catalogService as never,
     );
   });
 
@@ -104,6 +112,7 @@ describe('ImportService', () => {
       } as never,
       aiAgentCredentialService as never,
       cvService as never,
+      catalogService as never,
     );
 
     await expect(
@@ -230,6 +239,26 @@ describe('ImportService', () => {
       status: 'failed',
       errors: ['Import failed before CV creation'],
     });
+  });
+
+  it('restores a previous provider API key env var after the job finishes', async () => {
+    process.env.OPENAI_API_KEY = 'existing-key';
+    aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+      modelId: 'openai/gpt-4o-mini',
+      apiKey: 'sk-test',
+      accountId: 'acc-1',
+    });
+    jest.mocked(runPdfImportWorkflow).mockResolvedValue({ cvId: 'cv-1', errors: [] });
+
+    const result = await service.startPdfImport(user, {
+      mimetype: 'application/pdf',
+      size: 100,
+      buffer: Buffer.from('%PDF'),
+    } as Express.Multer.File);
+
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(process.env.OPENAI_API_KEY).toBe('existing-key');
+    expect(service.getJob(user, result.jobId).status).toBe('succeeded');
   });
 
   it('handles non-error workflow rejections', async () => {

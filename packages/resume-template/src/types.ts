@@ -1,14 +1,6 @@
 import type { Resume } from '@resumind/types';
 
-export type TemplateCategory =
-  | 'default'
-  | 'first-year'
-  | 'undergraduate'
-  | 'design'
-  | 'global'
-  | 'masters'
-  | 'phd'
-  | 'alum';
+export type TemplateCategory = 'default' | 'design' | 'tabular' | 'compact';
 
 export type HeadingStyle = 'uppercase' | 'sentence';
 export type HeaderStyle = 'centered' | 'tabular' | 'left' | 'icons' | 'design';
@@ -25,12 +17,15 @@ export type SectionKey =
   | 'publications'
   | 'languages'
   | 'interests'
-  | 'references'
-  | 'additionalInfo';
+  | 'references';
+
+import type { CvTemplatePresentationConfig } from './template-config';
 
 export interface RenderOptions {
   /** Extra CSS class on the article wrapper. */
   articleClass?: string;
+  /** Section order, visibility, labels, and per-field display toggles. */
+  presentationConfig?: CvTemplatePresentationConfig;
 }
 
 export interface ResumeTemplate {
@@ -48,21 +43,4 @@ export interface ResumeTemplateMeta {
   description: string;
   category: TemplateCategory;
   capdPage?: number | string;
-}
-
-export interface CapdTemplateConfig {
-  id: string;
-  label: string;
-  description: string;
-  category: TemplateCategory;
-  capdPage?: number | string;
-  sectionOrder: SectionKey[];
-  headingStyle: HeadingStyle;
-  headerStyle: HeaderStyle;
-  sectionLabels?: Partial<Record<SectionKey, string>>;
-  articleClass?: string;
-  bodyClass?: string;
-  sidebarNote?: string;
-  /** When true, volunteer section uses "Leadership Experiences" label. */
-  leadershipVolunteer?: boolean;
 }

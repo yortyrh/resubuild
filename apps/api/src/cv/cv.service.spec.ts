@@ -260,12 +260,12 @@ describe('CvService', () => {
         eq: jest.fn().mockResolvedValue({ error: null }),
       }));
       (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({ update }));
-      normalizedRepo.fetchHeader.mockResolvedValue(mockCvHeader({ template_id: 'capd-alum' }));
+      normalizedRepo.fetchHeader.mockResolvedValue(mockCvHeader({ template_id: 'classic' }));
 
       const result = await service.update(user, 'cv-1', { templateId: 'capd-alum' });
 
-      expect(update).toHaveBeenCalledWith({ template_id: 'capd-alum' });
-      expect(result.templateId).toBe('capd-alum');
+      expect(update).toHaveBeenCalledWith({ template_id: 'classic' });
+      expect(result.templateId).toBe('classic');
     });
 
     it('rejects unknown templateId with BadRequestException', async () => {

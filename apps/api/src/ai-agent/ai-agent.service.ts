@@ -6,33 +6,31 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
-  type ImportModelCatalog,
   InvalidImportModelError,
   InvalidMastraModelIdError,
   listCatalogModelsForProvider,
   listCatalogProviders,
   validateImportModelId,
 } from '@resumind/import-models';
-import catalog from '@resumind/import-models/catalog.json';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import type { AiAgentAccountSummary, AiAgentActiveStatus } from './ai-agent.repository';
 import { AiAgentRepository } from './ai-agent.repository';
 
 @Injectable()
 export class AiAgentService {
-  private readonly catalog = catalog as ImportModelCatalog;
-
   constructor(
     private readonly repository: AiAgentRepository,
     private readonly configService: ConfigService,
+    private readonly catalogService: ImportModelsCatalogService,
   ) {}
 
   listProviders() {
-    return listCatalogProviders(this.catalog);
+    return listCatalogProviders(this.catalogService.getCatalog());
   }
 
   listModels(providerId: string) {
-    const models = listCatalogModelsForProvider(providerId, this.catalog);
+    const models = listCatalogModelsForProvider(providerId, this.catalogService.getCatalog());
     if (models.length === 0) {
       throw new NotFoundException(`Provider "${providerId}" was not found`);
     }
@@ -178,7 +176,7 @@ export class AiAgentService {
 
   private validateModelId(modelId: string): void {
     try {
-      validateImportModelId(modelId, this.catalog);
+      validateImportModelId(modelId, this.catalogService.getCatalog());
     } catch (error) {
       if (error instanceof InvalidMastraModelIdError || error instanceof InvalidImportModelError) {
         throw new BadRequestException(error.message);
@@ -188,7 +186,7 @@ export class AiAgentService {
   }
 
   private resolveApiKeyEnvVar(modelId: string): string | null {
-    for (const provider of this.catalog.providers) {
+    for (const provider of this.catalogService.getCatalog().providers) {
       if (provider.models.some((model) => model.id === modelId)) {
         return provider.apiKeyEnvVar;
       }

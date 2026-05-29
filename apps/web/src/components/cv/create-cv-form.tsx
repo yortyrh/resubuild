@@ -4,7 +4,6 @@ import type { Resume } from '@resumind/types';
 import { useState } from 'react';
 import { BasicsFormFields } from '@/components/cv/basics-form-fields';
 import { Button } from '@/components/ui/button';
-import { uploadResumeMedia } from '@/lib/api';
 
 type Basics = NonNullable<Resume['basics']>;
 
@@ -20,7 +19,6 @@ function createEmptyBasics(): Basics {
 export function CreateCvForm({ onSave, onCancel }: CreateCvFormProps) {
   const [basics, setBasics] = useState<Basics>(createEmptyBasics);
   const [saving, setSaving] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSave = async () => {
@@ -35,20 +33,7 @@ export function CreateCvForm({ onSave, onCancel }: CreateCvFormProps) {
     }
   };
 
-  const handleProfilePhotoUpload = async (file: File) => {
-    setUploadingPhoto(true);
-    setError(null);
-    try {
-      const { url } = await uploadResumeMedia(file);
-      setBasics((current) => ({ ...current, image: url }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
-
-  const busy = saving || uploadingPhoto;
+  const busy = saving;
 
   return (
     <form
@@ -60,12 +45,7 @@ export function CreateCvForm({ onSave, onCancel }: CreateCvFormProps) {
         }
       }}
     >
-      <BasicsFormFields
-        value={basics}
-        onChange={setBasics}
-        onProfilePhotoFileSelect={handleProfilePhotoUpload}
-        imageFieldId="create-cv-image-url"
-      />
+      <BasicsFormFields value={basics} onChange={setBasics} />
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
       <div className="flex gap-2">
         <Button type="submit" disabled={busy}>

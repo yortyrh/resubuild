@@ -1,36 +1,39 @@
 #!/usr/bin/env node
 /**
- * Optional sync helper for the pinned import model catalog.
- * v1 keeps a hand-curated catalog.json; this script validates structure only.
+ * Optional: write packages/import-models/catalog.json from models.dev (offline fallback bundle).
+ * Runtime catalog is loaded from models.dev by ImportModelsCatalogService on API startup.
+ * @see https://models.dev/api.json
  */
 
-import { readFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  assertImportModelCatalog,
+  buildImportModelCatalog,
+  fetchModelsDevRegistry,
+} from '../packages/import-models/dist/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const catalogPath = path.join(__dirname, '../packages/import-models/catalog.json');
 
 async function main() {
-  const raw = await readFile(catalogPath, 'utf8');
-  const catalog = JSON.parse(raw);
+  const args = new Set(process.argv.slice(2));
+  const write = args.has('--write') || args.size === 0;
 
-  if (!Array.isArray(catalog.providers) || catalog.providers.length === 0) {
-    throw new Error('catalog.json must include at least one provider');
+  const registry = await fetchModelsDevRegistry();
+  const catalog = buildImportModelCatalog(registry);
+  assertImportModelCatalog(catalog);
+
+  const modelCount = catalog.providers.reduce((n, provider) => n + provider.models.length, 0);
+  console.log(
+    `Built catalog: ${catalog.providers.length} providers, ${modelCount} chat-capable models.`,
+  );
+
+  if (write) {
+    await writeFile(catalogPath, `${JSON.stringify(catalog, null, 2)}\n`, 'utf8');
+    console.log(`Wrote ${catalogPath}`);
   }
-
-  for (const provider of catalog.providers) {
-    if (!provider.id || !provider.apiKeyLabel || !Array.isArray(provider.models)) {
-      throw new Error(`Invalid provider entry: ${JSON.stringify(provider)}`);
-    }
-    for (const model of provider.models) {
-      if (!model.id?.startsWith(`${provider.id}/`) && !model.id?.includes('/')) {
-        throw new Error(`Model id must be Mastra form: ${model.id}`);
-      }
-    }
-  }
-
-  console.log(`Validated import model catalog (${catalog.providers.length} providers).`);
 }
 
 main().catch((error) => {

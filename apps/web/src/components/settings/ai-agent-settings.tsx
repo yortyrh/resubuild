@@ -25,7 +25,12 @@ import {
 
 type DialogMode = 'create' | 'edit' | null;
 
-export function AiAgentSettings() {
+export interface AiAgentSettingsProps {
+  backHref?: string;
+  backLabel?: string;
+}
+
+export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = {}) {
   const labelInputId = useId();
   const providerSelectId = useId();
   const modelSelectId = useId();
@@ -259,9 +264,11 @@ export function AiAgentSettings() {
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
       {success ? <p className="text-sm text-green-700">{success}</p> : null}
 
-      <Button type="button" variant="outline" asChild>
-        <Link href="/dashboard/cv/new">Back to new CV</Link>
-      </Button>
+      {backHref ? (
+        <Button type="button" variant="outline" asChild>
+          <Link href={backHref}>{backLabel ?? 'Back'}</Link>
+        </Button>
+      ) : null}
 
       <Dialog open={dialogMode !== null} onOpenChange={(open) => !open && setDialogMode(null)}>
         <DialogContent>

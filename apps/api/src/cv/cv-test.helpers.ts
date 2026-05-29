@@ -54,7 +54,7 @@ export function mockCvHeader(overrides: Partial<CvHeaderRow> = {}): CvHeaderRow 
     id: 'cv-1',
     user_id: 'user-1',
     location: {},
-    template_id: 'mit-classic',
+    template_id: 'classic',
     created_at: 'c',
     updated_at: 'u',
     ...overrides,

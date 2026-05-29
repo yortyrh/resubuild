@@ -60,4 +60,20 @@ describe('CvEditorBreadcrumb', () => {
     const current = screen.getByText('Untitled CV');
     expect(current).toHaveClass('text-muted-foreground');
   });
+
+  it('renders preview trail with linked CV title', () => {
+    render(
+      <CvEditorBreadcrumb
+        cvId="cv-1"
+        basics={{ name: 'Jane Doe', label: 'Engineer' }}
+        pageLabel="Preview"
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Jane Doe — Engineer' })).toHaveAttribute(
+      'href',
+      '/dashboard/cv/cv-1',
+    );
+    expect(screen.getByText('Preview')).toBeInTheDocument();
+  });
 });

@@ -7,11 +7,20 @@ import { CvService } from './cv.service';
 import { CvItemService } from './cv-item.service';
 import { CvItemsController } from './cv-items.controller';
 import { CvNormalizedRepository } from './cv-normalized.repository';
+import { CvTemplatePresentationRepository } from './cv-template-presentation.repository';
+import { CvTemplatePresentationService } from './cv-template-presentation.service';
 
 @Module({
   imports: [AuthModule, MediaModule],
   controllers: [CvController, CvItemsController],
-  providers: [CvService, CvItemService, CvNormalizedRepository, ResumeSchemaValidator],
-  exports: [CvService, CvItemService, CvNormalizedRepository],
+  providers: [
+    CvService,
+    CvItemService,
+    CvNormalizedRepository,
+    CvTemplatePresentationRepository,
+    CvTemplatePresentationService,
+    ResumeSchemaValidator,
+  ],
+  exports: [CvService, CvItemService, CvNormalizedRepository, CvTemplatePresentationService],
 })
 export class CvModule {}

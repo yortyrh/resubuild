@@ -3,8 +3,7 @@ import { CvPreviewClient } from './cv-preview-client';
 export default async function CvPreviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   return (
-    <div className="container max-w-5xl py-6">
-      <h1 className="no-print mb-4 text-2xl font-semibold tracking-tight">CV Preview</h1>
+    <div className="container w-full max-w-5xl py-2 lg:max-w-none">
       <CvPreviewClient cvId={id} />
     </div>
   );

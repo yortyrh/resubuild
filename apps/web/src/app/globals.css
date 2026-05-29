@@ -67,7 +67,8 @@
   --font-mono: var(--font-geist-mono);
 }
 
-html {
+html,
+body {
   scrollbar-gutter: stable;
 }
 
@@ -75,6 +76,19 @@ body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Radix scroll lock adds padding-right for the scrollbar; with scrollbar-gutter that
+   double-compensates and shifts the header. Keep overflow hidden, drop extra padding. */
+body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
 }
 
 @layer utilities {

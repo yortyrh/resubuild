@@ -15,6 +15,7 @@ import type {
   ResumeVolunteer,
   ResumeWork,
 } from '@resumind/types';
+import type { CvTemplatePresentationConfig } from '../../template-config';
 import type { HeaderStyle, HeadingStyle, SectionKey } from '../../types';
 import { escapeHtml, formatDateRange, formatIsoDate, hasItems, normalizeUrl } from '../html';
 import { renderMarkdownField } from '../markdown';
@@ -25,6 +26,7 @@ export interface SectionRenderContext {
   headerStyle?: HeaderStyle;
   sidebarNote?: string;
   leadershipVolunteer?: boolean;
+  presentation: CvTemplatePresentationConfig;
 }
 
 const DEFAULT_LABELS: Record<SectionKey, string> = {
@@ -40,7 +42,6 @@ const DEFAULT_LABELS: Record<SectionKey, string> = {
   languages: 'Languages',
   interests: 'Interests',
   references: 'References',
-  additionalInfo: 'Additional Information',
 };
 
 function sectionLabel(key: SectionKey, ctx: SectionRenderContext): string {
@@ -91,20 +92,24 @@ function linkedText(label: string | undefined, url: string | undefined): string 
 export function renderBasicsHeader(
   basics: ResumeBasics | undefined,
   headerStyle: HeaderStyle = 'centered',
+  presentation?: CvTemplatePresentationConfig,
 ): string {
   if (!basics) return '';
 
-  const location = formatLocation(basics.location);
+  const fields = presentation?.basicsFields;
+  const location = fields?.location !== false ? formatLocation(basics.location) : '';
   const contactParts: string[] = [];
 
   if (location) contactParts.push(`<span>${escapeHtml(location)}</span>`);
-  if (basics.phone) contactParts.push(`<span>${escapeHtml(basics.phone)}</span>`);
-  if (basics.email) {
+  if (fields?.phone !== false && basics.phone) {
+    contactParts.push(`<span>${escapeHtml(basics.phone)}</span>`);
+  }
+  if (fields?.email !== false && basics.email) {
     contactParts.push(
       `<a class="no-underline text-inherit" href="mailto:${escapeHtml(basics.email)}">${escapeHtml(basics.email)}</a>`,
     );
   }
-  if (basics.url) {
+  if (fields?.url !== false && basics.url) {
     const href = normalizeUrl(basics.url);
     contactParts.push(
       `<a class="no-underline text-inherit" href="${escapeHtml(href ?? basics.url)}" rel="noopener noreferrer">${escapeHtml(basics.url.replace(/^https?:\/\//, ''))}</a>`,
@@ -115,19 +120,25 @@ export function renderBasicsHeader(
     ? `<p class="mt-2 text-sm text-neutral-800">${contactParts.join(' · ')}</p>`
     : '';
 
-  const profileLinks = hasItems(basics.profiles)
-    ? basics.profiles
-        .filter((profile: ResumeProfile) => profile?.network && profile?.url)
-        .map(
-          (profile: ResumeProfile) =>
-            `<a class="no-underline text-inherit" href="${escapeHtml(normalizeUrl(profile.url) ?? '')}" rel="noopener noreferrer">${escapeHtml(profile.network ?? '')}</a>`,
-        )
-        .join(' · ')
-    : '';
+  const profileLinks =
+    fields?.profiles !== false && hasItems(basics.profiles)
+      ? basics.profiles
+          .filter((profile: ResumeProfile) => profile?.network && profile?.url)
+          .map(
+            (profile: ResumeProfile) =>
+              `<a class="no-underline text-inherit" href="${escapeHtml(normalizeUrl(profile.url) ?? '')}" rel="noopener noreferrer">${escapeHtml(profile.network ?? '')}</a>`,
+          )
+          .join(' · ')
+      : '';
 
   const profileLine = profileLinks
     ? `<p class="mt-1 text-sm text-neutral-800">${profileLinks}</p>`
     : '';
+
+  const imageHtml =
+    fields?.image !== false && basics.image
+      ? `<img src="${escapeHtml(basics.image)}" alt="" class="mx-auto mb-3 h-24 w-24 rounded-full object-cover" />`
+      : '';
 
   const separator = headerStyle === 'icons' ? ' <span aria-hidden="true">☞</span> ' : ' · ';
   const nameClass =
@@ -135,12 +146,18 @@ export function renderBasicsHeader(
       ? 'text-3xl font-light tracking-wide text-neutral-900'
       : 'text-2xl font-bold tracking-tight text-neutral-950';
 
+  const labelHtml =
+    fields?.label !== false && basics.label
+      ? `<p class="text-sm text-neutral-800 mt-0.5">${escapeHtml(basics.label)}</p>`
+      : '';
+
   if (headerStyle === 'tabular') {
     return `<header class="border-b border-neutral-400 pb-3">
+      ${imageHtml}
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
           <h1 class="${nameClass}">${escapeHtml(basics.name ?? 'Resume')}</h1>
-          ${basics.label ? `<p class="text-sm text-neutral-800 mt-0.5">${escapeHtml(basics.label)}</p>` : ''}
+          ${labelHtml}
         </div>
         <div class="text-sm text-neutral-800 sm:text-right">
           ${contactParts.join('<br />')}
@@ -151,17 +168,29 @@ export function renderBasicsHeader(
   }
 
   if (headerStyle === 'left') {
-    return `<header class="border-b border-neutral-400 pb-3 text-left">
+    const leftImageHtml =
+      fields?.image !== false && basics.image
+        ? `<img src="${escapeHtml(basics.image)}" alt="" class="h-24 w-24 shrink-0 rounded-full object-cover" />`
+        : '';
+    const headerBody = `<div class="min-w-0 flex-1">
       <h1 class="${nameClass}">${escapeHtml(basics.name ?? 'Resume')}</h1>
-      ${basics.label ? `<p class="text-sm text-neutral-800 mt-0.5">${escapeHtml(basics.label)}</p>` : ''}
+      ${labelHtml}
       ${contactLine.replace(' · ', separator)}
       ${profileLine}
+    </div>`;
+
+    return `<header class="border-b border-neutral-400 pb-3 text-left">
+      <div class="flex flex-row items-start gap-4">
+        ${leftImageHtml}
+        ${headerBody}
+      </div>
     </header>`;
   }
 
   return `<header class="text-center border-b border-neutral-400 pb-3">
+    ${imageHtml}
     <h1 class="${nameClass}">${escapeHtml(basics.name ?? 'Resume')}</h1>
-    ${basics.label ? `<p class="text-sm text-neutral-800 mt-0.5">${escapeHtml(basics.label)}</p>` : ''}
+    ${labelHtml}
     ${contactLine.replace(' · ', separator)}
     ${profileLine}
   </header>`;
@@ -186,17 +215,20 @@ export function renderWorkSection(
   if (!hasItems(work)) return '';
   const items = work;
   const label = sectionLabel('work', ctx);
+  const fields = ctx.presentation.workFields;
   const entries = items
     .map((item) => {
       const dateRange = escapeHtml(formatDateRange(item.startDate, item.endDate));
-      const employerParts = [linkedText(item.name, item.url)];
-      if (item.location) employerParts.push(escapeHtml(item.location));
+      const employerParts = [
+        fields.url !== false ? linkedText(item.name, item.url) : escapeHtml(item.name ?? ''),
+      ];
+      if (fields.location !== false && item.location) employerParts.push(escapeHtml(item.location));
       const employerHtml = employerParts.filter(Boolean).join(', ');
       return `<div>
         ${employerDateRow(employerHtml, dateRange)}
         ${item.position ? `<p class="italic text-neutral-900 mt-0.5">${escapeHtml(item.position)}</p>` : ''}
-        ${item.summary ? `<div class="text-neutral-900 mt-1">${renderMarkdownField(item.summary)}</div>` : ''}
-        ${markdownBulletList(item.highlights)}
+        ${fields.summary !== false && item.summary ? `<div class="text-neutral-900 mt-1">${renderMarkdownField(item.summary)}</div>` : ''}
+        ${fields.highlights !== false ? markdownBulletList(item.highlights) : ''}
       </div>`;
     })
     .join('');
@@ -214,15 +246,19 @@ export function renderVolunteerSection(
   if (!hasItems(volunteer)) return '';
   const items = volunteer;
   const label = sectionLabel('volunteer', ctx);
+  const fields = ctx.presentation.volunteerFields;
   const entries = items
     .map((item) => {
       const dateRange = escapeHtml(formatDateRange(item.startDate, item.endDate));
-      const employerHtml = linkedText(item.organization, item.url);
+      const employerHtml =
+        fields.url !== false
+          ? linkedText(item.organization, item.url)
+          : escapeHtml(item.organization ?? '');
       return `<div>
         ${employerDateRow(employerHtml, dateRange)}
         ${item.position ? `<p class="italic text-neutral-900 mt-0.5">${escapeHtml(item.position)}</p>` : ''}
-        ${item.summary ? `<div class="text-neutral-900 mt-1">${renderMarkdownField(item.summary)}</div>` : ''}
-        ${markdownBulletList(item.highlights)}
+        ${fields.summary !== false && item.summary ? `<div class="text-neutral-900 mt-1">${renderMarkdownField(item.summary)}</div>` : ''}
+        ${fields.highlights !== false ? markdownBulletList(item.highlights) : ''}
       </div>`;
     })
     .join('');
@@ -242,12 +278,18 @@ export function renderEducationSection(
   if (!hasItems(education)) return '';
   const items = education;
   const label = sectionLabel('education', ctx);
+  const fields = ctx.presentation.educationFields;
   const entries = items
     .map((item) => {
       const dateRange = escapeHtml(formatDateRange(item.startDate, item.endDate));
-      const institutionHtml = linkedText(item.institution, item.url);
+      const institutionHtml =
+        fields.url !== false
+          ? linkedText(item.institution, item.url)
+          : escapeHtml(item.institution ?? '');
       const degreeLine = [item.studyType, item.area].filter(Boolean).join(', ');
-      const degreeExtra = [degreeLine, item.score].filter(Boolean).join(' · ');
+      const degreeExtra = [degreeLine, fields.score !== false ? item.score : undefined]
+        .filter(Boolean)
+        .join(' · ');
       const intlNote =
         options?.emphasizeInternational && item.area
           ? `<p class="text-sm italic text-neutral-700">${escapeHtml(item.area)}</p>`
@@ -256,7 +298,7 @@ export function renderEducationSection(
         ${employerDateRow(institutionHtml, dateRange)}
         ${degreeExtra ? `<p class="font-bold text-neutral-950 mt-0.5">${escapeHtml(degreeExtra)}</p>` : ''}
         ${intlNote}
-        ${markdownBulletList(item.courses)}
+        ${fields.courses !== false ? markdownBulletList(item.courses) : ''}
       </div>`;
     })
     .join('');
@@ -277,7 +319,12 @@ export function renderSkillsSection(
   const rows = items
     .map((item) => {
       const keywords = hasItems(item.keywords) ? item.keywords.join(', ') : '';
-      const value = [keywords, item.level].filter(Boolean).join(' — ');
+      const value = [
+        keywords,
+        ctx.presentation.skillsFields.level !== false ? item.level : undefined,
+      ]
+        .filter(Boolean)
+        .join(' — ');
       if (!item.name) return '';
       return `<p class="text-neutral-900"><strong>${escapeHtml(item.name)}:</strong> ${escapeHtml(value)}</p>`;
     })
@@ -297,20 +344,27 @@ export function renderProjectsSection(
   if (!hasItems(projects)) return '';
   const items = projects;
   const label = sectionLabel('projects', ctx);
+  const fields = ctx.presentation.projectFields;
   const entries = items
     .map((item) => {
       const dateRange = escapeHtml(formatDateRange(item.startDate, item.endDate));
-      const titleHtml = linkedText(item.name, item.url);
-      const meta = [item.entity, item.type, hasItems(item.roles) ? item.roles.join(', ') : '']
+      const titleHtml =
+        fields.url !== false ? linkedText(item.name, item.url) : escapeHtml(item.name ?? '');
+      const meta = [
+        fields.entity !== false ? item.entity : undefined,
+        fields.type !== false ? item.type : undefined,
+        fields.roles !== false && hasItems(item.roles) ? item.roles.join(', ') : undefined,
+      ]
         .filter(Boolean)
         .join(' · ');
-      const keywords = hasItems(item.keywords) ? item.keywords.join(', ') : '';
+      const keywords =
+        fields.keywords !== false && hasItems(item.keywords) ? item.keywords.join(', ') : '';
       return `<div>
         ${employerDateRow(titleHtml, dateRange)}
         ${meta ? `<p class="text-sm font-medium text-neutral-800">${escapeHtml(meta)}</p>` : ''}
-        ${item.description ? `<div class="italic text-neutral-900 mt-1">${renderMarkdownField(item.description)}</div>` : ''}
+        ${fields.description !== false && item.description ? `<div class="italic text-neutral-900 mt-1">${renderMarkdownField(item.description)}</div>` : ''}
         ${keywords ? `<p class="text-sm text-neutral-800 mt-1">${escapeHtml(keywords)}</p>` : ''}
-        ${markdownBulletList(item.highlights)}
+        ${fields.highlights !== false ? markdownBulletList(item.highlights) : ''}
       </div>`;
     })
     .join('');
@@ -333,8 +387,8 @@ export function renderAwardsSection(
       const date = escapeHtml(formatIsoDate(item.date));
       return `<div>
         ${employerDateRow(escapeHtml(item.title ?? ''), date)}
-        ${item.awarder ? `<p class="text-sm font-medium text-neutral-800">${escapeHtml(item.awarder)}</p>` : ''}
-        ${item.summary ? `<div class="text-neutral-900 mt-1">${renderMarkdownField(item.summary)}</div>` : ''}
+        ${ctx.presentation.awardsFields.awarder !== false && item.awarder ? `<p class="text-sm font-medium text-neutral-800">${escapeHtml(item.awarder)}</p>` : ''}
+        ${ctx.presentation.awardsFields.summary !== false && item.summary ? `<div class="text-neutral-900 mt-1">${renderMarkdownField(item.summary)}</div>` : ''}
       </div>`;
     })
     .join('');
@@ -357,7 +411,7 @@ export function renderCertificatesSection(
       const date = escapeHtml(formatIsoDate(item.date));
       return `<div>
         ${employerDateRow(linkedText(item.name, item.url), date)}
-        ${item.issuer ? `<p class="text-sm font-medium text-neutral-800">${escapeHtml(item.issuer)}</p>` : ''}
+        ${ctx.presentation.certificatesFields.issuer !== false && item.issuer ? `<p class="text-sm font-medium text-neutral-800">${escapeHtml(item.issuer)}</p>` : ''}
       </div>`;
     })
     .join('');
@@ -380,8 +434,8 @@ export function renderPublicationsSection(
       const date = escapeHtml(formatIsoDate(item.releaseDate));
       return `<div>
         ${employerDateRow(linkedText(item.name, item.url), date)}
-        ${item.publisher ? `<p class="text-sm font-medium text-neutral-800">${escapeHtml(item.publisher)}</p>` : ''}
-        ${item.summary ? `<div class="text-neutral-900 mt-1">${renderMarkdownField(item.summary)}</div>` : ''}
+        ${ctx.presentation.publicationsFields.publisher !== false && item.publisher ? `<p class="text-sm font-medium text-neutral-800">${escapeHtml(item.publisher)}</p>` : ''}
+        ${ctx.presentation.publicationsFields.summary !== false && item.summary ? `<div class="text-neutral-900 mt-1">${renderMarkdownField(item.summary)}</div>` : ''}
       </div>`;
     })
     .join('');
@@ -421,7 +475,10 @@ export function renderInterestsSection(
   const label = sectionLabel('interests', ctx);
   const rows = items
     .map((item) => {
-      const keywords = hasItems(item.keywords) ? item.keywords.join(', ') : '';
+      const keywords =
+        ctx.presentation.interestsFields.keywords !== false && hasItems(item.keywords)
+          ? item.keywords.join(', ')
+          : '';
       return `<p class="text-neutral-900"><strong>${escapeHtml(item.name)}:</strong> ${escapeHtml(keywords)}</p>`;
     })
     .join('');
@@ -451,37 +508,6 @@ export function renderReferencesSection(
   return `<section class="mt-5" aria-labelledby="references-heading">
     ${sectionHeading('references-heading', label, ctx.headingStyle)}
     <div class="mt-2 space-y-3">${entries}</div>
-  </section>`;
-}
-
-export function renderAdditionalInfoSection(resume: Resume, ctx: SectionRenderContext): string {
-  const parts: string[] = [];
-  if (hasItems(resume.languages)) {
-    parts.push(
-      resume.languages
-        .map(
-          (item: ResumeLanguage) =>
-            `<p><strong>${escapeHtml(item.language)}</strong>${item.fluency ? `: ${escapeHtml(item.fluency)}` : ''}</p>`,
-        )
-        .join(''),
-    );
-  }
-  if (hasItems(resume.interests)) {
-    parts.push(
-      resume.interests
-        .map((item: ResumeInterest) => {
-          const keywords = hasItems(item.keywords) ? item.keywords.join(', ') : '';
-          return `<p><strong>${escapeHtml(item.name)}:</strong> ${escapeHtml(keywords)}</p>`;
-        })
-        .join(''),
-    );
-  }
-  if (parts.length === 0) return '';
-
-  const label = sectionLabel('additionalInfo', ctx);
-  return `<section class="mt-5" aria-labelledby="additional-info-heading">
-    ${sectionHeading('additional-info-heading', label, ctx.headingStyle)}
-    <div class="mt-2 space-y-1">${parts.join('')}</div>
   </section>`;
 }
 
@@ -516,8 +542,6 @@ export function renderSection(
       return renderInterestsSection(resume.interests, ctx);
     case 'references':
       return renderReferencesSection(resume.references, ctx);
-    case 'additionalInfo':
-      return renderAdditionalInfoSection(resume, ctx);
     default:
       return '';
   }
@@ -534,7 +558,7 @@ export function renderSections(
     : '';
 
   return [
-    renderBasicsHeader(resume.basics, ctx.headerStyle ?? 'centered'),
+    renderBasicsHeader(resume.basics, ctx.headerStyle ?? 'centered', ctx.presentation),
     sidebar,
     ...sectionOrder.map((key) => renderSection(key, resume, ctx, options)),
   ]

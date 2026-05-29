@@ -15,6 +15,10 @@ describe('CvController', () => {
     update: jest.Mock;
     remove: jest.Mock;
   }>;
+  let presentationService: jest.Mocked<{
+    getPresentation: jest.Mock;
+    upsertPresentation: jest.Mock;
+  }>;
 
   const userCtx: AuthenticatedRequest['user'] = {
     id: 'u42',
@@ -31,14 +35,18 @@ describe('CvController', () => {
       update: jest.fn(),
       remove: jest.fn(),
     };
-    controller = new CvController(service as never);
+    presentationService = {
+      getPresentation: jest.fn(),
+      upsertPresentation: jest.fn(),
+    };
+    controller = new CvController(service as never, presentationService as never);
   });
 
   const sample: CvRecord = {
     id: 'cv-1',
     user_id: 'u42',
     title: 'Doc',
-    templateId: 'mit-classic',
+    templateId: 'classic',
     data: {},
     created_at: 'c',
     updated_at: 'c',
@@ -79,5 +87,31 @@ describe('CvController', () => {
     service.findOne.mockResolvedValue(sample);
     await expect(controller.findOne(req, sample.id)).resolves.toEqual(sample);
     expect(service.findOne).toHaveBeenCalledWith(userCtx, sample.id);
+  });
+
+  it('GET template-presentation forwards template query', async () => {
+    const payload = { templateId: 'classic', config: { sectionOrder: [] } };
+    presentationService.getPresentation.mockResolvedValue(payload);
+
+    await expect(controller.getTemplatePresentation(req, sample.id, 'classic')).resolves.toEqual(
+      payload,
+    );
+    expect(presentationService.getPresentation).toHaveBeenCalledWith(userCtx, sample.id, 'classic');
+  });
+
+  it('PATCH template-presentation forwards config body', async () => {
+    const dto = { config: { hiddenSections: ['projects'] } };
+    const payload = { templateId: 'modern', config: dto.config };
+    presentationService.upsertPresentation.mockResolvedValue(payload);
+
+    await expect(
+      controller.upsertTemplatePresentation(req, sample.id, 'modern', dto),
+    ).resolves.toEqual(payload);
+    expect(presentationService.upsertPresentation).toHaveBeenCalledWith(
+      userCtx,
+      sample.id,
+      'modern',
+      dto.config,
+    );
   });
 });

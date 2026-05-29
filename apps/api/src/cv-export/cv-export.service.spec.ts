@@ -4,9 +4,14 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  createDefaultPresentationConfig,
+  getDefaultPresentationConfig,
+} from '@resumind/resume-template';
 import type { Resume } from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
+import { CvTemplatePresentationService } from '../cv/cv-template-presentation.service';
 import { CvExportService } from './cv-export.service';
 
 jest.mock('puppeteer', () => ({
@@ -23,6 +28,9 @@ describe('CvExportService', () => {
     Pick<CvNormalizedRepository, 'createClientForUser' | 'fetchHeader' | 'fetchSections'>
   >;
   let configService: jest.Mocked<Pick<ConfigService, 'get'>>;
+  let presentationService: jest.Mocked<
+    Pick<CvTemplatePresentationService, 'loadPresentationForExport'>
+  >;
 
   const userCtx: AuthenticatedRequest['user'] = {
     id: 'u42',
@@ -44,29 +52,40 @@ describe('CvExportService', () => {
         return undefined;
       }),
     } as never;
-    service = new CvExportService(normalizedRepo as never, configService as never);
+    presentationService = {
+      loadPresentationForExport: jest.fn().mockResolvedValue(createDefaultPresentationConfig()),
+    };
+    service = new CvExportService(
+      normalizedRepo as never,
+      presentationService as never,
+      configService as never,
+    );
     puppeteer.launch.mockReset();
   });
 
   it('listTemplateCatalog returns registered templates', () => {
     const templates = service.listTemplateCatalog();
-    expect(templates.length).toBeGreaterThanOrEqual(15);
-    expect(templates.some((t) => t.id === 'mit-classic')).toBe(true);
+    expect(templates).toHaveLength(4);
+    expect(templates.some((t) => t.id === 'classic')).toBe(true);
   });
 
   it('resolveTemplateId prefers query param over stored value', () => {
-    expect(service.resolveTemplateId('mit-classic', 'capd-alum')).toBe('capd-alum');
+    expect(service.resolveTemplateId('classic', 'modern')).toBe('modern');
+  });
+
+  it('resolveTemplateId maps legacy ids to canonical templates', () => {
+    expect(service.resolveTemplateId('mit-classic', 'capd-alum')).toBe('classic');
   });
 
   it('resolveTemplateId throws BadRequestException for unknown id', () => {
-    expect(() => service.resolveTemplateId('mit-classic', 'invalid-template')).toThrow(
+    expect(() => service.resolveTemplateId('classic', 'invalid-template')).toThrow(
       BadRequestException,
     );
   });
 
   it('resolveTemplateId falls back to default when stored and query are empty', () => {
-    expect(service.resolveTemplateId(null, undefined)).toBe('mit-classic');
-    expect(service.resolveTemplateId('  ', '  ')).toBe('mit-classic');
+    expect(service.resolveTemplateId(null, undefined)).toBe('classic');
+    expect(service.resolveTemplateId('  ', '  ')).toBe('classic');
   });
 
   it('withAbsoluteImageUrls leaves resume unchanged when basics image is missing', () => {
@@ -148,10 +167,15 @@ describe('CvExportService', () => {
       projects: [],
     });
 
+    presentationService.loadPresentationForExport.mockResolvedValue(
+      getDefaultPresentationConfig('capd-undergraduate-standard'),
+    );
+
     const html = await service.renderHtml(userCtx, 'cv-1', 'capd-undergraduate-standard');
     const educationIndex = html.indexOf('id="education-heading"');
     const experienceIndex = html.indexOf('id="experience-heading"');
     expect(educationIndex).toBeLessThan(experienceIndex);
+    expect(html).toContain('data-template="classic"');
   });
 
   it('renderHtml throws NotFoundException when CV is missing', async () => {

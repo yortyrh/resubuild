@@ -1,5 +1,6 @@
 'use client';
 
+import type { CvTemplatePresentationConfig } from '@resumind/resume-template';
 import { getValidAccessToken } from '@/lib/auth-session';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -187,6 +188,28 @@ export function updateCv(
 
 export function updateCvTemplate(id: string, templateId: string) {
   return updateCv(id, { templateId });
+}
+
+export function getCvTemplatePresentation(cvId: string, templateId: string) {
+  const query = `?template=${encodeURIComponent(templateId)}`;
+  return apiFetch<{ templateId: string; config: CvTemplatePresentationConfig }>(
+    `/cv/${cvId}/template-presentation${query}`,
+  );
+}
+
+export function updateCvTemplatePresentation(
+  cvId: string,
+  templateId: string,
+  config: Partial<CvTemplatePresentationConfig>,
+) {
+  const query = `?template=${encodeURIComponent(templateId)}`;
+  return apiFetch<{ templateId: string; config: CvTemplatePresentationConfig }>(
+    `/cv/${cvId}/template-presentation${query}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ config }),
+    },
+  );
 }
 
 export function listCvTemplates() {

@@ -13,6 +13,8 @@ export interface DocumentOptions {
   articleClass?: string;
   extraStyles?: string;
   dataTemplate?: string;
+  /** Page padding inside the article (screen preview). PDF/print uses @page margin. */
+  articlePadding?: string;
 }
 
 /** Wrap rendered section HTML in a full printable HTML document. */
@@ -21,9 +23,10 @@ export function wrapDocument(options: DocumentOptions): string {
     title,
     body,
     bodyClass = 'min-h-screen bg-neutral-100 print:bg-white',
-    articleClass = 'max-w-[8.5in] mx-auto my-6 print:my-0 bg-white text-neutral-900 font-resume text-[11pt] leading-snug shadow-sm print:shadow-none p-[0.5in] print:p-0 text-pretty',
+    articleClass = 'resume-article max-w-[8.5in] mx-auto my-6 print:my-0 bg-white text-neutral-900 font-resume text-[11pt] leading-snug shadow-sm print:shadow-none text-pretty',
     extraStyles = '',
     dataTemplate,
+    articlePadding = '0.5in',
   } = options;
 
   const dataAttr = dataTemplate ? ` data-template="${escapeHtml(dataTemplate)}"` : '';
@@ -47,9 +50,16 @@ export function wrapDocument(options: DocumentOptions): string {
       };
     </script>
     <style>
+      .resume-article {
+        box-sizing: border-box;
+        padding: ${articlePadding};
+      }
       @media print {
         @page {
           margin: 0.5in;
+        }
+        .resume-article {
+          padding: 0;
         }
         .no-print {
           display: none !important;

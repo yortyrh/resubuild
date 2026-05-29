@@ -1,16 +1,19 @@
-import { mitClassicTemplate } from './templates/capd-factory';
-import { ALL_CAPD_TEMPLATES } from './templates/capd-templates';
+import {
+  getDefaultPresentationConfig,
+  isKnownTemplateId,
+  LEGACY_TO_CANONICAL_TEMPLATE,
+  resolveCanonicalTemplateId,
+} from './template-config';
 import type { ResumeTemplate, ResumeTemplateMeta } from './types';
-
-const BUILTIN_TEMPLATES: ResumeTemplate[] = [mitClassicTemplate, ...ALL_CAPD_TEMPLATES];
+import { VISUAL_TEMPLATES } from './visual-templates';
 
 const registry = new Map<string, ResumeTemplate>();
 
-for (const template of BUILTIN_TEMPLATES) {
+for (const template of VISUAL_TEMPLATES) {
   registry.set(template.id, template);
 }
 
-export const DEFAULT_TEMPLATE_ID = 'mit-classic';
+export const DEFAULT_TEMPLATE_ID = 'classic';
 
 export const TEMPLATE_IDS = Object.freeze([...registry.keys()] as string[]);
 
@@ -19,11 +22,12 @@ export function registerTemplate(template: ResumeTemplate): void {
 }
 
 export function getTemplate(id: string): ResumeTemplate | undefined {
-  return registry.get(id);
+  const canonical = resolveCanonicalTemplateId(id);
+  return registry.get(canonical);
 }
 
 export function isValidTemplateId(id: string): boolean {
-  return registry.has(id);
+  return isKnownTemplateId(id);
 }
 
 export function listTemplates(): ResumeTemplateMeta[] {
@@ -36,8 +40,7 @@ export function toMeta(template: ResumeTemplate): ResumeTemplateMeta {
     label: template.label,
     description: template.description,
     category: template.category,
-    capdPage: template.capdPage,
   };
 }
 
-export { mitClassicTemplate } from './templates/capd-factory';
+export { getDefaultPresentationConfig, LEGACY_TO_CANONICAL_TEMPLATE, resolveCanonicalTemplateId };

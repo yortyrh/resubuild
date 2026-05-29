@@ -32,8 +32,8 @@ describe('renderResumeHtml', () => {
   });
 
   it('accepts explicit template id', () => {
-    const html = renderResumeHtml(sampleResume, 'capd-global');
-    expect(html).toContain('data-template="capd-global"');
+    const html = renderResumeHtml(sampleResume, 'left');
+    expect(html).toContain('data-template="left"');
   });
 });
 
