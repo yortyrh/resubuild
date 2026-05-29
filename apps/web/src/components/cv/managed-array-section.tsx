@@ -458,23 +458,17 @@ export function ManagedArraySection<T extends WithItemId>({
         itemList
       )}
 
-      {creating && createDraft ? (
-        <SectionCreateForm
-          label={addLabel}
-          open
-          onOpen={startCreate}
-          saving={saving}
-          error={error}
-          onSave={saveCreate}
-          onCancel={cancelCreate}
-        >
-          {renderForm(createDraft, setCreateDraft)}
-        </SectionCreateForm>
-      ) : (
-        <Button type="button" className="mt-4" onClick={startCreate}>
-          {addLabel}
-        </Button>
-      )}
+      <SectionCreateForm
+        label={addLabel}
+        open={creating && createDraft !== null}
+        onOpen={startCreate}
+        saving={saving}
+        error={error}
+        onSave={saveCreate}
+        onCancel={cancelCreate}
+      >
+        {createDraft ? renderForm(createDraft, setCreateDraft) : null}
+      </SectionCreateForm>
 
       <DeleteItemDialog
         open={deleteId !== null}

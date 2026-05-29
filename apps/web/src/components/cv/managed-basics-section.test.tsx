@@ -2,18 +2,24 @@
 import type { Resume } from '@resumind/types';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ManagedBasicsSection } from './managed-basics-section';
 
-vi.mock('sonner', () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+vi.mock('@/components/cv/use-cv-item-mutation', () => ({
+  useCvItemMutation: () => ({
+    saving: false,
+    error: null,
+    setError: vi.fn(),
+    run: vi.fn(),
+  }),
 }));
 
 vi.mock('@/lib/api', () => ({
   deleteMedia: vi.fn(),
   getMediaMeta: vi.fn(),
+  originalUrlForMediaId: vi.fn(),
   parseMediaIdFromImageUrl: vi.fn(() => null),
-  profilePhotoPreviewUrl: (url: string | undefined) => url,
-  originalUrlForMediaId: (id: string) => `http://localhost:3001/media/${id}/original`,
   patchMediaCrop: vi.fn(),
+  profilePhotoPreviewUrl: (url?: string) => url ?? '',
   uploadResumeMedia: vi.fn(),
 }));
 
@@ -21,50 +27,23 @@ vi.mock('@/lib/cv-item-api', () => ({
   patchCvBasics: vi.fn(),
 }));
 
-vi.mock('@/components/cv/markdown-view', () => ({
-  MarkdownView: ({ value }: { value?: string }) => <div data-testid="basics-summary">{value}</div>,
-}));
-
-vi.mock('@/components/cv/profile-photo-thumbnail', () => ({
-  ProfilePhotoThumbnail: () => <div data-testid="profile-photo" />,
-}));
-
-vi.mock('@/components/cv/profile-photo-crop-dialog', () => ({
-  ProfilePhotoCropDialog: () => null,
-}));
-
-import { ManagedBasicsSection } from './managed-basics-section';
-
 const basics: NonNullable<Resume['basics']> = {
   name: 'Jane Doe',
-  label: 'Engineer',
   email: 'jane@example.com',
-  summary: 'A versatile engineer.',
+  phone: '555-0100',
+  url: 'https://example.com',
+  location: { city: 'Boston', region: 'MA', countryCode: 'US' },
 };
 
-describe('ManagedBasicsSection', () => {
-  afterEach(() => {
-    cleanup();
-    vi.clearAllMocks();
-  });
+describe('ManagedBasicsSection contact line', () => {
+  afterEach(() => cleanup());
 
-  it('renders Edit in the bottom action bar below the summary', () => {
-    const { container } = render(
-      <ManagedBasicsSection cvId="cv-1" basics={basics} onBasicsChange={vi.fn()} />,
-    );
+  it('renders contact fields with icons in view mode', () => {
+    render(<ManagedBasicsSection cvId="cv-1" basics={basics} onBasicsChange={vi.fn()} />);
 
-    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
-    expect(screen.getByTestId('basics-summary')).toHaveTextContent('A versatile engineer.');
-
-    const editButton = screen.getByRole('button', { name: 'Edit' });
-    const summary = screen.getByTestId('basics-summary');
-    const headerRow = container.querySelector('.flex.items-start.justify-between');
-
-    expect(headerRow).not.toBeNull();
-    expect(headerRow?.contains(editButton)).toBe(false);
-    expect(
-      summary.compareDocumentPosition(editButton) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(editButton.closest('.divider-soft.mt-4.flex.gap-2')).not.toBeNull();
+    expect(screen.getByText('jane@example.com')).toBeInTheDocument();
+    expect(screen.getByText('555-0100')).toBeInTheDocument();
+    expect(screen.getByText('Boston, MA, US')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /example\.com/i })).toBeInTheDocument();
   });
 });

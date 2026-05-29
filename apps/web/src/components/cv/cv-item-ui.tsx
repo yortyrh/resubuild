@@ -3,6 +3,7 @@
 import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 import { type ButtonHTMLAttributes, type ReactNode, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { scheduleScrollAndFocusSectionForm } from '@/lib/focus-section-form';
 
 const resumeItemActionsClassName = 'divider-soft mt-4 flex gap-2 border-t pt-4';
 
@@ -175,8 +176,15 @@ export function ResumeItemForm({
   onSave,
   onCancel,
 }: ResumeItemFormProps) {
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    scheduleScrollAndFocusSectionForm(formRef.current);
+  }, []);
+
   return (
     <form
+      ref={formRef}
       className="surface-soft text-card-foreground p-4"
       onSubmit={(event) => {
         event.preventDefault();
@@ -220,6 +228,15 @@ export function SectionCreateForm({
   onSave,
   onCancel,
 }: SectionCreateFormProps) {
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    scheduleScrollAndFocusSectionForm(formRef.current);
+  }, [open]);
+
   if (!open) {
     return (
       <Button type="button" className="mt-4" onClick={onOpen}>
@@ -230,6 +247,7 @@ export function SectionCreateForm({
 
   return (
     <form
+      ref={formRef}
       className="surface-soft text-card-foreground mt-4 p-4"
       onSubmit={(event) => {
         event.preventDefault();

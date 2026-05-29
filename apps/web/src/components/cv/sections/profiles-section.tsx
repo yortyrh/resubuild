@@ -1,9 +1,12 @@
 'use client';
 
+import { resolveProfileUrl } from '@resumind/resume-template';
 import type { ResumeProfile } from '@resumind/types';
+import { SocialNetworkTitle } from '@/components/cv/contact-icons';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { ExternalLink } from '@/components/cv/external-link';
 import { TextField } from '@/components/cv/form-fields';
+import { SocialNetworkCombobox } from '@/components/cv/social-network-combobox';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { createCvProfile, deleteCvProfile, updateCvProfile } from '@/lib/cv-item-api';
@@ -38,21 +41,25 @@ export function ProfilesSection() {
       api={profileApi}
       renderView={(item) => ({
         title: (
-          <span>
+          <SocialNetworkTitle network={item.network}>
             {item.network || 'Network'}
             {item.username ? ` — ${item.username}` : ''}
-          </span>
+          </SocialNetworkTitle>
         ),
-        body: item.url ? (
-          <p className="text-sm font-normal">
-            <ExternalLink href={item.url} />
-          </p>
-        ) : null,
+        body: (() => {
+          const href = resolveProfileUrl(item);
+          if (!href) return null;
+          const label = item.username?.trim() || href.replace(/^https?:\/\//, '');
+          return (
+            <p className="text-sm font-normal">
+              <ExternalLink href={href}>{label}</ExternalLink>
+            </p>
+          );
+        })(),
       })}
       renderForm={(item, onChange) => (
         <>
-          <TextField
-            label="Network"
+          <SocialNetworkCombobox
             value={item.network}
             onChange={(network) => onChange({ ...item, network })}
           />

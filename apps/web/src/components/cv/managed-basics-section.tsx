@@ -4,6 +4,7 @@ import type { Resume } from '@resumind/types';
 import { type ChangeEvent, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { BasicsFormFields } from '@/components/cv/basics-form-fields';
+import { ContactLineSegment } from '@/components/cv/contact-icons';
 import { ResumeItemForm, ResumeItemRow } from '@/components/cv/cv-item-ui';
 import { ExternalLink } from '@/components/cv/external-link';
 import { MarkdownView } from '@/components/cv/markdown-view';
@@ -176,12 +177,42 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
   }
 
   const contactSegments: React.ReactNode[] = [];
-  if (basics.email) contactSegments.push(basics.email);
-  if (basics.phone) contactSegments.push(basics.phone);
-  if (basics.url) contactSegments.push(<ExternalLink key="url" href={basics.url} />);
+  if (basics.email) {
+    contactSegments.push(
+      <ContactLineSegment key="email" type="email">
+        {basics.email}
+      </ContactLineSegment>,
+    );
+  }
+  if (basics.phone) {
+    contactSegments.push(
+      <ContactLineSegment key="phone" type="phone">
+        {basics.phone}
+      </ContactLineSegment>,
+    );
+  }
+  if (basics.url) {
+    contactSegments.push(
+      <ContactLineSegment key="url" type="url">
+        <ExternalLink href={basics.url} showIcon={false} />
+      </ContactLineSegment>,
+    );
+  }
   const location = formatBasicsLocation(basics);
-  if (location) contactSegments.push(location);
-  if (basics.location?.address) contactSegments.push(basics.location.address);
+  if (location) {
+    contactSegments.push(
+      <ContactLineSegment key="location" type="location">
+        {location}
+      </ContactLineSegment>,
+    );
+  }
+  if (basics.location?.address) {
+    contactSegments.push(
+      <ContactLineSegment key="address" type="location">
+        {basics.location.address}
+      </ContactLineSegment>,
+    );
+  }
 
   return (
     <>
@@ -208,10 +239,14 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
                 <div className="text-muted-foreground font-normal">{basics.label}</div>
               ) : null}
               {contactSegments.length > 0 ? (
-                <p className="text-muted-foreground flex flex-wrap items-center gap-x-1 text-sm font-normal">
+                <p className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-normal">
                   {contactSegments.map((segment, i) => (
-                    <span key={typeof segment === 'string' ? segment : `seg-${i}`}>
-                      {i > 0 ? ' • ' : ''}
+                    <span key={`contact-${i}`} className="inline-flex items-center">
+                      {i > 0 ? (
+                        <span className="text-muted-foreground/60 me-3" aria-hidden="true">
+                          •
+                        </span>
+                      ) : null}
                       {segment}
                     </span>
                   ))}

@@ -12,6 +12,15 @@ export {
 } from './registry';
 export { renderMarkdownField } from './render-markdown-field';
 export { PDF_EXPORT_OPTIONS, renderResumeHtml } from './render-resume-html';
+export type { ProfileUrlFields, SocialNetworkKey } from './social-networks';
+export {
+  allSocialNetworkOptions,
+  isProfileVisible,
+  normalizeSocialNetworkKey,
+  resolveProfileUrl,
+  SOCIAL_NETWORK_SUGGESTIONS,
+  socialNetworkLabel,
+} from './social-networks';
 export type {
   BasicsFieldVisibility,
   CanonicalTemplateId,

@@ -15,9 +15,18 @@ import type {
   ResumeVolunteer,
   ResumeWork,
 } from '@resumind/types';
+import { isProfileVisible, resolveProfileUrl } from '../../social-networks';
 import type { CvTemplatePresentationConfig } from '../../template-config';
 import type { HeaderStyle, HeadingStyle, SectionKey } from '../../types';
 import { escapeHtml, formatDateRange, formatIsoDate, hasItems, normalizeUrl } from '../html';
+import {
+  iconForSocialNetwork,
+  iconLink,
+  iconMail,
+  iconMapPin,
+  iconPhone,
+  TEMPLATE_URL_LINK_CLASS,
+} from '../icons';
 import { renderMarkdownField } from '../markdown';
 
 export interface SectionRenderContext {
@@ -89,6 +98,23 @@ function linkedText(label: string | undefined, url: string | undefined): string 
   return `<a class="no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="${escapeHtml(href)}" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
 }
 
+const CONTACT_SEGMENT_CLASS = 'inline-flex items-center gap-1';
+
+function contactSegment(iconHtml: string, contentHtml: string): string {
+  return `<span class="${CONTACT_SEGMENT_CLASS}">${iconHtml}${contentHtml}</span>`;
+}
+
+function profileLinkSegment(profile: ResumeProfile): string {
+  if (!isProfileVisible(profile)) return '';
+  const href = resolveProfileUrl(profile);
+  const label = (profile.username?.trim() || profile.network) ?? '';
+  const icon = iconForSocialNetwork(profile.network);
+  const content = href
+    ? `<a class="no-underline text-inherit hover:text-neutral-600 print:text-inherit" href="${escapeHtml(href)}" rel="noopener noreferrer">${escapeHtml(label)}</a>`
+    : `<span>${escapeHtml(label)}</span>`;
+  return contactSegment(icon, content);
+}
+
 export function renderBasicsHeader(
   basics: ResumeBasics | undefined,
   headerStyle: HeaderStyle = 'centered',
@@ -100,39 +126,47 @@ export function renderBasicsHeader(
   const location = fields?.location !== false ? formatLocation(basics.location) : '';
   const contactParts: string[] = [];
 
-  if (location) contactParts.push(`<span>${escapeHtml(location)}</span>`);
+  if (location) {
+    contactParts.push(contactSegment(iconMapPin(), `<span>${escapeHtml(location)}</span>`));
+  }
   if (fields?.phone !== false && basics.phone) {
-    contactParts.push(`<span>${escapeHtml(basics.phone)}</span>`);
+    contactParts.push(contactSegment(iconPhone(), `<span>${escapeHtml(basics.phone)}</span>`));
   }
   if (fields?.email !== false && basics.email) {
     contactParts.push(
-      `<a class="no-underline text-inherit" href="mailto:${escapeHtml(basics.email)}">${escapeHtml(basics.email)}</a>`,
+      contactSegment(
+        iconMail(),
+        `<a class="no-underline text-inherit" href="mailto:${escapeHtml(basics.email)}">${escapeHtml(basics.email)}</a>`,
+      ),
     );
   }
   if (fields?.url !== false && basics.url) {
     const href = normalizeUrl(basics.url);
+    const urlLabel = basics.url.replace(/^https?:\/\//, '');
     contactParts.push(
-      `<a class="no-underline text-inherit" href="${escapeHtml(href ?? basics.url)}" rel="noopener noreferrer">${escapeHtml(basics.url.replace(/^https?:\/\//, ''))}</a>`,
+      contactSegment(
+        iconLink(),
+        `<a class="${TEMPLATE_URL_LINK_CLASS} no-underline text-inherit" href="${escapeHtml(href ?? basics.url)}" rel="noopener noreferrer">${escapeHtml(urlLabel)}</a>`,
+      ),
     );
   }
 
+  const contactRowClass =
+    'mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-800';
   const contactLine = contactParts.length
-    ? `<p class="mt-2 text-sm text-neutral-800">${contactParts.join(' · ')}</p>`
+    ? `<p class="${contactRowClass}">${contactParts.join('')}</p>`
     : '';
 
-  const profileLinks =
+  const profileSegments =
     fields?.profiles !== false && hasItems(basics.profiles)
       ? basics.profiles
-          .filter((profile: ResumeProfile) => profile?.network && profile?.url)
-          .map(
-            (profile: ResumeProfile) =>
-              `<a class="no-underline text-inherit" href="${escapeHtml(normalizeUrl(profile.url) ?? '')}" rel="noopener noreferrer">${escapeHtml(profile.network ?? '')}</a>`,
-          )
-          .join(' · ')
-      : '';
+          .filter((profile: ResumeProfile) => isProfileVisible(profile))
+          .map((profile: ResumeProfile) => profileLinkSegment(profile))
+          .filter(Boolean)
+      : [];
 
-  const profileLine = profileLinks
-    ? `<p class="mt-1 text-sm text-neutral-800">${profileLinks}</p>`
+  const profileLine = profileSegments.length
+    ? `<p class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-800">${profileSegments.join('')}</p>`
     : '';
 
   const imageHtml =
@@ -140,7 +174,6 @@ export function renderBasicsHeader(
       ? `<img src="${escapeHtml(basics.image)}" alt="" class="mx-auto mb-3 h-24 w-24 rounded-full object-cover" />`
       : '';
 
-  const separator = headerStyle === 'icons' ? ' <span aria-hidden="true">☞</span> ' : ' · ';
   const nameClass =
     headerStyle === 'design'
       ? 'text-3xl font-light tracking-wide text-neutral-900'
@@ -161,7 +194,7 @@ export function renderBasicsHeader(
         </div>
         <div class="text-sm text-neutral-800 sm:text-right">
           ${contactParts.join('<br />')}
-          ${profileLine ? profileLine.replace('<p class="mt-1 text-sm text-neutral-800">', '<p class="mt-1">').replace('</p>', '</p>') : ''}
+          ${profileSegments.length ? `<div class="mt-1 space-y-1">${profileSegments.join('<br />')}</div>` : ''}
         </div>
       </div>
     </header>`;
@@ -175,7 +208,7 @@ export function renderBasicsHeader(
     const headerBody = `<div class="min-w-0 flex-1">
       <h1 class="${nameClass}">${escapeHtml(basics.name ?? 'Resume')}</h1>
       ${labelHtml}
-      ${contactLine.replace(' · ', separator)}
+      ${contactLine}
       ${profileLine}
     </div>`;
 
@@ -191,7 +224,7 @@ export function renderBasicsHeader(
     ${imageHtml}
     <h1 class="${nameClass}">${escapeHtml(basics.name ?? 'Resume')}</h1>
     ${labelHtml}
-    ${contactLine.replace(' · ', separator)}
+    ${contactLine}
     ${profileLine}
   </header>`;
 }
