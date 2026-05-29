@@ -11,6 +11,7 @@ async function bootstrap() {
       .filter(Boolean) ?? ['http://localhost:3000'],
     credentials: false,
     allowedHeaders: ['Authorization', 'Content-Type'],
+    exposedHeaders: ['Content-Disposition'],
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   });
 
