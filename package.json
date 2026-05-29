@@ -10,7 +10,7 @@
     "format:check": "prettier --check .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "verify": "node scripts/check-node-version.mjs && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "prepare": "lefthook install",
     "dev:web": "pnpm --filter @resumind/web dev",
     "dev:api": "pnpm --filter @resumind/api dev",
@@ -33,6 +33,9 @@
     "turbo": "^2.5.4"
   },
   "packageManager": "pnpm@10.26.0",
+  "engines": {
+    "node": "22.x"
+  },
   "pnpm": {
     "onlyBuiltDependencies": [
       "lefthook",

@@ -143,6 +143,7 @@ Git hooks (Lefthook): **pre-commit** (Biome + Prettier on staged files), **pre-p
 | `Could not find the table 'public.cv' in the schema cache` | Run `supabase db push` or `supabase start` with migrations applied.                                   |
 | `Invalid or expired token`                                 | Sign out and sign in again. Ensure `SUPABASE_*` vars in `apps/api/.env` match your Supabase instance. |
 | Forgot local dev password                                  | Run `pnpm local:credentials`.                                                                         |
+| `pnpm verify` fails on Node version                        | Use Node **22** (see `.nvmrc`). CI uses 22; newer Node can hide test failures that break in CI.       |
 
 ## API (`apps/api`)
 

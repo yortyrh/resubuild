@@ -10,6 +10,17 @@ vi.mock('@/lib/auth-session', () => ({
 
 import { downloadCvPdf, getCvExportHtml, listCvTemplates, updateCvTemplate } from './api';
 
+/** PDF export mocks use a string body — jsdom Blob lacks `.stream()` on Node 22. */
+function mockPdfExportResponse(filename = 'jane-doe.pdf'): Response {
+  return new Response('%PDF', {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    },
+  });
+}
+
 describe('cv export api helpers', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -50,15 +61,7 @@ describe('cv export api helpers', () => {
   });
 
   it('downloadCvPdf returns blob and parsed filename', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(new Blob(['%PDF'], { type: 'application/pdf' }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': 'attachment; filename="jane-doe.pdf"',
-        },
-      }),
-    );
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockPdfExportResponse());
 
     const result = await downloadCvPdf('cv-1');
     expect(result.filename).toBe('jane-doe.pdf');
@@ -66,15 +69,7 @@ describe('cv export api helpers', () => {
   });
 
   it('downloadCvPdf passes template query param when provided', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(new Blob(['%PDF'], { type: 'application/pdf' }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': 'attachment; filename="jane-doe.pdf"',
-        },
-      }),
-    );
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockPdfExportResponse());
 
     await downloadCvPdf('cv-1', 'capd-global');
     expect(fetchMock).toHaveBeenCalledWith(
