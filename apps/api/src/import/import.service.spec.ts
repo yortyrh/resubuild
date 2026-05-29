@@ -28,11 +28,13 @@ describe('ImportService', () => {
   let aiAgentCredentialService: { getActiveCredentials: jest.Mock };
   let cvService: { create: jest.Mock };
   let catalogService: Pick<ImportModelsCatalogService, 'getCatalog'>;
+  let schemaValidator: { validate: jest.Mock };
 
   beforeEach(() => {
     aiAgentCredentialService = { getActiveCredentials: jest.fn() };
     cvService = { create: jest.fn() };
     catalogService = { getCatalog: () => testCatalog };
+    schemaValidator = { validate: jest.fn() };
 
     service = new ImportService(
       {
@@ -45,6 +47,7 @@ describe('ImportService', () => {
       aiAgentCredentialService as never,
       cvService as never,
       catalogService as never,
+      schemaValidator as never,
     );
   });
 
@@ -113,6 +116,7 @@ describe('ImportService', () => {
       aiAgentCredentialService as never,
       cvService as never,
       catalogService as never,
+      schemaValidator as never,
     );
 
     await expect(
@@ -277,5 +281,138 @@ describe('ImportService', () => {
 
     await new Promise((resolve) => setImmediate(resolve));
     expect(service.getJob(user, result.jobId).errors).toEqual(['Import failed']);
+  });
+
+  describe('importFromUrl', () => {
+    it('rejects invalid URLs', async () => {
+      await expect(service.importFromUrl(user, 'not-a-url')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('rejects non-JSON responses', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: { get: () => 'text/html' },
+      }) as never;
+
+      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('rejects invalid JSON', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: { get: () => 'application/json' },
+        json: jest.fn().mockRejectedValue(new Error('parse error')),
+      }) as never;
+
+      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('rejects non-resume JSON', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: { get: () => 'application/json' },
+        json: jest.fn().mockResolvedValue({ not: 'a resume' }),
+      }) as never;
+
+      schemaValidator.validate.mockImplementation(() => {
+        throw new Error('invalid schema');
+      });
+
+      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('returns prepared data for valid JSON resume', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: { get: () => 'application/json' },
+        json: jest.fn().mockResolvedValue({ basics: { name: 'Test User' } }),
+      }) as never;
+
+      schemaValidator.validate.mockReturnValue(undefined);
+
+      const result = await service.importFromUrl(user, 'https://example.com/data');
+      expect(result.data).toMatchObject({ basics: { name: 'Test User' } });
+    });
+
+    it('handles non-Error thrown in fetch', async () => {
+      global.fetch = jest.fn().mockRejectedValue('string error') as never;
+
+      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('handles InvalidImportedResumeError from prepareImportedResume', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: { get: () => 'application/json' },
+        json: jest.fn().mockResolvedValue({ basics: {} }),
+      }) as never;
+
+      const { InvalidImportedResumeError } = require('@resumind/types');
+      schemaValidator.validate.mockImplementation(() => {
+        throw new InvalidImportedResumeError('missing basics');
+      });
+
+      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('re-throws unknown errors from prepareImportedResume', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: { get: () => 'application/json' },
+        json: jest.fn().mockResolvedValue({ basics: {} }),
+      }) as never;
+
+      schemaValidator.validate.mockImplementation(() => {
+        throw { unknown: 'error' };
+      });
+
+      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('resolveApiKeyEnvVar', () => {
+    it('returns null when model not found in catalog', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'unknown/model',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(runPdfImportWorkflow).mockResolvedValue({ cvId: 'cv-1', errors: [] });
+
+      const result = await service.startPdfImport(user, {
+        mimetype: 'application/pdf',
+        size: 100,
+        buffer: Buffer.from('%PDF'),
+      } as Express.Multer.File);
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(service.getJob(user, result.jobId).status).toBe('succeeded');
+    });
   });
 });

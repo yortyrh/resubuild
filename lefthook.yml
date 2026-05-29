@@ -14,8 +14,10 @@ pre-commit:
 pre-push:
   commands:
     verify:
+      # Lefthook skips pre-push commands when it finds no push-scoped files.
+      # {all_files} opts out of that skip so the full verify suite always runs.
       env:
         NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
         NEXT_PUBLIC_SUPABASE_ANON_KEY: anon-ci-placeholder-key
         NEXT_PUBLIC_API_URL: http://localhost:3001
-      run: pnpm verify
+      run: ': {all_files}; pnpm verify'
