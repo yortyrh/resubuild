@@ -549,3 +549,28 @@ export async function downloadCvPdf(
     parseContentDispositionFilename(response.headers.get('Content-Disposition')) ?? 'resume.pdf';
   return { blob, filename };
 }
+
+export async function downloadCvJson(cvId: string): Promise<{ blob: Blob; filename: string }> {
+  const token = await getValidAccessToken(apiUrl);
+  const response = await fetch(`${apiUrl}/cv/${cvId}/export/json`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { message?: string | string[] };
+    const message =
+      typeof body.message === 'string'
+        ? body.message
+        : Array.isArray(body.message)
+          ? body.message.join(', ')
+          : `Request failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  const blob = await response.blob();
+  const filename =
+    parseContentDispositionFilename(response.headers.get('Content-Disposition')) ?? 'resume.json';
+  return { blob, filename };
+}

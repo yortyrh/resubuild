@@ -336,6 +336,21 @@ describe('E2E — CV export (local Supabase)', () => {
     expect(response.text).toContain('<');
     expect(response.text.length).toBeGreaterThan(100);
   });
+
+  it('GET /cv/:id/export/json returns JSON Resume attachment for seeded CV', async () => {
+    const target = state.cvs[0];
+    const response = await request(app.getHttpServer())
+      .get(`/cv/${target.id}/export/json`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(response.headers['content-type']).toMatch(/application\/json/);
+    expect(response.headers['content-disposition']).toMatch(/attachment/);
+    expect(response.headers['content-disposition']).toMatch(/filename="/);
+
+    const body = JSON.parse(response.text) as { basics?: { name?: string } };
+    expect(body.basics?.name).toBe('Alex Mercer');
+  });
 });
 
 describe('E2E — CV template presentation (local Supabase)', () => {

@@ -35,4 +35,16 @@ export class CvExportController {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(buffer);
   }
+
+  @Get(':id/export/json')
+  async exportJson(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const { body, filename } = await this.exportService.renderJson(req.user, id);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(body);
+  }
 }

@@ -5,7 +5,7 @@ import type { CvExportService } from './cv-export.service';
 describe('CvExportController', () => {
   let controller: CvExportController;
   let exportService: jest.Mocked<
-    Pick<CvExportService, 'renderHtml' | 'renderPdf' | 'listTemplateCatalog'>
+    Pick<CvExportService, 'renderHtml' | 'renderPdf' | 'renderJson' | 'listTemplateCatalog'>
   >;
 
   const userCtx: AuthenticatedRequest['user'] = {
@@ -19,6 +19,7 @@ describe('CvExportController', () => {
     exportService = {
       renderHtml: jest.fn(),
       renderPdf: jest.fn(),
+      renderJson: jest.fn(),
       listTemplateCatalog: jest.fn(),
     };
     controller = new CvExportController(exportService as never);
@@ -60,5 +61,24 @@ describe('CvExportController', () => {
       'attachment; filename="jane-doe.pdf"',
     );
     expect(res.send).toHaveBeenCalledWith(buffer);
+  });
+
+  it('exportJson sets JSON headers and sends body', async () => {
+    const body = JSON.stringify({ basics: { name: 'Jane Doe' } });
+    exportService.renderJson.mockResolvedValue({ body, filename: 'jane-doe.json' });
+    const res = {
+      setHeader: jest.fn(),
+      send: jest.fn(),
+    };
+
+    await controller.exportJson(req, 'cv-1', res as never);
+
+    expect(exportService.renderJson).toHaveBeenCalledWith(userCtx, 'cv-1');
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'application/json; charset=utf-8');
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'Content-Disposition',
+      'attachment; filename="jane-doe.json"',
+    );
+    expect(res.send).toHaveBeenCalledWith(body);
   });
 });

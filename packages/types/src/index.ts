@@ -1,5 +1,6 @@
 export * from './cv-title';
 export * from './image-url-host';
+export * from './prepare-exported-resume';
 export * from './prepare-imported-resume';
 export * from './resume';
 export * from './resume-item-payload';

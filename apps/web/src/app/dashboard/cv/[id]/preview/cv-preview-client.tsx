@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
   type CvTemplateMeta,
+  downloadCvJson,
   downloadCvPdf,
   getCv,
   getCvExportHtml,
@@ -91,7 +92,9 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
   const [previewLoading, setPreviewLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [jsonError, setJsonError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [downloadingJson, setDownloadingJson] = useState(false);
   const [templates, setTemplates] = useState<CvTemplateMeta[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('classic');
   const [basics, setBasics] = useState<CvTitleBasics | null>(null);
@@ -286,6 +289,24 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
     }
   }, [cvId, selectedTemplateId]);
 
+  const handleDownloadJson = useCallback(async () => {
+    setJsonError(null);
+    setDownloadingJson(true);
+    try {
+      const { blob, filename } = await downloadCvJson(cvId);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setJsonError(err instanceof Error ? err.message : 'JSON download failed');
+    } finally {
+      setDownloadingJson(false);
+    }
+  }, [cvId]);
+
   return (
     <div className="space-y-4">
       {breadcrumbReady ? (
@@ -338,6 +359,14 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
           <Button type="button" variant="outline" onClick={handlePrint} disabled={!html}>
             Print
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleDownloadJson}
+            disabled={!html || downloadingJson}
+          >
+            {downloadingJson ? 'Downloading…' : 'Download JSON'}
+          </Button>
           <Button type="button" onClick={handleDownloadPdf} disabled={!html || downloading}>
             {downloading ? 'Downloading…' : 'Download PDF'}
           </Button>
@@ -350,6 +379,7 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
       {templateError ? <p className="no-print text-destructive text-sm">{templateError}</p> : null}
       {configError ? <p className="no-print text-destructive text-sm">{configError}</p> : null}
       {pdfError ? <p className="no-print text-destructive text-sm">{pdfError}</p> : null}
+      {jsonError ? <p className="no-print text-destructive text-sm">{jsonError}</p> : null}
       {error ? <p className="text-destructive">{error}</p> : null}
 
       <div className="flex items-start gap-2">

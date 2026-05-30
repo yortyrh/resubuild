@@ -8,7 +8,13 @@ vi.mock('@/lib/auth-session', () => ({
   getValidAccessToken: getValidAccessTokenMock,
 }));
 
-import { downloadCvPdf, getCvExportHtml, listCvTemplates, updateCvTemplate } from './api';
+import {
+  downloadCvJson,
+  downloadCvPdf,
+  getCvExportHtml,
+  listCvTemplates,
+  updateCvTemplate,
+} from './api';
 
 /** PDF export mocks use a string body — jsdom Blob lacks `.stream()` on Node 22. */
 function mockPdfExportResponse(filename = 'jane-doe.pdf'): Response {
@@ -75,6 +81,28 @@ describe('cv export api helpers', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       'http://localhost:3001/cv/cv-1/export/pdf?template=capd-global',
       expect.any(Object),
+    );
+  });
+
+  it('downloadCvJson returns blob and parsed filename with auth header', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ basics: { name: 'Jane Doe' } }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Disposition': 'attachment; filename="jane-doe.json"',
+        },
+      }),
+    );
+
+    const result = await downloadCvJson('cv-1');
+    expect(result.filename).toBe('jane-doe.json');
+    expect(result.blob.type).toBe('application/json');
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:3001/cv/cv-1/export/json',
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+      }),
     );
   });
 

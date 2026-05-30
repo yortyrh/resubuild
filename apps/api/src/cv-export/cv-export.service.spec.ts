@@ -12,6 +12,7 @@ import type { Resume } from '@resumind/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
 import { CvTemplatePresentationService } from '../cv/cv-template-presentation.service';
+import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 import { CvExportService } from './cv-export.service';
 
 jest.mock('puppeteer', () => ({
@@ -31,6 +32,7 @@ describe('CvExportService', () => {
   let presentationService: jest.Mocked<
     Pick<CvTemplatePresentationService, 'loadPresentationForExport'>
   >;
+  let schemaValidator: jest.Mocked<Pick<ResumeSchemaValidator, 'validate'>>;
 
   const userCtx: AuthenticatedRequest['user'] = {
     id: 'u42',
@@ -55,10 +57,14 @@ describe('CvExportService', () => {
     presentationService = {
       loadPresentationForExport: jest.fn().mockResolvedValue(createDefaultPresentationConfig()),
     };
+    schemaValidator = {
+      validate: jest.fn(),
+    };
     service = new CvExportService(
       normalizedRepo as never,
       presentationService as never,
       configService as never,
+      schemaValidator as never,
     );
     puppeteer.launch.mockReset();
   });
@@ -277,5 +283,51 @@ describe('CvExportService', () => {
     };
     const updated = service.withAbsoluteImageUrls(resume);
     expect(updated.basics?.image).toBe('http://localhost:3001/media/abc-123');
+  });
+
+  it('renderJson returns schema-valid JSON without internal row ids', async () => {
+    normalizedRepo.fetchHeader.mockResolvedValue({
+      id: 'cv-1',
+      user_id: 'u42',
+      name: 'Jane Doe',
+      updated_at: '2024-06-01T12:00:00.000Z',
+    });
+    normalizedRepo.fetchSections.mockResolvedValue({
+      profiles: [],
+      work: [
+        {
+          id: 'w1',
+          cv_id: 'cv-1',
+          name: 'Acme',
+          position: 'Engineer',
+          start_date: '2020-01',
+        },
+      ],
+      volunteer: [],
+      education: [],
+      awards: [],
+      certificates: [],
+      publications: [],
+      skills: [],
+      languages: [],
+      interests: [],
+      references: [],
+      projects: [],
+    });
+
+    const result = await service.renderJson(userCtx, 'cv-1');
+
+    expect(schemaValidator.validate).toHaveBeenCalled();
+    expect(result.filename).toBe('jane-doe.json');
+    const parsed = JSON.parse(result.body) as Record<string, unknown>;
+    expect(parsed.basics).toEqual({ name: 'Jane Doe' });
+    expect((parsed.work as Record<string, unknown>[])[0]).not.toHaveProperty('id');
+    expect(parsed.$schema).toEqual(expect.any(String));
+    expect(parsed.meta).toMatchObject({ lastModified: '2024-06-01T12:00:00.000Z' });
+  });
+
+  it('renderJson throws NotFoundException when CV is missing', async () => {
+    normalizedRepo.fetchHeader.mockResolvedValue(null);
+    await expect(service.renderJson(userCtx, 'missing')).rejects.toBeInstanceOf(NotFoundException);
   });
 });

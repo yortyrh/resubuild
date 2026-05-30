@@ -8,6 +8,7 @@ vi.mock('@/lib/api', () => ({
   getCv: vi.fn(),
   getCvExportHtml: vi.fn(),
   downloadCvPdf: vi.fn(),
+  downloadCvJson: vi.fn(),
   listCvTemplates: vi.fn(),
   updateCvTemplate: vi.fn(),
   getCvTemplatePresentation: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock('@resumind/resume-template', async (importOriginal) => {
 
 import { renderResumeHtml } from '@resumind/resume-template';
 import {
+  downloadCvJson,
   downloadCvPdf,
   getCv,
   getCvExportHtml,
@@ -136,6 +138,10 @@ describe('CvPreviewClient', () => {
       blob: new Blob(['pdf'], { type: 'application/pdf' }),
       filename: 'jane-doe.pdf',
     });
+    vi.mocked(downloadCvJson).mockResolvedValue({
+      blob: new Blob(['{}'], { type: 'application/json' }),
+      filename: 'jane-doe.json',
+    });
     URL.createObjectURL = vi.fn(() => 'blob:mock');
     URL.revokeObjectURL = vi.fn();
   });
@@ -186,6 +192,14 @@ describe('CvPreviewClient', () => {
       { timeout: 10_000 },
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Download JSON' }));
+    await waitFor(
+      () => {
+        expect(downloadCvJson).toHaveBeenCalledWith('cv-1');
+      },
+      { timeout: 10_000 },
+    );
+
     expect(screen.getByRole('link', { name: 'Back to editor' })).toHaveAttribute(
       'href',
       '/dashboard/cv/cv-1',
@@ -208,6 +222,21 @@ describe('CvPreviewClient', () => {
         'modern',
         expect.objectContaining({ presentationConfig: defaultPresentation }),
       );
+    });
+  });
+
+  it('shows user-visible message when JSON export fails', async () => {
+    vi.mocked(downloadCvJson).mockRejectedValue(new Error('Request failed (500)'));
+    render(<CvPreviewClient cvId="cv-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Download JSON' })).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Download JSON' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Request failed (500)')).toBeInTheDocument();
     });
   });
 
