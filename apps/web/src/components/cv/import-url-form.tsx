@@ -2,24 +2,25 @@
 
 import Link from 'next/link';
 import { useEffect, useId, useState } from 'react';
+import { ImportFormActions } from '@/components/cv/import-form-actions';
+import { ImportJsonEditDialog } from '@/components/cv/import-json-edit-dialog';
+import { ImportKindBadge } from '@/components/cv/import-kind-badge';
+import { ImportPreviewDialog } from '@/components/cv/import-preview-dialog';
+import { ImportProgressBar } from '@/components/cv/import-progress-bar';
+import { ImportValidationFeedback } from '@/components/cv/import-validation-feedback';
 import { formatJsonForEditor } from '@/components/cv/json-resume-editor';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { importCvFromUrl } from '@/lib/api';
-import { checkImportableMediaUrl } from '@/lib/import-cv-media';
-import {
-  gravatarOptionForImageStatus,
-  type ImportImagePreviewStatus,
-  type ImportSourcePreview,
-  imageStatusLabel,
-  parseImportJsonSource,
-  probeExternalImageUrl,
-} from '@/lib/import-cv-preview';
+import type { ImportValidationSource } from '@/lib/import-validation-source';
 import { useAiAgentActive, usePdfImportJob } from '@/lib/queries/ai-agent-queries';
 import { useWebScrapeConfig } from '@/lib/queries/web-scrape-queries';
+import { useImportJsonPreview } from '@/lib/use-import-json-preview';
+import { useImportPreviewToasts } from '@/lib/use-import-preview-toasts';
 
 export const IMPORT_URL_RETURN_PATH = '/dashboard/cv/new/import/url';
+
+export type ImportUrlKind = 'json' | 'html';
 
 export interface ImportUrlFormProps {
   onImport: (payload: { data: Record<string, unknown>; useGravatar: boolean }) => Promise<void>;
@@ -34,6 +35,10 @@ function normalizeImportError(err: unknown): string {
   return 'Failed to import CV';
 }
 
+function importUrlKindLabel(kind: ImportUrlKind): string {
+  return kind === 'json' ? 'JSON Resume' : 'HTML page';
+}
+
 export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: ImportUrlFormProps) {
   const gravatarOptionId = useId();
   const { data: activeStatus } = useAiAgentActive();
@@ -41,58 +46,26 @@ export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: Imp
   const aiConfigured = activeStatus?.configured ?? false;
 
   const [urlInput, setUrlInput] = useState('');
+  const [urlKind, setUrlKind] = useState<ImportUrlKind | null>(null);
+  const [jsonText, setJsonText] = useState('');
+  const [validationSource, setValidationSource] = useState<ImportValidationSource>('none');
   const [urlFetching, setUrlFetching] = useState(false);
   const [urlFetchError, setUrlFetchError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
-  const [useGravatar, setUseGravatar] = useState(false);
-  const [preview, setPreview] = useState<ImportSourcePreview | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [fetchProgress, setFetchProgress] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
 
+  const { preview, useGravatar, setUseGravatar } = useImportJsonPreview(jsonText);
   const { data: jobStatus, error: jobError } = usePdfImportJob(jobId, pollIntervalMs);
 
-  useEffect(() => {
-    if (!preview?.valid || preview.imageStatus !== 'checking' || !preview.basicsImage) {
-      return;
-    }
-
-    let cancelled = false;
-    const imageUrl = preview.basicsImage;
-
-    void (async () => {
-      const browserReachable = await probeExternalImageUrl(imageUrl);
-      if (cancelled) {
-        return;
-      }
-
-      let imageStatus: ImportImagePreviewStatus = browserReachable ? 'reachable' : 'unreachable';
-      if (browserReachable) {
-        const serverImportable = await checkImportableMediaUrl(imageUrl);
-        if (cancelled) {
-          return;
-        }
-        if (!serverImportable) {
-          imageStatus = 'host_not_allowed';
-        }
-      }
-
-      setPreview((current) => {
-        if (!current || !current.valid || current.basicsImage !== imageUrl) {
-          return current;
-        }
-        return {
-          ...current,
-          imageStatus,
-          showGravatarOption: gravatarOptionForImageStatus(current.basicsEmail, imageStatus),
-        };
-      });
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [preview]);
+  useImportPreviewToasts({
+    resetKey: urlInput.trim(),
+    preview,
+    validationSource,
+  });
 
   useEffect(() => {
     if (!jobStatus) {
@@ -108,8 +81,9 @@ export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: Imp
       setUrlFetching(false);
       setUrlFetchError(null);
       setFetchProgress(null);
-      setPreview(parseImportJsonSource(JSON.stringify(jobStatus.previewData)));
-      setUseGravatar(false);
+      setValidationSource('agent');
+      setUrlKind('html');
+      setJsonText(formatJsonForEditor(JSON.stringify(jobStatus.previewData)));
       return;
     }
 
@@ -138,19 +112,23 @@ export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: Imp
 
     setUrlFetchError(null);
     setImportError(null);
-    setPreview(null);
+    setJsonText('');
+    setValidationSource('none');
+    setUrlKind(null);
     setJobId(null);
-    setFetchProgress(null);
+    setFetchProgress('fetching');
     setUrlFetching(true);
 
     let startedAgentJob = false;
     try {
       const result = await importCvFromUrl(trimmed);
       if (result.kind === 'json') {
-        setPreview(parseImportJsonSource(JSON.stringify(result.data)));
-        setUseGravatar(false);
+        setValidationSource('direct');
+        setUrlKind('json');
+        setJsonText(formatJsonForEditor(JSON.stringify(result.data)));
       } else {
         startedAgentJob = true;
+        setUrlKind('html');
         setJobId(result.jobId);
         setFetchProgress('queued');
       }
@@ -159,14 +137,30 @@ export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: Imp
     } finally {
       if (!startedAgentJob) {
         setUrlFetching(false);
+        setFetchProgress(null);
       }
     }
   };
 
-  const canImport = preview?.valid === true && !importing && !urlFetching;
+  const isSavePhase = preview?.valid === true;
+  const canFetchUrl = Boolean(urlInput.trim()) && !isSavePhase && !importing && !urlFetching;
+  const canSave = isSavePhase && !importing && !urlFetching;
+  const canImport = canFetchUrl || canSave;
+  const canPreview = isSavePhase && !importing && !urlFetching;
+  const canEdit = Boolean(jsonText.trim()) && !importing && !urlFetching;
 
-  const handleImport = async () => {
-    if (!canImport || !preview?.valid) {
+  const activeImportProgress = (() => {
+    if (importing && isSavePhase) {
+      return 'saving';
+    }
+    if (urlFetching) {
+      return fetchProgress ?? 'fetching';
+    }
+    return null;
+  })();
+
+  const handleSave = async () => {
+    if (!canSave || !preview?.valid) {
       return;
     }
 
@@ -184,10 +178,13 @@ export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: Imp
     }
   };
 
-  const imageHint =
-    preview?.valid && preview.imageStatus !== 'owned'
-      ? imageStatusLabel(preview.imageStatus)
-      : null;
+  const handlePrimaryAction = async () => {
+    if (isSavePhase) {
+      await handleSave();
+      return;
+    }
+    await handleUrlFetch();
+  };
 
   const scrapeHint = scrapeStatus?.configured
     ? `Page extraction: ${scrapeStatus.provider}`
@@ -196,38 +193,61 @@ export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: Imp
   const settingsReturnTo = `${IMPORT_URL_RETURN_PATH}?returnLabel=${encodeURIComponent('Back to URL import')}`;
 
   return (
-    <form
-      className="space-y-6"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (canImport) {
-          void handleImport();
-        }
-      }}
-    >
-      <div className="space-y-4 rounded-lg border border-dashed p-4">
-        <div className="space-y-1">
-          <Label htmlFor="url-import">Import from URL</Label>
-          <p className="text-muted-foreground text-sm">
-            Paste any public HTTPS résumé URL. JSON Resume endpoints (including{' '}
-            <span className="font-mono text-xs">registry.jsonresume.org/your-username</span>) are
-            imported immediately; HTML pages are converted by the AI agent.
-          </p>
-          <p className="text-muted-foreground text-xs">
-            {scrapeHint}.{' '}
-            <Link
-              href={`/dashboard/settings/ai-agent?returnTo=${encodeURIComponent(settingsReturnTo)}`}
-              className="underline"
-            >
-              Configure in AI agent settings
-            </Link>
-            . For a local <span className="font-mono text-xs">.json</span> file, use{' '}
-            <Link href="/dashboard/cv/new/import/json" className="underline">
-              Import JSON
-            </Link>
-            .
-          </p>
+    <>
+      <form
+        className="space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (canImport) {
+            void handlePrimaryAction();
+          }
+        }}
+      >
+        <div className="space-y-2">
+          <Label htmlFor="url-import">Résumé URL</Label>
+          <div className="border-input bg-background relative flex h-28 items-center rounded-lg border border-dashed px-4">
+            {urlKind ? (
+              <ImportKindBadge
+                label={importUrlKindLabel(urlKind)}
+                testId="import-url-kind"
+                className="absolute right-4 top-3"
+              />
+            ) : null}
+            <Input
+              id="url-import"
+              type="url"
+              placeholder="https://registry.jsonresume.org/your-username"
+              value={urlInput}
+              disabled={importing || urlFetching}
+              className={urlKind ? 'pr-28' : undefined}
+              onChange={(event) => {
+                setUrlInput(event.target.value);
+                setUrlKind(null);
+                setJsonText('');
+                setValidationSource('none');
+                setUrlFetchError(null);
+                setImportError(null);
+              }}
+            />
+          </div>
         </div>
+
+        <p className="text-muted-foreground text-sm">
+          JSON Resume endpoints import immediately; HTML pages are converted by the AI agent.{' '}
+          {scrapeHint}.{' '}
+          <Link
+            href={`/dashboard/settings/ai-agent?returnTo=${encodeURIComponent(settingsReturnTo)}`}
+            className="underline"
+          >
+            Configure in AI agent settings
+          </Link>
+          . For a local file instead, use{' '}
+          <Link href="/dashboard/cv/new/import/file" className="underline">
+            Import from file
+          </Link>
+          .
+        </p>
+
         {!aiConfigured ? (
           <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
             An active AI agent account is required for HTML pages. JSON endpoints work without extra
@@ -238,74 +258,65 @@ export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: Imp
             .
           </p>
         ) : null}
-        <div className="flex gap-2">
-          <Input
-            id="url-import"
-            type="url"
-            placeholder="https://registry.jsonresume.org/your-username"
-            value={urlInput}
-            disabled={importing || urlFetching}
-            onChange={(event) => setUrlInput(event.target.value)}
-            className="flex-1"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!urlInput.trim() || importing || urlFetching}
-            onClick={() => void handleUrlFetch()}
-          >
-            {urlFetching ? 'Fetching…' : 'Fetch'}
-          </Button>
-        </div>
-        {fetchProgress ? (
-          <p className="text-muted-foreground text-sm">Agent progress: {fetchProgress}</p>
+
+        <ImportFormActions
+          importLabel={isSavePhase ? 'Save' : 'Import'}
+          importing={urlFetching || importing}
+          importingLabel={isSavePhase ? 'Saving…' : 'Importing…'}
+          canImport={canImport}
+          canPreview={canPreview}
+          canEdit={canEdit}
+          importButtonType="submit"
+          onImport={() => {}}
+          onPreview={() => setPreviewDialogOpen(true)}
+          onEdit={() => setEditDialogOpen(true)}
+          onCancel={onCancel}
+        />
+
+        <ImportProgressBar progress={activeImportProgress} />
+
+        {preview?.valid && preview.showGravatarOption ? (
+          <div className="flex items-start gap-2">
+            <input
+              id={gravatarOptionId}
+              type="checkbox"
+              className="border-input mt-1 size-4 rounded border"
+              checked={useGravatar}
+              disabled={importing}
+              onChange={(event) => setUseGravatar(event.target.checked)}
+            />
+            <Label htmlFor={gravatarOptionId} className="font-normal leading-snug">
+              Use Gravatar profile photo
+              {preview.basicsEmail ? ` (${preview.basicsEmail})` : ''}
+            </Label>
+          </div>
         ) : null}
+
         {urlFetchError ? <p className="text-destructive text-sm">{urlFetchError}</p> : null}
-      </div>
 
-      {preview?.valid ? (
-        <div className="space-y-2 rounded-lg border p-4">
-          <p className="text-sm font-medium">Preview</p>
-          <pre className="bg-muted max-h-48 overflow-auto rounded-md p-3 text-xs">
-            {formatJsonForEditor(JSON.stringify(preview.prepared))}
-          </pre>
-        </div>
-      ) : null}
+        <ImportValidationFeedback validationSource={validationSource} preview={preview} />
 
-      {preview?.valid ? (
-        <p className="text-muted-foreground text-sm">JSON Resume data is valid.</p>
-      ) : null}
-      {imageHint ? <p className="text-muted-foreground text-sm">{imageHint}</p> : null}
+        {importError ? (
+          <p className="text-destructive whitespace-pre-wrap text-sm">{importError}</p>
+        ) : null}
+      </form>
 
-      {preview?.valid && preview.showGravatarOption ? (
-        <div className="flex items-start gap-2">
-          <input
-            id={gravatarOptionId}
-            type="checkbox"
-            className="border-input mt-1 size-4 rounded border"
-            checked={useGravatar}
-            disabled={importing}
-            onChange={(event) => setUseGravatar(event.target.checked)}
-          />
-          <Label htmlFor={gravatarOptionId} className="font-normal leading-snug">
-            Use Gravatar profile photo
-            {preview.basicsEmail ? ` (${preview.basicsEmail})` : ''}
-          </Label>
-        </div>
-      ) : null}
+      <ImportPreviewDialog
+        open={previewDialogOpen}
+        onOpenChange={setPreviewDialogOpen}
+        resume={preview?.valid ? preview.prepared : null}
+      />
 
-      {importError ? (
-        <p className="text-destructive whitespace-pre-wrap text-sm">{importError}</p>
-      ) : null}
-
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={!canImport}>
-          {importing ? 'Importing…' : 'Import'}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={importing}>
-          Cancel
-        </Button>
-      </div>
-    </form>
+      <ImportJsonEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        value={jsonText}
+        onSave={(value) => {
+          setJsonText(value);
+          setValidationSource('edited');
+          setImportError(null);
+        }}
+      />
+    </>
   );
 }

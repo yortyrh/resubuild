@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryProvider } from '@/components/providers/query-provider';
@@ -78,9 +78,16 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+vi.mock('@/lib/queries/ai-agent-queries', () => ({
+  useAiAgentActive: () => ({
+    data: { configured: true, modelId: 'openai/gpt-4o-mini' },
+    isLoading: false,
+  }),
+  usePdfImportJob: () => ({ data: undefined, error: undefined }),
+}));
+
 import CreateCvPage from './create/page';
-import ImportJsonPage from './import/json/page';
-import ImportPdfPage from './import/pdf/page';
+import ImportFilePage from './import/file/page';
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(<QueryProvider>{ui}</QueryProvider>);
@@ -102,27 +109,31 @@ describe('New CV route pages', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('renders the PDF import upload on the PDF route', async () => {
-    renderWithProviders(<ImportPdfPage />);
+  it('renders the unified file import upload', async () => {
+    renderWithProviders(<ImportFilePage />);
     expect(await screen.findByTestId('import-file-upload')).toBeInTheDocument();
   });
 
-  it('creates a CV from JSON import and navigates to the editor', async () => {
+  it('creates a CV from JSON file import and navigates to the editor', async () => {
     mockCreateCv.mockResolvedValue({ id: 'cv-import-1' });
     const user = userEvent.setup({ delay: null });
-    renderWithProviders(<ImportJsonPage />);
+    renderWithProviders(<ImportFilePage />);
 
-    await user.click(screen.getByRole('button', { name: 'Edit JSON…' }));
-    fireEvent.change(screen.getByLabelText('JSON source'), {
-      target: {
-        value: JSON.stringify({ basics: { name: 'Jane Doe', label: 'Engineer' } }),
-      },
+    await waitFor(() => {
+      expect(screen.getByTestId('import-file-upload-input')).toBeInTheDocument();
+    });
+
+    const file = new File(
+      [JSON.stringify({ basics: { name: 'Jane Doe', label: 'Engineer' } })],
+      'resume.json',
+      { type: 'application/json' },
+    );
+    await user.upload(screen.getByTestId('import-file-upload-input'), file);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     });
     await user.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Import' })).toBeEnabled();
-    });
-    await user.click(screen.getByRole('button', { name: 'Import' }));
 
     await waitFor(() => {
       expect(mockCreateCv).toHaveBeenCalledTimes(1);

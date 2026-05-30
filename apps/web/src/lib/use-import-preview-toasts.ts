@@ -1,0 +1,75 @@
+'use client';
+
+import { useEffect, useRef } from 'react';
+import { toast } from 'sonner';
+import type { ImportSourcePreview } from '@/lib/import-cv-preview';
+import { imageStatusLabel } from '@/lib/import-cv-preview';
+import type { ImportValidationSource } from '@/lib/import-validation-source';
+
+export interface UseImportPreviewToastsOptions {
+  resetKey: string;
+  preview: ImportSourcePreview | null;
+  validationSource: ImportValidationSource;
+}
+
+export function useImportPreviewToasts({
+  resetKey,
+  preview,
+  validationSource,
+}: UseImportPreviewToastsOptions): void {
+  const readySourceRef = useRef<ImportValidationSource | null>(null);
+  const imageStatusRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    readySourceRef.current = null;
+    imageStatusRef.current = null;
+  }, [resetKey]);
+
+  useEffect(() => {
+    if (!preview?.valid) {
+      return;
+    }
+
+    if (validationSource === 'agent' && readySourceRef.current !== 'agent') {
+      toast.success('Résumé is ready to import.');
+      readySourceRef.current = 'agent';
+      return;
+    }
+
+    if (
+      (validationSource === 'direct' || validationSource === 'edited') &&
+      readySourceRef.current !== validationSource
+    ) {
+      toast.success('JSON Resume data is valid.');
+      readySourceRef.current = validationSource;
+    }
+  }, [preview?.valid, validationSource]);
+
+  useEffect(() => {
+    if (!preview?.valid) {
+      return;
+    }
+
+    const status = preview.imageStatus;
+    if (status === 'checking' || status === 'owned') {
+      return;
+    }
+
+    if (imageStatusRef.current === status) {
+      return;
+    }
+
+    imageStatusRef.current = status;
+    const label = imageStatusLabel(status);
+    if (!label) {
+      return;
+    }
+
+    if (status === 'reachable') {
+      toast.success(label);
+      return;
+    }
+
+    toast.info(label);
+  }, [preview]);
+}

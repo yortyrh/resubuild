@@ -4,8 +4,9 @@ import { type CvTemplatePresentationConfig, renderResumeHtml } from '@resumind/r
 import type { CvTitleBasics, Resume } from '@resumind/types';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import Link from 'next/link';
-import { memo, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CvEditorBreadcrumb } from '@/components/cv/cv-editor-breadcrumb';
+import { CvPreviewIframe } from '@/components/cv/cv-preview-iframe';
 import { TemplateConfigPanel } from '@/components/cv/template-config-panel';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -21,12 +22,6 @@ import {
 } from '@/lib/api';
 import { fetchCvResumeForPreview } from '@/lib/cv-preview-resume';
 import { cn } from '@/lib/utils';
-import {
-  CV_PREVIEW_MIN_HEIGHT_PX,
-  isCvPreviewResizeMessage,
-  measureIframeDocumentHeight,
-  withPreviewResizeReporter,
-} from './cv-preview-frame';
 import { CvPreviewBreadcrumbSkeleton, CvPreviewLoadingRow } from './cv-preview-skeleton';
 
 interface CvPreviewClientProps {
@@ -48,74 +43,6 @@ function getAutoLayoutExpanded(): boolean {
 
   return window.matchMedia('(min-width: 1024px)').matches;
 }
-
-const CvPreviewFrame = memo(function CvPreviewFrame({
-  html,
-  frameRef,
-}: {
-  html: string;
-  frameRef: RefObject<HTMLIFrameElement | null>;
-}) {
-  const [contentHeight, setContentHeight] = useState(CV_PREVIEW_MIN_HEIGHT_PX);
-  const srcDoc = useMemo(() => withPreviewResizeReporter(html), [html]);
-
-  const applyMeasuredHeight = useCallback((iframe: HTMLIFrameElement) => {
-    const measured = measureIframeDocumentHeight(iframe);
-    if (measured === null) {
-      return;
-    }
-    setContentHeight(Math.max(CV_PREVIEW_MIN_HEIGHT_PX, Math.ceil(measured)));
-  }, []);
-
-  useEffect(() => {
-    if (srcDoc) {
-      setContentHeight(CV_PREVIEW_MIN_HEIGHT_PX);
-    }
-  }, [srcDoc]);
-
-  useEffect(() => {
-    function onMessage(event: MessageEvent) {
-      const iframe = frameRef.current;
-      if (!iframe?.contentWindow || event.source !== iframe.contentWindow) {
-        return;
-      }
-      if (!isCvPreviewResizeMessage(event.data)) {
-        return;
-      }
-      setContentHeight(Math.max(CV_PREVIEW_MIN_HEIGHT_PX, Math.ceil(event.data.height)));
-    }
-
-    window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
-  }, [frameRef]);
-
-  const handleLoad = useCallback(() => {
-    const iframe = frameRef.current;
-    if (!iframe) {
-      return;
-    }
-    applyMeasuredHeight(iframe);
-    window.setTimeout(() => applyMeasuredHeight(iframe), 300);
-  }, [applyMeasuredHeight, frameRef]);
-
-  const frameHeight = contentHeight;
-
-  return (
-    <div
-      className="surface-soft cv-export-preview w-full min-w-0 max-w-none flex-1"
-      style={{ height: frameHeight, minHeight: CV_PREVIEW_MIN_HEIGHT_PX }}
-    >
-      <iframe
-        ref={frameRef}
-        title="Resume preview"
-        className="block w-full border-0 bg-white"
-        style={{ height: frameHeight }}
-        srcDoc={srcDoc}
-        onLoad={handleLoad}
-      />
-    </div>
-  );
-});
 
 function renderPreviewHtml(
   resume: Resume,
@@ -440,7 +367,7 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
             ) : null}
 
             <div className="relative min-w-0 flex-1">
-              {html ? <CvPreviewFrame html={html} frameRef={previewFrameRef} /> : null}
+              {html ? <CvPreviewIframe html={html} frameRef={previewFrameRef} /> : null}
             </div>
           </>
         )}

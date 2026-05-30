@@ -5,6 +5,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ImportUrlForm } from './import-url-form';
 
 const mockImportCvFromUrl = vi.fn();
+const mockToastSuccess = vi.fn();
+const mockToastInfo = vi.fn();
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    info: (...args: unknown[]) => mockToastInfo(...args),
+  },
+}));
 
 vi.mock('@/lib/api', () => ({
   importCvFromUrl: (...args: unknown[]) => mockImportCvFromUrl(...args),
@@ -33,6 +42,13 @@ vi.mock('@/lib/queries/web-scrape-queries', () => ({
 
 vi.mock('@/components/cv/json-resume-editor', () => ({
   formatJsonForEditor: (text: string) => text,
+  JsonResumeEditor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
+    <textarea
+      aria-label="JSON source"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  ),
 }));
 
 describe('ImportUrlForm', () => {
@@ -44,7 +60,37 @@ describe('ImportUrlForm', () => {
     vi.clearAllMocks();
   });
 
-  it('fetches JSON Resume from a URL and imports it', async () => {
+  it('shows the progress bar while fetching a JSON URL', async () => {
+    let resolveFetch: (value: unknown) => void = () => {};
+    mockImportCvFromUrl.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
+    const user = userEvent.setup({ delay: null });
+
+    render(<ImportUrlForm onImport={mockOnImport} onCancel={mockOnCancel} />);
+    await user.type(
+      screen.getByLabelText(/Résumé URL/i),
+      'https://registry.jsonresume.org/thomasdavis',
+    );
+    await user.click(screen.getByRole('button', { name: 'Import' }));
+
+    expect(screen.getByTestId('import-progress-bar')).toBeInTheDocument();
+    expect(screen.getByText('Fetching URL…')).toBeInTheDocument();
+
+    resolveFetch({
+      kind: 'json',
+      data: { basics: { name: 'Registry User' } },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    });
+  });
+
+  it('imports JSON Resume from a URL in two steps', async () => {
     mockImportCvFromUrl.mockResolvedValue({
       kind: 'json',
       data: { basics: { name: 'Registry User', label: 'Engineer' } },
@@ -54,16 +100,16 @@ describe('ImportUrlForm', () => {
 
     render(<ImportUrlForm onImport={mockOnImport} onCancel={mockOnCancel} />);
     await user.type(
-      screen.getByLabelText(/Import from URL/i),
+      screen.getByLabelText(/Résumé URL/i),
       'https://registry.jsonresume.org/thomasdavis',
     );
-    await user.click(screen.getByRole('button', { name: 'Fetch' }));
+    await user.click(screen.getByRole('button', { name: 'Import' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Import' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     });
 
-    await user.click(screen.getByRole('button', { name: 'Import' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
       expect(mockOnImport).toHaveBeenCalledWith({

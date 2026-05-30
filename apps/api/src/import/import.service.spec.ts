@@ -61,7 +61,6 @@ describe('ImportService', () => {
 
   let service: ImportService;
   let aiAgentCredentialService: { getActiveCredentials: jest.Mock };
-  let cvService: { create: jest.Mock };
   let catalogService: Pick<ImportModelsCatalogService, 'getCatalog'>;
   let schemaValidator: { validate: jest.Mock };
   let webScrapeService: { getDecryptedConfig: jest.Mock };
@@ -74,7 +73,6 @@ describe('ImportService', () => {
           .prepareImportedResume,
       );
     aiAgentCredentialService = { getActiveCredentials: jest.fn() };
-    cvService = { create: jest.fn() };
     catalogService = { getCatalog: () => testCatalog };
     schemaValidator = { validate: jest.fn() };
     webScrapeService = { getDecryptedConfig: jest.fn().mockResolvedValue(null) };
@@ -88,7 +86,6 @@ describe('ImportService', () => {
         }),
       } as never,
       aiAgentCredentialService as never,
-      cvService as never,
       catalogService as never,
       schemaValidator as never,
       webScrapeService as never,
@@ -137,8 +134,9 @@ describe('ImportService', () => {
     });
     jest.mocked(runPdfImportWorkflow).mockImplementation(async ({ onProgress }) => {
       onProgress?.('extracting');
-      return { cvId: 'cv-1', errors: [] };
+      return { draft: { basics: { name: 'Jane Doe' } }, errors: [] };
     });
+    schemaValidator.validate.mockReturnValue(undefined);
 
     const result = await service.startPdfImport(user, {
       mimetype: 'application/pdf',
@@ -154,6 +152,9 @@ describe('ImportService', () => {
       }),
     );
     expect(service.getJob(user, result.jobId).status).toBe('succeeded');
+    expect(service.getJob(user, result.jobId).previewData).toMatchObject({
+      basics: { name: 'Jane Doe' },
+    });
   });
 
   it('uses default max bytes when PDF_IMPORT_MAX_BYTES is unset', () => {
@@ -169,7 +170,6 @@ describe('ImportService', () => {
         }),
       } as never,
       aiAgentCredentialService as never,
-      cvService as never,
       catalogService as never,
       schemaValidator as never,
       webScrapeService as never,
@@ -187,7 +187,6 @@ describe('ImportService', () => {
         }),
       } as never,
       aiAgentCredentialService as never,
-      cvService as never,
       catalogService as never,
       schemaValidator as never,
       webScrapeService as never,
@@ -257,16 +256,16 @@ describe('ImportService', () => {
     expect(service.getJob(user, result.jobId).errors?.[0]).toMatch(/AI agent settings/i);
   });
 
-  it('creates CV through workflow finalize callback', async () => {
+  it('stores previewData when workflow returns a valid draft', async () => {
     aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
       modelId: 'openai/gpt-4o-mini',
       apiKey: 'sk-test',
       accountId: 'acc-1',
     });
-    cvService.create.mockResolvedValue({ id: 'cv-final' });
-    jest.mocked(runPdfImportWorkflow).mockImplementation(async (input) => {
-      const cvId = await input.finalize?.({ basics: { name: 'Jane Doe' } });
-      return { cvId, errors: [] };
+    schemaValidator.validate.mockReturnValue(undefined);
+    jest.mocked(runPdfImportWorkflow).mockResolvedValue({
+      draft: { basics: { name: 'Jane Doe' } },
+      errors: [],
     });
 
     const result = await service.startPdfImport(user, {
@@ -276,8 +275,11 @@ describe('ImportService', () => {
     } as Express.Multer.File);
 
     await new Promise((resolve) => setImmediate(resolve));
-    expect(cvService.create).toHaveBeenCalled();
-    expect(service.getJob(user, result.jobId).cvId).toBe('cv-final');
+    expect(service.getJob(user, result.jobId)).toMatchObject({
+      status: 'succeeded',
+      previewData: expect.objectContaining({ basics: { name: 'Jane Doe' } }),
+    });
+    expect(service.getJob(user, result.jobId).cvId).toBeUndefined();
   });
 
   it('marks job failed with generic workflow errors', async () => {
@@ -298,7 +300,7 @@ describe('ImportService', () => {
     expect(service.getJob(user, result.jobId).errors).toEqual(['parse failed']);
   });
 
-  it('marks job failed when workflow succeeds without cvId', async () => {
+  it('marks job failed when workflow succeeds without draft', async () => {
     aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
       modelId: 'openai/gpt-4o-mini',
       apiKey: 'sk-test',
@@ -315,7 +317,7 @@ describe('ImportService', () => {
     await new Promise((resolve) => setImmediate(resolve));
     expect(service.getJob(user, result.jobId)).toMatchObject({
       status: 'failed',
-      errors: ['Import failed before CV creation'],
+      errors: ['Import failed before preview'],
     });
   });
 
@@ -326,7 +328,11 @@ describe('ImportService', () => {
       apiKey: 'sk-test',
       accountId: 'acc-1',
     });
-    jest.mocked(runPdfImportWorkflow).mockResolvedValue({ cvId: 'cv-1', errors: [] });
+    jest.mocked(runPdfImportWorkflow).mockResolvedValue({
+      draft: { basics: { name: 'Jane Doe' } },
+      errors: [],
+    });
+    schemaValidator.validate.mockReturnValue(undefined);
 
     const result = await service.startPdfImport(user, {
       mimetype: 'application/pdf',
@@ -540,7 +546,11 @@ describe('ImportService', () => {
         apiKey: 'sk-test',
         accountId: 'acc-1',
       });
-      jest.mocked(runTextImportWorkflow).mockResolvedValue({ cvId: 'cv-md-1', errors: [] });
+      jest.mocked(runTextImportWorkflow).mockResolvedValue({
+        draft: { basics: { name: 'Jane Doe' } },
+        errors: [],
+      });
+      schemaValidator.validate.mockReturnValue(undefined);
 
       const result = await service.startMarkdownImport(user, {
         mimetype: 'text/markdown',
@@ -567,7 +577,6 @@ describe('ImportService', () => {
           }),
         } as never,
         aiAgentCredentialService as never,
-        cvService as never,
         catalogService as never,
         schemaValidator as never,
         webScrapeService as never,
@@ -608,7 +617,11 @@ describe('ImportService', () => {
         apiKey: 'sk-test',
         accountId: 'acc-1',
       });
-      jest.mocked(runPdfImportWorkflow).mockResolvedValue({ cvId: 'cv-1', errors: [] });
+      jest.mocked(runPdfImportWorkflow).mockResolvedValue({
+        draft: { basics: { name: 'Jane Doe' } },
+        errors: [],
+      });
+      schemaValidator.validate.mockReturnValue(undefined);
 
       const result = await service.startPdfImport(user, {
         mimetype: 'application/pdf',

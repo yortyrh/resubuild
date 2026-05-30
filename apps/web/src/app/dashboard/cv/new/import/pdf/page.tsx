@@ -1,10 +1,6 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { ImportPdfCvForm } from '@/components/cv/import-pdf-cv-form';
-import { useNewCvHandlers } from '@/lib/use-new-cv-handlers';
-
+/** @deprecated Use `/dashboard/cv/new/import/file` */
 export default function ImportPdfPage() {
-  const { navigateToEditor, handleCancel } = useNewCvHandlers();
-
-  return <ImportPdfCvForm onSuccess={navigateToEditor} onCancel={handleCancel} />;
+  redirect('/dashboard/cv/new/import/file');
 }

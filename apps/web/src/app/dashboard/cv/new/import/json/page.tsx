@@ -1,10 +1,6 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { ImportCvForm } from '@/components/cv/import-cv-form';
-import { useNewCvHandlers } from '@/lib/use-new-cv-handlers';
-
+/** @deprecated Use `/dashboard/cv/new/import/file` */
 export default function ImportJsonPage() {
-  const { handleImport, handleCancel } = useNewCvHandlers();
-
-  return <ImportCvForm onImport={handleImport} onCancel={handleCancel} />;
+  redirect('/dashboard/cv/new/import/file');
 }

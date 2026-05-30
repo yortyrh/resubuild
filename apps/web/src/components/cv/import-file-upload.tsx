@@ -2,6 +2,7 @@
 
 import { Upload, X } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
+import { ImportKindBadge } from '@/components/cv/import-kind-badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,7 @@ export interface ImportFileUploadProps {
   hint?: string;
   disabled?: boolean;
   value: File | null;
+  kindLabel?: string | null;
   onFileSelect: (file: File | null) => void;
 }
 
@@ -55,6 +57,7 @@ export function ImportFileUpload({
   hint = 'Drag and drop or browse…',
   disabled = false,
   value,
+  kindLabel = null,
   onFileSelect,
 }: ImportFileUploadProps) {
   const inputId = useId();
@@ -120,6 +123,11 @@ export function ImportFileUpload({
     }
   };
 
+  const dashedBoxClassName = cn(
+    'border-input bg-background h-28 w-full rounded-lg border border-dashed px-4',
+    disabled && 'opacity-50',
+  );
+
   return (
     <div className="space-y-2" data-testid="import-file-upload">
       <Label htmlFor={inputId}>{label}</Label>
@@ -134,33 +142,31 @@ export function ImportFileUpload({
         onChange={handleInputChange}
       />
       {value ? (
-        <div
-          className={cn(
-            'border-input bg-background flex w-full items-center justify-between gap-3 rounded-lg border border-dashed px-4 py-4',
-            disabled && 'opacity-50',
-          )}
-        >
+        <div className={cn(dashedBoxClassName, 'relative flex items-center')}>
+          <div className="absolute right-3 top-3 flex items-center gap-1.5">
+            {kindLabel ? <ImportKindBadge label={kindLabel} testId="import-file-kind" /> : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              disabled={disabled}
+              aria-label="Clear selected file"
+              data-testid="import-file-upload-clear"
+              onClick={handleClear}
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
           <button
             type="button"
             disabled={disabled}
-            className="hover:bg-accent/40 focus-visible:ring-ring min-w-0 flex-1 rounded-md px-2 py-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed"
+            className="hover:bg-accent/40 focus-visible:ring-ring min-w-0 flex-1 rounded-md px-2 py-1 pr-36 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed"
             onClick={() => inputRef.current?.click()}
             aria-describedby={validationError ? `${inputId}-error` : undefined}
           >
             <p className="truncate text-sm font-medium">{value.name}</p>
             <p className="text-muted-foreground text-xs">{formatFileSize(value.size)}</p>
           </button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            disabled={disabled}
-            aria-label="Clear selected file"
-            data-testid="import-file-upload-clear"
-            onClick={handleClear}
-          >
-            <X className="size-4" />
-          </Button>
         </div>
       ) : (
         <div
@@ -168,9 +174,10 @@ export function ImportFileUpload({
           tabIndex={disabled ? -1 : 0}
           aria-disabled={disabled}
           className={cn(
-            'border-input bg-background hover:bg-accent/40 focus-visible:ring-ring flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-8 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+            dashedBoxClassName,
+            'hover:bg-accent/40 focus-visible:ring-ring flex flex-col items-center justify-center gap-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
             dragActive && 'border-primary bg-accent/30',
-            disabled && 'pointer-events-none opacity-50',
+            disabled && 'pointer-events-none',
           )}
           onClick={() => {
             if (!disabled) {

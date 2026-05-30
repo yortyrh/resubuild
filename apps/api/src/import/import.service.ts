@@ -15,7 +15,6 @@ import {
 import { InvalidImportedResumeError, prepareImportedResume } from '@resumind/types';
 import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
-import { CvService } from '../cv/cv.service';
 import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 import { WebScrapeService } from '../web-scrape/web-scrape.service';
@@ -38,7 +37,6 @@ export class ImportService {
   constructor(
     private readonly configService: ConfigService,
     private readonly aiAgentCredentialService: AiAgentCredentialService,
-    private readonly cvService: CvService,
     private readonly catalogService: ImportModelsCatalogService,
     private readonly schemaValidator: ResumeSchemaValidator,
     private readonly webScrapeService: WebScrapeService,
@@ -287,15 +285,10 @@ export class ImportService {
           onProgress: (progress: ImportJobProgress) => {
             this.jobStore.update(jobId, { progress });
           },
-          finalize: async (draft: Record<string, unknown>) => {
-            const prepared = prepareImportedResume(draft);
-            const created = await this.cvService.create(user, { data: prepared });
-            return created.id;
-          },
         });
       });
 
-      this.finishJob(jobId, result);
+      this.finishPreviewJob(jobId, result);
     } catch (error) {
       this.failJob(jobId, error);
     }
@@ -329,20 +322,18 @@ export class ImportService {
         });
       });
 
-      this.finishWebsitePreviewJob(jobId, result);
+      this.finishPreviewJob(jobId, result);
     } catch (error) {
       this.failJob(jobId, error);
     }
   }
 
-  private finishWebsitePreviewJob(
+  private finishPreviewJob(
     jobId: string,
     result: { draft?: Record<string, unknown>; errors: string[] },
   ) {
     if (result.errors.length > 0 || !result.draft) {
-      const errors = result.errors.length
-        ? result.errors
-        : ['Website import failed before preview'];
+      const errors = result.errors.length ? result.errors : ['Import failed before preview'];
       this.jobStore.update(jobId, { status: 'failed', errors });
       return;
     }
@@ -387,32 +378,13 @@ export class ImportService {
           onProgress: (progress: ImportJobProgress) => {
             this.jobStore.update(jobId, { progress });
           },
-          finalize: async (draft: Record<string, unknown>) => {
-            const prepared = prepareImportedResume(draft);
-            const created = await this.cvService.create(user, { data: prepared });
-            return created.id;
-          },
         });
       });
 
-      this.finishJob(jobId, result);
+      this.finishPreviewJob(jobId, result);
     } catch (error) {
       this.failJob(jobId, error);
     }
-  }
-
-  private finishJob(jobId: string, result: { cvId?: string; errors: string[] }) {
-    if (result.errors.length > 0 || !result.cvId) {
-      const errors = result.errors.length ? result.errors : ['Import failed before CV creation'];
-      this.jobStore.update(jobId, { status: 'failed', errors });
-      return;
-    }
-
-    this.jobStore.update(jobId, {
-      status: 'succeeded',
-      cvId: result.cvId,
-      progress: 'finalizing',
-    });
   }
 
   private failJob(jobId: string, error: unknown) {

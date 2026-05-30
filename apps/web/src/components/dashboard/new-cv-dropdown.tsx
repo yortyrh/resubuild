@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, FileJson, FileText, Globe, PenLine, Plus } from 'lucide-react';
+import { ChevronDown, FileUp, Globe, PenLine, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,14 +12,9 @@ import {
 
 const NEW_CV_ROUTES = [
   {
-    href: '/dashboard/cv/new/import/pdf',
-    label: 'Import PDF',
-    icon: FileText,
-  },
-  {
-    href: '/dashboard/cv/new/create',
-    label: 'Create manually',
-    icon: PenLine,
+    href: '/dashboard/cv/new/import/file',
+    label: 'Import from file',
+    icon: FileUp,
   },
   {
     href: '/dashboard/cv/new/import/url',
@@ -27,14 +22,9 @@ const NEW_CV_ROUTES = [
     icon: Globe,
   },
   {
-    href: '/dashboard/cv/new/import/json',
-    label: 'Import JSON file',
-    icon: FileJson,
-  },
-  {
-    href: '/dashboard/cv/new/import/markdown',
-    label: 'Import Markdown',
-    icon: FileText,
+    href: '/dashboard/cv/new/create',
+    label: 'Create manually',
+    icon: PenLine,
   },
 ] as const;
 

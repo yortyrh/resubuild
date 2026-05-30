@@ -46,9 +46,9 @@ export function ImportJsonEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit JSON Resume</DialogTitle>
+          <DialogTitle>Edit</DialogTitle>
           <DialogDescription>
-            Edit the JSON source. Validation runs on the import tab after you save.
+            Edit the JSON Resume source. Changes apply after Save.
           </DialogDescription>
         </DialogHeader>
         <JsonResumeEditor value={draft} onChange={setDraft} label="JSON source" />

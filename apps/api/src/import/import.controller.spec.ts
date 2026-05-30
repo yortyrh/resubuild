@@ -64,12 +64,14 @@ describe('ImportController', () => {
       status: 'running',
       progress: 'drafting',
       cvId: undefined,
+      previewData: undefined,
       errors: undefined,
     });
     expect(controller.getJob(req, 'job-1')).toEqual({
       status: 'running',
       progress: 'drafting',
       cvId: undefined,
+      previewData: undefined,
       errors: undefined,
     });
     expect(service.getJob).toHaveBeenCalledWith(user, 'job-1');
