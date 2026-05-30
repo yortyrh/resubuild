@@ -7,10 +7,8 @@ Standalone wireframe reference for the `import-preview` change. Implementation d
 ```mermaid
 flowchart LR
   subgraph sources [Import sources]
-    JSON[JSON file]
-    PDF[PDF upload]
-    MD[Markdown upload]
-    URL[URL fetch]
+    File[File import JSON PDF MD]
+    URL[URL import JSON HTML]
   end
 
   subgraph prepare [Prepare]
@@ -24,11 +22,10 @@ flowchart LR
     EditDlg[Edit dialog WF-4]
   end
 
-  Create[createCv on Import confirm]
+  Create[createCv on Save confirm]
 
-  JSON --> Parse
-  PDF --> Agent --> Parse
-  MD --> Agent --> Parse
+  File --> Agent
+  File --> Parse
   URL --> Agent
   URL --> Parse
   Agent --> Parse
@@ -41,29 +38,31 @@ flowchart LR
 
 ## WF-1: Empty / invalid state
 
-All import routes share this action bar pattern when no valid preview exists.
+File and URL import routes share this action bar pattern when no valid preview exists.
 
 | Control | State                                                     |
 | ------- | --------------------------------------------------------- |
-| Import  | Disabled                                                  |
-| Preview | Hidden or disabled                                        |
+| Import  | Enabled when source ready (file selected or URL entered)  |
+| Save    | Hidden until valid preview exists                         |
+| Preview | Disabled until valid preview                              |
 | Edit    | Disabled (JSON: enabled once file loaded even if invalid) |
 | Cancel  | Enabled                                                   |
 
 ## WF-2: Ready to import
 
-Applies to: JSON, PDF, Markdown, URL (JSON sync and HTML job success).
+Applies to: file import (JSON/PDF/Markdown) and URL (JSON sync and HTML job success).
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  [Primary] Import                                               │
+│  [Primary] Save                                                 │
 │  [Outline] Preview          → opens WF-3                        │
 │  [Outline] ✎ Edit           → opens WF-4                        │
 │  [Outline] Cancel                                               │
+│  ───────── progress bar (fetch / agent / save) ─────────        │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-Validation message: "JSON Resume data is valid."  
+Direct JSON: inline validation errors. Agent paths: success via toast.  
 Optional Gravatar checkbox when image rules match existing `import-cv-preview` logic.
 
 ## WF-3: Preview dialog

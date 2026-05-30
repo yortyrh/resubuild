@@ -20,7 +20,9 @@ The full CV preview page (`/dashboard/cv/[id]/preview`) already renders template
 - PDF/Markdown agent jobs stop persisting CV rows; they return `previewData` like website import.
 - Shared **Import preview dialog** with template dropdown + rendered iframe (read-only).
 - Shared **Edit** dialog (renamed from Edit JSON…) with left `Pencil` icon; available on all import forms when source text or prepared data exists.
-- Consistent action row: **Import** (primary), **Preview** (outline, when valid), **Edit** (outline with icon), **Cancel**.
+- Two import entry points: **Import from file** (auto-detect JSON/PDF/Markdown) and **Import from URL**; legacy per-format routes redirect to file import.
+- Consistent action row: **Import** then **Save** (primary), **Preview** (outline, when valid), **Edit** (outline with icon), **Cancel**; progress bar below actions while active.
+- Agent-processed paths use toasts for success hints; direct JSON and post-Edit validation use inline feedback.
 
 **Non-Goals:**
 
@@ -56,7 +58,7 @@ The full CV preview page (`/dashboard/cv/[id]/preview`) already renders template
 
 ### 3. Shared `ImportFormActions` helper
 
-**Choice:** Small presentational component or hook used by all four import forms for Preview/Edit/Import/Cancel buttons and disabled states.
+**Choice:** Small presentational component used by file and URL import forms for Import/Save, Preview, Edit, Cancel and disabled states.
 
 **Rationale:** Keeps button order, icons, and aria labels identical; reduces copy-paste across forms.
 
