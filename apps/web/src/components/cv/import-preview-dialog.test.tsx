@@ -5,15 +5,22 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ImportPreviewDialog } from './import-preview-dialog';
 
 const mockListCvTemplates = vi.fn();
-const mockRenderResumeHtml = vi.fn(() => '<html><body><article>Preview</article></body></html>');
 
 vi.mock('@/lib/api', () => ({
   listCvTemplates: (...args: unknown[]) => mockListCvTemplates(...args),
 }));
 
-vi.mock('@resumind/resume-template', () => ({
-  renderResumeHtml: (...args: unknown[]) => mockRenderResumeHtml(...args),
-}));
+vi.mock('@resumind/resume-template', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@resumind/resume-template')>();
+  return {
+    ...actual,
+    renderResumeHtml: vi.fn(() => '<html><body><article>Preview</article></body></html>'),
+  };
+});
+
+import { renderResumeHtml } from '@resumind/resume-template';
+
+const mockRenderResumeHtml = vi.mocked(renderResumeHtml);
 
 describe('ImportPreviewDialog', () => {
   const resume = { basics: { name: 'Alex Smith' } };

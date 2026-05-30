@@ -243,6 +243,46 @@ describe('media-remote-fetch.util', () => {
     expect(result).toBeNull();
   });
 
+  it('returns null when the content-type header is an unsupported image format', async () => {
+    mockMetadata.mockResolvedValue({ format: undefined });
+    const result = await fetchRemoteImage('https://cdn.example.com/icon.svg', {
+      maxBytes: 1_000_000,
+      fetchResponse: async () => mockResponse({ status: 200, contentType: 'image/svg+xml' }),
+    });
+    expect(result).toBeNull();
+  });
+
+  it('skips empty chunks while reading the response body', async () => {
+    const result = await fetchRemoteImage('https://cdn.example.com/photo.png', {
+      maxBytes: 1_000_000,
+      fetchResponse: async () =>
+        ({
+          ok: true,
+          status: 200,
+          headers: new Headers({ 'content-type': 'image/png' }),
+          body: {
+            getReader: () => {
+              let reads = 0;
+              return {
+                read: async () => {
+                  reads += 1;
+                  if (reads === 1) return { done: false, value: new Uint8Array() };
+                  if (reads === 2) return { done: false, value: new Uint8Array([137, 80, 78, 71]) };
+                  return { done: true, value: undefined };
+                },
+                releaseLock: () => {},
+              };
+            },
+          },
+        }) as Response,
+    });
+
+    expect(result).toEqual({
+      buffer: expect.any(Buffer),
+      contentType: 'image/png',
+    });
+  });
+
   it('wraps defaultRemoteImageFetch with abort timeout', async () => {
     const fetchMock = jest.fn().mockResolvedValue(mockResponse({ status: 200 }));
     global.fetch = fetchMock as typeof fetch;

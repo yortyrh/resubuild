@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-export type ImportFileAccept = Record<string, string[]>;
+export type ImportFileAccept = Record<string, readonly string[]>;
 
 export interface ImportFileUploadProps {
   accept: ImportFileAccept;

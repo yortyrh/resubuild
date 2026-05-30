@@ -67,6 +67,37 @@ describe('CvService', () => {
       expect(result[0].data).not.toHaveProperty('work');
       expect(normalizedRepo.fetchSections).not.toHaveBeenCalled();
     });
+
+    it('returns empty list when query succeeds with null data', async () => {
+      const order = jest.fn().mockResolvedValue({ data: null, error: null });
+
+      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
+        select: jest.fn(() => ({ order })),
+      }));
+
+      await expect(service.findAll(user)).resolves.toEqual([]);
+    });
+
+    it('defaults template and timestamps when header fields are missing', async () => {
+      const header = mockCvHeader({
+        template_id: undefined,
+        created_at: undefined,
+        updated_at: undefined,
+      });
+      const order = jest.fn().mockResolvedValue({ data: [header], error: null });
+
+      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
+        select: jest.fn(() => ({ order })),
+      }));
+
+      const result = await service.findAll(user);
+
+      expect(result[0]).toMatchObject({
+        templateId: 'classic',
+        created_at: '',
+        updated_at: '',
+      });
+    });
   });
 
   it('getHeader throws NotFoundException when CV is missing', async () => {
