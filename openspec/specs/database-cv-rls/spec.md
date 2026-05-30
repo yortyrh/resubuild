@@ -45,6 +45,8 @@ RLS SHALL be enabled on `public.cv` and every normalized CV child table with pol
 
 A table (e.g. `public.import_llm_config`) MUST store at most one row per user with: `user_id` (uuid PK/FK to `auth.users`), `model_id` (text, Mastra model string), `api_key_encrypted` (text), `configured_at` (timestamptz), and `updated_at`. RLS SHALL restrict SELECT, INSERT, UPDATE, and DELETE to rows where `auth.uid() = user_id`. API key plaintext MUST NOT be stored unencrypted.
 
+A table `public.web_scrape_config` MUST store at most one row per user with encrypted Firecrawl or Tavily API keys per `web-scrape-config`. RLS policies SHALL mirror import LLM configuration isolation.
+
 #### Scenario: User reads own config only
 
 - **WHEN** a user's JWT queries `import_llm_config`

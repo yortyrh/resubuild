@@ -33,9 +33,20 @@ The App Router under `src/app/` MUST provide public entry and auth pages (`/`, `
 
 The new CV route (`/dashboard/cv/new`) SHALL NOT call `POST /cv` on page load. It SHALL render a simplified create form collecting JSON Resume `basics` fields only—**without** a separate CV title field. The client SHALL invoke `createCv` with resume `data` containing `basics` only (no `meta`) when the user activates an explicit Save (or Create) control; the API SHALL derive `cv.title` from the submitted basics. On successful create, the UI SHALL navigate to `/dashboard/cv/:id` for full editing. Navigating away or canceling before Save SHALL NOT create a CV row.
 
-The new CV route SHALL ALSO expose **Import from JSON** per `cv-json-import` and **Import from PDF** per `cv-pdf-import`. JSON import uses client-side parse + `prepareImportedResume` + `createCv`. PDF import requires completed **Import LLM settings** per `import-llm-config`, then uploads to `POST /cv/import/pdf`, polls job status, and navigates to the editor when the job succeeds with a `cvId`. The dashboard SHALL expose a settings surface (e.g. `/dashboard/settings/import-llm` or equivalent) for provider → model → API key configuration. Manual create, JSON import, and PDF import are separate paths on the same page; none SHALL POST or start import until the user confirms.
+The new CV route SHALL ALSO expose **Import from JSON** per `cv-json-import`, **Import from PDF** per `cv-pdf-import`, and **Import from URL** at `/dashboard/cv/new/import/url`. JSON import uses client-side parse + `prepareImportedResume` + `createCv`. PDF import requires completed **Import LLM settings** per `import-llm-config`, then uploads to `POST /cv/import/pdf`, polls job status, and navigates to the editor when the job succeeds with a `cvId`. URL import SHALL call `POST /cv/import/from-url`: JSON responses show preview immediately; HTML responses poll until `previewData` is available, then the user confirms Import to call `createCv`. The dashboard SHALL expose AI agent settings (including web scrape provider configuration per `web-scrape-config`) for provider → model → API key and optional Firecrawl/Tavily keys. Manual create, JSON import, PDF import, and URL import are separate paths; none SHALL POST or start import until the user confirms.
 
 The per-CV editor bootstrap (`GET /cv/:id`) SHALL merge slim `data.basics` into local editor state and SHALL NOT depend on `data.meta` or `meta.version` for saves.
+
+#### Scenario: User imports CV from URL (JSON)
+
+- **WHEN** a signed-in user enters a JSON Resume URL and fetches successfully
+- **THEN** the client SHALL show a preview and create a CV only after explicit Import confirmation
+
+#### Scenario: User imports CV from URL (HTML)
+
+- **WHEN** a signed-in user with AI agent configuration enters an HTML résumé URL
+- **THEN** the client SHALL poll the import job until `previewData` is available
+- **AND** SHALL create a CV only after explicit Import confirmation
 
 #### Scenario: User creates and edits a CV in the UI
 
