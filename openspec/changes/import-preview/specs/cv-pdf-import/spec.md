@@ -1,0 +1,95 @@
+## MODIFIED Requirements
+
+### Requirement: Clients SHALL poll import job status until terminal state
+
+The API SHALL expose `GET /cv/import/:jobId` for the authenticated job owner. Responses SHALL include `status` (`queued` | `running` | `succeeded` | `failed`), optional `progress` (human-readable step label), optional `previewData` (prepared JSON Resume object) on PDF, Markdown, and website URL import success before client create, and optional `errors` (string array or structured validation messages) on failure. On success, `cvId` SHALL be absent until the client explicitly creates a CV via `POST /cv`. Jobs SHALL NOT be readable by other users. Unknown or expired job ids SHALL return `404`.
+
+#### Scenario: Successful PDF import preview
+
+- **WHEN** a client polls a PDF import job that finished successfully
+- **THEN** the response SHALL have `status: succeeded` and `previewData` containing schema-valid prepared JSON
+- **AND** `cvId` SHALL be absent
+
+#### Scenario: Successful Markdown import preview
+
+- **WHEN** a client polls a Markdown import job that finished successfully
+- **THEN** the response SHALL have `status: succeeded` and `previewData` containing schema-valid prepared JSON
+- **AND** `cvId` SHALL be absent
+
+#### Scenario: Successful website import preview
+
+- **WHEN** a client polls a website URL import job that finished successfully
+- **THEN** the response SHALL have `status: succeeded` and `previewData` containing schema-valid prepared JSON
+- **AND** `cvId` SHALL be absent
+
+#### Scenario: Failed import
+
+- **WHEN** extraction, agent, or schema validation ultimately fails
+- **THEN** the response SHALL have `status: failed` and non-empty `errors` describing the failure
+
+#### Scenario: Job not found
+
+- **WHEN** a client requests a job id that does not exist or expired
+- **THEN** the API SHALL respond with `404`
+
+### Requirement: PDF import SHALL produce schema-valid JSON Resume before CV create
+
+The import pipeline SHALL extract text from the PDF, map content to JSON Resume shape, run verification (schema validation, date normalization, optional web lookup tools using the user's Tavily web scrape key when configured), and pass the result through `prepareImportedResume` and schema validation. The job SHALL store the prepared object as `previewData` and SHALL NOT persist a CV row. CV creation SHALL occur only when the client calls `POST /cv` after user confirmation with the prepared data (same meta, validation, and title derivation as direct create).
+
+#### Scenario: Valid PDF yields preview data
+
+- **WHEN** processing completes for a text-based PDF with extractable content
+- **THEN** the job SHALL end in `succeeded` with `previewData` set
+- **AND** no CV row SHALL be created by the import job
+
+#### Scenario: Unextractable PDF fails job
+
+- **WHEN** the PDF yields no extractable text (e.g. scanned image-only)
+- **THEN** the job SHALL end in `failed` with an error indicating the PDF could not be parsed
+- **AND** no CV row SHALL be created
+
+### Requirement: The web app SHALL expose PDF import on the new CV route
+
+`/dashboard/cv/new` SHALL include an **Import from PDF** path alongside manual create and JSON import. PDF import SHALL be **disabled** until the user completes import LLM configuration per `import-llm-config`, showing a setup link instead of upload when unset. When configured, the client SHALL upload the PDF only after explicit user confirmation, poll job status until `previewData` is available, then allow Preview, Edit, and Import per `import-preview-ui`. Import SHALL call `createCv` with the prepared data and navigate to `/dashboard/cv/:id` on success. Job errors SHALL display on failure. Visiting the page alone SHALL NOT start an import or create a CV.
+
+#### Scenario: User imports PDF successfully
+
+- **WHEN** a signed-in user selects a PDF, waits for agent success, and confirms Import
+- **THEN** the client SHALL call `POST /cv/import/pdf`, poll until `previewData` is available, then call `POST /cv` once and navigate to the new CV editor route
+
+#### Scenario: User previews PDF import before create
+
+- **WHEN** a PDF import job succeeds with `previewData`
+- **AND** the user opens Preview without confirming Import
+- **THEN** the client SHALL show the import preview dialog
+- **AND** SHALL NOT call `POST /cv`
+
+#### Scenario: User abandons import in progress
+
+- **WHEN** a user navigates away while a job is running
+- **THEN** the client MAY stop polling
+- **AND** the server job MAY continue; no CV SHALL be created until explicit client `POST /cv`
+
+#### Scenario: User without LLM config sees setup instead of upload
+
+- **WHEN** a signed-in user opens the PDF import section without saved LLM settings
+- **THEN** the UI SHALL NOT show the PDF file input
+- **AND** SHALL prompt the user to open import LLM settings
+
+## ADDED Requirements
+
+### Requirement: Markdown import SHALL follow preview-then-create semantics
+
+Markdown import jobs SHALL use the same agent pipeline completion rules as PDF import: prepared JSON Resume in `previewData`, no automatic CV row, client `POST /cv` on confirm. The web app SHALL expose Markdown import at `/dashboard/cv/new/import/markdown` with the same Preview, Edit, and Import action row as PDF and URL imports per `import-preview-ui`.
+
+#### Scenario: Successful Markdown import via client create
+
+- **WHEN** a signed-in user uploads Markdown, the job succeeds with `previewData`, and the user confirms Import
+- **THEN** the client SHALL call `POST /cv` once with the prepared data
+- **AND** SHALL navigate to `/dashboard/cv/:id`
+
+#### Scenario: Markdown job does not auto-create CV
+
+- **WHEN** a Markdown import job completes successfully
+- **THEN** `GET /cv/import/:jobId` SHALL NOT include `cvId`
+- **AND** SHALL include `previewData`
