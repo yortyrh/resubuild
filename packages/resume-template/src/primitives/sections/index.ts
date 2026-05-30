@@ -151,8 +151,14 @@ export function renderBasicsHeader(
     );
   }
 
-  const contactRowClass =
-    'mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-800';
+  const centeredContactRow = headerStyle === 'centered' || headerStyle === 'design';
+  const contactRowJustify = centeredContactRow ? 'justify-center' : '';
+  const contactRowClass = [
+    'mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-800',
+    contactRowJustify,
+  ]
+    .filter(Boolean)
+    .join(' ');
   const contactLine = contactParts.length
     ? `<p class="${contactRowClass}">${contactParts.join('')}</p>`
     : '';
@@ -165,8 +171,14 @@ export function renderBasicsHeader(
           .filter(Boolean)
       : [];
 
+  const profileRowClass = [
+    'mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-800',
+    contactRowJustify,
+  ]
+    .filter(Boolean)
+    .join(' ');
   const profileLine = profileSegments.length
-    ? `<p class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-800">${profileSegments.join('')}</p>`
+    ? `<p class="${profileRowClass}">${profileSegments.join('')}</p>`
     : '';
 
   const imageHtml =
@@ -194,7 +206,11 @@ export function renderBasicsHeader(
         </div>
         <div class="text-sm text-neutral-800 sm:text-right">
           ${contactParts.join('<br />')}
-          ${profileSegments.length ? `<div class="mt-1 space-y-1">${profileSegments.join('<br />')}</div>` : ''}
+          ${
+            profileSegments.length
+              ? `<p class="mt-1 flex flex-wrap items-center justify-end gap-x-3 gap-y-1">${profileSegments.join('')}</p>`
+              : ''
+          }
         </div>
       </div>
     </header>`;

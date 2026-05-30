@@ -25,6 +25,7 @@ describe('renderBasicsHeader', () => {
     const presentation = getDefaultPresentationConfig('classic');
     const html = renderBasicsHeader(fullBasics, 'centered', presentation);
 
+    expect(html).toContain('justify-center');
     expect(html).toContain('aria-hidden="true"');
     expect(html).toContain('inline-flex items-center gap-1');
     expect(html).toContain('jane@example.com');
@@ -61,9 +62,33 @@ describe('renderBasicsHeader', () => {
     expect(html).toContain('janedoe');
   });
 
-  it('stacks icon-prefixed contact lines in tabular header', () => {
+  it('centers contact row for modern design header', () => {
+    const presentation = getDefaultPresentationConfig('modern');
+    const html = renderBasicsHeader(fullBasics, 'design', presentation);
+
+    expect(html).toContain('text-center');
+    expect(html).toContain('justify-center');
+  });
+
+  it('does not center contact row for left header', () => {
+    const presentation = getDefaultPresentationConfig('left');
+    const html = renderBasicsHeader(fullBasics, 'left', presentation);
+
+    expect(html).toContain('text-left');
+    expect(html).not.toContain('justify-center');
+  });
+
+  it('stacks contact lines but shows profiles inline in tabular header', () => {
     const presentation = getDefaultPresentationConfig('tabular');
-    const html = renderBasicsHeader(fullBasics, 'tabular', presentation);
+    const basics = {
+      ...fullBasics,
+      profiles: [
+        { network: 'LinkedIn', username: 'janedoe', url: 'https://linkedin.com/in/janedoe' },
+        { network: 'GitHub', username: 'janedoe', url: 'https://github.com/janedoe' },
+        { network: 'X', username: 'janedoe', url: 'https://x.com/janedoe' },
+      ],
+    };
+    const html = renderBasicsHeader(basics, 'tabular', presentation);
 
     const rightColStart = html.indexOf('sm:text-right');
     expect(rightColStart).toBeGreaterThan(-1);
@@ -71,5 +96,12 @@ describe('renderBasicsHeader', () => {
     expect(rightCol).toContain('<br />');
     expect(rightCol).toContain('inline-flex items-center gap-1');
     expect(rightCol).toContain('jane@example.com');
+
+    const profileRowStart = rightCol.indexOf('justify-end gap-x-3');
+    expect(profileRowStart).toBeGreaterThan(-1);
+    const profileRow = rightCol.slice(profileRowStart);
+    expect(profileRow).not.toContain('space-y-1');
+    const profileBrCount = (profileRow.match(/<br \/>/g) ?? []).length;
+    expect(profileBrCount).toBe(0);
   });
 });
