@@ -55,14 +55,16 @@ describe('CvEditorHeaderActions', () => {
     );
   }
 
-  it('renders Preview link and Export menu trigger', async () => {
+  it('renders Export before Preview with accessible labels', async () => {
     renderActions();
 
-    expect(screen.getByRole('link', { name: /Preview/i })).toHaveAttribute(
-      'href',
-      '/dashboard/cv/cv-1/preview',
-    );
-    expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
+    const exportButton = screen.getByRole('button', { name: 'Export' });
+    const previewLink = screen.getByRole('link', { name: 'Preview' });
+
+    expect(previewLink).toHaveAttribute('href', '/dashboard/cv/cv-1/preview');
+    expect(
+      exportButton.compareDocumentPosition(previewLink) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('downloads PDF using the CV template id', async () => {

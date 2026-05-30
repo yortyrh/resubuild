@@ -65,12 +65,6 @@ export function CvEditorHeaderActions({ cvId, className }: CvEditorHeaderActions
   return (
     <div className={cn('flex flex-col items-stretch gap-1 sm:items-end', className)}>
       <div className="flex items-center justify-end gap-2">
-        <Button type="button" variant="outline" size="sm" className="shrink-0" asChild>
-          <Link href={`/dashboard/cv/${cvId}/preview`}>
-            <Eye className="mr-1.5 size-4 shrink-0" aria-hidden />
-            Preview
-          </Link>
-        </Button>
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button
@@ -95,6 +89,12 @@ export function CvEditorHeaderActions({ cvId, className }: CvEditorHeaderActions
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <Button type="button" variant="outline" size="sm" className="shrink-0" asChild>
+          <Link href={`/dashboard/cv/${cvId}/preview`} aria-label="Preview">
+            <Eye className="size-4 shrink-0 lg:mr-1.5" aria-hidden />
+            <span className="hidden lg:inline">Preview</span>
+          </Link>
+        </Button>
       </div>
       {exportError ? (
         <p className="text-destructive text-right text-xs leading-snug">{exportError}</p>
