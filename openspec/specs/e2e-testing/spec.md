@@ -101,7 +101,7 @@ The repository MUST maintain the catalog table below mapping E2E describe blocks
 | `auth (local Supabase)`                  | `authentication`                          | Login + `/auth/me` for fixture user                                                               |
 | `CV REST (local Supabase)`               | `cv-rest-api`, `resume-schema-validation` | List/get seeded CVs; profile photo assignment; reject invalid JSON                                |
 | `media service (local Supabase)`         | `resume-media-uploads`                    | Public GET stream; owner meta; authenticated upload                                               |
-| `CV export (local Supabase)`             | `cv-export`                               | Template catalog; HTML export for seeded CV                                                       |
+| `CV export (local Supabase)`             | `cv-export`, `cv-json-export`             | Template catalog; HTML and JSON export for seeded CV                                              |
 | `CV template presentation`               | `cv-template-presentation`                | GET defaults; PATCH hidden sections round-trip                                                    |
 | `CV lifecycle (local Supabase)`          | `cv-rest-api`                             | PATCH template + basics; DELETE ephemeral CV                                                      |
 | `CV sections coverage (local Supabase)`  | `cv-items-api`                            | Basics/education/languages GET; work create/delete by row id                                      |
@@ -132,13 +132,24 @@ Changes that only affect `cv-editor-ui` or `web-application` MUST NOT modify API
 - Auth: login fixture user; `/auth/me` with Bearer; 401 without token
 - CV: all seeded ids present in list; get by id; every CV has `basics.image`; invalid POST returns 400; skills reorder; work patch by row id
 - Media: public GET streams bytes; owner GET meta; authenticated upload returns `{ id, url, contentType }`; upload without token returns 401
-- Export: `GET /cv/export/templates`; `GET /cv/:id/export/html` returns HTML
+- Export: `GET /cv/export/templates`; `GET /cv/:id/export/html` returns HTML; `GET /cv/:id/export/json` returns JSON with `basics.name`
 - Template presentation: GET defaults; PATCH hidden sections round-trip
 - Lifecycle: PATCH template + basics; DELETE ephemeral CV
 - Sections: GET basics/education/languages on seeded CV; work create + delete by row id
 - AI agent: `GET /ai/agents/providers`; `GET /ai/agents/active` unconfigured for fixture user
 - Import LLM: `GET /import/llm/providers`; `GET /import/llm/config` unconfigured for fixture user
 - Import URL: `POST /cv/import/from-url` rejects invalid URLs with 400
+
+### Requirement: E2E catalog SHALL include JSON export
+
+The test catalog for `local-supabase.e2e-spec.ts` SHALL list JSON export alongside existing HTML export coverage.
+
+#### Scenario: JSON export smoke test
+
+- **WHEN** E2E requests `GET /cv/:id/export/json` for a seeded owned CV with a valid bearer token
+- **THEN** the response status SHALL be 200
+- **AND** the `Content-Type` SHALL include `application/json`
+- **AND** the parsed body SHALL include `basics.name` matching the seeded CV
 
 ## tasks.md template (E2E test impact)
 
