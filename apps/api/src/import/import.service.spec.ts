@@ -4,7 +4,11 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { runPdfImportWorkflow, runTextImportWorkflow } from '@resumind/import-agent';
+import {
+  runPdfImportWorkflow,
+  runTextImportWorkflow,
+  runWebsiteImportWorkflow,
+} from '@resumind/import-agent';
 import type { ImportModelCatalog } from '@resumind/import-models';
 import catalog from '@resumind/import-models/catalog.json';
 import { InvalidImportedResumeError, prepareImportedResume } from '@resumind/types';
@@ -17,7 +21,28 @@ const testCatalog = catalog as ImportModelCatalog;
 jest.mock('@resumind/import-agent', () => ({
   runPdfImportWorkflow: jest.fn(),
   runTextImportWorkflow: jest.fn(),
+  runWebsiteImportWorkflow: jest.fn(),
 }));
+
+function mockFetchJsonResume(body: Record<string, unknown>, contentType = 'application/json') {
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    headers: { get: () => contentType },
+    text: jest.fn().mockResolvedValue(JSON.stringify(body)),
+  }) as never;
+}
+
+function mockFetchHtml(html: string) {
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    headers: { get: () => 'text/html' },
+    text: jest.fn().mockResolvedValue(html),
+  }) as never;
+}
 
 jest.mock('@resumind/types', () => {
   const actual = jest.requireActual<typeof import('@resumind/types')>('@resumind/types');
@@ -39,6 +64,7 @@ describe('ImportService', () => {
   let cvService: { create: jest.Mock };
   let catalogService: Pick<ImportModelsCatalogService, 'getCatalog'>;
   let schemaValidator: { validate: jest.Mock };
+  let webScrapeService: { getDecryptedConfig: jest.Mock };
 
   beforeEach(() => {
     jest
@@ -51,6 +77,7 @@ describe('ImportService', () => {
     cvService = { create: jest.fn() };
     catalogService = { getCatalog: () => testCatalog };
     schemaValidator = { validate: jest.fn() };
+    webScrapeService = { getDecryptedConfig: jest.fn().mockResolvedValue(null) };
 
     service = new ImportService(
       {
@@ -64,6 +91,7 @@ describe('ImportService', () => {
       cvService as never,
       catalogService as never,
       schemaValidator as never,
+      webScrapeService as never,
     );
   });
 
@@ -144,6 +172,7 @@ describe('ImportService', () => {
       cvService as never,
       catalogService as never,
       schemaValidator as never,
+      webScrapeService as never,
     );
 
     expect(service.getMaxBytes()).toBe(2048);
@@ -161,6 +190,7 @@ describe('ImportService', () => {
       cvService as never,
       catalogService as never,
       schemaValidator as never,
+      webScrapeService as never,
     );
 
     await expect(
@@ -334,64 +364,29 @@ describe('ImportService', () => {
       );
     });
 
-    it('rejects non-JSON responses', async () => {
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-        headers: { get: () => 'text/html' },
-      }) as never;
-
-      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
-    });
-
-    it('rejects invalid JSON', async () => {
+    it('rejects invalid JSON bodies', async () => {
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,
         status: 200,
         statusText: 'OK',
         headers: { get: () => 'application/json' },
-        json: jest.fn().mockRejectedValue(new Error('parse error')),
+        text: jest.fn().mockResolvedValue('{not-json'),
       }) as never;
 
-      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
-    });
-
-    it('rejects non-resume JSON', async () => {
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-        headers: { get: () => 'application/json' },
-        json: jest.fn().mockResolvedValue({ not: 'a resume' }),
-      }) as never;
-
-      schemaValidator.validate.mockImplementation(() => {
-        throw new Error('invalid schema');
-      });
-
-      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toBeInstanceOf(
-        BadRequestException,
+      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toThrow(
+        'URL returned invalid JSON',
       );
     });
 
     it('returns prepared data for valid JSON resume', async () => {
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-        headers: { get: () => 'application/json' },
-        json: jest.fn().mockResolvedValue({ basics: { name: 'Test User' } }),
-      }) as never;
-
+      mockFetchJsonResume({ basics: { name: 'Test User' } });
       schemaValidator.validate.mockReturnValue(undefined);
 
       const result = await service.importFromUrl(user, 'https://example.com/data');
-      expect(result.data).toMatchObject({ basics: { name: 'Test User' } });
+      expect(result).toEqual({
+        kind: 'json',
+        data: expect.objectContaining({ basics: { name: 'Test User' } }),
+      });
     });
 
     it('handles non-Error thrown in fetch', async () => {
@@ -402,33 +397,57 @@ describe('ImportService', () => {
       );
     });
 
-    it('rejects unsupported content types with explicit none label', async () => {
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-        headers: { get: () => '' },
-        json: jest.fn(),
-      }) as never;
+    it('parses JSON bodies without a JSON content-type', async () => {
+      mockFetchJsonResume({ basics: { name: 'No Header User' } }, '');
+      schemaValidator.validate.mockReturnValue(undefined);
 
-      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toThrow(
-        'Content-Type: none',
+      const result = await service.importFromUrl(user, 'https://example.com/data');
+      expect(result.kind).toBe('json');
+      expect(result).toMatchObject({
+        data: expect.objectContaining({ basics: { name: 'No Header User' } }),
+      });
+    });
+
+    it('starts an agent job for HTML pages when AI is configured', async () => {
+      mockFetchHtml('<html><body>CV</body></html>');
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(runWebsiteImportWorkflow).mockResolvedValue({
+        draft: { basics: { name: 'HTML User' } },
+        errors: [],
+      });
+
+      const result = await service.importFromUrl(user, 'https://example.com/profile');
+      expect(result).toEqual({ kind: 'job', jobId: expect.any(String) });
+
+      await new Promise((resolve) => setImmediate(resolve));
+      const job = service.getJob(user, result.kind === 'job' ? result.jobId : '');
+      expect(job.previewData).toMatchObject({ basics: { name: 'HTML User' } });
+    });
+
+    it('rejects HTML import when AI agent is not configured', async () => {
+      mockFetchHtml('<html></html>');
+      aiAgentCredentialService.getActiveCredentials.mockRejectedValue(
+        new UnprocessableEntityException('Active AI agent configuration is required'),
+      );
+
+      await expect(service.importFromUrl(user, 'https://example.com/profile')).rejects.toThrow(
+        'Configure an AI agent account',
       );
     });
 
     it('accepts text/plain JSON responses', async () => {
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-        headers: { get: () => 'text/plain' },
-        json: jest.fn().mockResolvedValue({ basics: { name: 'Plain Text User' } }),
-      }) as never;
-
+      mockFetchJsonResume({ basics: { name: 'Plain Text User' } }, 'text/plain');
       schemaValidator.validate.mockReturnValue(undefined);
 
       const result = await service.importFromUrl(user, 'https://example.com/resume.txt');
-      expect(result.data).toMatchObject({ basics: { name: 'Plain Text User' } });
+      expect(result.kind).toBe('json');
+      expect(result).toMatchObject({
+        data: expect.objectContaining({ basics: { name: 'Plain Text User' } }),
+      });
     });
 
     it('rejects HTTP error responses from URL import', async () => {
@@ -444,51 +463,27 @@ describe('ImportService', () => {
       );
     });
 
-    it('handles InvalidImportedResumeError from prepareImportedResume', async () => {
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-        headers: { get: () => 'application/json' },
-        json: jest.fn().mockResolvedValue({ basics: {} }),
-      }) as never;
-
-      jest.mocked(prepareImportedResume).mockImplementation(() => {
+    it('falls back to agent import when JSON body fails prepareImportedResume', async () => {
+      mockFetchJsonResume({ basics: {} });
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(prepareImportedResume).mockImplementationOnce(() => {
         throw new InvalidImportedResumeError('missing basics');
       });
-
-      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toThrow(
-        'missing basics',
-      );
-    });
-
-    it('re-throws unknown errors from prepareImportedResume', async () => {
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-        headers: { get: () => 'application/json' },
-        json: jest.fn().mockResolvedValue({ basics: {} }),
-      }) as never;
-
-      jest.mocked(prepareImportedResume).mockImplementation(() => {
-        throw new Error('prepare failed');
+      jest.mocked(runWebsiteImportWorkflow).mockResolvedValue({
+        draft: { basics: { name: 'Agent User' } },
+        errors: [],
       });
 
-      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toThrow(
-        'prepare failed',
-      );
+      const result = await service.importFromUrl(user, 'https://example.com/data');
+      expect(result.kind).toBe('job');
     });
 
     it('rewrites registry profile URLs before fetching', async () => {
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-        headers: { get: () => 'application/json' },
-        json: jest.fn().mockResolvedValue({ basics: { name: 'Registry User' } }),
-      }) as never;
-
+      mockFetchJsonResume({ basics: { name: 'Registry User' } });
       schemaValidator.validate.mockReturnValue(undefined);
 
       const result = await service.importFromUrl(
@@ -499,7 +494,10 @@ describe('ImportService', () => {
         'https://registry.jsonresume.org/thomasdavis.json',
         expect.any(Object),
       );
-      expect(result.data).toMatchObject({ basics: { name: 'Registry User' } });
+      expect(result).toMatchObject({
+        kind: 'json',
+        data: expect.objectContaining({ basics: { name: 'Registry User' } }),
+      });
     });
   });
 
@@ -572,6 +570,7 @@ describe('ImportService', () => {
         cvService as never,
         catalogService as never,
         schemaValidator as never,
+        webScrapeService as never,
       );
 
       await expect(

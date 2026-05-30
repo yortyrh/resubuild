@@ -7,6 +7,8 @@ export interface ImportJobRecord {
   status: ImportJobStatus;
   progress?: ImportJobProgress;
   cvId?: string;
+  /** Normalized JSON Resume draft for client preview (website import, no CV created yet). */
+  previewData?: Record<string, unknown>;
   errors?: string[];
   createdAt: number;
   updatedAt: number;

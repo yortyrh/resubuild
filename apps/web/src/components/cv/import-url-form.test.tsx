@@ -2,7 +2,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ImportWebsiteForm } from './import-website-form';
+import { ImportUrlForm } from './import-url-form';
 
 const mockImportCvFromUrl = vi.fn();
 
@@ -22,11 +22,20 @@ vi.mock('@/lib/import-cv-preview', async (importOriginal) => {
   };
 });
 
+vi.mock('@/lib/queries/ai-agent-queries', () => ({
+  useAiAgentActive: () => ({ data: { configured: true } }),
+  usePdfImportJob: () => ({ data: undefined, error: undefined }),
+}));
+
+vi.mock('@/lib/queries/web-scrape-queries', () => ({
+  useWebScrapeConfig: () => ({ data: { configured: false } }),
+}));
+
 vi.mock('@/components/cv/json-resume-editor', () => ({
   formatJsonForEditor: (text: string) => text,
 }));
 
-describe('ImportWebsiteForm', () => {
+describe('ImportUrlForm', () => {
   const mockOnImport = vi.fn();
   const mockOnCancel = vi.fn();
 
@@ -35,16 +44,17 @@ describe('ImportWebsiteForm', () => {
     vi.clearAllMocks();
   });
 
-  it('fetches JSON Resume data from a URL and imports it', async () => {
+  it('fetches JSON Resume from a URL and imports it', async () => {
     mockImportCvFromUrl.mockResolvedValue({
+      kind: 'json',
       data: { basics: { name: 'Registry User', label: 'Engineer' } },
     });
     mockOnImport.mockResolvedValue(undefined);
     const user = userEvent.setup({ delay: null });
 
-    render(<ImportWebsiteForm onImport={mockOnImport} onCancel={mockOnCancel} />);
+    render(<ImportUrlForm onImport={mockOnImport} onCancel={mockOnCancel} />);
     await user.type(
-      screen.getByLabelText(/Import from website/i),
+      screen.getByLabelText(/Import from URL/i),
       'https://registry.jsonresume.org/thomasdavis',
     );
     await user.click(screen.getByRole('button', { name: 'Fetch' }));

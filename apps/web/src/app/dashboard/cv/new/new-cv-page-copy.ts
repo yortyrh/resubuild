@@ -13,15 +13,15 @@ export const NEW_CV_PAGE_COPY: Record<string, NewCvPageCopy> = {
     subtitle:
       'Upload a PDF résumé and let the AI agent extract a JSON Resume. The CV is created when import succeeds.',
   },
-  '/dashboard/cv/new/import/json': {
-    title: 'Import JSON Resume',
+  '/dashboard/cv/new/import/url': {
+    title: 'Import from URL',
     subtitle:
-      'Upload a `.json` file or edit JSON directly. Review validation, then confirm to create your CV.',
+      'Paste a public HTTPS résumé URL. JSON endpoints import instantly; HTML pages are converted by the AI agent.',
   },
-  '/dashboard/cv/new/import/website': {
-    title: 'Import from website',
+  '/dashboard/cv/new/import/json': {
+    title: 'Import JSON file',
     subtitle:
-      'Fetch JSON Resume data from a public HTTPS URL, including JSON Resume Registry profile links.',
+      'Upload a `.json` file or edit JSON directly. For a remote URL, use Import from URL instead.',
   },
   '/dashboard/cv/new/import/markdown': {
     title: 'Import from Markdown',

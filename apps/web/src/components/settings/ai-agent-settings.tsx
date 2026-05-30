@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useId, useState } from 'react';
+import { WebScrapeSettings } from '@/components/settings/web-scrape-settings';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -357,6 +358,8 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <WebScrapeSettings />
 
       <Dialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>

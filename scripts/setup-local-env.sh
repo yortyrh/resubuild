@@ -22,7 +22,7 @@ Write local dev .env files using `supabase status -o env`.
 
 Options:
   --dry-run          Print files to stdout instead of writing
-  --non-interactive  Skip prompts (SEARCH_API_KEY stays empty unless already in apps/api/.env)
+  --non-interactive  Skip interactive prompts
   -h, --help         Show this help
 
 Environment overrides (optional):
@@ -30,7 +30,6 @@ Environment overrides (optional):
   WEB_ORIGIN        CORS / app origin (default: http://localhost:3000)
   API_PUBLIC_URL    PUBLIC_API_URL / NEXT_PUBLIC_API_URL (default: http://localhost:$PORT)
   MEDIA_BUCKET      Storage bucket name (default: first [storage.buckets.*] in config.toml, else "media")
-  SEARCH_API_KEY    Tavily key for PDF import web lookup (optional; prompted when interactive)
 EOF
 }
 
@@ -62,34 +61,6 @@ generate_encryption_key() {
     openssl rand -base64 32
   else
     head -c 32 /dev/urandom | base64 | tr -d '\n'
-  fi
-}
-
-prompt_search_api_key() {
-  if [[ -n "${SEARCH_API_KEY:-}" ]]; then
-    return
-  fi
-  if $non_interactive || ! [[ -t 0 ]]; then
-    return
-  fi
-
-  cat <<'EOF'
-
-PDF import — optional web lookup (Tavily)
----------------------------------------
-The import agent can resolve company/school URLs during PDF import when
-SEARCH_API_KEY is set. Without it, web lookup is skipped; import still works.
-
-Get a free API key:
-  1. Sign up at https://tavily.com
-  2. Open Dashboard → API keys
-  3. Create a key and paste it below
-
-Press Enter to skip.
-EOF
-  read -r -p "SEARCH_API_KEY: " entered_key || true
-  if [[ -n "${entered_key// /}" ]]; then
-    SEARCH_API_KEY="$entered_key"
   fi
 }
 
@@ -129,10 +100,11 @@ fi
 media_bucket="${media_bucket:-media}"
 
 existing_encryption_key=""
-existing_search_api_key=""
 if [[ -f "$API_ENV" ]]; then
   existing_encryption_key="$(read_env_var "$API_ENV" IMPORT_LLM_CONFIG_ENCRYPTION_KEY || true)"
-  existing_search_api_key="$(read_env_var "$API_ENV" SEARCH_API_KEY || true)"
+  if [[ -z "$existing_encryption_key" ]]; then
+    existing_encryption_key="$(read_env_var "$API_ENV" AI_AGENT_ENCRYPTION_KEY || true)"
+  fi
 fi
 
 encryption_key_rotated=false
@@ -144,9 +116,6 @@ if is_placeholder_encryption_key "$existing_encryption_key"; then
 else
   import_llm_config_encryption_key="$existing_encryption_key"
 fi
-
-SEARCH_API_KEY="${SEARCH_API_KEY:-$existing_search_api_key}"
-prompt_search_api_key
 
 pdf_import_max_bytes="${PDF_IMPORT_MAX_BYTES:-5242880}"
 pdf_import_enabled="${PDF_IMPORT_ENABLED:-true}"
@@ -170,9 +139,8 @@ CORS_ORIGIN=${WEB_ORIGIN}
 APP_URL=${WEB_ORIGIN}
 PUBLIC_API_URL=${API_PUBLIC_URL}
 
-# PDF import + per-user LLM settings
-IMPORT_LLM_CONFIG_ENCRYPTION_KEY=${import_llm_config_encryption_key}
-SEARCH_API_KEY=${SEARCH_API_KEY}
+# PDF import + per-user AI agent / web scrape settings (keys configured in the app UI)
+AI_AGENT_ENCRYPTION_KEY=${import_llm_config_encryption_key}
 PDF_IMPORT_MAX_BYTES=${pdf_import_max_bytes}
 PDF_IMPORT_ENABLED=${pdf_import_enabled}
 EOF
@@ -207,9 +175,7 @@ if ! $dry_run; then
   if [[ -z "$existing_encryption_key" ]]; then
     echo "Generated IMPORT_LLM_CONFIG_ENCRYPTION_KEY for PDF import LLM settings."
   elif $encryption_key_rotated; then
-    echo "Rotated IMPORT_LLM_CONFIG_ENCRYPTION_KEY — re-save import LLM settings at /dashboard/settings/import-llm if PDF import fails."
+    echo "Rotated AI_AGENT_ENCRYPTION_KEY — re-save AI agent and web scrape keys in settings if import fails."
   fi
-  if [[ -z "${SEARCH_API_KEY:-}" ]]; then
-    echo "SEARCH_API_KEY not set — PDF import web lookup disabled (optional)."
-  fi
+  echo "Configure Tavily or Firecrawl under Dashboard → Settings → AI agent for URL import and optional web lookup."
 fi

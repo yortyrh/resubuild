@@ -1,10 +1,6 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { ImportWebsiteForm } from '@/components/cv/import-website-form';
-import { useNewCvHandlers } from '@/lib/use-new-cv-handlers';
-
-export default function ImportWebsitePage() {
-  const { handleImport, handleCancel } = useNewCvHandlers();
-
-  return <ImportWebsiteForm onImport={handleImport} onCancel={handleCancel} />;
+/** @deprecated Use `/dashboard/cv/new/import/url` */
+export default function ImportWebsiteRedirectPage() {
+  redirect('/dashboard/cv/new/import/url');
 }

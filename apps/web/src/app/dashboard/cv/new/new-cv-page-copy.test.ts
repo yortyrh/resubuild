@@ -5,8 +5,8 @@ describe('getNewCvPageCopy', () => {
   it('returns route-specific copy for each create/import page', () => {
     expect(getNewCvPageCopy('/dashboard/cv/new/create').title).toBe('Create a CV manually');
     expect(getNewCvPageCopy('/dashboard/cv/new/import/pdf').title).toBe('Import from PDF');
-    expect(getNewCvPageCopy('/dashboard/cv/new/import/json').title).toBe('Import JSON Resume');
-    expect(getNewCvPageCopy('/dashboard/cv/new/import/website').title).toBe('Import from website');
+    expect(getNewCvPageCopy('/dashboard/cv/new/import/url').title).toBe('Import from URL');
+    expect(getNewCvPageCopy('/dashboard/cv/new/import/json').title).toBe('Import JSON file');
     expect(getNewCvPageCopy('/dashboard/cv/new/import/markdown').title).toBe(
       'Import from Markdown',
     );

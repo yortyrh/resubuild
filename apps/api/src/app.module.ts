@@ -9,6 +9,7 @@ import { ImportModule } from './import/import.module';
 import { ImportLlmConfigModule } from './import-llm-config/import-llm-config.module';
 import { ImportModelsCatalogModule } from './import-models-catalog/import-models-catalog.module';
 import { MediaModule } from './media/media.module';
+import { WebScrapeModule } from './web-scrape/web-scrape.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { MediaModule } from './media/media.module';
     AiAgentModule,
     ImportLlmConfigModule,
     ImportModule,
+    WebScrapeModule,
   ],
 })
 export class AppModule {}

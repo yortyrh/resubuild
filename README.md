@@ -63,7 +63,7 @@ Regenerate sample PDFs from JSON fixtures: `pnpm samples:pdf` (builds `@resumind
 
 ### PDF import smoke (optional)
 
-Requires a real provider API key in import LLM settings. `pnpm setup:env` generates `IMPORT_LLM_CONFIG_ENCRYPTION_KEY` and optionally prompts for a Tavily `SEARCH_API_KEY` (web lookup during import).
+Requires a real provider API key in AI agent settings. `pnpm setup:env` generates `AI_AGENT_ENCRYPTION_KEY`. Optional Tavily or Firecrawl keys for URL import and web lookup are saved per user in the app (Settings → AI agent), not in server env.
 
 1. Open `/dashboard/settings/import-llm`, pick provider → model → API key, and save.
 2. Generate sample PDFs if needed: `pnpm samples:pdf`

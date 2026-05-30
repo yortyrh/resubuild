@@ -339,7 +339,17 @@ export interface PdfImportJobStatus {
   status: 'queued' | 'running' | 'succeeded' | 'failed';
   progress?: string;
   cvId?: string;
+  previewData?: Record<string, unknown>;
   errors?: string[];
+}
+
+export type WebScrapeProvider = 'firecrawl' | 'tavily';
+
+export interface WebScrapeConfigStatus {
+  configured: boolean;
+  provider?: WebScrapeProvider;
+  reconfigurationRequired?: boolean;
+  updatedAt?: string;
 }
 
 export async function startPdfImport(file: File): Promise<{ jobId: string }> {
@@ -452,14 +462,31 @@ export function getCvProfiles(cvId: string) {
   return apiFetch<Record<string, unknown>[]>(`/cv/${cvId}/profiles`);
 }
 
-export interface ImportFromUrlResult {
-  data: Record<string, unknown>;
-}
+export type ImportFromUrlResult =
+  | { kind: 'json'; data: Record<string, unknown> }
+  | { kind: 'job'; jobId: string };
 
 export async function importCvFromUrl(url: string): Promise<ImportFromUrlResult> {
   return apiFetch<ImportFromUrlResult>('/cv/import/from-url', {
     method: 'POST',
     body: JSON.stringify({ url }),
+  });
+}
+
+export function getWebScrapeConfig() {
+  return apiFetch<WebScrapeConfigStatus>('/web-scrape/config');
+}
+
+export function saveWebScrapeConfig(payload: { provider: WebScrapeProvider; apiKey: string }) {
+  return apiFetch<WebScrapeConfigStatus>('/web-scrape/config', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function clearWebScrapeConfig() {
+  return apiFetch<WebScrapeConfigStatus>('/web-scrape/config', {
+    method: 'DELETE',
   });
 }
 

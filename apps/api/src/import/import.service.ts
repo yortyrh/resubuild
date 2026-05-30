@@ -9,6 +9,8 @@ import {
   type ImportJobProgress,
   runPdfImportWorkflow,
   runTextImportWorkflow,
+  runWebsiteImportWorkflow,
+  type WebsiteImportToolsConfig,
 } from '@resumind/import-agent';
 import { InvalidImportedResumeError, prepareImportedResume } from '@resumind/types';
 import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
@@ -16,8 +18,13 @@ import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvService } from '../cv/cv.service';
 import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
+import { WebScrapeService } from '../web-scrape/web-scrape.service';
 import { ImportJobStore } from './import-job.store';
 import { resolveImportUrl, validateImportUrl } from './import-url.util';
+
+export type ImportFromUrlResponse =
+  | { kind: 'json'; data: Record<string, unknown> }
+  | { kind: 'job'; jobId: string };
 
 export const PDF_IMPORT_MAX_BYTES_DEFAULT = 5 * 1024 * 1024;
 export const MARKDOWN_IMPORT_MAX_BYTES_DEFAULT = 512 * 1024;
@@ -34,6 +41,7 @@ export class ImportService {
     private readonly cvService: CvService,
     private readonly catalogService: ImportModelsCatalogService,
     private readonly schemaValidator: ResumeSchemaValidator,
+    private readonly webScrapeService: WebScrapeService,
   ) {}
 
   isEnabled(): boolean {
@@ -116,18 +124,25 @@ export class ImportService {
       status: job.status,
       progress: job.progress,
       cvId: job.cvId,
+      previewData: job.previewData,
       errors: job.errors,
     };
   }
 
-  async importFromUrl(user: AuthenticatedRequest['user'], rawUrl: string) {
-    const url = resolveImportUrl(validateImportUrl(rawUrl));
+  async importFromUrl(
+    user: AuthenticatedRequest['user'],
+    rawUrl: string,
+  ): Promise<ImportFromUrlResponse> {
+    const validated = validateImportUrl(rawUrl);
+    const url = resolveImportUrl(validated);
 
     let fetched: Response;
     try {
       fetched = await fetch(url.toString(), {
         signal: AbortSignal.timeout(10_000),
-        headers: { Accept: 'application/json, text/plain' },
+        headers: {
+          Accept: 'application/json, text/plain, text/html;q=0.8',
+        },
       });
     } catch (err) {
       throw new BadRequestException(
@@ -140,25 +155,62 @@ export class ImportService {
     }
 
     const contentType = fetched.headers.get('content-type') ?? '';
-    if (!contentType.includes('json') && !contentType.includes('text/plain')) {
+    const bodyText = await fetched.text();
+    const trimmed = bodyText.trim();
+
+    const jsonCandidate =
+      contentType.includes('json') ||
+      contentType.includes('text/plain') ||
+      trimmed.startsWith('{') ||
+      trimmed.startsWith('[');
+
+    if (jsonCandidate) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {
+        if (!contentType.includes('html')) {
+          throw new BadRequestException('URL returned invalid JSON');
+        }
+      }
+
+      if (parsed !== undefined) {
+        const prepared = this.tryPrepareJsonResume(parsed);
+        if (prepared) {
+          return { kind: 'json', data: prepared };
+        }
+      }
+    }
+
+    if (!this.isEnabled()) {
+      throw new ForbiddenException('Website import is disabled');
+    }
+
+    let llmConfig: Awaited<ReturnType<AiAgentCredentialService['getActiveCredentials']>>;
+    try {
+      llmConfig = await this.aiAgentCredentialService.getActiveCredentials(user);
+    } catch {
       throw new BadRequestException(
-        `URL did not return JSON (Content-Type: ${contentType || 'none'}). Only JSON endpoints are supported.`,
+        'This page is not JSON Resume data. Configure an AI agent account in settings to import HTML or markdown pages.',
       );
     }
 
-    let parsed: unknown;
-    try {
-      parsed = await fetched.json();
-    } catch {
-      throw new BadRequestException('URL returned invalid JSON');
-    }
+    const scrapeConfig = await this.webScrapeService.getDecryptedConfig(user);
+    const job = this.jobStore.create(user.id);
+    setImmediate(() => {
+      void this.runWebsiteJob(user, job.id, validated.toString(), llmConfig, scrapeConfig);
+    });
 
+    return { kind: 'job', jobId: job.id };
+  }
+
+  private tryPrepareJsonResume(parsed: unknown): Record<string, unknown> | null {
     let prepared: Record<string, unknown>;
     try {
       prepared = prepareImportedResume(parsed);
     } catch (err) {
       if (err instanceof InvalidImportedResumeError) {
-        throw new BadRequestException(err.message);
+        return null;
       }
       throw err;
     }
@@ -166,10 +218,21 @@ export class ImportService {
     try {
       this.schemaValidator.validate(prepared);
     } catch {
-      throw new BadRequestException('URL returned data is not a valid JSON Resume');
+      return null;
     }
 
-    return { data: prepared };
+    return prepared;
+  }
+
+  /** Tavily search/extract key from per-user web scrape settings (no server env fallback). */
+  private async resolveUserSearchApiKey(
+    user: AuthenticatedRequest['user'],
+  ): Promise<string | undefined> {
+    const scrapeConfig = await this.webScrapeService.getDecryptedConfig(user);
+    if (scrapeConfig?.provider === 'tavily') {
+      return scrapeConfig.apiKey;
+    }
+    return undefined;
   }
 
   private resolveApiKeyEnvVar(modelId: string): string | null {
@@ -214,12 +277,13 @@ export class ImportService {
     this.jobStore.update(jobId, { status: 'running', progress: 'extracting' });
 
     try {
+      const searchApiKey = await this.resolveUserSearchApiKey(user);
       const result = await this.withScopedApiKey(modelId, apiKey, async () => {
         return runPdfImportWorkflow({
           pdfBuffer,
           modelId,
           apiKey,
-          searchApiKey: this.configService.get<string>('SEARCH_API_KEY'),
+          searchApiKey,
           onProgress: (progress: ImportJobProgress) => {
             this.jobStore.update(jobId, { progress });
           },
@@ -237,6 +301,72 @@ export class ImportService {
     }
   }
 
+  private async runWebsiteJob(
+    user: AuthenticatedRequest['user'],
+    jobId: string,
+    sourceUrl: string,
+    llmConfig: { modelId: string; apiKey: string },
+    scrapeConfig: { provider: 'firecrawl' | 'tavily'; apiKey: string } | null,
+  ) {
+    this.jobStore.update(jobId, { status: 'running', progress: 'extracting' });
+
+    const toolsConfig: WebsiteImportToolsConfig = {
+      scrapeProvider: scrapeConfig?.provider ?? null,
+      scrapeApiKey: scrapeConfig?.apiKey,
+      searchApiKey: scrapeConfig?.provider === 'tavily' ? scrapeConfig.apiKey : undefined,
+    };
+
+    try {
+      const result = await this.withScopedApiKey(llmConfig.modelId, llmConfig.apiKey, async () => {
+        return runWebsiteImportWorkflow({
+          sourceUrl,
+          modelId: llmConfig.modelId,
+          apiKey: llmConfig.apiKey,
+          toolsConfig,
+          onProgress: (progress: ImportJobProgress) => {
+            this.jobStore.update(jobId, { progress });
+          },
+        });
+      });
+
+      this.finishWebsitePreviewJob(jobId, result);
+    } catch (error) {
+      this.failJob(jobId, error);
+    }
+  }
+
+  private finishWebsitePreviewJob(
+    jobId: string,
+    result: { draft?: Record<string, unknown>; errors: string[] },
+  ) {
+    if (result.errors.length > 0 || !result.draft) {
+      const errors = result.errors.length
+        ? result.errors
+        : ['Website import failed before preview'];
+      this.jobStore.update(jobId, { status: 'failed', errors });
+      return;
+    }
+
+    let prepared: Record<string, unknown>;
+    try {
+      prepared = prepareImportedResume(result.draft);
+      this.schemaValidator.validate(prepared);
+    } catch (err) {
+      const message =
+        err instanceof InvalidImportedResumeError
+          ? err.message
+          : 'Imported page did not produce valid JSON Resume data';
+      this.jobStore.update(jobId, { status: 'failed', errors: [message] });
+      return;
+    }
+
+    this.jobStore.update(jobId, {
+      status: 'succeeded',
+      previewData: prepared,
+      progress: 'finalizing',
+    });
+  }
+
   private async runTextJob(
     user: AuthenticatedRequest['user'],
     jobId: string,
@@ -247,12 +377,13 @@ export class ImportService {
     this.jobStore.update(jobId, { status: 'running', progress: 'drafting' });
 
     try {
+      const searchApiKey = await this.resolveUserSearchApiKey(user);
       const result = await this.withScopedApiKey(modelId, apiKey, async () => {
         return runTextImportWorkflow({
           sourceText,
           modelId,
           apiKey,
-          searchApiKey: this.configService.get<string>('SEARCH_API_KEY'),
+          searchApiKey,
           onProgress: (progress: ImportJobProgress) => {
             this.jobStore.update(jobId, { progress });
           },

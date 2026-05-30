@@ -22,14 +22,14 @@ const NEW_CV_ROUTES = [
     icon: PenLine,
   },
   {
-    href: '/dashboard/cv/new/import/json',
-    label: 'Import JSON',
-    icon: FileJson,
+    href: '/dashboard/cv/new/import/url',
+    label: 'Import from URL',
+    icon: Globe,
   },
   {
-    href: '/dashboard/cv/new/import/website',
-    label: 'Import from website',
-    icon: Globe,
+    href: '/dashboard/cv/new/import/json',
+    label: 'Import JSON file',
+    icon: FileJson,
   },
   {
     href: '/dashboard/cv/new/import/markdown',

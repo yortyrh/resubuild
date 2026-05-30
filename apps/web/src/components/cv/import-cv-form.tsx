@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useId, useState } from 'react';
 import { ImportFileUpload } from '@/components/cv/import-file-upload';
 import { ImportJsonEditDialog } from '@/components/cv/import-json-edit-dialog';
@@ -170,7 +171,11 @@ export function ImportCvForm({ onImport, onCancel }: ImportCvFormProps) {
         />
         <p className="text-muted-foreground text-sm">
           Choose a JSON Resume file to import. Validation runs automatically after the file is
-          loaded.
+          loaded. To import from a remote URL instead, use{' '}
+          <Link href="/dashboard/cv/new/import/url" className="underline">
+            Import from URL
+          </Link>
+          .
         </p>
 
         {fileError ? <p className="text-destructive text-sm">{fileError}</p> : null}
