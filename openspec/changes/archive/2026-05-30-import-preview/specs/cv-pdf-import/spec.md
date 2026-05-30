@@ -50,17 +50,17 @@ The import pipeline SHALL extract text from the PDF, map content to JSON Resume 
 
 ### Requirement: The web app SHALL expose PDF import on the new CV route
 
-`/dashboard/cv/new` SHALL include an **Import from PDF** path alongside manual create and JSON import. PDF import SHALL be **disabled** until the user completes import LLM configuration per `import-llm-config`, showing a setup link instead of upload when unset. When configured, the client SHALL upload the PDF only after explicit user confirmation, poll job status until `previewData` is available, then allow Preview, Edit, and Import per `import-preview-ui`. Import SHALL call `createCv` with the prepared data and navigate to `/dashboard/cv/:id` on success. Job errors SHALL display on failure. Visiting the page alone SHALL NOT start an import or create a CV.
+PDF import SHALL be available through **Import from file** at `/dashboard/cv/new/import/file` alongside JSON and Markdown. PDF import SHALL be **disabled** until the user completes import LLM configuration per `import-llm-config`, showing a setup link instead of upload when unset. When configured, the client SHALL upload the PDF only after explicit Import confirmation, poll job status until `previewData` is available, then allow Preview, Edit, and Save per `import-preview-ui`. Save SHALL call `createCv` with the prepared data and navigate to `/dashboard/cv/:id` on success. Job errors SHALL display on failure. Visiting the page alone SHALL NOT start an import or create a CV.
 
 #### Scenario: User imports PDF successfully
 
-- **WHEN** a signed-in user selects a PDF, waits for agent success, and confirms Import
+- **WHEN** a signed-in user selects a PDF on the file import route, waits for agent success, and activates Save
 - **THEN** the client SHALL call `POST /cv/import/pdf`, poll until `previewData` is available, then call `POST /cv` once and navigate to the new CV editor route
 
 #### Scenario: User previews PDF import before create
 
 - **WHEN** a PDF import job succeeds with `previewData`
-- **AND** the user opens Preview without confirming Import
+- **AND** the user opens Preview without Save
 - **THEN** the client SHALL show the import preview dialog
 - **AND** SHALL NOT call `POST /cv`
 
@@ -72,19 +72,19 @@ The import pipeline SHALL extract text from the PDF, map content to JSON Resume 
 
 #### Scenario: User without LLM config sees setup instead of upload
 
-- **WHEN** a signed-in user opens the PDF import section without saved LLM settings
-- **THEN** the UI SHALL NOT show the PDF file input
+- **WHEN** a signed-in user opens the file import section without saved LLM settings and selects a PDF
+- **THEN** the UI SHALL NOT enqueue the PDF job
 - **AND** SHALL prompt the user to open import LLM settings
 
 ## ADDED Requirements
 
 ### Requirement: Markdown import SHALL follow preview-then-create semantics
 
-Markdown import jobs SHALL use the same agent pipeline completion rules as PDF import: prepared JSON Resume in `previewData`, no automatic CV row, client `POST /cv` on confirm. The web app SHALL expose Markdown import at `/dashboard/cv/new/import/markdown` with the same Preview, Edit, and Import action row as PDF and URL imports per `import-preview-ui`.
+Markdown import jobs SHALL use the same agent pipeline completion rules as PDF import: prepared JSON Resume in `previewData`, no automatic CV row, client `POST /cv` on Save. Markdown SHALL be accepted on the unified file import route at `/dashboard/cv/new/import/file` with the same Preview, Edit, and Save action row as PDF and URL imports per `import-preview-ui`.
 
 #### Scenario: Successful Markdown import via client create
 
-- **WHEN** a signed-in user uploads Markdown, the job succeeds with `previewData`, and the user confirms Import
+- **WHEN** a signed-in user uploads Markdown on the file import route, the job succeeds with `previewData`, and the user activates Save
 - **THEN** the client SHALL call `POST /cv` once with the prepared data
 - **AND** SHALL navigate to `/dashboard/cv/:id`
 
