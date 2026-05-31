@@ -58,7 +58,7 @@ On successful workflow completion, the system SHALL persist a `job_application` 
 
 ### Requirement: Application clones SHALL be hidden from the main CV library by default
 
-CV rows created as application clones SHALL have `kind = application_clone` and `visible_in_library = false`. The dashboard CV list SHALL NOT include these clones. Users SHALL open clones only via the application workspace or direct id URL.
+CV rows created as application clones SHALL have `kind = application_clone`. The dashboard CV list SHALL include only `kind = primary` CVs from `GET /cv` and SHALL NOT include application clones. Users SHALL open clones only via the application workspace or direct id URL.
 
 #### Scenario: Dashboard list excludes application clone
 
@@ -72,13 +72,14 @@ CV rows created as application clones SHALL have `kind = application_clone` and 
 
 ### Requirement: Users SHALL promote an application clone to the main library
 
-The API SHALL expose an authenticated action to set `visible_in_library = true` on an application clone owned by the user. After promotion, the clone SHALL appear in `GET /cv` and the dashboard list like a primary CV.
+The API SHALL expose an authenticated action that deep-clones the application's tailored CV into a new row with `kind = primary` and `source_cv_id` referencing the application clone. The original application clone SHALL remain `kind = application_clone` and SHALL stay off the library list.
 
 #### Scenario: Promote clone to library
 
 - **WHEN** a user promotes an application clone
-- **THEN** subsequent `GET /cv` responses SHALL include that CV
-- **AND** `source_cv_id` SHALL remain set for lineage
+- **THEN** subsequent `GET /cv` responses SHALL include the new primary CV
+- **AND** that row's `source_cv_id` SHALL reference the application clone
+- **AND** the application clone SHALL still be excluded from `GET /cv`
 
 ### Requirement: Users SHALL copy and export the cover letter for email or PDF
 

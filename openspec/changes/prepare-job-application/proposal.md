@@ -37,7 +37,7 @@ Users can create and edit CVs in Resumind but have no guided path from a specifi
 
 ## Impact
 
-- **Database**: New migration(s) for `job_application`, `cv.source_cv_id`, `cv.kind`, `cv.visible_in_library`.
+- **Database**: New migration(s) for `job_application`, `cv.source_cv_id`, `cv.kind` (library lists `kind = primary` only).
 - **apps/import-agent**: New workflows/tools (job parse, CV match, tailor, letter)—parallel to PDF import.
 - **apps/api**: New `ApplicationModule` (controller, service, job runner); extensions to `CvService` (clone, list filter, promote, source-section loaders); letter export in export module.
 - **apps/web**: New routes under `/dashboard/applications/*`; reuse CV editor components against clone id.

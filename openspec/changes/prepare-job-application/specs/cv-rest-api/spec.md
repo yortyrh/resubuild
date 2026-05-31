@@ -8,7 +8,7 @@ Under `/applications`, authenticated handlers SHALL provide:
 - `GET /applications` — list user's applications (summary fields, ordered by `updated_at` desc)
 - `GET /applications/:id` — application detail including status, job metadata, `sourceCvId`, `tailoredCvId`, `coverLetter` Markdown, `selectionRationale`, and prepare progress while running
 - `PATCH /applications/:id` — optional body `{ coverLetter: string }` for manual Markdown edits (no AI)
-- `POST /applications/:id/promote-clone` — sets tailored clone `visible_in_library = true`
+- `POST /applications/:id/promote-clone` — deep-clones the tailored CV as `kind = primary` with `source_cv_id` pointing at the clone
 - `GET /applications/:id/export/letter/html` and `GET /applications/:id/export/letter/pdf` — cover letter export (Markdown rendered to HTML/PDF)
 
 All routes SHALL require the same Supabase auth guard as `/cv`. Prepare SHALL require a valid **active AI agent account** per `ai-agent-accounts`.
@@ -40,7 +40,7 @@ All routes SHALL require the same Supabase auth guard as `/cv`. Prepare SHALL re
 
 ### Requirement: The API SHALL deep-clone a CV for application tailoring
 
-The service SHALL expose an internal clone operation that copies the `cv` header row and all normalized child rows to a new `cv.id`, setting `source_cv_id`, `kind = application_clone`, and `visible_in_library = false`. The clone SHALL validate as JSON Resume after assembly. Child row order within each section SHALL be preserved so the UI can match clone entries to source entries by index.
+The service SHALL expose an internal clone operation that copies the `cv` header row and all normalized child rows to a new `cv.id`, setting `source_cv_id` and `kind = application_clone`. The clone SHALL validate as JSON Resume after assembly. Child row order within each section SHALL be preserved so the UI can match clone entries to source entries by index.
 
 #### Scenario: Clone preserves section content
 
@@ -60,16 +60,16 @@ The service SHALL expose read helpers keyed by `source_cv_id` to fetch basics an
 
 ### Requirement: The API SHALL expose CRUD endpoints for CVs scoped to the authenticated user
 
-Handlers MUST implement `GET /cv`, `GET /cv/:id`, `POST /cv`, `PATCH /cv/:id`, and `DELETE /cv/:id`, using a per-user Supabase client created with the caller's access token so RLS applies. `GET /cv` SHALL return only CV rows where `visible_in_library = true` (excluding non-promoted application clones). `GET /cv/:id` and mutating operations SHALL still apply to any CV owned by the user, including application clones and source CVs referenced by applications, when the id is known.
+Handlers MUST implement `GET /cv`, `GET /cv/:id`, `POST /cv`, `PATCH /cv/:id`, and `DELETE /cv/:id`, using a per-user Supabase client created with the caller's access token so RLS applies. `GET /cv` SHALL return only CV rows where `kind = primary` (excluding application clones). `GET /cv/:id` and mutating operations SHALL still apply to any CV owned by the user, including application clones and source CVs referenced by applications, when the id is known.
 
 #### Scenario: List CVs
 
 - **WHEN** an authenticated client calls `GET /cv`
-- **THEN** the service SHALL return CV rows for that user with `visible_in_library = true` ordered by `updated_at` descending
+- **THEN** the service SHALL return CV rows for that user with `kind = primary` ordered by `updated_at` descending
 
 #### Scenario: List excludes application clone
 
-- **WHEN** a user owns a primary CV and a non-promoted application clone
+- **WHEN** a user owns a primary CV and an application clone
 - **THEN** `GET /cv` SHALL return only the primary CV
 
 #### Scenario: Get application clone by id

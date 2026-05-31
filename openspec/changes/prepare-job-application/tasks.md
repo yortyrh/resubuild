@@ -6,7 +6,7 @@
 
 ## 2. Database schema
 
-- [ ] 2.1 Add migration: `cv.source_cv_id`, `cv.kind`, `cv.visible_in_library` with defaults for existing rows (`primary`, `true`)
+- [ ] 2.1 Add migration: `cv.source_cv_id`, `cv.kind` with defaults for existing rows (`primary`)
 - [ ] 2.2 Add migration: `job_application` table (including `cover_letter`, `selection_rationale`), indexes, RLS policies
 - [ ] 2.3 Update `@resumind/types` / repository mappers for new CV fields
 
@@ -24,7 +24,7 @@
 
 - [ ] 4.1 Implement `CvCloneService` deep-copy in `apps/api/src/cv/` (header + all section tables, preserve row order) with colocated Jest tests
 - [ ] 4.2 Add `CvSourceLoaderService` (or methods on clone service) to read Work/Volunteer/Project from `source_cv_id`
-- [ ] 4.3 Update `CvService.findAll` to filter `visible_in_library = true`
+- [ ] 4.3 Update `CvService.findAll` to filter `kind = primary`
 
 ## 5. API — Application module
 

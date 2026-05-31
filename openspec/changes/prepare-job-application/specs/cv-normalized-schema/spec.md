@@ -1,18 +1,23 @@
 ## ADDED Requirements
 
-### Requirement: CV rows SHALL support application clone lineage and library visibility
+### Requirement: CV rows SHALL support application clone lineage
 
-The `public.cv` table SHALL include nullable `source_cv_id uuid references public.cv(id) on delete set null`, non-null `kind text not null default 'primary'` with allowed values `primary` and `application_clone`, and non-null `visible_in_library boolean not null default true`. Application clones SHALL be inserted with `kind = application_clone`, `visible_in_library = false`, and `source_cv_id` referencing the selected base CV.
+The `public.cv` table SHALL include nullable `source_cv_id uuid references public.cv(id) on delete set null` and non-null `kind text not null default 'primary'` with allowed values `primary` and `application_clone`. Application clones SHALL be inserted with `kind = application_clone` and `source_cv_id` referencing the selected base CV. Promoted library CVs SHALL be new rows with `kind = primary` and `source_cv_id` referencing the application clone they were copied from.
 
 #### Scenario: Application clone row shape
 
 - **WHEN** the prepare workflow creates a tailored CV
-- **THEN** the new `cv` row SHALL have `kind = application_clone`, `visible_in_library = false`, and non-null `source_cv_id`
+- **THEN** the new `cv` row SHALL have `kind = application_clone` and non-null `source_cv_id`
 
 #### Scenario: Primary CV defaults unchanged
 
 - **WHEN** a user creates a CV through manual create or import
-- **THEN** the row SHALL have `kind = primary` and `visible_in_library = true` with null `source_cv_id`
+- **THEN** the row SHALL have `kind = primary` with null `source_cv_id`
+
+#### Scenario: Promoted CV row shape
+
+- **WHEN** a user promotes an application clone to the library
+- **THEN** the new `cv` row SHALL have `kind = primary` and `source_cv_id` set to the application clone id
 
 ### Requirement: Job applications SHALL be stored in a dedicated table
 

@@ -96,7 +96,7 @@ sequenceDiagram
 
 ### Data model & CV lineage
 
-Primary CV and application clone are **the same `cv` entity**—full normalized resumes with identical child tables. The clone differs only by metadata: `kind = application_clone`, `source_cv_id` pointing at the original, and `visible_in_library = false`. Deep clone copies **every** section table (work, volunteer, education, skills, projects, awards, etc.). Source preview in the UI is limited to Work/Volunteer/Project for copying text back; that is not a schema constraint.
+Primary CV and application clone are **the same `cv` entity**—full normalized resumes with identical child tables. The clone differs only by metadata: `kind = application_clone` and `source_cv_id` pointing at the original. Deep clone copies **every** section table (work, volunteer, education, skills, projects, awards, etc.). Source preview in the UI is limited to Work/Volunteer/Project for copying text back; that is not a schema constraint. The dashboard CV list includes only `kind = primary` rows, so application clones never appear there.
 
 ```mermaid
 erDiagram
@@ -125,18 +125,18 @@ erDiagram
     uuid user_id
     uuid source_cv_id FK "nullable; set on clone only"
     text kind "primary | application_clone"
-    boolean visible_in_library
   }
 ```
 
 ```mermaid
 flowchart LR
-  subgraph Library["Dashboard CV list\nGET /cv"]
-    P["Primary CV\nkind=primary\nvisible_in_library=true"]
+  subgraph Library["Dashboard CV list\nGET /cv · kind=primary"]
+    P["Primary CV\nkind=primary"]
+    P2["Promoted CV\nkind=primary\nsource_cv_id → clone"]
   end
 
-  subgraph Hidden["Hidden until promoted"]
-    C["Application clone\nfull CV · all sections\nsource_cv_id → Primary\nvisible_in_library=false"]
+  subgraph Hidden["Not in GET /cv"]
+    C["Application clone\nkind=application_clone\nsource_cv_id → Primary"]
   end
 
   subgraph App["job_application"]
@@ -147,7 +147,7 @@ flowchart LR
   P -.->|"read-only preview\nWork · Volunteer · Project only"| C
   A --> C
   A --> P
-  C -->|"POST promote-clone"| P
+  C -->|"POST promote-clone\nclone as primary"| P2
 ```
 
 ### Mastra workflow steps
@@ -347,9 +347,9 @@ Rows match by **section type + index** at clone time. Reordering clone rows afte
 | Entity            | Purpose                                                                                                                                                                        |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `job_application` | User, status, job metadata (title, company, raw text, source type), `source_cv_id`, `tailored_cv_id`, `cover_letter` Markdown, optional `selection_rationale` text, timestamps |
-| `cv` extensions   | `source_cv_id uuid null`, `kind text` (`primary` \| `application_clone`), `visible_in_library boolean default true`                                                            |
+| `cv` extensions   | `source_cv_id uuid null`, `kind text` (`primary` \| `application_clone`)                                                                                                       |
 
-Clones created with `kind = application_clone`, `source_cv_id` set, `visible_in_library = false`. Promote sets `visible_in_library = true` (kind unchanged for audit).
+Clones created with `kind = application_clone` and `source_cv_id` set. Promote deep-clones the tailored CV into a new row with `kind = primary` and `source_cv_id` pointing at the application clone (lineage only; the clone stays off the library list).
 
 **Rationale:** Keeps all CV editing/export machinery unchanged—clone is a normal CV row with flags. Avoids parallel editor code paths. No chat message table—one-shot output lives on `job_application`.
 
@@ -399,7 +399,7 @@ Tailor step removes bullets by writing a shorter `highlights` array on the clone
 
 ### 5. CV list filtering
 
-**Choice:** `CvService.findAll` filters `visible_in_library = true`. `GET /cv/:id` returns clones by id. Source CV readable via same routes using `sourceCvId` from application detail.
+**Choice:** `CvService.findAll` filters `kind = primary`. `GET /cv/:id` returns clones by id. Source CV readable via same routes using `sourceCvId` from application detail.
 
 ### 6. Cover letter: Markdown storage, rich-text copy, PDF export
 
