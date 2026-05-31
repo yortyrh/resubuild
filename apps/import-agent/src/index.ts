@@ -9,6 +9,7 @@ export type {
   UpdateApplicationWorkflowResult,
 } from './prepare-application.types';
 export { type ToolRegistry, toolRegistry } from './tool-registry';
+export { extractDocxTextTool } from './tools/extract-docx-text.tool';
 export { extractPdfTextTool } from './tools/extract-pdf-text.tool';
 export { fetchHtmlTool } from './tools/fetch-html.tool';
 export { firecrawlScrapeTool } from './tools/firecrawl-scrape.tool';
@@ -25,6 +26,7 @@ export * from './types';
 export {
   createPdfImportWorkflow,
   createResumeChatWorkflow,
+  runImageImportWorkflow,
   runPdfImportWorkflow,
   runTextImportWorkflow,
 } from './workflows/pdf-import.workflow';

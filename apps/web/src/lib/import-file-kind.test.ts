@@ -24,8 +24,23 @@ describe('import-file-kind', () => {
     );
   });
 
+  it('detects DOCX files', () => {
+    expect(
+      detectImportFileKind(
+        new File(['docx'], 'cv.docx', {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        }),
+      ),
+    ).toBe('docx');
+  });
+
+  it('detects image files', () => {
+    expect(detectImportFileKind(new File(['png'], 'cv.png', { type: 'image/png' }))).toBe('image');
+    expect(detectImportFileKind(new File(['jpg'], 'cv.jpg', { type: 'image/jpeg' }))).toBe('image');
+  });
+
   it('returns null for unsupported files', () => {
-    expect(detectImportFileKind(new File(['x'], 'cv.docx', { type: 'application/msword' }))).toBe(
+    expect(detectImportFileKind(new File(['x'], 'cv.doc', { type: 'application/msword' }))).toBe(
       null,
     );
   });
@@ -34,11 +49,15 @@ describe('import-file-kind', () => {
     expect(getImportFileMaxBytes('json')).toBe(1024 * 1024);
     expect(getImportFileMaxBytes('pdf')).toBe(5 * 1024 * 1024);
     expect(getImportFileMaxBytes('markdown')).toBe(512 * 1024);
+    expect(getImportFileMaxBytes('image')).toBe(5 * 1024 * 1024);
+    expect(getImportFileMaxBytes('docx')).toBe(5 * 1024 * 1024);
   });
 
-  it('marks pdf and markdown as agent-backed', () => {
+  it('marks agent-backed formats correctly', () => {
     expect(importFileKindRequiresAgent('json')).toBe(false);
     expect(importFileKindRequiresAgent('pdf')).toBe(true);
     expect(importFileKindRequiresAgent('markdown')).toBe(true);
+    expect(importFileKindRequiresAgent('image')).toBe(true);
+    expect(importFileKindRequiresAgent('docx')).toBe(true);
   });
 });

@@ -11,7 +11,12 @@ import { ImportProgressBar } from '@/components/cv/import-progress-bar';
 import { ImportValidationFeedback } from '@/components/cv/import-validation-feedback';
 import { formatJsonForEditor } from '@/components/cv/json-resume-editor';
 import { Label } from '@/components/ui/label';
-import { importCvFromMarkdown, startPdfImport } from '@/lib/api';
+import {
+  importCvFromDocx,
+  importCvFromMarkdown,
+  startImageImport,
+  startPdfImport,
+} from '@/lib/api';
 import {
   detectImportFileKind,
   getImportFileMaxBytes,
@@ -134,7 +139,7 @@ export function ImportFileForm({ onImport, onCancel, pollIntervalMs = 2000 }: Im
 
     const kind = detectImportFileKind(file);
     if (!kind) {
-      setFileError('Unsupported file type. Use JSON, PDF, or Markdown.');
+      setFileError('Unsupported file type. Use JSON, PDF, Markdown, Word (.docx), or an image.');
       setSelectedFile(null);
       setFileKind(null);
       return;
@@ -171,7 +176,9 @@ export function ImportFileForm({ onImport, onCancel, pollIntervalMs = 2000 }: Im
     }
 
     if (!configured) {
-      setAgentError('An active AI agent account is required for PDF and Markdown files.');
+      setAgentError(
+        'An active AI agent account is required for PDF, Markdown, Word, and image files.',
+      );
       return;
     }
 
@@ -186,7 +193,11 @@ export function ImportFileForm({ onImport, onCancel, pollIntervalMs = 2000 }: Im
       const { jobId: nextJobId } =
         fileKind === 'pdf'
           ? await startPdfImport(selectedFile)
-          : await importCvFromMarkdown(selectedFile);
+          : fileKind === 'image'
+            ? await startImageImport(selectedFile)
+            : fileKind === 'docx'
+              ? await importCvFromDocx(selectedFile)
+              : await importCvFromMarkdown(selectedFile);
       setJobId(nextJobId);
     } catch (err) {
       setImporting(false);
@@ -237,7 +248,7 @@ export function ImportFileForm({ onImport, onCancel, pollIntervalMs = 2000 }: Im
           accept={IMPORT_FILE_ACCEPT}
           maxBytes={IMPORT_FILE_MAX_BYTES}
           label="Résumé file"
-          hint="Drag and drop a JSON, PDF, or Markdown résumé…"
+          hint="Drag and drop a JSON, PDF, Markdown, Word, or image résumé…"
           disabled={importing}
           value={selectedFile}
           kindLabel={fileKind ? importFileKindLabel(fileKind) : null}
@@ -248,9 +259,13 @@ export function ImportFileForm({ onImport, onCancel, pollIntervalMs = 2000 }: Im
 
         <p className="text-muted-foreground text-sm">
           Supported formats: JSON Resume (<span className="font-mono text-xs">.json</span>), PDF (
-          <span className="font-mono text-xs">.pdf</span>), and Markdown (
-          <span className="font-mono text-xs">.md</span>). PDF and Markdown are converted by the AI
-          agent. To import from a link instead, use{' '}
+          <span className="font-mono text-xs">.pdf</span>), Markdown (
+          <span className="font-mono text-xs">.md</span>), Word (
+          <span className="font-mono text-xs">.docx</span>), and images (
+          <span className="font-mono text-xs">.png</span>,{' '}
+          <span className="font-mono text-xs">.jpg</span>,{' '}
+          <span className="font-mono text-xs">.webp</span>). PDF, Markdown, Word, and images are
+          converted by the AI agent. To import from a link instead, use{' '}
           <Link href="/dashboard/cv/new/import/url" className="underline">
             Import from URL
           </Link>
@@ -259,7 +274,7 @@ export function ImportFileForm({ onImport, onCancel, pollIntervalMs = 2000 }: Im
 
         {needsAgent && !configured ? (
           <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-            PDF and Markdown files require an active AI agent account.{' '}
+            PDF, Markdown, Word, and image files require an active AI agent account.{' '}
             <Link href="/dashboard/settings/ai-agent" className="underline">
               Open AI agent settings
             </Link>

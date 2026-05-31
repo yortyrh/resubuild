@@ -50,6 +50,24 @@ export interface PdfImportWorkflowInput {
 
 export interface PdfImportWorkflowResult extends TextImportWorkflowResult {}
 
+export interface ImageImportWorkflowInput {
+  imageBuffer: Buffer;
+  imageMimeType: string;
+  modelId: string;
+  apiKey: string;
+  searchApiKey?: string;
+  onProgress?: (progress: ImportJobProgress) => void;
+  finalize?: (draft: Record<string, unknown>) => Promise<string>;
+  generateDraft?: (text: string) => Promise<Record<string, unknown>>;
+  repairDraft?: (
+    draft: Record<string, unknown>,
+    errors: string[],
+  ) => Promise<Record<string, unknown>>;
+  transcribeImage?: (imageBuffer: Buffer, mimeType: string) => Promise<string>;
+}
+
+export interface ImageImportWorkflowResult extends TextImportWorkflowResult {}
+
 export interface ToolRegistry {
   extractPdfText: typeof import('./tools/extract-pdf-text.tool').extractPdfTextTool;
   validateResumeSchema: typeof import('./tools/validate-resume-schema.tool').validateResumeSchemaTool;

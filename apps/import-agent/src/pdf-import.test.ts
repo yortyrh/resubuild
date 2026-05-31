@@ -16,19 +16,40 @@ import { runPdfImportWorkflow } from './workflows/pdf-import.workflow';
 
 const fixturePath = path.join(__dirname, '../test-fixtures/minimal.pdf');
 
-describe('extractPdfTextTool', () => {
-  beforeEach(() => {
-    vi.mocked(pdfParse).mockResolvedValue({
-      text: 'Jane Doe\nSoftware Engineer',
-      numpages: 1,
-    } as never);
-  });
+beforeEach(() => {
+  vi.mocked(pdfParse).mockResolvedValue({
+    text: 'Jane Doe\nSoftware Engineer',
+    numpages: 1,
+  } as never);
+});
 
+describe('extractPdfTextTool', () => {
   it('extracts text from a minimal PDF buffer', async () => {
     const buffer = readFileSync(fixturePath);
     const result = await extractPdfTextTool(buffer);
     expect(result.text).toContain('Jane Doe');
     expect(result.pageCount).toBe(1);
+    expect(result.usedVisionOcr).toBe(false);
+  });
+
+  it('falls back to vision OCR when pdf-parse returns no text', async () => {
+    vi.mocked(pdfParse).mockResolvedValue({
+      text: '   ',
+      numpages: 2,
+    } as never);
+
+    const buffer = readFileSync(fixturePath);
+    const transcribePdfPages = vi.fn().mockResolvedValue('Mariela Romero\nProduct Designer');
+
+    const result = await extractPdfTextTool(buffer, {
+      modelId: 'openai/gpt-4o-mini',
+      apiKey: 'test-key',
+      transcribePdfPages,
+    });
+
+    expect(transcribePdfPages).toHaveBeenCalledWith(buffer, 2, 'openai/gpt-4o-mini', 'test-key');
+    expect(result.text).toContain('Mariela Romero');
+    expect(result.usedVisionOcr).toBe(true);
   });
 });
 

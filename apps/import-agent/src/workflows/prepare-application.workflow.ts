@@ -122,7 +122,10 @@ export async function normalizeJobPostingText(
 
   if (input.sourceType === 'pdf') {
     if (!input.pdfBuffer?.length) throw new Error('PDF buffer is required');
-    const extracted = await extractPdfTextTool(input.pdfBuffer);
+    const extracted = await extractPdfTextTool(input.pdfBuffer, {
+      modelId: input.modelId,
+      apiKey: input.apiKey,
+    });
     if (!extracted.text.trim()) throw new Error('No text extracted from PDF');
     return extracted.text.trim();
   }

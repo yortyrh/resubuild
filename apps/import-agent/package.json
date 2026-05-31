@@ -18,12 +18,15 @@
   },
   "dependencies": {
     "@mastra/core": "^0.20.2",
+    "@napi-rs/canvas": "^1.0.0",
     "@resumind/import-models": "workspace:*",
     "@resumind/schemas": "workspace:*",
     "@resumind/types": "workspace:*",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
+    "mammoth": "^1.12.0",
     "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "^6.0.227",
     "zod": "^3.25.67"
   },
   "devDependencies": {

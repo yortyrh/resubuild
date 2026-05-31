@@ -17,13 +17,18 @@ describe('ImportController', () => {
 
   let controller: ImportController;
   let service: jest.Mocked<
-    Pick<ImportService, 'startPdfImport' | 'startMarkdownImport' | 'getJob'>
+    Pick<
+      ImportService,
+      'startPdfImport' | 'startMarkdownImport' | 'startImageImport' | 'startDocxImport' | 'getJob'
+    >
   >;
 
   beforeEach(() => {
     service = {
       startPdfImport: jest.fn(),
       startMarkdownImport: jest.fn(),
+      startImageImport: jest.fn(),
+      startDocxImport: jest.fn(),
       getJob: jest.fn(),
     };
     controller = new ImportController(service as never);
@@ -57,6 +62,29 @@ describe('ImportController', () => {
 
   it('requires markdown multipart file field', async () => {
     expect(() => controller.startMarkdownImport(req, undefined)).toThrow(BadRequestException);
+  });
+
+  it('returns 202 payload from startImageImport', async () => {
+    service.startImageImport.mockResolvedValue({ jobId: 'job-img-1' });
+    const file = {
+      mimetype: 'image/png',
+      size: 10,
+      buffer: Buffer.from('png'),
+    } as Express.Multer.File;
+
+    await expect(controller.startImageImport(req, file)).resolves.toEqual({ jobId: 'job-img-1' });
+  });
+
+  it('returns 202 payload from startDocxImport', async () => {
+    service.startDocxImport.mockResolvedValue({ jobId: 'job-docx-1' });
+    const file = {
+      mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      size: 10,
+      buffer: Buffer.from('docx'),
+      originalname: 'resume.docx',
+    } as Express.Multer.File;
+
+    await expect(controller.startDocxImport(req, file)).resolves.toEqual({ jobId: 'job-docx-1' });
   });
 
   it('proxies getJob to service', () => {

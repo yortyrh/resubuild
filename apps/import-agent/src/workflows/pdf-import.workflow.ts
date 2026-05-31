@@ -2,9 +2,12 @@ import { Agent } from '@mastra/core/agent';
 import { createEmptyResume, sanitizeAiTypographyDeep } from '@resumind/types';
 import { extractPdfTextTool } from '../tools/extract-pdf-text.tool';
 import { normalizeDatesTool } from '../tools/normalize-dates.tool';
+import { transcribeImageResumeTool } from '../tools/transcribe-image-resume.tool';
 import { validateResumeSchemaTool } from '../tools/validate-resume-schema.tool';
 import { webLookupTool } from '../tools/web-lookup.tool';
 import type {
+  ImageImportWorkflowInput,
+  ImageImportWorkflowResult,
   PdfImportWorkflowInput,
   PdfImportWorkflowResult,
   TextImportWorkflowInput,
@@ -136,10 +139,38 @@ export async function runPdfImportWorkflow(
   input: PdfImportWorkflowInput,
 ): Promise<PdfImportWorkflowResult> {
   input.onProgress?.('extracting');
-  const extracted = await extractPdfTextTool(input.pdfBuffer);
+  const extracted = await extractPdfTextTool(input.pdfBuffer, {
+    modelId: input.modelId,
+    apiKey: input.apiKey,
+  });
 
   return runTextImportWorkflow({
     sourceText: extracted.text,
+    modelId: input.modelId,
+    apiKey: input.apiKey,
+    searchApiKey: input.searchApiKey,
+    onProgress: input.onProgress,
+    finalize: input.finalize,
+    generateDraft: input.generateDraft,
+    repairDraft: input.repairDraft,
+  });
+}
+
+export async function runImageImportWorkflow(
+  input: ImageImportWorkflowInput,
+): Promise<ImageImportWorkflowResult> {
+  input.onProgress?.('extracting');
+  const sourceText = input.transcribeImage
+    ? await input.transcribeImage(input.imageBuffer, input.imageMimeType)
+    : await transcribeImageResumeTool(
+        input.imageBuffer,
+        input.imageMimeType,
+        input.modelId,
+        input.apiKey,
+      );
+
+  return runTextImportWorkflow({
+    sourceText,
     modelId: input.modelId,
     apiKey: input.apiKey,
     searchApiKey: input.searchApiKey,

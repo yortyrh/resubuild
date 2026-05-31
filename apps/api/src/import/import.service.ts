@@ -6,7 +6,9 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  extractDocxTextTool,
   type ImportJobProgress,
+  runImageImportWorkflow,
   runPdfImportWorkflow,
   runTextImportWorkflow,
   runWebsiteImportWorkflow,
@@ -27,8 +29,14 @@ export type ImportFromUrlResponse =
 
 export const PDF_IMPORT_MAX_BYTES_DEFAULT = 5 * 1024 * 1024;
 export const MARKDOWN_IMPORT_MAX_BYTES_DEFAULT = 512 * 1024;
+export const IMAGE_IMPORT_MAX_BYTES_DEFAULT = 5 * 1024 * 1024;
+export const DOCX_IMPORT_MAX_BYTES_DEFAULT = 5 * 1024 * 1024;
 
 const MARKDOWN_MIME_TYPES = new Set(['text/markdown', 'text/plain', 'text/x-markdown']);
+export const IMAGE_IMPORT_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
+export const DOCX_IMPORT_MIME_TYPES = new Set([
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]);
 
 @Injectable()
 export class ImportService {
@@ -56,6 +64,18 @@ export class ImportService {
     return Number(
       this.configService.get<string>('MARKDOWN_IMPORT_MAX_BYTES') ??
         MARKDOWN_IMPORT_MAX_BYTES_DEFAULT,
+    );
+  }
+
+  getImageMaxBytes(): number {
+    return Number(
+      this.configService.get<string>('IMAGE_IMPORT_MAX_BYTES') ?? IMAGE_IMPORT_MAX_BYTES_DEFAULT,
+    );
+  }
+
+  getDocxMaxBytes(): number {
+    return Number(
+      this.configService.get<string>('DOCX_IMPORT_MAX_BYTES') ?? DOCX_IMPORT_MAX_BYTES_DEFAULT,
     );
   }
 
@@ -102,6 +122,72 @@ export class ImportService {
     const sourceText = file.buffer.toString('utf8').trim();
     if (!sourceText) {
       throw new BadRequestException('Markdown file is empty');
+    }
+
+    const job = this.jobStore.create(user.id);
+    setImmediate(() => {
+      void this.runTextJob(user, job.id, sourceText, llmConfig.modelId, llmConfig.apiKey);
+    });
+
+    return { jobId: job.id };
+  }
+
+  async startImageImport(user: AuthenticatedRequest['user'], file: Express.Multer.File) {
+    if (!this.isEnabled()) {
+      throw new ForbiddenException('Image import is disabled');
+    }
+
+    const llmConfig = await this.aiAgentCredentialService.getActiveCredentials(user);
+
+    if (!IMAGE_IMPORT_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException('Only PNG, JPEG, and WebP images are supported');
+    }
+
+    if (file.size > this.getImageMaxBytes()) {
+      throw new BadRequestException(
+        `Image exceeds maximum size of ${this.getImageMaxBytes()} bytes`,
+      );
+    }
+
+    const job = this.jobStore.create(user.id);
+    setImmediate(() => {
+      void this.runImageJob(
+        user,
+        job.id,
+        file.buffer,
+        file.mimetype,
+        llmConfig.modelId,
+        llmConfig.apiKey,
+      );
+    });
+
+    return { jobId: job.id };
+  }
+
+  async startDocxImport(user: AuthenticatedRequest['user'], file: Express.Multer.File) {
+    if (!this.isEnabled()) {
+      throw new ForbiddenException('DOCX import is disabled');
+    }
+
+    const llmConfig = await this.aiAgentCredentialService.getActiveCredentials(user);
+
+    if (!this.isDocxFile(file)) {
+      throw new BadRequestException('Only DOCX files are supported');
+    }
+
+    if (file.size > this.getDocxMaxBytes()) {
+      throw new BadRequestException(
+        `DOCX file exceeds maximum size of ${this.getDocxMaxBytes()} bytes`,
+      );
+    }
+
+    let sourceText: string;
+    try {
+      sourceText = (await extractDocxTextTool(file.buffer)).text;
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Could not extract text from DOCX',
+      );
     }
 
     const job = this.jobStore.create(user.id);
@@ -294,6 +380,37 @@ export class ImportService {
     }
   }
 
+  private async runImageJob(
+    user: AuthenticatedRequest['user'],
+    jobId: string,
+    imageBuffer: Buffer,
+    imageMimeType: string,
+    modelId: string,
+    apiKey: string,
+  ) {
+    this.jobStore.update(jobId, { status: 'running', progress: 'extracting' });
+
+    try {
+      const searchApiKey = await this.resolveUserSearchApiKey(user);
+      const result = await this.withScopedApiKey(modelId, apiKey, async () => {
+        return runImageImportWorkflow({
+          imageBuffer,
+          imageMimeType,
+          modelId,
+          apiKey,
+          searchApiKey,
+          onProgress: (progress: ImportJobProgress) => {
+            this.jobStore.update(jobId, { progress });
+          },
+        });
+      });
+
+      this.finishPreviewJob(jobId, result);
+    } catch (error) {
+      this.failJob(jobId, error);
+    }
+  }
+
   private async runWebsiteJob(
     user: AuthenticatedRequest['user'],
     jobId: string,
@@ -393,5 +510,13 @@ export class ImportService {
       ? ['Import failed. Update your AI agent settings and verify the API key.']
       : [message];
     this.jobStore.update(jobId, { status: 'failed', errors });
+  }
+
+  private isDocxFile(file: Express.Multer.File): boolean {
+    if (DOCX_IMPORT_MIME_TYPES.has(file.mimetype)) {
+      return true;
+    }
+
+    return file.originalname?.toLowerCase().endsWith('.docx') ?? false;
   }
 }

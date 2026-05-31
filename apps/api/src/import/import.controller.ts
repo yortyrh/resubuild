@@ -17,6 +17,8 @@ import { memoryStorage } from 'multer';
 import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ImportFromUrlDto } from './dto/import-from-url.dto';
 import {
+  DOCX_IMPORT_MAX_BYTES_DEFAULT,
+  IMAGE_IMPORT_MAX_BYTES_DEFAULT,
   ImportService,
   MARKDOWN_IMPORT_MAX_BYTES_DEFAULT,
   PDF_IMPORT_MAX_BYTES_DEFAULT,
@@ -66,6 +68,42 @@ export class ImportController {
     }
 
     return this.importService.startMarkdownImport(req.user, file);
+  }
+
+  @Post('image')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: {
+        fileSize: Number(process.env.IMAGE_IMPORT_MAX_BYTES ?? IMAGE_IMPORT_MAX_BYTES_DEFAULT),
+      },
+    }),
+  )
+  startImageImport(@Req() req: AuthenticatedRequest, @UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Expected multipart field "file"');
+    }
+
+    return this.importService.startImageImport(req.user, file);
+  }
+
+  @Post('docx')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: {
+        fileSize: Number(process.env.DOCX_IMPORT_MAX_BYTES ?? DOCX_IMPORT_MAX_BYTES_DEFAULT),
+      },
+    }),
+  )
+  startDocxImport(@Req() req: AuthenticatedRequest, @UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Expected multipart field "file"');
+    }
+
+    return this.importService.startDocxImport(req.user, file);
   }
 
   @Post('from-url')

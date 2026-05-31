@@ -406,6 +406,60 @@ export async function importCvFromMarkdown(file: File): Promise<{ jobId: string 
   return response.json() as Promise<{ jobId: string }>;
 }
 
+export async function startImageImport(file: File): Promise<{ jobId: string }> {
+  const token = await getValidAccessToken(apiUrl);
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${apiUrl}/cv/import/image`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { message?: string | string[] };
+    const message =
+      typeof body.message === 'string'
+        ? body.message
+        : Array.isArray(body.message)
+          ? body.message.join(', ')
+          : `Request failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<{ jobId: string }>;
+}
+
+export async function importCvFromDocx(file: File): Promise<{ jobId: string }> {
+  const token = await getValidAccessToken(apiUrl);
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${apiUrl}/cv/import/docx`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { message?: string | string[] };
+    const message =
+      typeof body.message === 'string'
+        ? body.message
+        : Array.isArray(body.message)
+          ? body.message.join(', ')
+          : `Request failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<{ jobId: string }>;
+}
+
 export function getPdfImportJob(jobId: string) {
   return apiFetch<PdfImportJobStatus>(`/cv/import/${jobId}`);
 }

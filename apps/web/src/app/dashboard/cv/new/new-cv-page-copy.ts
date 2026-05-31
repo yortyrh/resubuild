@@ -11,7 +11,7 @@ export const NEW_CV_PAGE_COPY: Record<string, NewCvPageCopy> = {
   '/dashboard/cv/new/import/file': {
     title: 'Import from file',
     subtitle:
-      'Upload a JSON Resume, PDF, or Markdown file. JSON is validated locally; PDF and Markdown are converted by the AI agent before you confirm import.',
+      'Upload a JSON Resume, PDF, Markdown, Word, or image file. JSON is validated locally; other formats are converted by the AI agent before you confirm import.',
   },
   '/dashboard/cv/new/import/url': {
     title: 'Import from URL',
