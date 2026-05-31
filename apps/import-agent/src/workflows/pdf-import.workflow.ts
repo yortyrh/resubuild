@@ -1,5 +1,5 @@
 import { Agent } from '@mastra/core/agent';
-import { createEmptyResume } from '@resumind/types';
+import { createEmptyResume, sanitizeAiTypographyDeep } from '@resumind/types';
 import { extractPdfTextTool } from '../tools/extract-pdf-text.tool';
 import { normalizeDatesTool } from '../tools/normalize-dates.tool';
 import { validateResumeSchemaTool } from '../tools/validate-resume-schema.tool';
@@ -123,10 +123,10 @@ export async function runTextImportWorkflow(
         `Validation errors:\n${validation.errors.join('\n')}\n\nDraft:\n${JSON.stringify(draft)}`,
       );
     }
-    draft = {
+    draft = sanitizeAiTypographyDeep({
       ...createEmptyResume(),
       ...draft,
-    };
+    });
   }
 
   return { draft, errors };

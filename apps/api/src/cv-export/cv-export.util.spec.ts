@@ -1,4 +1,8 @@
-import { slugifyExportFilename, toAbsoluteMediaUrl } from './cv-export.util';
+import {
+  buildCoverLetterExportFilename,
+  slugifyExportFilename,
+  toAbsoluteMediaUrl,
+} from './cv-export.util';
 
 describe('toAbsoluteMediaUrl', () => {
   it('returns undefined for empty values', () => {
@@ -32,5 +36,28 @@ describe('slugifyExportFilename', () => {
 
   it('falls back to resume when slug is empty', () => {
     expect(slugifyExportFilename('!!!')).toBe('resume');
+  });
+});
+
+describe('buildCoverLetterExportFilename', () => {
+  it('joins company, name, and label as slug segments', () => {
+    expect(
+      buildCoverLetterExportFilename({
+        company: 'Acme Corp',
+        name: 'Thomas Davis',
+        label: 'Engineering Manager',
+      }),
+    ).toBe('acme-corp-thomas-davis-engineering-manager.pdf');
+  });
+
+  it('omits missing parts and falls back when all are empty', () => {
+    expect(
+      buildCoverLetterExportFilename({
+        company: 'Acme',
+        name: null,
+        label: 'Engineer',
+      }),
+    ).toBe('acme-engineer.pdf');
+    expect(buildCoverLetterExportFilename({})).toBe('cover-letter.pdf');
   });
 });

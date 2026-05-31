@@ -330,4 +330,25 @@ describe('CvExportService', () => {
     normalizedRepo.fetchHeader.mockResolvedValue(null);
     await expect(service.renderJson(userCtx, 'missing')).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it('renderLetterHtml converts markdown to sanitized html document', () => {
+    const html = service.renderLetterHtml('Dear team,\n\n**Excited** to apply.');
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain('<strong>Excited</strong>');
+  });
+
+  it('renderLetterPdf wraps html rendering', async () => {
+    jest.spyOn(service, 'renderPdfFromHtml').mockResolvedValue(Buffer.from('%PDF'));
+    const result = await service.renderLetterPdf('Hello', { title: 'Cover letter' });
+    expect(result.filename).toBe('cover-letter.pdf');
+    expect(result.buffer.toString()).toBe('%PDF');
+  });
+
+  it('renderLetterPdf uses explicit filename when provided', async () => {
+    jest.spyOn(service, 'renderPdfFromHtml').mockResolvedValue(Buffer.from('%PDF'));
+    const result = await service.renderLetterPdf('Hello', {
+      filename: 'acme-corp-jane-doe-engineer.pdf',
+    });
+    expect(result.filename).toBe('acme-corp-jane-doe-engineer.pdf');
+  });
 });

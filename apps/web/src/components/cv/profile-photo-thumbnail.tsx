@@ -10,6 +10,8 @@ interface ProfilePhotoThumbnailProps {
   onUpload: () => void;
   onEditCrop?: () => void;
   onDelete: () => void;
+  /** When true, show the photo only (no upload/crop/delete affordances). */
+  readOnly?: boolean;
 }
 
 export function ProfilePhotoThumbnail({
@@ -18,11 +20,16 @@ export function ProfilePhotoThumbnail({
   onUpload,
   onEditCrop,
   onDelete,
+  readOnly = false,
 }: ProfilePhotoThumbnailProps) {
   const [hasError, setHasError] = useState(false);
   const [hovering, setHovering] = useState(false);
 
   if (!src) {
+    if (readOnly) {
+      return null;
+    }
+
     return (
       <button
         type="button"
@@ -36,6 +43,15 @@ export function ProfilePhotoThumbnail({
   }
 
   if (hasError) {
+    if (readOnly) {
+      return (
+        <div
+          className="bg-muted flex h-20 w-20 shrink-0 items-center justify-center rounded-md"
+          aria-hidden
+        />
+      );
+    }
+
     return (
       <div className="flex h-20 w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-md border bg-red-50 dark:bg-red-950">
         <ImageOff className="text-muted-foreground h-5 w-5" />
@@ -81,7 +97,7 @@ export function ProfilePhotoThumbnail({
         className="h-20 w-20 rounded-md object-cover"
         onError={() => setHasError(true)}
       />
-      {hovering && (
+      {!readOnly && hovering && (
         <div className="absolute inset-0 flex items-center justify-center gap-1 rounded-md bg-black/50">
           <Button
             type="button"

@@ -1,5 +1,5 @@
 import { Agent } from '@mastra/core/agent';
-import { createEmptyResume } from '@resumind/types';
+import { createEmptyResume, sanitizeAiTypographyDeep } from '@resumind/types';
 import { normalizeDatesTool } from '../tools/normalize-dates.tool';
 import { validateResumeSchemaTool } from '../tools/validate-resume-schema.tool';
 import { webLookupTool } from '../tools/web-lookup.tool';
@@ -113,7 +113,7 @@ export async function runWebsiteImportWorkflow(
 
   input.onProgress?.('extracting');
   let draft = await generateWebsiteDraft(input);
-  draft = { ...createEmptyResume(), ...draft };
+  draft = sanitizeAiTypographyDeep({ ...createEmptyResume(), ...draft });
 
   for (let attempt = 0; attempt < MAX_REPAIR_ATTEMPTS; attempt += 1) {
     input.onProgress?.('verifying');
@@ -158,7 +158,7 @@ export async function runWebsiteImportWorkflow(
       draft,
       validation.errors,
     );
-    draft = { ...createEmptyResume(), ...draft };
+    draft = sanitizeAiTypographyDeep({ ...createEmptyResume(), ...draft });
   }
 
   return { draft, errors };

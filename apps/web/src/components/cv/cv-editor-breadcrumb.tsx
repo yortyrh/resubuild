@@ -31,7 +31,13 @@ function sectionLabel(slug: CvSectionSlug): string {
   return CV_SECTIONS.find((section) => section.slug === slug)?.label ?? 'Basics';
 }
 
-function CvTitleDisplay({ basics, muted }: { basics?: CvTitleBasics | null; muted: boolean }) {
+export function CvTitleDisplay({
+  basics,
+  muted,
+}: {
+  basics?: CvTitleBasics | null;
+  muted: boolean;
+}) {
   const title = deriveCvTitleFromBasics(basics);
   const shortTitle = deriveCvShortTitleFromBasics(basics);
   const showShortTitle = shortTitle !== title;

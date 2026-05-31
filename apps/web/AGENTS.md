@@ -6,4 +6,4 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 <!-- END:nextjs-agent-rules -->
 
-For dashboard layout, borders, and surface styling, follow [DESIGN.md](./DESIGN.md) (use `surface-soft` for cards, panels, and the resume preview frame — not raw `border` + `bg-white`).
+For dashboard layout, borders, and surface styling, follow [DESIGN.md](./DESIGN.md). Use `surface-soft text-card-foreground` for cards, panels, application workspace sections, and the resume preview frame — never bare `rounded-lg border` or `border` + `bg-white` on dashboard chrome.

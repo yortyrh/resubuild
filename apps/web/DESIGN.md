@@ -11,6 +11,7 @@ Use the `surface-soft` utility (defined in `src/app/globals.css`) for elevated d
 - CV list items and editor section cards (`ResumeItemRow`, `ManagedArraySection` shells)
 - Layout / configuration side panels (e.g. `TemplateConfigPanel`)
 - **Resume HTML preview frame** (wrapper around the preview `iframe` and its loading skeleton)
+- **Applications UI**: workspace panels (job summary, cover letter), list rows on `/dashboard/applications`, and the tailored-CV editor breadcrumb row (`CvApplicationEditorBreadcrumb` + promote icon)
 
 `surface-soft` provides:
 
@@ -18,7 +19,9 @@ Use the `surface-soft` utility (defined in `src/app/globals.css`) for elevated d
 - Muted fill: `hsl(var(--muted) / 0.35)`
 - Border via **inset box-shadow**: `inset 0 0 0 1px hsl(var(--border) / 0.55)` — not a Tailwind `border` class
 
-Do **not** substitute `rounded-md border bg-white` (or `border-border`) for these surfaces; it produces a harsher, inconsistent outline in light and dark mode.
+Do **not** substitute `rounded-lg border`, `rounded-md border bg-white`, or `border-border` for these surfaces; it produces a harsher, inconsistent outline in light and dark mode.
+
+Common mistake: `rounded-lg border p-4` on application workspace `<section>` cards — use `surface-soft text-card-foreground p-4` instead (see `application-workspace.tsx`).
 
 ### Form controls and popovers
 
@@ -30,6 +33,16 @@ Interactive inputs, selects, and dropdown shells use explicit borders:
 
 - Section footers / action rows: `divider-soft` + `border-t`
 - App header: `chrome-divider` + `border-b`
+
+## Applications (`/dashboard/applications`)
+
+| Element                                      | Classes                                                                                                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Workspace panels (job summary, cover letter) | `surface-soft text-card-foreground` + `space-y-3 p-4`                                                                     |
+| Application list row                         | `surface-soft text-card-foreground p-4` inside `ul.space-y-3`                                                             |
+| Tailored CV editor breadcrumb                | Application job label in the CV editor header (`CvApplicationEditorBreadcrumb`); promote clone icon beside export/preview |
+
+Compare with `/dashboard` CV list cards when adding new application surfaces.
 
 ## Resume preview (`/dashboard/cv/[id]/preview`)
 
@@ -46,13 +59,16 @@ The white `bg-white` on the iframe (or skeleton inner area) represents the print
 
 When adding or refactoring UI in `apps/web`:
 
-1. If it matches a CV card, list row, side panel, or preview frame → **`surface-soft`**
+1. If it matches a CV card, list row, side panel, preview frame, or **application workspace/list panel** → **`surface-soft`**
 2. If it is an input, button outline, or menu → **`border-input`** pattern from shadcn components
 3. Never copy `border` from generated/mock HTML export templates into dashboard chrome
 4. After preview or panel changes, compare visually with `/dashboard` CV list cards
+5. Before shipping applications UI, read the **Applications** table in this doc — do not use bare `rounded-lg border` on dashboard panels
 
 ## Related files
 
 - Tokens and utilities: `src/app/globals.css`
 - Preview implementation: `src/app/dashboard/cv/[id]/preview/cv-preview-client.tsx`, `cv-preview-skeleton.tsx`
 - Reference panel: `src/components/cv/template-config-panel.tsx`
+- Applications workspace: `src/components/applications/application-workspace.tsx`
+- Applications list: `src/components/applications/application-list.tsx`

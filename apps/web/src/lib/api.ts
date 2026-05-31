@@ -574,3 +574,137 @@ export async function downloadCvJson(cvId: string): Promise<{ blob: Blob; filena
     parseContentDispositionFilename(response.headers.get('Content-Disposition')) ?? 'resume.json';
   return { blob, filename };
 }
+
+export type JobApplicationStatus = 'queued' | 'running' | 'ready' | 'failed';
+
+export interface JobApplicationSummary {
+  id: string;
+  status: JobApplicationStatus;
+  jobTitle?: string | null;
+  jobCompany?: string | null;
+  jobSourceType?: string | null;
+  sourceCvId?: string | null;
+  tailoredCvId?: string | null;
+  coverLetter?: string | null;
+  coverLetterEmailSubject?: string | null;
+  selectionRationale?: string | null;
+  userMessage?: string | null;
+  intakeSourceCvId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  progress?: string;
+  errors?: string[];
+}
+
+export function listApplications() {
+  return apiFetch<JobApplicationSummary[]>('/applications');
+}
+
+export function getApplication(id: string) {
+  return apiFetch<JobApplicationSummary>(`/applications/${id}`);
+}
+
+export async function prepareApplication(payload: {
+  url?: string;
+  text?: string;
+  message?: string;
+  sourceCvId?: string;
+  file?: File;
+}) {
+  const token = await getValidAccessToken(apiUrl);
+  const formData = new FormData();
+  if (payload.url) formData.append('url', payload.url);
+  if (payload.text) formData.append('text', payload.text);
+  if (payload.message) formData.append('message', payload.message);
+  if (payload.sourceCvId) formData.append('sourceCvId', payload.sourceCvId);
+  if (payload.file) formData.append('file', payload.file);
+
+  const response = await fetch(`${apiUrl}/applications/prepare`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { message?: string | string[] };
+    const message =
+      typeof body.message === 'string'
+        ? body.message
+        : Array.isArray(body.message)
+          ? body.message.join(', ')
+          : `Request failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<{ applicationId: string; status: 'queued' }>;
+}
+
+export function updateApplicationLetter(id: string, coverLetter: string) {
+  return apiFetch<JobApplicationSummary>(`/applications/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ coverLetter }),
+  });
+}
+
+export function updateApplication(id: string, payload: { message?: string; sourceCvId?: string }) {
+  return apiFetch<{ applicationId: string; status: 'queued' }>(`/applications/${id}/update`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function cancelApplication(id: string) {
+  return apiFetch<JobApplicationSummary>(`/applications/${id}/cancel`, {
+    method: 'POST',
+  });
+}
+
+export function retryApplication(id: string) {
+  return apiFetch<{ applicationId: string; status: 'queued' }>(`/applications/${id}/retry`, {
+    method: 'POST',
+  });
+}
+
+export function deleteApplication(id: string) {
+  return apiFetch<void>(`/applications/${id}`, { method: 'DELETE' });
+}
+
+export function promoteApplicationClone(id: string) {
+  return apiFetch<JobApplicationSummary>(`/applications/${id}/promote-clone`, {
+    method: 'POST',
+  });
+}
+
+export async function getApplicationLetterHtml(id: string): Promise<string> {
+  const token = await getValidAccessToken(apiUrl);
+  const response = await fetch(`${apiUrl}/applications/${id}/export/letter/html`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed (${response.status})`);
+  }
+  return response.text();
+}
+
+export async function downloadApplicationLetterPdf(
+  id: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const token = await getValidAccessToken(apiUrl);
+  const response = await fetch(`${apiUrl}/applications/${id}/export/letter/pdf`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const message =
+      response.status === 503
+        ? 'PDF export is temporarily unavailable.'
+        : `Request failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  const blob = await response.blob();
+  const filename =
+    parseContentDispositionFilename(response.headers.get('Content-Disposition')) ??
+    'cover-letter.pdf';
+  return { blob, filename };
+}

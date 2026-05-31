@@ -15,6 +15,7 @@ export function createMockNormalizedRepo(): jest.Mocked<
     | 'updateBasicsHeader'
     | 'insertNormalizedCv'
     | 'replaceNormalizedCv'
+    | 'assembleFullResume'
     | 'reorderSection'
     | 'getNextSort'
   >
@@ -44,6 +45,7 @@ export function createMockNormalizedRepo(): jest.Mocked<
     updateBasicsHeader: jest.fn(),
     insertNormalizedCv: jest.fn(),
     replaceNormalizedCv: jest.fn(),
+    assembleFullResume: jest.fn(),
     reorderSection: jest.fn(),
     getNextSort: jest.fn().mockResolvedValue(0),
   };

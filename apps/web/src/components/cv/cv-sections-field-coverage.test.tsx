@@ -11,6 +11,7 @@ vi.mock('sonner', () => ({
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/dashboard/cv/cv-1/work',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 function stubApi() {

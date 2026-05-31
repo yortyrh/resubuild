@@ -32,9 +32,13 @@ export interface CvHeaderRow {
   meta_canonical?: string | null;
   meta_last_modified?: string | null;
   template_id?: string | null;
+  source_cv_id?: string | null;
+  kind?: CvKind | null;
   created_at?: string;
   updated_at?: string;
 }
+
+export type CvKind = 'primary' | 'application_clone';
 
 export interface CvProfileRow {
   id: string;

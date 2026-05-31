@@ -79,6 +79,17 @@ If the first startup fetch fails, the API falls back to bundled `packages/import
 
 Optional: `pnpm import-models:sync` rebuilds the fallback file from models.dev (not required for normal operation).
 
+## Prepare Application
+
+Requires **`cv-html-view-pdf-export`** (Puppeteer HTML/PDF pipeline) for cover letter export and tailored CV export in the application workspace.
+
+| Variable                      | Purpose                                                              |
+| ----------------------------- | -------------------------------------------------------------------- |
+| `APPLICATION_PREPARE_ENABLED` | Set to `false` to disable `POST /applications/prepare` (default on). |
+| `PDF_IMPORT_MAX_BYTES`        | Shared 5 MB limit for PDF/image job posting uploads.                 |
+
+Routes under `/applications/*` reuse the active AI agent account (`AiAgentCredentialService`) and the prepare workflow in `@resumind/import-agent`.
+
 ## Scripts
 
 See `package.json`: `pnpm dev`, `pnpm build`, `pnpm test`.

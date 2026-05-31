@@ -14,9 +14,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Link href="/dashboard" className="text-lg font-semibold">
                   Resumind
                 </Link>
-                <nav className="text-muted-foreground text-sm">
+                <nav className="text-muted-foreground flex gap-4 text-sm">
                   <Link href="/dashboard" className="hover:text-foreground">
                     My CVs
+                  </Link>
+                  <Link href="/dashboard/applications" className="hover:text-foreground">
+                    Applications
                   </Link>
                 </nav>
               </div>

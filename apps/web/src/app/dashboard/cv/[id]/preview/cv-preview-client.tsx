@@ -2,12 +2,14 @@
 
 import { type CvTemplatePresentationConfig, renderResumeHtml } from '@resumind/resume-template';
 import type { CvTitleBasics, Resume } from '@resumind/types';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { ArrowLeft, Braces, FileDown, PanelLeftClose, PanelLeftOpen, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CvApplicationEditorBreadcrumb } from '@/components/cv/cv-application-editor-breadcrumb';
 import { CvEditorBreadcrumb } from '@/components/cv/cv-editor-breadcrumb';
 import { CvPreviewIframe } from '@/components/cv/cv-preview-iframe';
 import { TemplateConfigPanel } from '@/components/cv/template-config-panel';
+import { useApplicationForCv } from '@/components/cv/use-application-for-cv';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -86,6 +88,7 @@ const CvLayoutPanelColumn = memo(function CvLayoutPanelColumn({
 });
 
 export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
+  const application = useApplicationForCv(cvId);
   const [layoutCollapsed, setLayoutCollapsed] = useState<boolean | null>(null);
   const layoutPanelState = resolveLayoutPanelState(layoutCollapsed);
   const [html, setHtml] = useState<string | null>(null);
@@ -106,6 +109,11 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
   const resumeRef = useRef<Resume | null>(null);
+
+  const backHref = application
+    ? `/dashboard/applications/${application.id}`
+    : `/dashboard/cv/${cvId}`;
+  const backAriaLabel = application ? 'Back to application' : 'Back to editor';
 
   useEffect(() => {
     let cancelled = false;
@@ -309,18 +317,44 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
 
   return (
     <div className="space-y-4">
-      {breadcrumbReady ? (
-        <CvEditorBreadcrumb cvId={cvId} basics={basics} pageLabel="Preview" className="mt-0" />
-      ) : (
-        <CvPreviewBreadcrumbSkeleton />
-      )}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+        <div className="min-w-0 flex-1">
+          {breadcrumbReady ? (
+            application ? (
+              <CvApplicationEditorBreadcrumb
+                application={application}
+                cvId={cvId}
+                pageLabel="Preview"
+                className="mt-0"
+              />
+            ) : (
+              <CvEditorBreadcrumb
+                cvId={cvId}
+                basics={basics}
+                pageLabel="Preview"
+                className="mt-0"
+              />
+            )
+          ) : (
+            <CvPreviewBreadcrumbSkeleton />
+          )}
+        </div>
+        <Button type="button" variant="outline" size="sm" className="no-print shrink-0" asChild>
+          <Link href={backHref} aria-label={backAriaLabel}>
+            <ArrowLeft className="size-4 shrink-0 lg:mr-1.5" aria-hidden />
+            <span className="hidden lg:inline">Back</span>
+          </Link>
+        </Button>
+      </div>
 
-      <div className="no-print flex flex-wrap items-end gap-4">
-        <div className="min-w-[14rem] space-y-1">
-          <Label htmlFor="cv-template-select">Template</Label>
+      <div className="no-print flex flex-wrap items-center gap-4">
+        <div className="flex min-w-[14rem] items-center gap-2">
+          <Label htmlFor="cv-template-select" className="shrink-0">
+            Template
+          </Label>
           <select
             id="cv-template-select"
-            className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 min-w-0 flex-1 rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
             value={selectedTemplateId}
             onChange={(event) => void handleTemplateChange(event.target.value)}
             disabled={templateOptions.length === 0}
@@ -356,22 +390,42 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
               </>
             )}
           </Button>
-          <Button type="button" variant="outline" onClick={handlePrint} disabled={!html}>
-            Print
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={handlePrint}
+            disabled={!html}
+            aria-label="Print"
+          >
+            <Printer className="size-4 shrink-0 lg:mr-1.5" aria-hidden />
+            <span className="hidden lg:inline">Print</span>
           </Button>
           <Button
             type="button"
             variant="outline"
+            size="sm"
+            className="shrink-0"
             onClick={handleDownloadJson}
             disabled={!html || downloadingJson}
+            aria-label={downloadingJson ? 'Downloading JSON Resume' : 'JSON Resume'}
           >
-            {downloadingJson ? 'Downloading…' : 'Download JSON'}
+            <Braces className="size-4 shrink-0 lg:mr-1.5" aria-hidden />
+            <span className="hidden lg:inline">
+              {downloadingJson ? 'Downloading…' : 'JSON Resume'}
+            </span>
           </Button>
-          <Button type="button" onClick={handleDownloadPdf} disabled={!html || downloading}>
-            {downloading ? 'Downloading…' : 'Download PDF'}
-          </Button>
-          <Button type="button" variant="ghost" asChild>
-            <Link href={`/dashboard/cv/${cvId}`}>Back to editor</Link>
+          <Button
+            type="button"
+            size="sm"
+            className="shrink-0"
+            onClick={handleDownloadPdf}
+            disabled={!html || downloading}
+            aria-label={downloading ? 'Downloading PDF' : 'PDF'}
+          >
+            <FileDown className="size-4 shrink-0 lg:mr-1.5" aria-hidden />
+            <span className="hidden lg:inline">{downloading ? 'Downloading…' : 'PDF'}</span>
           </Button>
         </div>
       </div>

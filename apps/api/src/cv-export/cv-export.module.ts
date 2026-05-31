@@ -9,5 +9,6 @@ import { CvExportService } from './cv-export.service';
   imports: [AuthModule, CvModule],
   controllers: [CvExportController],
   providers: [CvExportService, ResumeSchemaValidator],
+  exports: [CvExportService],
 })
 export class CvExportModule {}

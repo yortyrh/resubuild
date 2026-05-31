@@ -12,6 +12,7 @@ import {
   isValidTemplateId,
   listTemplates,
   PDF_EXPORT_OPTIONS,
+  renderMarkdownField,
   renderResumeHtml,
   resolveCanonicalTemplateId,
 } from '@resumind/resume-template';
@@ -132,6 +133,35 @@ export class CvExportService {
     const buffer = await this.renderPdfFromHtml(html);
     const title = deriveCvTitleFromBasics(resume.basics);
     const filename = `${slugifyExportFilename(title)}.pdf`;
+    return { buffer, filename };
+  }
+
+  renderLetterHtml(markdown: string, options: { title?: string } = {}): string {
+    const body = renderMarkdownField(markdown);
+    const title = options.title ?? 'Cover letter';
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>${title}</title>
+  <style>
+    body { font-family: Georgia, 'Times New Roman', serif; max-width: 700px; margin: 2rem auto; line-height: 1.6; color: #111; }
+    p { margin: 0 0 1rem; }
+    strong, b { font-weight: 700; }
+  </style>
+</head>
+<body>${body}</body>
+</html>`;
+  }
+
+  async renderLetterPdf(
+    markdown: string,
+    options: { title?: string; filename?: string } = {},
+  ): Promise<CvExportPdfResult> {
+    const html = this.renderLetterHtml(markdown, options);
+    const buffer = await this.renderPdfFromHtml(html);
+    const filename =
+      options.filename ?? `${slugifyExportFilename(options.title ?? 'cover-letter')}.pdf`;
     return { buffer, filename };
   }
 

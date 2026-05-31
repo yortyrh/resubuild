@@ -48,6 +48,7 @@ export class CvService {
     const { data, error } = await supabase
       .from('cv')
       .select('*')
+      .eq('kind', 'primary')
       .order('updated_at', { ascending: false });
 
     if (error) {

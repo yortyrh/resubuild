@@ -1,3 +1,13 @@
+export type {
+  CvSummaryForRanking,
+  JobSummary,
+  PrepareApplicationProgress,
+  PrepareApplicationWorkflowInput,
+  PrepareApplicationWorkflowResult,
+  TailorCvPatch,
+  UpdateApplicationWorkflowInput,
+  UpdateApplicationWorkflowResult,
+} from './prepare-application.types';
 export { type ToolRegistry, toolRegistry } from './tool-registry';
 export { extractPdfTextTool } from './tools/extract-pdf-text.tool';
 export { fetchHtmlTool } from './tools/fetch-html.tool';
@@ -18,4 +28,12 @@ export {
   runPdfImportWorkflow,
   runTextImportWorkflow,
 } from './workflows/pdf-import.workflow';
+export {
+  applyCoverLetterCandidateName,
+  createPrepareApplicationWorkflow,
+  createUpdateApplicationWorkflow,
+  resolveCandidateName,
+  runPrepareApplicationWorkflow,
+  runUpdateApplicationWorkflow,
+} from './workflows/prepare-application.workflow';
 export { runWebsiteImportWorkflow } from './workflows/website-import.workflow';

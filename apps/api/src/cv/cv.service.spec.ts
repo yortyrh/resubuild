@@ -43,7 +43,9 @@ describe('CvService', () => {
     it('throws BadRequestException when list query fails', async () => {
       (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
         select: jest.fn(() => ({
-          order: jest.fn().mockResolvedValue({ data: null, error: { message: 'list fail' } }),
+          eq: jest.fn(() => ({
+            order: jest.fn().mockResolvedValue({ data: null, error: { message: 'list fail' } }),
+          })),
         })),
       }));
 
@@ -55,12 +57,15 @@ describe('CvService', () => {
       const order = jest.fn().mockResolvedValue({ data: [header], error: null });
 
       (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        select: jest.fn(() => ({ order })),
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({ order })),
+        })),
       }));
 
       const result = await service.findAll(user);
 
       expect(result).toHaveLength(1);
+      expect(order).toHaveBeenCalled();
       expect(result[0].title).toBe('Jane — Engineer');
       expect((result[0].data as { basics?: { name?: string } }).basics?.name).toBe('Jane');
       expect(result[0].data).not.toHaveProperty('meta');
@@ -72,7 +77,9 @@ describe('CvService', () => {
       const order = jest.fn().mockResolvedValue({ data: null, error: null });
 
       (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        select: jest.fn(() => ({ order })),
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({ order })),
+        })),
       }));
 
       await expect(service.findAll(user)).resolves.toEqual([]);
@@ -87,7 +94,9 @@ describe('CvService', () => {
       const order = jest.fn().mockResolvedValue({ data: [header], error: null });
 
       (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        select: jest.fn(() => ({ order })),
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({ order })),
+        })),
       }));
 
       const result = await service.findAll(user);

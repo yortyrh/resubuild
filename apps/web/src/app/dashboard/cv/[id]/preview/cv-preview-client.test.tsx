@@ -4,6 +4,14 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CvPreviewClient } from './cv-preview-client';
 
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+vi.mock('@/components/cv/use-application-for-cv', () => ({
+  useApplicationForCv: vi.fn(() => null),
+}));
+
 vi.mock('@/lib/api', () => ({
   getCv: vi.fn(),
   getCvExportHtml: vi.fn(),
@@ -28,6 +36,7 @@ vi.mock('@resumind/resume-template', async (importOriginal) => {
 });
 
 import { renderResumeHtml } from '@resumind/resume-template';
+import { useApplicationForCv } from '@/components/cv/use-application-for-cv';
 import {
   downloadCvJson,
   downloadCvPdf,
@@ -105,6 +114,7 @@ function mockViewport(isDesktop: boolean) {
 describe('CvPreviewClient', () => {
   beforeEach(() => {
     mockViewport(true);
+    vi.mocked(useApplicationForCv).mockReturnValue(null);
     vi.mocked(getCv).mockResolvedValue({
       id: 'cv-1',
       user_id: 'u1',
@@ -184,7 +194,7 @@ describe('CvPreviewClient', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Print' }));
     expect(iframePrint).toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+    fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
     await waitFor(
       () => {
         expect(downloadCvPdf).toHaveBeenCalledWith('cv-1', 'classic');
@@ -192,7 +202,7 @@ describe('CvPreviewClient', () => {
       { timeout: 10_000 },
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Download JSON' }));
+    fireEvent.click(screen.getByRole('button', { name: 'JSON Resume' }));
     await waitFor(
       () => {
         expect(downloadCvJson).toHaveBeenCalledWith('cv-1');
@@ -204,6 +214,25 @@ describe('CvPreviewClient', () => {
       'href',
       '/dashboard/cv/cv-1',
     );
+  });
+
+  it('links back to the application workspace when opened from an application', async () => {
+    vi.mocked(useApplicationForCv).mockReturnValue({
+      id: 'app-1',
+      status: 'ready',
+      tailoredCvId: 'cv-1',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    render(<CvPreviewClient cvId="cv-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Back to application' })).toHaveAttribute(
+        'href',
+        '/dashboard/applications/app-1',
+      );
+    });
   });
 
   it('template change triggers refetch with new query param', async () => {
@@ -230,10 +259,10 @@ describe('CvPreviewClient', () => {
     render(<CvPreviewClient cvId="cv-1" />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Download JSON' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'JSON Resume' })).toBeEnabled();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Download JSON' }));
+    fireEvent.click(screen.getByRole('button', { name: 'JSON Resume' }));
 
     await waitFor(() => {
       expect(screen.getByText('Request failed (500)')).toBeInTheDocument();
@@ -247,10 +276,10 @@ describe('CvPreviewClient', () => {
     render(<CvPreviewClient cvId="cv-1" />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Download PDF' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'PDF' })).toBeEnabled();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+    fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
 
     await waitFor(() => {
       expect(
