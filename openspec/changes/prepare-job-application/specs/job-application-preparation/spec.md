@@ -2,7 +2,7 @@
 
 ### Requirement: Signed-in users SHALL start Prepare Application with multimodal job input
 
-The product SHALL expose a Prepare Application flow where the user submits exactly one job posting source among: HTTPS URL, plain text, PDF file (`application/pdf`), or image file (PNG/JPEG/WebP screenshot), plus an optional instruction message. The client SHALL validate that at least one source is present before submit. The API SHALL reject requests with no extractable source with `400`.
+The product SHALL expose a Prepare Application flow where the user submits exactly one job posting source among: HTTPS URL, plain text, PDF file (`application/pdf`, max 5 MB), or image file (PNG/JPEG/WebP screenshot, max 5 MB), plus an optional instruction message. The user MAY optionally select a base CV before submit; when provided, the workflow SHALL use that CV as `source_cv_id` and skip AI ranking. The client SHALL validate that at least one source is present before submit. The API SHALL reject requests with no extractable source with `400`.
 
 #### Scenario: User submits job URL with instruction
 
@@ -19,9 +19,29 @@ The product SHALL expose a Prepare Application flow where the user submits exact
 - **WHEN** a client calls prepare with empty url, text, and no file
 - **THEN** the API SHALL return `400` and SHALL NOT create an application row
 
+#### Scenario: User picks base CV before prepare
+
+- **WHEN** a signed-in user selects a library-visible CV on intake and submits valid job content
+- **THEN** the prepare workflow SHALL use that CV as `source_cv_id`
+- **AND** SHALL NOT run AI CV ranking for selection
+
+#### Scenario: Oversize screenshot rejected
+
+- **WHEN** a client uploads an image job posting larger than 5 MB
+- **THEN** the API SHALL return `400` with a clear size limit message
+
+### Requirement: Users MAY pick the base CV before prepare
+
+The intake form SHALL default to AI selection. The user MAY choose a specific library-visible CV instead. When `sourceCvId` is provided on prepare, the workflow SHALL use it and skip AI ranking; `selection_rationale` MAY note user selection.
+
+#### Scenario: AI picks when no CV selected
+
+- **WHEN** a user submits prepare without choosing a base CV
+- **THEN** the workflow SHALL run AI ranking to select `source_cv_id`
+
 ### Requirement: Prepare Application SHALL produce a job_application record with tailored artifacts in one run
 
-On successful workflow completion, the system SHALL persist a `job_application` row containing: extracted job metadata (title, company when known), reference to the selected `source_cv_id`, reference to a new `tailored_cv_id` clone, and a `cover_letter` **Markdown** draft. The application SHALL be owned by the authenticated user. The flow SHALL NOT require or expose AI chat for refinement.
+On successful workflow completion, the system SHALL persist a `job_application` row containing: extracted job metadata (title, company when known), reference to the selected `source_cv_id`, reference to a new `tailored_cv_id` clone, and a `cover_letter` **Markdown** draft in the job posting language unless the optional user message specifies another language. The application SHALL be owned by the authenticated user. The flow SHALL NOT require or expose AI chat for refinement.
 
 #### Scenario: Successful prepare creates linked records
 
@@ -62,12 +82,13 @@ The API SHALL expose an authenticated action to set `visible_in_library = true` 
 
 ### Requirement: Users SHALL copy and export the cover letter for email or PDF
 
-The application workspace SHALL store and display `cover_letter` as Markdown. The UI SHALL provide copy-to-clipboard as **plain text** suitable for pasting into an email body. The UI MAY also offer copy Markdown. The API SHALL expose authenticated letter export routes returning HTML and PDF (Markdown rendered to HTML) using the same server-side PDF engine as CV export. Letter PDF export MAY return `503` when the PDF engine is unavailable, matching CV export behavior.
+The application workspace SHALL store and display `cover_letter` as Markdown. The UI SHALL provide a single copy action that writes **rich text** to the clipboard (`text/html` derived from rendered Markdown, with `text/plain` fallback) so one paste into an email client or document preserves formatting. The API SHALL expose authenticated letter export routes returning HTML and PDF (Markdown rendered to HTML) using the same server-side PDF engine as CV export. Letter PDF export MAY return `503` when the PDF engine is unavailable, matching CV export behavior.
 
-#### Scenario: Copy letter as plain text for email
+#### Scenario: Copy letter as rich text for email or document
 
 - **WHEN** a user clicks copy on the cover letter in the workspace
-- **THEN** plain text derived from the Markdown letter SHALL be copied to the clipboard
+- **THEN** the clipboard SHALL include HTML rich text derived from the Markdown letter
+- **AND** SHALL include a plain-text fallback for clients that ignore HTML
 
 #### Scenario: Download letter PDF
 

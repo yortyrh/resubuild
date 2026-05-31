@@ -35,12 +35,12 @@ The Prepare Application workspace SHALL link to or embed the existing section ed
 
 ### Requirement: Application workspace SHALL include a cover letter panel without AI chat
 
-The workspace layout SHALL include: job summary, selection rationale, Markdown cover letter preview with editable field, copy plain text (for email), optional copy Markdown, letter PDF download, and navigation to tailored CV editing and CV export. The layout SHALL NOT include a chat transcript or AI composer.
+The workspace layout SHALL include: job summary, selection rationale, Markdown cover letter preview with editable field, **copy rich text** (single action for email/documents), letter PDF download, and navigation to tailored CV editing and CV export. The layout SHALL NOT include a chat transcript or AI composer.
 
-#### Scenario: Copy letter for email
+#### Scenario: Copy letter as rich text
 
 - **WHEN** a user clicks copy on the cover letter
-- **THEN** the UI SHALL copy plain text suitable for pasting into an email body
+- **THEN** the UI SHALL write HTML rich text to the clipboard with a plain-text fallback
 
 #### Scenario: Edit letter manually after generation
 

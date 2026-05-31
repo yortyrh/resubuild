@@ -4,7 +4,7 @@
 
 Under `/applications`, authenticated handlers SHALL provide:
 
-- `POST /applications/prepare` — multipart intake (optional `url`, `text`, `message`, file pdf|image); returns `{ applicationId, status }` with `202` when queued
+- `POST /applications/prepare` — multipart intake (optional `url`, `text`, `message`, optional `sourceCvId`, file pdf|image max 5 MB each); returns `{ applicationId, status }` with `202` when queued
 - `GET /applications` — list user's applications (summary fields, ordered by `updated_at` desc)
 - `GET /applications/:id` — application detail including status, job metadata, `sourceCvId`, `tailoredCvId`, `coverLetter` Markdown, `selectionRationale`, and prepare progress while running
 - `PATCH /applications/:id` — optional body `{ coverLetter: string }` for manual Markdown edits (no AI)
@@ -17,6 +17,16 @@ All routes SHALL require the same Supabase auth guard as `/cv`. Prepare SHALL re
 
 - **WHEN** an authenticated user with a valid active AI agent account submits valid job intake
 - **THEN** the API SHALL return `202` with an application id and queued status
+
+#### Scenario: User-provided source CV honored
+
+- **WHEN** prepare intake includes `sourceCvId` owned by the user
+- **THEN** the workflow SHALL use that CV and skip AI ranking
+
+#### Scenario: Oversize file rejected
+
+- **WHEN** prepare intake includes a PDF or image file larger than 5 MB
+- **THEN** the API SHALL return `400`
 
 #### Scenario: Manual letter update
 

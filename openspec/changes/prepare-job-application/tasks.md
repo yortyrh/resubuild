@@ -14,10 +14,10 @@
 
 - [ ] 3.1 Add job posting normalize tools: URL fetch (SSRF-safe), text pass-through, reuse PDF extract, image-to-text vision step
 - [ ] 3.2 Add `summarizeJobPostingTool` returning structured title, company, requirements, keywords
-- [ ] 3.3 Add `rankCvForJobTool` selecting `source_cv_id` from user CV summaries + user message
+- [ ] 3.3 Add `rankCvForJobTool` selecting `source_cv_id` when intake omits `sourceCvId`; skip when user provides `sourceCvId`
 - [ ] 3.4 Add source-CV loader tools (basics, Work/Volunteer/Project items) reading from `source_cv_id`
 - [ ] 3.5 Add `tailorCvPatchTool` producing validated patches (label, Markdown bold, trimmed `highlights` on clone)
-- [ ] 3.6 Add `draftCoverLetterTool` generating cover letter **Markdown**
+- [ ] 3.6 Add `draftCoverLetterTool` generating cover letter **Markdown** in posting language (override from user message)
 - [ ] 3.7 Export `createPrepareApplicationWorkflow()` with colocated Vitest tests (mocked LLM + fetch)
 
 ## 4. API — CV clone, list filter, source loaders
@@ -29,7 +29,7 @@
 ## 5. API — Application module
 
 - [ ] 5.1 Create `ApplicationModule`, `ApplicationController`, `ApplicationService` under `apps/api/src/application/`
-- [ ] 5.2 Implement `POST /applications/prepare` (multipart intake, active AI agent account gate, 202 + job enqueue)
+- [ ] 5.2 Implement `POST /applications/prepare` (multipart intake, optional `sourceCvId`, PDF/image max 5 MB, active AI agent account gate, 202 + job enqueue)
 - [ ] 5.3 Implement in-memory application job store (user-scoped, TTL) and background runner invoking prepare workflow
 - [ ] 5.4 Implement `GET /applications` and `GET /applications/:id` with status/progress
 - [ ] 5.5 Implement optional `PATCH /applications/:id` for manual `coverLetter` Markdown edits (no AI)
@@ -47,14 +47,14 @@
 
 - [ ] 7.1 Add API helpers in `apps/web/src/lib/api.ts`: listApplications, prepareApplication, getApplication, updateApplicationLetter, promoteApplicationClone, export letter helpers
 - [ ] 7.2 Add `/dashboard/applications` list page with colocated tests
-- [ ] 7.3 Add `/dashboard/applications/new` intake form (URL, text, PDF/image upload, message) gated on active AI agent account
+- [ ] 7.3 Add `/dashboard/applications/new` intake form (URL, text, PDF/image upload max 5 MB, optional base CV picker, message) gated on active AI agent account
 - [ ] 7.4 Add `/dashboard/applications/[id]` workspace shell with polling for prepare status
 - [ ] 7.5 Add dashboard nav entry for Prepare Application
 - [ ] 7.6 Colocated tests for intake validation, AI agent account gate, poll success/failure
 
 ## 8. Web — workspace UI
 
-- [ ] 8.1 Letter panel: Markdown preview, editable textarea, copy plain text (email), copy Markdown, download PDF
+- [ ] 8.1 Letter panel: Markdown preview, editable textarea, copy rich text (HTML clipboard + plain fallback), download PDF
 - [ ] 8.2 Job summary and selection rationale from application detail
 - [ ] 8.3 Link tailored CV to existing editor routes; show clone lineage and promote action
 - [ ] 8.4 Source preview panel on Work/Volunteer/Project clone editors: read-only source entry by index, copy summary/highlights into clone
@@ -65,7 +65,7 @@
 
 ## 10. Verification
 
-- [ ] 10.1 Manual smoke: prepare from pasted job text → tailored clone + Markdown letter → copy plain text → export letter PDF
+- [ ] 10.1 Manual smoke: prepare from pasted job text → tailored clone + Markdown letter → copy rich text → export letter PDF
 - [ ] 10.2 Manual smoke: application clone absent from dashboard CV list until promoted
 - [ ] 10.3 Manual smoke: copy highlight from source preview into clone; source CV unchanged
 - [ ] 10.4 Run `pnpm test -- --run` for affected workspaces (`import-agent`, `api`, `web`, `types`)

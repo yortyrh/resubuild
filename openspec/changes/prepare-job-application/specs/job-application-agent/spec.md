@@ -16,7 +16,7 @@ The `apps/import-agent` package SHALL export a prepare-application workflow runn
 
 ### Requirement: The workflow SHALL normalize job postings from URL, text, PDF, and image inputs
 
-The first workflow stage SHALL produce plain-text job description content suitable for downstream LLM steps. URL input SHALL fetch HTTPS content with size and timeout limits. PDF input SHALL reuse PDF text extraction tooling from resume import. Image input SHALL use a vision-capable model step to transcribe job content. Text input SHALL pass through unchanged.
+The first workflow stage SHALL produce plain-text job description content suitable for downstream LLM steps. URL input SHALL fetch HTTPS content with size and timeout limits. PDF input SHALL reuse PDF text extraction tooling from resume import (max 5 MB). Image input SHALL use a vision-capable model step to transcribe job content (max 5 MB). Text input SHALL pass through unchanged.
 
 #### Scenario: PDF job posting extracted
 
@@ -30,17 +30,23 @@ The first workflow stage SHALL produce plain-text job description content suitab
 
 ### Requirement: The workflow SHALL select the best-matching base CV for the user
 
-Given extracted job content, optional user message, and a list of the user's CVs (header fields plus concise section summaries), an LLM step SHALL choose one `source_cv_id`. The choice rationale SHALL be persisted on `job_application.selection_rationale`.
+When prepare intake does not include `sourceCvId`, given extracted job content, optional user message, and a list of the user's CVs (header fields plus concise section summaries), an LLM step SHALL choose one `source_cv_id`. The choice rationale SHALL be persisted on `job_application.selection_rationale`. When intake includes a valid user-owned `sourceCvId`, the workflow SHALL use it directly and skip ranking.
 
 #### Scenario: Multiple CVs ranked
 
-- **WHEN** a user owns two or more CVs and submits a frontend-developer job posting
+- **WHEN** a user owns two or more CVs, submits a frontend-developer job posting, and does not pick a base CV
 - **THEN** the workflow SHALL select the CV whose content best matches the posting
 - **AND** SHALL record which id was selected
 
+#### Scenario: User-selected base CV
+
+- **WHEN** prepare intake includes `sourceCvId` for a CV owned by the user
+- **THEN** the workflow SHALL use that id as `source_cv_id`
+- **AND** SHALL NOT invoke the rank step
+
 #### Scenario: Single CV auto-selected
 
-- **WHEN** a user owns exactly one CV
+- **WHEN** a user owns exactly one CV and does not pick a base CV
 - **THEN** the workflow SHALL select that CV without user intervention
 
 ### Requirement: Source-CV utilities SHALL load sections from the original CV
@@ -75,9 +81,14 @@ After selection, the server SHALL deep-copy normalized CV rows to a new clone li
 
 ### Requirement: The workflow SHALL draft a cover letter as Markdown
 
-After tailoring, an LLM step SHALL generate a cover letter using the job summary and tailored CV content. The letter SHALL be stored on `job_application.cover_letter` as **Markdown** suitable for plain-text email paste or PDF export.
+After tailoring, an LLM step SHALL generate a cover letter using the job summary and tailored CV content. The letter SHALL be written in the **job posting language** detected during normalize/summarize unless the optional user message explicitly requests another language. The letter SHALL be stored on `job_application.cover_letter` as **Markdown** suitable for rich-text clipboard copy or PDF export.
 
 #### Scenario: Letter persisted on success
 
 - **WHEN** the workflow completes
-- **THEN** `cover_letter` SHALL contain a multi-paragraph Markdown draft suitable for copy or PDF export
+- **THEN** `cover_letter` SHALL contain a multi-paragraph Markdown draft in the posting language (or user-requested language from message)
+
+#### Scenario: User message overrides letter language
+
+- **WHEN** the optional user message asks for the letter in a specific language
+- **THEN** the draft step SHALL generate the letter in that language regardless of posting language

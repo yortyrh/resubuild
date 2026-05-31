@@ -2,7 +2,7 @@
 
 ### Requirement: The SPA SHALL expose Prepare Application routes and navigation
 
-The App Router SHALL provide `/dashboard/applications` (list/history), `/dashboard/applications/new` (intake form: URL, text, file upload for PDF or screenshot, optional message), and `/dashboard/applications/[id]` (workspace with letter, job summary, tailored CV links—no chat). The dashboard shell SHALL include navigation to Prepare Application. Intake SHALL require a valid active AI agent account per `ai-agent-accounts`, linking to AI agent settings or the user menu when missing.
+The App Router SHALL provide `/dashboard/applications` (list/history), `/dashboard/applications/new` (intake form: URL, text, file upload for PDF or screenshot up to 5 MB each, optional base CV picker, optional message), and `/dashboard/applications/[id]` (workspace with letter, job summary, tailored CV links—no chat). The dashboard shell SHALL include navigation to Prepare Application. Intake SHALL require a valid active AI agent account per `ai-agent-accounts`, linking to AI agent settings or the user menu when missing.
 
 #### Scenario: User starts prepare from dashboard
 

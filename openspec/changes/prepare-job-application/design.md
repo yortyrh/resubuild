@@ -165,8 +165,10 @@ flowchart TD
   PdfExt --> Summarize
   Vision --> Summarize
 
-  Summarize --> Rank[Rank user CVs\n→ source_cv_id + rationale]
-  Rank --> Clone[CvCloneService\ndeep copy all sections]
+  Summarize --> Pick{sourceCvId\nprovided?}
+  Pick -->|yes| Clone[CvCloneService\ndeep copy all sections]
+  Pick -->|no| Rank[Rank user CVs\n→ source_cv_id + rationale]
+  Rank --> Clone
   Clone --> Tailor[Tailor clone only\nlabel · bold · trim highlights]
   Tailor --> Letter[Draft cover letter Markdown]
   Letter --> Persist[(job_application\nstatus: ready)]
@@ -178,7 +180,7 @@ flowchart TD
 ```mermaid
 flowchart LR
   MD["cover_letter\n(Markdown on job_application)"]
-  MD --> Copy["Copy plain text\n(client-side, email)"]
+  MD --> Copy["Copy rich text\n(HTML clipboard, email/docs)"]
   MD --> Edit["PATCH /applications/:id\nmanual edit"]
   MD --> HTML["GET …/export/letter/html\nMarkdown → sanitized HTML"]
   HTML --> PDF["GET …/export/letter/pdf\nPuppeteer"]
@@ -229,9 +231,13 @@ flowchart LR
 │  │ ○ File    [ Choose PDF or screenshot ]  job-posting.pdf             │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
+│  Base CV (optional)                                                         │
+│  ○ Let AI pick best match    ○ Choose CV: [ Software Engineer CV      ▾]   │
+│                                                                             │
 │  Optional instruction                                                       │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │ Emphasize React and team lead experience…                           │   │
+│  │ Write the letter in English… (overrides posting language)           │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │                              [ Prepare application ]                        │
@@ -255,7 +261,7 @@ flowchart LR
 │  Why this CV:                         │  │                               │  │
 │  "Strongest match for React +         │  │ …                             │  │
 │   leadership bullets in work #2"      │  └───────────────────────────────┘  │
-│                                       │  [Copy plain text] [Copy MD] [PDF ↓]  │
+│                                       │  [Copy letter] [PDF ↓]                  │
 │  TAILORED CV                          │                                       │
 │  ─────────────────                    │                                       │
 │  Clone from: Software Engineer CV     │                                       │
@@ -317,7 +323,8 @@ Rows match by **section type + index** at clone time. Reordering clone rows afte
 - Tailoring operations v1: update `basics.label`, Markdown bold in summaries/highlights, remove irrelevant bullets from the clone's `highlights` arrays (standard jsonb fields—no extra columns).
 - Reuse active AI agent account credentials and Mastra patterns; extend `apps/import-agent` rather than duplicating agent infrastructure.
 - Source-CV utilities: server-side loaders and read-only UI to fetch Work/Volunteer/Project from `source_cv_id`; user can copy summary or highlight text into the clone.
-- Application workspace: job summary, Markdown letter (copy plain text for email, export PDF when needed), full CV editor on clone.
+- Application workspace: job summary, Markdown letter (copy as rich text for email/docs, export PDF when needed), full CV editor on clone.
+- Optional base CV picker on intake; when set, workflow uses that CV instead of AI ranking.
 - `GET /cv` excludes non-promoted application clones; promote action makes clone visible in library.
 
 **Non-Goals:**
@@ -373,10 +380,10 @@ Tailor step removes bullets by writing a shorter `highlights` array on the clone
 
 1. **Normalize job posting** — branch on input type (URL fetch, text, PDF extract, image vision)
 2. **Summarize job** — structured fields: title, company, requirements[], keywords[]
-3. **Rank CVs** — LLM picks `source_cv_id` with rationale
+3. **Select base CV** — use user-provided `source_cv_id` when present; otherwise LLM picks with rationale
 4. **Clone** — deep copy normalized rows → new `cv` + children (`source_cv_id` set)
 5. **Tailor clone** — patches on clone only: `basics.label`, Markdown bold in summaries/highlights, reduced `highlights` arrays (drop irrelevant bullets)
-6. **Draft cover letter** — Markdown from job summary + tailored CV assembly
+6. **Draft cover letter** — Markdown in the job posting language (or language specified in the user message) from job summary + tailored CV assembly
 7. **Persist** — create `job_application` with `cover_letter`, `selection_rationale`, status `ready`
 
 **Rationale:** Mirrors PDF import architecture; tools are unit-testable; no chat agent.
@@ -394,18 +401,30 @@ Tailor step removes bullets by writing a shorter `highlights` array on the clone
 
 **Choice:** `CvService.findAll` filters `visible_in_library = true`. `GET /cv/:id` returns clones by id. Source CV readable via same routes using `sourceCvId` from application detail.
 
-### 6. Cover letter: Markdown storage, dual export paths
+### 6. Cover letter: Markdown storage, rich-text copy, PDF export
 
-**Choice:** Store Markdown on `job_application`; copy plain text for email; PDF via Markdown → HTML → Puppeteer.
+**Choice:** Store Markdown on `job_application`. Client copy action writes **rich text** (`text/html` from rendered Markdown, with `text/plain` fallback) so one paste preserves bold and paragraphs in email clients and word processors. PDF via Markdown → HTML → Puppeteer.
 
-### 7. AI agent credential gate
+**Letter language:** Default to the job posting language (detected during normalize/summarize). If the optional user message explicitly requests another language, the draft step SHALL honor that override.
+
+### 7. Optional base CV selection on intake
+
+**Choice:** Intake form offers "Let AI pick" (default) or a dropdown of the user's library-visible CVs. When the user selects a CV, `POST /applications/prepare` sends `sourceCvId`; the workflow skips LLM ranking and uses that id (still records a short rationale such as "User selected"). When omitted, existing rank step applies.
+
+**Rationale:** Reduces wrong-CV risk without blocking users who trust AI selection.
+
+### 8. Screenshot upload size limit
+
+**Choice:** Image job postings (PNG/JPEG/WebP) SHALL use the same maximum upload size as PDF import: **5 MB** (`PDF_IMPORT_MAX_BYTES` default, shared constant or env for application prepare).
+
+### 9. AI agent credential gate
 
 **Choice:** Reuse `AiAgentCredentialService.getActiveCredentials(user)` for `POST /applications/prepare`.
 
 ## Risks / Trade-offs
 
 - **[Risk] URL fetch SSRF / ToS** → HTTPS only, size/time limits; pasted text fallback.
-- **[Risk] Wrong CV selected** → Persist `selection_rationale`; future: user picks base CV before prepare.
+- **[Risk] Wrong CV selected** → Optional base CV picker on intake; persist `selection_rationale` either way.
 - **[Risk] LLM corrupts CV schema** → Validated patch applier + `ResumeSchemaValidator`.
 - **[Risk] One-shot quality** → Manual edit on clone; source preview to copy back removed content.
 - **[Risk] Source/clone row matching** → Deep copy preserves order; preview matches by index within section; document limitation if user reorders clone rows.
@@ -418,9 +437,11 @@ Tailor step removes bullets by writing a shorter `highlights` array on the clone
 3. Deploy web routes behind nav link.
 4. Rollback: disable flag; new tables unused; CV columns nullable/no-op for existing rows.
 
-## Open Questions
+## Resolved Questions
 
-- Should v1 allow user to **pick base CV** before prepare, or only AI pick?
-- Maximum size for screenshot upload (propose 5 MB, same as PDF import).
-- Letter language: match job posting language or user locale?
-- Copy letter as plain text vs Markdown for email—default plain text?
+| Question                   | Decision                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| Base CV before prepare     | **v1 yes** — optional picker; default AI pick when unset                       |
+| Screenshot max size        | **5 MB** — same as PDF import                                                  |
+| Letter language            | **Job posting language** — unless user specifies otherwise in optional message |
+| Copy format for email/docs | **Rich text** — HTML clipboard from Markdown (not plain text or raw Markdown)  |
