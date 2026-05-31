@@ -19,7 +19,12 @@ describe('ImportController', () => {
   let service: jest.Mocked<
     Pick<
       ImportService,
-      'startPdfImport' | 'startMarkdownImport' | 'startImageImport' | 'startDocxImport' | 'getJob'
+      | 'startPdfImport'
+      | 'startMarkdownImport'
+      | 'startImageImport'
+      | 'startDocxImport'
+      | 'importFromUrl'
+      | 'getJob'
     >
   >;
 
@@ -29,6 +34,7 @@ describe('ImportController', () => {
       startMarkdownImport: jest.fn(),
       startImageImport: jest.fn(),
       startDocxImport: jest.fn(),
+      importFromUrl: jest.fn(),
       getJob: jest.fn(),
     };
     controller = new ImportController(service as never);
@@ -75,6 +81,10 @@ describe('ImportController', () => {
     await expect(controller.startImageImport(req, file)).resolves.toEqual({ jobId: 'job-img-1' });
   });
 
+  it('requires image multipart file field', async () => {
+    expect(() => controller.startImageImport(req, undefined)).toThrow(BadRequestException);
+  });
+
   it('returns 202 payload from startDocxImport', async () => {
     service.startDocxImport.mockResolvedValue({ jobId: 'job-docx-1' });
     const file = {
@@ -85,6 +95,25 @@ describe('ImportController', () => {
     } as Express.Multer.File;
 
     await expect(controller.startDocxImport(req, file)).resolves.toEqual({ jobId: 'job-docx-1' });
+  });
+
+  it('requires docx multipart file field', async () => {
+    expect(() => controller.startDocxImport(req, undefined)).toThrow(BadRequestException);
+  });
+
+  it('proxies importFromUrl to service', async () => {
+    service.importFromUrl.mockResolvedValue({
+      kind: 'json',
+      data: { basics: { name: 'Jane Doe' } },
+    });
+
+    await expect(
+      controller.importFromUrl(req, { url: 'https://example.com/resume.json' }),
+    ).resolves.toEqual({
+      kind: 'json',
+      data: { basics: { name: 'Jane Doe' } },
+    });
+    expect(service.importFromUrl).toHaveBeenCalledWith(user, 'https://example.com/resume.json');
   });
 
   it('proxies getJob to service', () => {

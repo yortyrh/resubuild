@@ -863,6 +863,57 @@ describe('ImportService', () => {
   });
 
   describe('startImageImport', () => {
+    it('rejects when feature flag is disabled', async () => {
+      service = new ImportService(
+        {
+          get: jest.fn((key: string) => {
+            if (key === 'PDF_IMPORT_ENABLED') return 'false';
+            return undefined;
+          }),
+        } as never,
+        aiAgentCredentialService as never,
+        catalogService as never,
+        schemaValidator as never,
+        webScrapeService as never,
+      );
+
+      await expect(
+        service.startImageImport(user, {
+          mimetype: 'image/png',
+          size: 100,
+          buffer: Buffer.from('png'),
+        } as Express.Multer.File),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rejects oversize images', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      service = new ImportService(
+        {
+          get: jest.fn((key: string) => {
+            if (key === 'IMAGE_IMPORT_MAX_BYTES') return '10';
+            return undefined;
+          }),
+        } as never,
+        aiAgentCredentialService as never,
+        catalogService as never,
+        schemaValidator as never,
+        webScrapeService as never,
+      );
+
+      await expect(
+        service.startImageImport(user, {
+          mimetype: 'image/png',
+          size: 20,
+          buffer: Buffer.from('png'),
+        } as Express.Multer.File),
+      ).rejects.toThrow(/maximum size/i);
+    });
+
     it('rejects non-image uploads', async () => {
       aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
         modelId: 'openai/gpt-4o-mini',
@@ -906,9 +957,107 @@ describe('ImportService', () => {
       );
       expect(service.getJob(user, result.jobId).status).toBe('succeeded');
     });
+
+    it('marks image job failed on workflow errors', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(runImageImportWorkflow).mockRejectedValue(new Error('vision failed'));
+
+      const result = await service.startImageImport(user, {
+        mimetype: 'image/png',
+        size: 100,
+        buffer: Buffer.from('png'),
+      } as Express.Multer.File);
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(service.getJob(user, result.jobId).errors).toEqual(['vision failed']);
+    });
+
+    it('updates image job progress from workflow callbacks', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(runImageImportWorkflow).mockImplementation(async ({ onProgress }) => {
+        onProgress?.('drafting');
+        return { draft: { basics: { name: 'Jane Doe' } }, errors: [] };
+      });
+      schemaValidator.validate.mockReturnValue(undefined);
+
+      const result = await service.startImageImport(user, {
+        mimetype: 'image/png',
+        size: 100,
+        buffer: Buffer.from('png'),
+      } as Express.Multer.File);
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(runImageImportWorkflow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onProgress: expect.any(Function),
+        }),
+      );
+      expect(service.getJob(user, result.jobId).status).toBe('succeeded');
+    });
   });
 
   describe('startDocxImport', () => {
+    it('rejects when feature flag is disabled', async () => {
+      service = new ImportService(
+        {
+          get: jest.fn((key: string) => {
+            if (key === 'PDF_IMPORT_ENABLED') return 'false';
+            return undefined;
+          }),
+        } as never,
+        aiAgentCredentialService as never,
+        catalogService as never,
+        schemaValidator as never,
+        webScrapeService as never,
+      );
+
+      await expect(
+        service.startDocxImport(user, {
+          mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          size: 100,
+          buffer: Buffer.from('docx'),
+          originalname: 'resume.docx',
+        } as Express.Multer.File),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rejects oversize docx files', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      service = new ImportService(
+        {
+          get: jest.fn((key: string) => {
+            if (key === 'DOCX_IMPORT_MAX_BYTES') return '10';
+            return undefined;
+          }),
+        } as never,
+        aiAgentCredentialService as never,
+        catalogService as never,
+        schemaValidator as never,
+        webScrapeService as never,
+      );
+
+      await expect(
+        service.startDocxImport(user, {
+          mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          size: 20,
+          buffer: Buffer.from('docx'),
+          originalname: 'resume.docx',
+        } as Express.Multer.File),
+      ).rejects.toThrow(/maximum size/i);
+    });
+
     it('rejects non-docx uploads', async () => {
       aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
         modelId: 'openai/gpt-4o-mini',
@@ -955,6 +1104,65 @@ describe('ImportService', () => {
         }),
       );
       expect(service.getJob(user, result.jobId).status).toBe('succeeded');
+    });
+
+    it('accepts docx files by extension when mime type is generic', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(extractDocxTextTool).mockResolvedValue({ text: 'Jane Doe\nEngineer' });
+      jest.mocked(runTextImportWorkflow).mockResolvedValue({
+        draft: { basics: { name: 'Jane Doe' } },
+        errors: [],
+      });
+      schemaValidator.validate.mockReturnValue(undefined);
+
+      const result = await service.startDocxImport(user, {
+        mimetype: 'application/octet-stream',
+        size: 100,
+        buffer: Buffer.from('docx'),
+        originalname: 'resume.docx',
+      } as Express.Multer.File);
+
+      expect(result.jobId).toEqual(expect.any(String));
+    });
+
+    it('rejects docx extraction failures', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(extractDocxTextTool).mockRejectedValue(new Error('corrupt docx'));
+
+      await expect(
+        service.startDocxImport(user, {
+          mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          size: 100,
+          buffer: Buffer.from('docx'),
+          originalname: 'resume.docx',
+        } as Express.Multer.File),
+      ).rejects.toThrow('corrupt docx');
+    });
+
+    it('maps non-error docx extraction failures to a generic message', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(extractDocxTextTool).mockRejectedValue('bad docx');
+
+      await expect(
+        service.startDocxImport(user, {
+          mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          size: 100,
+          buffer: Buffer.from('docx'),
+          originalname: 'resume.docx',
+        } as Express.Multer.File),
+      ).rejects.toThrow('Could not extract text from DOCX');
     });
   });
 
