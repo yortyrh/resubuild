@@ -1,8 +1,8 @@
 ## ADDED Requirements
 
-### Requirement: Job application preparation SHALL run as Mastra workflows in the import-agent workspace
+### Requirement: Job application preparation SHALL run as a one-shot Mastra workflow in the import-agent workspace
 
-The `apps/import-agent` package SHALL export a prepare-application workflow runner invoked by Nest with: normalized job posting input, optional user message, the user's CV summaries for matching, and the active account's Mastra `model_id` plus decrypted API key from `AiAgentCredentialService`. The workflow SHALL NOT use server-wide LLM secrets for end-user runs.
+The `apps/import-agent` package SHALL export a prepare-application workflow runner invoked by Nest with: normalized job posting input, optional user message, the user's CV summaries for matching, and the active account's Mastra `model_id` plus decrypted API key from `AiAgentCredentialService`. The workflow SHALL complete in a single run and SHALL NOT expose chat or multi-turn agents. The workflow SHALL NOT use server-wide LLM secrets for end-user runs.
 
 #### Scenario: API invokes workflow with active AI agent account
 
@@ -30,7 +30,7 @@ The first workflow stage SHALL produce plain-text job description content suitab
 
 ### Requirement: The workflow SHALL select the best-matching base CV for the user
 
-Given extracted job content, optional user message, and a list of the user's CVs (header fields plus concise section summaries), an LLM step SHALL choose one `source_cv_id`. The choice rationale SHALL be included in the first assistant chat message.
+Given extracted job content, optional user message, and a list of the user's CVs (header fields plus concise section summaries), an LLM step SHALL choose one `source_cv_id`. The choice rationale SHALL be persisted on `job_application.selection_rationale`.
 
 #### Scenario: Multiple CVs ranked
 
@@ -43,49 +43,41 @@ Given extracted job content, optional user message, and a list of the user's CVs
 - **WHEN** a user owns exactly one CV
 - **THEN** the workflow SHALL select that CV without user intervention
 
+### Requirement: Source-CV utilities SHALL load sections from the original CV
+
+The workflow and API SHALL provide read utilities for Work, Volunteer, Project, and basics from `source_cv_id` without mutating the source. The application workspace SHALL use the same data (via existing `GET /cv/:sourceCvId/...` routes) for read-only preview and copy-into-clone flows.
+
+#### Scenario: Tailor reads source before editing clone highlights
+
+- **WHEN** the tailor step evaluates which bullets to drop from the clone
+- **THEN** it MAY load highlight text from the source CV for comparison
+- **AND** SHALL apply changes only by updating the clone's `highlights` arrays
+
 ### Requirement: The workflow SHALL clone and tailor the selected CV
 
-After selection, the server SHALL deep-copy normalized CV rows to a new clone linked by `source_cv_id`. A tailor step SHALL apply structured patches: update `basics.label` to align with the job title when appropriate, add Markdown bold emphasis to relevant summary and highlight strings, and move irrelevant highlight strings from `highlights` to `inactive_highlights`. All mutations SHALL pass schema validation before persist.
+After selection, the server SHALL deep-copy normalized CV rows to a new clone linked by `source_cv_id`. A tailor step SHALL apply structured patches **on the clone only**: update `basics.label`, add Markdown bold in summaries/highlights, and set reduced `highlights` arrays (irrelevant bullets omitted). All mutations SHALL pass schema validation. The source CV SHALL NOT be modified.
 
 #### Scenario: Label updated for target role
 
 - **WHEN** the job posting title is "Senior Product Designer" and the base CV label differs
 - **THEN** the tailored clone SHALL update `basics.label` toward the posting-aligned headline
 
-#### Scenario: Irrelevant highlight deactivated
+#### Scenario: Irrelevant highlight dropped from clone
 
 - **WHEN** a work highlight does not support the target job
-- **THEN** the string SHALL be removed from `highlights` and stored in `inactive_highlights` for that row
+- **THEN** on the clone the string SHALL be absent from that row's `highlights` array
+- **AND** the source CV's `highlights` SHALL remain unchanged
 
 #### Scenario: Relevant highlight bolded
 
 - **WHEN** a highlight mentions a skill required in the job posting
 - **THEN** the tailored clone MAY wrap matching phrases in Markdown bold without breaking JSON Resume string type
 
-### Requirement: The workflow SHALL draft a presentation letter
+### Requirement: The workflow SHALL draft a cover letter as Markdown
 
-After tailoring, an LLM step SHALL generate a presentation letter using the job summary and tailored CV content. The letter SHALL be stored on `job_application.cover_letter` as plain text (Markdown allowed).
+After tailoring, an LLM step SHALL generate a cover letter using the job summary and tailored CV content. The letter SHALL be stored on `job_application.cover_letter` as **Markdown** suitable for plain-text email paste or PDF export.
 
 #### Scenario: Letter persisted on success
 
 - **WHEN** the workflow completes
-- **THEN** `cover_letter` SHALL contain a multi-paragraph draft suitable for copy or PDF export
-
-### Requirement: Chat turns SHALL revise the letter and tailored CV through validated tools
-
-`POST /applications/:id/chat` SHALL append a user message, run a Mastra agent turn with tools to patch `cover_letter` and apply CV patches to `tailored_cv_id`, validate results, persist assistant reply and mutations, and return updated application state. Chat SHALL require the same active AI agent account as prepare per `ai-agent-accounts`.
-
-#### Scenario: User asks to shorten the letter
-
-- **WHEN** a user sends a chat message requesting a shorter presentation letter
-- **THEN** the assistant response SHALL reflect an updated `cover_letter` stored on the application
-
-#### Scenario: User asks to emphasize a skill on the clone
-
-- **WHEN** a user asks to highlight a specific technology on the tailored CV
-- **THEN** the agent SHALL apply validated CV patches to the clone and confirm in the assistant message
-
-#### Scenario: Chat blocked without active AI agent account
-
-- **WHEN** a user without an active AI agent account sends a chat message
-- **THEN** the API SHALL reject the request with `403` or `422` and a configuration-required message
+- **THEN** `cover_letter` SHALL contain a multi-paragraph Markdown draft suitable for copy or PDF export

@@ -2,7 +2,7 @@
 
 ### Requirement: The SPA SHALL expose Prepare Application routes and navigation
 
-The App Router SHALL provide `/dashboard/applications` (list/history), `/dashboard/applications/new` (intake form: URL, text, file upload for PDF or screenshot, optional message), and `/dashboard/applications/[id]` (workspace with chat, letter, tailored CV links). The dashboard shell SHALL include navigation to Prepare Application. Intake SHALL require a valid active AI agent account per `ai-agent-accounts`, linking to AI agent settings or the user menu when missing.
+The App Router SHALL provide `/dashboard/applications` (list/history), `/dashboard/applications/new` (intake form: URL, text, file upload for PDF or screenshot, optional message), and `/dashboard/applications/[id]` (workspace with letter, job summary, tailored CV links—no chat). The dashboard shell SHALL include navigation to Prepare Application. Intake SHALL require a valid active AI agent account per `ai-agent-accounts`, linking to AI agent settings or the user menu when missing.
 
 #### Scenario: User starts prepare from dashboard
 
@@ -32,12 +32,3 @@ The dashboard CV list SHALL continue to show only library-visible CVs from `GET 
 
 - **WHEN** a user promotes an application clone from the workspace
 - **THEN** the clone SHALL appear on the next CV list refresh
-
-### Requirement: Chat UI SHALL subscribe to Realtime when enabled
-
-When Supabase Realtime is enabled for `job_application_message`, the application workspace chat SHALL subscribe to inserts for the open `applicationId` using the authenticated Supabase client pattern agreed for the web app (or fallback to refetch after each chat POST when Realtime is unavailable).
-
-#### Scenario: Realtime subscription on workspace open
-
-- **WHEN** a user opens `/dashboard/applications/[id]` with Realtime enabled
-- **THEN** the client SHALL subscribe to new messages for that application id

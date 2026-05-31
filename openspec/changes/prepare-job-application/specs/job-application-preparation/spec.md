@@ -19,21 +19,22 @@ The product SHALL expose a Prepare Application flow where the user submits exact
 - **WHEN** a client calls prepare with empty url, text, and no file
 - **THEN** the API SHALL return `400` and SHALL NOT create an application row
 
-### Requirement: Prepare Application SHALL produce a job_application record with tailored artifacts
+### Requirement: Prepare Application SHALL produce a job_application record with tailored artifacts in one run
 
-On successful workflow completion, the system SHALL persist a `job_application` row containing: extracted job metadata (title, company when known), reference to the selected `source_cv_id`, reference to a new `tailored_cv_id` clone, and a `cover_letter` text draft. The application SHALL be owned by the authenticated user.
+On successful workflow completion, the system SHALL persist a `job_application` row containing: extracted job metadata (title, company when known), reference to the selected `source_cv_id`, reference to a new `tailored_cv_id` clone, and a `cover_letter` **Markdown** draft. The application SHALL be owned by the authenticated user. The flow SHALL NOT require or expose AI chat for refinement.
 
 #### Scenario: Successful prepare creates linked records
 
 - **WHEN** the prepare workflow completes successfully
 - **THEN** a `job_application` row SHALL exist for the user
 - **AND** `tailored_cv_id` SHALL reference a CV clone with `source_cv_id` pointing to the selected base CV
-- **AND** `cover_letter` SHALL contain non-empty draft text
+- **AND** `cover_letter` SHALL contain non-empty Markdown draft text
 
 #### Scenario: User views application workspace after prepare
 
 - **WHEN** a signed-in user opens an application they own
-- **THEN** the UI SHALL show the cover letter, tailored CV editor entry, job summary, and chat panel
+- **THEN** the UI SHALL show the cover letter, tailored CV editor entry, job summary, and selection rationale
+- **AND** SHALL NOT show an AI chat panel
 
 ### Requirement: Application clones SHALL be hidden from the main CV library by default
 
@@ -59,34 +60,28 @@ The API SHALL expose an authenticated action to set `visible_in_library = true` 
 - **THEN** subsequent `GET /cv` responses SHALL include that CV
 - **AND** `source_cv_id` SHALL remain set for lineage
 
-### Requirement: Users SHALL copy and export the presentation letter
+### Requirement: Users SHALL copy and export the cover letter for email or PDF
 
-The application workspace SHALL provide copy-to-clipboard for `cover_letter` text. The API SHALL expose authenticated letter export routes returning HTML and PDF using the same server-side PDF engine as CV export. Letter PDF export MAY return `503` when the PDF engine is unavailable, matching CV export behavior.
+The application workspace SHALL store and display `cover_letter` as Markdown. The UI SHALL provide copy-to-clipboard as **plain text** suitable for pasting into an email body. The UI MAY also offer copy Markdown. The API SHALL expose authenticated letter export routes returning HTML and PDF (Markdown rendered to HTML) using the same server-side PDF engine as CV export. Letter PDF export MAY return `503` when the PDF engine is unavailable, matching CV export behavior.
 
-#### Scenario: Copy letter text
+#### Scenario: Copy letter as plain text for email
 
-- **WHEN** a user clicks copy on the presentation letter in the workspace
-- **THEN** the full current letter text SHALL be copied to the clipboard
+- **WHEN** a user clicks copy on the cover letter in the workspace
+- **THEN** plain text derived from the Markdown letter SHALL be copied to the clipboard
 
 #### Scenario: Download letter PDF
 
 - **WHEN** a user requests letter PDF export for their application
-- **THEN** the API SHALL return `application/pdf` bytes generated from letter HTML
+- **THEN** the API SHALL return `application/pdf` bytes generated from rendered letter HTML
 
 ### Requirement: Prepare Application SHALL require a valid active AI agent account
 
-Prepare Application intake and chat SHALL be unavailable until the user has an active AI agent account with a Mastra-compatible model id and valid API key per `ai-agent-accounts`. The intake UI SHALL link to AI agent settings or the dashboard user menu when unconfigured. The API SHALL reject `POST /applications/prepare` and `POST /applications/:id/chat` with `403` or `422` when no active account is available.
+Prepare Application intake SHALL be unavailable until the user has an active AI agent account with a Mastra-compatible model id and valid API key per `ai-agent-accounts`. The intake UI SHALL link to AI agent settings or the dashboard user menu when unconfigured. The API SHALL reject `POST /applications/prepare` with `403` or `422` when no active account is available.
 
 #### Scenario: Prepare blocked without active account
 
 - **WHEN** a client calls `POST /applications/prepare` without a valid active AI agent account
 - **THEN** the API SHALL NOT enqueue a job
-- **AND** SHALL return an error indicating AI agent configuration is required
-
-#### Scenario: Chat blocked without active account
-
-- **WHEN** a client calls `POST /applications/:id/chat` without a valid active AI agent account
-- **THEN** the API SHALL NOT run a chat turn
 - **AND** SHALL return an error indicating AI agent configuration is required
 
 ### Requirement: Users SHALL list and revisit past applications
