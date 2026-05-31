@@ -52,6 +52,8 @@ Workflow-level placeholder env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SU
 
 Concurrency MUST cancel in-progress runs for the same ref (`concurrency.group` / `cancel-in-progress: true`).
 
+The **Unit tests (coverage)** job MUST run `pnpm test`, which includes `apps/api` Jest with `--coverage`. The `apps/api` workspace SHALL enforce global coverage thresholds of **90%** for statements, branches, functions, and lines via `coverageThreshold` in `jest.config.cjs`.
+
 #### Scenario: CI validates a pull request with a warm dependency cache
 
 - **WHEN** a pull request targets `main` and a matching `node_modules` cache exists for the current `pnpm-lock.yaml`
@@ -66,6 +68,12 @@ Concurrency MUST cancel in-progress runs for the same ref (`concurrency.group` /
 
 - **WHEN** a developer runs `pnpm verify` at the repository root
 - **THEN** the same commands run in sequence as CI (Prettier check, Biome, typecheck, tests, build), modulo CI running them in parallel jobs and CI dependency caching
+
+#### Scenario: API unit tests fail when branch coverage drops below threshold
+
+- **WHEN** `apps/api` Jest coverage for branches falls below 90%
+- **THEN** the test command exits non-zero
+- **AND** CI **Unit tests (coverage)** job fails
 
 ### Requirement: Root scripts SHALL support local Supabase setup and E2E execution
 
