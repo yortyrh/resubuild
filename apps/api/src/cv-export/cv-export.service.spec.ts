@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  InternalServerErrorException,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -329,6 +330,64 @@ describe('CvExportService', () => {
   it('renderJson throws NotFoundException when CV is missing', async () => {
     normalizedRepo.fetchHeader.mockResolvedValue(null);
     await expect(service.renderJson(userCtx, 'missing')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('renderJson throws InternalServerErrorException when export validation fails', async () => {
+    normalizedRepo.fetchHeader.mockResolvedValue({
+      id: 'cv-1',
+      user_id: 'u42',
+      name: 'Jane Doe',
+      updated_at: '2024-06-01T12:00:00.000Z',
+    });
+    normalizedRepo.fetchSections.mockResolvedValue({
+      profiles: [],
+      work: [],
+      volunteer: [],
+      education: [],
+      awards: [],
+      certificates: [],
+      publications: [],
+      skills: [],
+      languages: [],
+      interests: [],
+      references: [],
+      projects: [],
+    });
+    schemaValidator.validate.mockImplementation(() => {
+      throw new BadRequestException('invalid export');
+    });
+
+    await expect(service.renderJson(userCtx, 'cv-1')).rejects.toBeInstanceOf(
+      InternalServerErrorException,
+    );
+  });
+
+  it('renderJson rethrows unexpected validation errors', async () => {
+    normalizedRepo.fetchHeader.mockResolvedValue({
+      id: 'cv-1',
+      user_id: 'u42',
+      name: 'Jane Doe',
+      updated_at: '2024-06-01T12:00:00.000Z',
+    });
+    normalizedRepo.fetchSections.mockResolvedValue({
+      profiles: [],
+      work: [],
+      volunteer: [],
+      education: [],
+      awards: [],
+      certificates: [],
+      publications: [],
+      skills: [],
+      languages: [],
+      interests: [],
+      references: [],
+      projects: [],
+    });
+    schemaValidator.validate.mockImplementation(() => {
+      throw new Error('validator crashed');
+    });
+
+    await expect(service.renderJson(userCtx, 'cv-1')).rejects.toThrow('validator crashed');
   });
 
   it('renderLetterHtml converts markdown to sanitized html document', () => {

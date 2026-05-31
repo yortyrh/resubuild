@@ -61,10 +61,53 @@ describe('CvCloneService', () => {
     expect(validator.validate).toHaveBeenCalled();
   });
 
+  it('uses application_clone kind when options are omitted', async () => {
+    const sourceHeader = mockCvHeader({
+      id: 'source-1',
+      location: undefined,
+      template_id: undefined,
+    });
+    const resume = { basics: { name: 'Jane' }, work: [] } as Resume;
+
+    normalizedRepo.fetchHeader.mockResolvedValue(sourceHeader);
+    normalizedRepo.assembleFullResume.mockResolvedValueOnce(resume).mockResolvedValueOnce(resume);
+
+    const insertChain = {
+      insert: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: { id: 'clone-2' }, error: null }),
+    };
+    supabase.from.mockReturnValue(insertChain);
+    normalizedRepo.insertNormalizedCv.mockResolvedValue(mockCvHeader({ id: 'clone-2' }));
+
+    await service.deepClone(user, 'source-1', {});
+
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'application_clone',
+        location: {},
+        template_id: 'classic',
+      }),
+    );
+  });
+
   it('throws when source CV is missing', async () => {
     normalizedRepo.fetchHeader.mockResolvedValue(null);
 
     await expect(service.deepClone(user, 'missing')).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws when source CV cannot be assembled', async () => {
+    normalizedRepo.fetchHeader.mockResolvedValue(mockCvHeader({ id: 'source-1' }));
+    normalizedRepo.assembleFullResume.mockResolvedValue(null);
+
+    await expect(service.deepClone(user, 'source-1')).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws when promote target is missing', async () => {
+    normalizedRepo.fetchHeader.mockResolvedValue(null);
+
+    await expect(service.promoteClone(user, 'missing')).rejects.toThrow(NotFoundException);
   });
 
   it('promotes application clone by cloning as primary', async () => {

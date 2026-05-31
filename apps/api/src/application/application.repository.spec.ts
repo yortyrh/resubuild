@@ -65,6 +65,42 @@ describe('ApplicationRepository', () => {
     await expect(repository.findAll(user)).resolves.toEqual(rows);
   });
 
+  it('returns empty list when query succeeds with null data', async () => {
+    supabase.from.mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        order: jest.fn().mockResolvedValue({ data: null, error: null }),
+      }),
+    });
+
+    await expect(repository.findAll(user)).resolves.toEqual([]);
+  });
+
+  it('returns null when findOne succeeds without a row', async () => {
+    supabase.from.mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+        }),
+      }),
+    });
+
+    await expect(repository.findOne(user, 'missing')).resolves.toBeNull();
+  });
+
+  it('returns null when update succeeds without a row', async () => {
+    supabase.from.mockReturnValue({
+      update: jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        }),
+      }),
+    });
+
+    await expect(repository.update(user, 'missing', { status: 'failed' })).resolves.toBeNull();
+  });
+
   it('finds one application by id', async () => {
     const row = { id: 'app-1', status: 'ready' };
     supabase.from.mockReturnValue({

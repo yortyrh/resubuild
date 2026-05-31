@@ -55,6 +55,23 @@ describe('ResumeSchemaValidator', () => {
     }
   });
 
+  it('uses root path when AJV returns an empty instancePath', () => {
+    const validateFn = jest.fn().mockReturnValue(false);
+    Object.assign(validateFn, {
+      errors: [{ instancePath: '', message: 'schema mismatch' }],
+    });
+    (validator as unknown as { validateFn: typeof validateFn }).validateFn = validateFn;
+
+    try {
+      validator.validate({});
+      throw new Error('expected validation to fail');
+    } catch (error) {
+      expect(error).toBeInstanceOf(BadRequestException);
+      const response = (error as BadRequestException).getResponse() as { errors: string[] };
+      expect(response.errors).toContain('/: schema mismatch');
+    }
+  });
+
   it('falls back to invalid value when AJV omits error message', () => {
     const validateFn = jest.fn().mockReturnValue(false);
     Object.assign(validateFn, {

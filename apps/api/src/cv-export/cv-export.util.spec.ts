@@ -59,5 +59,8 @@ describe('buildCoverLetterExportFilename', () => {
       }),
     ).toBe('acme-engineer.pdf');
     expect(buildCoverLetterExportFilename({})).toBe('cover-letter.pdf');
+    expect(buildCoverLetterExportFilename({ company: '---', name: 'Jane Doe' })).toBe(
+      'jane-doe.pdf',
+    );
   });
 });

@@ -470,6 +470,38 @@ describe('MediaService', () => {
     await moduleRef.close();
   });
 
+  it('logs rollback warnings when thumbnail cleanup partially fails', async () => {
+    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const { service, moduleRef } = await bootstrapModule(true);
+    uploadFn
+      .mockResolvedValueOnce({ error: null })
+      .mockResolvedValueOnce({ error: { message: 'thumb upload failed' } });
+    removeFn.mockRejectedValueOnce(new Error('storage delete unavailable'));
+    deleteFn.mockReturnValueOnce({
+      eq: jest.fn().mockResolvedValue({ error: { message: 'delete denied' } }),
+    });
+
+    const file = {
+      mimetype: 'image/png',
+      buffer: Buffer.from([1]),
+      size: 1,
+    } as unknown as Express.Multer.File;
+
+    await expect(service.uploadObject('user-123', file)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Rolling back object after thumbnail failed'),
+    );
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Rolling back media row after thumbnail failed'),
+    );
+
+    warnSpy.mockRestore();
+    await moduleRef.close();
+  });
+
   it('importFromGravatarEmail delegates to Gravatar URL import', async () => {
     mockedFetchRemoteImage.mockResolvedValueOnce({
       buffer: Buffer.from([0]),
@@ -955,7 +987,7 @@ describe('MediaService', () => {
     });
 
     it('throws ServiceUnavailableException when MEDIA_BUCKET is missing', async () => {
-      const { service, moduleRef } = await bootstrapModule('bucket-only');
+      const { service, moduleRef } = await bootstrapModule(false);
       await expect(service.loadOriginalPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
         ServiceUnavailableException,
       );
@@ -964,6 +996,14 @@ describe('MediaService', () => {
   });
 
   describe('ensureThumbnail', () => {
+    it('throws ServiceUnavailableException when MEDIA_BUCKET is missing', async () => {
+      const { service, moduleRef } = await bootstrapModule(false);
+      await expect(service.ensureThumbnail(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+      await moduleRef.close();
+    });
+
     it('uploads thumbnail and updates registry without touching original path', async () => {
       const { service, moduleRef } = await bootstrapModule(true);
       await service.ensureThumbnail(FIXED_MEDIA_ID);

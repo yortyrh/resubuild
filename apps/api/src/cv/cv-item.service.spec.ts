@@ -346,6 +346,20 @@ describe('CvItemService', () => {
     expect(basics).not.toHaveProperty('profiles');
   });
 
+  it('getBasics returns empty object when header has no basics fields', async () => {
+    cvService.getHeader.mockResolvedValue(mockCvHeader({ name: undefined, label: undefined }));
+
+    await expect(service.getBasics(user, 'cv-1')).resolves.toEqual({ location: {} });
+  });
+
+  it('updateBasics returns empty item when header has no basics fields', async () => {
+    normalizedRepo.updateBasicsHeader.mockResolvedValue(mockCvHeader({ name: undefined }));
+
+    const result = await service.updateBasics(user, 'cv-1', { summary: 'Updated summary' });
+
+    expect(result.item).toEqual({ location: {} });
+  });
+
   it('reorderSection rejects non sort-backed sections', async () => {
     await expect(service.reorderSection(user, 'cv-1', 'work', ['a'])).rejects.toThrow(
       BadRequestException,

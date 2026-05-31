@@ -434,6 +434,120 @@ describe('ImportService', () => {
       expect(job.previewData).toMatchObject({ basics: { name: 'HTML User' } });
     });
 
+    it('marks website import job failed on workflow errors', async () => {
+      mockFetchHtml('<html><body>CV</body></html>');
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(runWebsiteImportWorkflow).mockRejectedValue(new Error('scrape failed'));
+
+      const result = await service.importFromUrl(user, 'https://example.com/profile');
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(service.getJob(user, result.kind === 'job' ? result.jobId : '').errors).toEqual([
+        'scrape failed',
+      ]);
+    });
+
+    it('maps auth failures during website import to a friendly error', async () => {
+      mockFetchHtml('<html><body>CV</body></html>');
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(runWebsiteImportWorkflow).mockRejectedValue(new Error('401 invalid api key'));
+
+      const result = await service.importFromUrl(user, 'https://example.com/profile');
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(service.getJob(user, result.kind === 'job' ? result.jobId : '').errors?.[0]).toMatch(
+        /AI agent settings/i,
+      );
+    });
+
+    it('passes Tavily search key to website import workflow', async () => {
+      mockFetchHtml('<html><body>CV</body></html>');
+      webScrapeService.getDecryptedConfig.mockResolvedValue({
+        provider: 'tavily',
+        apiKey: 'tvly-test',
+      });
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest
+        .mocked(runWebsiteImportWorkflow)
+        .mockImplementation(async ({ onProgress, toolsConfig }) => {
+          onProgress?.('extracting');
+          expect(toolsConfig?.searchApiKey).toBe('tvly-test');
+          return { draft: { basics: { name: 'HTML User' } }, errors: [] };
+        });
+
+      const result = await service.importFromUrl(user, 'https://example.com/profile');
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(runWebsiteImportWorkflow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onProgress: expect.any(Function),
+        }),
+      );
+      expect(service.getJob(user, result.kind === 'job' ? result.jobId : '').status).toBe(
+        'succeeded',
+      );
+    });
+
+    it('marks website import job failed when preview draft is invalid', async () => {
+      mockFetchHtml('<html><body>CV</body></html>');
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(runWebsiteImportWorkflow).mockResolvedValue({
+        draft: { basics: {} },
+        errors: [],
+      });
+      jest.mocked(prepareImportedResume).mockImplementationOnce(() => {
+        throw new InvalidImportedResumeError('missing name');
+      });
+
+      const result = await service.importFromUrl(user, 'https://example.com/profile');
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(service.getJob(user, result.kind === 'job' ? result.jobId : '')).toMatchObject({
+        status: 'failed',
+        errors: ['missing name'],
+      });
+    });
+
+    it('marks website import job failed when preview validation fails', async () => {
+      mockFetchHtml('<html><body>CV</body></html>');
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(runWebsiteImportWorkflow).mockResolvedValue({
+        draft: { basics: { name: 'Jane Doe' } },
+        errors: [],
+      });
+      schemaValidator.validate.mockImplementation(() => {
+        throw new BadRequestException('invalid schema');
+      });
+
+      const result = await service.importFromUrl(user, 'https://example.com/profile');
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(service.getJob(user, result.kind === 'job' ? result.jobId : '')).toMatchObject({
+        status: 'failed',
+        errors: ['Imported page did not produce valid JSON Resume data'],
+      });
+    });
+
     it('rejects HTML import when AI agent is not configured', async () => {
       mockFetchHtml('<html></html>');
       aiAgentCredentialService.getActiveCredentials.mockRejectedValue(
@@ -505,6 +619,57 @@ describe('ImportService', () => {
         data: expect.objectContaining({ basics: { name: 'Registry User' } }),
       });
     });
+
+    it('rejects URL import when JSON fails validation and imports are disabled', async () => {
+      mockFetchJsonResume({ basics: { name: 'Invalid User' } });
+      schemaValidator.validate.mockImplementation(() => {
+        throw new BadRequestException('invalid schema');
+      });
+      service = new ImportService(
+        {
+          get: jest.fn((key: string) => (key === 'PDF_IMPORT_ENABLED' ? 'false' : undefined)),
+        } as never,
+        aiAgentCredentialService as never,
+        catalogService as never,
+        schemaValidator as never,
+        webScrapeService as never,
+      );
+
+      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+    });
+
+    it('rethrows unexpected prepareImportedResume failures during URL import', async () => {
+      mockFetchJsonResume({ basics: { name: 'Broken User' } });
+      jest.mocked(prepareImportedResume).mockImplementationOnce(() => {
+        throw new Error('unexpected prepare failure');
+      });
+
+      await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toThrow(
+        'unexpected prepare failure',
+      );
+    });
+
+    it('falls back to agent import when JSON body fails schema validation', async () => {
+      mockFetchJsonResume({ basics: { name: 'Invalid User' } });
+      schemaValidator.validate.mockImplementation(() => {
+        throw new BadRequestException('invalid schema');
+      });
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(runWebsiteImportWorkflow).mockResolvedValue({
+        draft: { basics: { name: 'Agent User' } },
+        errors: [],
+      });
+
+      const result = await service.importFromUrl(user, 'https://example.com/data');
+
+      expect(result.kind).toBe('job');
+    });
   });
 
   describe('startMarkdownImport', () => {
@@ -522,6 +687,34 @@ describe('ImportService', () => {
           buffer: Buffer.from('# Hello'),
         } as Express.Multer.File),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects oversize markdown files', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      service = new ImportService(
+        {
+          get: jest.fn((key: string) => {
+            if (key === 'MARKDOWN_IMPORT_MAX_BYTES') return '10';
+            return undefined;
+          }),
+        } as never,
+        aiAgentCredentialService as never,
+        catalogService as never,
+        schemaValidator as never,
+        webScrapeService as never,
+      );
+
+      await expect(
+        service.startMarkdownImport(user, {
+          mimetype: 'text/markdown',
+          size: 20,
+          buffer: Buffer.from('# Too large markdown file'),
+        } as Express.Multer.File),
+      ).rejects.toThrow(/maximum size/i);
     });
 
     it('rejects empty markdown files', async () => {
@@ -607,6 +800,61 @@ describe('ImportService', () => {
 
       await new Promise((resolve) => setImmediate(resolve));
       expect(service.getJob(user, result.jobId).errors).toEqual(['markdown parse failed']);
+    });
+
+    it('passes Tavily search key to markdown import workflow', async () => {
+      webScrapeService.getDecryptedConfig.mockResolvedValue({
+        provider: 'tavily',
+        apiKey: 'tvly-test',
+      });
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(runTextImportWorkflow).mockResolvedValue({
+        draft: { basics: { name: 'Jane Doe' } },
+        errors: [],
+      });
+      schemaValidator.validate.mockReturnValue(undefined);
+
+      const result = await service.startMarkdownImport(user, {
+        mimetype: 'text/markdown',
+        size: 20,
+        buffer: Buffer.from('# Jane Doe\nEngineer'),
+      } as Express.Multer.File);
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(runTextImportWorkflow).toHaveBeenCalledWith(
+        expect.objectContaining({ searchApiKey: 'tvly-test' }),
+      );
+      expect(service.getJob(user, result.jobId).status).toBe('succeeded');
+    });
+
+    it('updates markdown job progress from workflow callbacks', async () => {
+      aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+        modelId: 'openai/gpt-4o-mini',
+        apiKey: 'sk-test',
+        accountId: 'acc-1',
+      });
+      jest.mocked(runTextImportWorkflow).mockImplementation(async ({ onProgress }) => {
+        onProgress?.('drafting');
+        return { draft: { basics: { name: 'Jane Doe' } }, errors: [] };
+      });
+      schemaValidator.validate.mockReturnValue(undefined);
+
+      const result = await service.startMarkdownImport(user, {
+        mimetype: 'text/markdown',
+        size: 20,
+        buffer: Buffer.from('# Jane Doe\nEngineer'),
+      } as Express.Multer.File);
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(runTextImportWorkflow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onProgress: expect.any(Function),
+        }),
+      );
     });
   });
 
