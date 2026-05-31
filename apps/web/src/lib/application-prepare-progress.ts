@@ -29,9 +29,7 @@ const PROGRESS_LABELS: Record<string, string> = {
 
 function stepsForProgress(progress: string | null | undefined, isUpdate: boolean) {
   const steps = isUpdate ? UPDATE_PROGRESS_STEPS : PREPARE_PROGRESS_STEPS;
-  const index = progress
-    ? steps.indexOf(progress as (typeof steps)[number])
-    : steps.indexOf('queued');
+  const index = progress ? (steps as readonly string[]).indexOf(progress) : steps.indexOf('queued');
   return { steps, index: index >= 0 ? index : 0 };
 }
 

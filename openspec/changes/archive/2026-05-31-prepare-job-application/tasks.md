@@ -65,11 +65,11 @@
 
 ## 10. Verification
 
-- [ ] 10.1 Manual smoke: prepare from pasted job text → tailored clone + Markdown letter → copy rich text → export letter PDF
-- [ ] 10.2 Manual smoke: application clone absent from dashboard CV list until promoted
-- [ ] 10.3 Manual smoke: copy highlight from source preview into clone; source CV unchanged
+- [x] 10.1 Manual smoke: prepare from pasted job text → tailored clone + Markdown letter → copy rich text → export letter PDF
+- [x] 10.2 Manual smoke: application clone absent from dashboard CV list until promoted
+- [x] 10.3 Manual smoke: copy highlight from source preview into clone; source CV unchanged
 - [x] 10.4 Run `pnpm test -- --run` for affected workspaces (`import-agent`, `api`, `web`, `types`)
-- [ ] 10.5 Run `pnpm verify`
+- [x] 10.5 Run `pnpm verify`
 
 ## 11. E2E test impact
 

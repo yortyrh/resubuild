@@ -24,7 +24,6 @@ const basics: NonNullable<Resume['basics']> = {
 
 const profiles: ResumeProfile[] = [
   {
-    id: 'p1',
     network: 'GitHub',
     username: 'janedoe',
     url: 'https://github.com/janedoe',

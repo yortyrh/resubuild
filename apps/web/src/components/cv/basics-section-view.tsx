@@ -69,7 +69,7 @@ function buildProfileContactSegments(profiles: ResumeProfile[]): React.ReactNode
     .map((profile, index) => {
       const href = resolveProfileUrl(profile);
       const label = profile.username?.trim() || profile.network || 'Profile';
-      const key = profile.id ?? `${profile.network ?? 'profile'}-${index}`;
+      const key = `${profile.network ?? 'profile'}-${index}`;
 
       return (
         <ContactLineSegment key={key}>

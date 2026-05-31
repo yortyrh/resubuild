@@ -98,6 +98,41 @@ describe('CvCloneService', () => {
 
     await expect(service.promoteClone(user, 'cv-1')).rejects.toThrow(BadRequestException);
   });
+
+  it('throws when clone insert fails', async () => {
+    const sourceHeader = mockCvHeader({ id: 'source-1' });
+    const resume = { basics: { name: 'Jane' }, work: [] } as Resume;
+
+    normalizedRepo.fetchHeader.mockResolvedValue(sourceHeader);
+    normalizedRepo.assembleFullResume.mockResolvedValue(resume);
+    supabase.from.mockReturnValue({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: null, error: { message: 'insert failed' } }),
+        }),
+      }),
+    });
+
+    await expect(service.deepClone(user, 'source-1')).rejects.toThrow(BadRequestException);
+  });
+
+  it('throws when clone assembly fails after insert', async () => {
+    const sourceHeader = mockCvHeader({ id: 'source-1' });
+    const resume = { basics: { name: 'Jane' }, work: [] } as Resume;
+
+    normalizedRepo.fetchHeader.mockResolvedValue(sourceHeader);
+    normalizedRepo.assembleFullResume.mockResolvedValueOnce(resume).mockResolvedValueOnce(null);
+    supabase.from.mockReturnValue({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: { id: 'clone-1' }, error: null }),
+        }),
+      }),
+    });
+    normalizedRepo.insertNormalizedCv.mockResolvedValue(mockCvHeader({ id: 'clone-1' }));
+
+    await expect(service.deepClone(user, 'source-1')).rejects.toThrow(BadRequestException);
+  });
 });
 
 describe('CvSourceLoaderService', () => {
@@ -113,5 +148,17 @@ describe('CvSourceLoaderService', () => {
       'source-1',
       'work',
     );
+  });
+
+  it('loads volunteer and project items from source CV', async () => {
+    const normalizedRepo = createMockNormalizedRepo();
+    normalizedRepo.listSectionRows
+      .mockResolvedValueOnce([{ id: 'v1' }])
+      .mockResolvedValueOnce([{ id: 'p1' }]);
+    const service = new CvSourceLoaderService(normalizedRepo as never);
+    const user = { accessToken: 'tok' } as never;
+
+    await expect(service.loadVolunteerItems(user, 'source-1')).resolves.toEqual([{ id: 'v1' }]);
+    await expect(service.loadProjectItems(user, 'source-1')).resolves.toEqual([{ id: 'p1' }]);
   });
 });

@@ -137,7 +137,7 @@ export function ApplicationWorkspace({ id }: { id: string }) {
         <ApplicationPrepareActions
           applicationId={id}
           application={data}
-          onStatusChange={() => refetch()}
+          onStatusChange={() => void refetch()}
         />
       </div>
     );

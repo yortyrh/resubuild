@@ -220,10 +220,6 @@ describe('cover letter candidate name', () => {
       }
       return { basics: { label: 'Engineer' } };
     });
-    const generateText = vi
-      .fn()
-      .mockResolvedValue('Dear team,\n\nThanks.\n\nSincerely,\n\n**[Your Name]**');
-
     const result = await runPrepareApplicationWorkflow({
       sourceType: 'text',
       text: 'Job description',
