@@ -121,10 +121,12 @@ Under `/cv/import`, authenticated handlers SHALL provide:
 
 - `POST /cv/import/pdf` — multipart PDF upload, returns `{ jobId }` with 202
 - `POST /cv/import/markdown` — multipart Markdown upload, returns `{ jobId }` with 202
+- `POST /cv/import/image` — multipart PNG/JPEG/WebP upload (max 5 MB), returns `{ jobId }` with 202
+- `POST /cv/import/docx` — multipart `.docx` upload (max 5 MB), returns `{ jobId }` with 202
 - `POST /cv/import/from-url` — JSON body `{ url }`; returns either `{ kind: 'json', data }` with 200 when the URL yields valid JSON Resume synchronously, or `{ kind: 'job', jobId }` with 200 when an agent job is started for HTML/non-JSON pages
-- `GET /cv/import/:jobId` — job status for the owning user, including optional `previewData` on PDF, Markdown, and website import success before CV create
+- `GET /cv/import/:jobId` — job status for the owning user, including optional `previewData` on PDF, Markdown, image, DOCX, and website import success before CV create
 
-Handlers MUST use the caller's Supabase user client for ownership checks on created CVs. Async PDF, Markdown, and website import jobs SHALL NOT create a CV automatically; they SHALL populate `previewData` after `prepareImportedResume` and schema validation for client-side confirmation. The client SHALL create CVs via `POST /cv` using the same validation and meta rules as direct create. Agent-based imports (PDF, Markdown, HTML URL) SHALL require valid per-user LLM configuration per `import-llm-config`. Synchronous JSON URL import SHALL NOT require LLM configuration.
+Handlers MUST use the caller's Supabase user client for ownership checks on created CVs. Async PDF, Markdown, image, DOCX, and website import jobs SHALL NOT create a CV automatically; they SHALL populate `previewData` after `prepareImportedResume` and schema validation for client-side confirmation. The client SHALL create CVs via `POST /cv` using the same validation and meta rules as direct create. Agent-based imports (PDF, Markdown, image, DOCX, HTML URL) SHALL require valid per-user LLM configuration per `import-llm-config`. Synchronous JSON URL import SHALL NOT require LLM configuration.
 
 For `POST /cv/import/from-url`, when the URL host is `registry.jsonresume.org` and the pathname does not end with `.json`, the service SHALL fetch the URL with `.json` appended to the pathname before validation.
 
@@ -149,6 +151,18 @@ Under `/web-scrape`, authenticated handlers SHALL provide web scrape configurati
 - **THEN** `GET /cv/import/:jobId` SHALL have `status: succeeded` and `previewData` set
 - **AND** SHALL NOT include `cvId` until the client creates a CV separately
 
+#### Scenario: Image import returns preview without CV
+
+- **WHEN** an image import job completes successfully
+- **THEN** `GET /cv/import/:jobId` SHALL have `status: succeeded` and `previewData` set
+- **AND** SHALL NOT include `cvId` until the client creates a CV separately
+
+#### Scenario: DOCX import returns preview without CV
+
+- **WHEN** a DOCX import job completes successfully
+- **THEN** `GET /cv/import/:jobId` SHALL have `status: succeeded` and `previewData` set
+- **AND** SHALL NOT include `cvId` until the client creates a CV separately
+
 #### Scenario: Website import returns preview without CV
 
 - **WHEN** a website import job completes successfully
@@ -169,6 +183,16 @@ Under `/web-scrape`, authenticated handlers SHALL provide web scrape configurati
 
 - **WHEN** a client calls `POST /cv/import/from-url` with a URL returning HTML and the user has valid LLM configuration
 - **THEN** the API SHALL respond with `{ kind: 'job', jobId }`
+
+#### Scenario: Invalid image MIME rejected
+
+- **WHEN** a client uploads a non-image file to `POST /cv/import/image`
+- **THEN** the API SHALL respond with `400` and SHALL NOT create a job
+
+#### Scenario: Invalid DOCX rejected
+
+- **WHEN** a client uploads a non-DOCX file to `POST /cv/import/docx`
+- **THEN** the API SHALL respond with `400` and SHALL NOT create a job
 
 ### Requirement: Media routes MUST inherit CV-grade authentication on upload and public read on stream
 

@@ -35,7 +35,7 @@ The new CV route (`/dashboard/cv/new`) SHALL NOT call `POST /cv` on page load. I
 
 The new CV menu SHALL expose **Import from file**, **Import from URL** (`/dashboard/cv/new/import/url`), and **Create manually** only. Legacy paths `/dashboard/cv/new/import/json`, `/import/pdf`, and `/import/markdown` SHALL redirect to `/dashboard/cv/new/import/file`.
 
-**Import from file** SHALL accept JSON, PDF, or Markdown and auto-detect format client-side. JSON is parsed locally; PDF and Markdown require Import LLM settings and agent jobs returning `previewData` before Save. **Import from URL** SHALL fetch JSON synchronously or start an HTML agent job with the same preview-then-Save UX per `import-preview-ui`.
+**Import from file** SHALL accept JSON, PDF, Markdown, Word (`.docx`), and résumé images (PNG/JPEG/WebP) and auto-detect format client-side. JSON is parsed locally; PDF, Markdown, Word, and images require Import LLM settings and agent jobs returning `previewData` before Save. **Import from URL** SHALL fetch JSON synchronously or start an HTML agent job with the same preview-then-Save UX per `import-preview-ui`.
 
 All import paths SHALL converge on a client-side prepared JSON Resume before `createCv`. Manual create and all import paths SHALL NOT POST or start import until the user confirms Import or Save.
 
@@ -45,6 +45,16 @@ The per-CV editor bootstrap (`GET /cv/:id`) SHALL merge slim `data.basics` into 
 
 - **WHEN** a signed-in user uploads a PDF on `/dashboard/cv/new/import/file`
 - **THEN** the client SHALL detect PDF, run the agent job, and enable Save after `previewData` is available
+
+#### Scenario: User imports image from file route
+
+- **WHEN** a signed-in user uploads a résumé image on `/dashboard/cv/new/import/file`
+- **THEN** the client SHALL detect image format, call `POST /cv/import/image`, and enable Save after `previewData` is available
+
+#### Scenario: User imports DOCX from file route
+
+- **WHEN** a signed-in user uploads a `.docx` file on `/dashboard/cv/new/import/file`
+- **THEN** the client SHALL detect DOCX, call `POST /cv/import/docx`, and enable Save after `previewData` is available
 
 #### Scenario: User imports CV from URL (JSON)
 

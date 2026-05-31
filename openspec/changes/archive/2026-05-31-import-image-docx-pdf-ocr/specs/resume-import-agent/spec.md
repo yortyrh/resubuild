@@ -24,12 +24,14 @@ The import agent package SHALL register tools usable by import workflows and fut
 
 #### Scenario: Web lookup disabled
 
-- **WHEN** no Tavily search key is configured
-- **THEN** the web lookup tool SHALL return `{ skipped: true }` without failing the job
+- **WHEN** the user has not configured a Tavily key in web scrape settings
+- **THEN** the workflow SHALL continue without web enrichment
 
-### Requirement: Text import workflow SHALL be shared across non-PDF sources
+## ADDED Requirements
 
-The package SHALL export `runTextImportWorkflow` used by PDF (after extraction/OCR), Markdown (file body), image (after transcription), and DOCX (after mammoth extraction). The package SHALL export `runImageImportWorkflow` for image-only intake.
+### Requirement: The import agent SHALL expose image and shared text import workflows
+
+The package SHALL export `runTextImportWorkflow` for Markdown, DOCX (after extraction), PDF (after extraction/OCR), and image (after transcription). The package SHALL export `runImageImportWorkflow` that transcribes a résumé image then delegates to `runTextImportWorkflow`.
 
 #### Scenario: Image workflow reuses text pipeline
 
