@@ -17,8 +17,10 @@ import type {
 const MAX_REPAIR_ATTEMPTS = 3;
 
 const DRAFT_INSTRUCTIONS = `You convert resume plain text into JSON Resume JSON.
-Return only valid JSON with basics, work, education, skills, and other relevant sections.
-Use ISO-8601 partial dates (YYYY or YYYY-MM) for date fields.`;
+Return only valid JSON with basics, work, volunteer, education, skills, and other relevant sections.
+Use ISO-8601 partial dates (YYYY or YYYY-MM) for date fields.
+Put unpaid, volunteer, community service, and pro bono roles in volunteer[] (organization, position, dates, summary, highlights)—not in work[].
+Put paid employment in work[] (name, position, location, dates, summary, description, highlights).`;
 
 const REPAIR_INSTRUCTIONS = `You repair JSON Resume documents to satisfy schema validation errors.
 Return only valid JSON. Preserve factual content from the draft unless fixing shape or dates.`;

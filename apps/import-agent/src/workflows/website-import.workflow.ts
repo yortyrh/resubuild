@@ -14,8 +14,10 @@ const MAX_AGENT_STEPS = 12;
 
 const WEBSITE_DRAFT_INSTRUCTIONS = `You import résumés/CVs from public websites into JSON Resume JSON.
 Use the available tools to load page content (markdown or HTML) and optionally search the web for missing facts.
-Return only valid JSON with basics, work, education, skills, and other relevant sections.
-Use ISO-8601 partial dates (YYYY or YYYY-MM) for date fields.`;
+Return only valid JSON with basics, work, volunteer, education, skills, and other relevant sections.
+Use ISO-8601 partial dates (YYYY or YYYY-MM) for date fields.
+Put unpaid, volunteer, community service, and pro bono roles in volunteer[] (organization, position, dates, summary, highlights)—not in work[].
+Put paid employment in work[] (name, position, location, dates, summary, description, highlights).`;
 
 const REPAIR_INSTRUCTIONS = `You repair JSON Resume documents to satisfy schema validation errors.
 Return only valid JSON. Preserve factual content from the draft unless fixing shape or dates.`;
