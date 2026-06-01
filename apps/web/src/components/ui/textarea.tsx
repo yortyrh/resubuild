@@ -1,7 +1,11 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
-const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<'textarea'>>(
+type TextareaProps = Omit<React.ComponentProps<'textarea'>, 'value'> & {
+  value?: React.ComponentProps<'textarea'>['value'] | null;
+};
+
+const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, value, ...props }, ref) => {
     return (
       <textarea
