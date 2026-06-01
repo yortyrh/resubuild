@@ -5,6 +5,7 @@ export type ImportJobProgress =
   | 'drafting'
   | 'verifying'
   | 'repairing'
+  | 'discovering-profiles'
   | 'finalizing';
 
 export interface ImportJobResult {
@@ -32,6 +33,7 @@ export interface TextImportWorkflowResult {
   cvId?: string;
   draft?: Record<string, unknown>;
   errors: string[];
+  discoveredProfilesCount?: number;
 }
 
 export interface PdfImportWorkflowInput {
@@ -73,4 +75,5 @@ export interface ToolRegistry {
   validateResumeSchema: typeof import('./tools/validate-resume-schema.tool').validateResumeSchemaTool;
   normalizeDates: typeof import('./tools/normalize-dates.tool').normalizeDatesTool;
   webLookup: typeof import('./tools/web-lookup.tool').webLookupTool;
+  discoverSocialProfiles: typeof import('./tools/discover-social-profiles.tool').discoverSocialProfilesTool;
 }

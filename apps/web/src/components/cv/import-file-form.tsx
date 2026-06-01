@@ -68,6 +68,9 @@ export function ImportFileForm({ onImport, onCancel, pollIntervalMs = 2000 }: Im
   const [importError, setImportError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [discoveredProfilesCount, setDiscoveredProfilesCount] = useState<number | undefined>(
+    undefined,
+  );
 
   const { preview, useGravatar, setUseGravatar } = useImportJsonPreview(jsonText);
   const { data: jobStatus, error: jobError } = usePdfImportJob(jobId, pollIntervalMs);
@@ -78,6 +81,7 @@ export function ImportFileForm({ onImport, onCancel, pollIntervalMs = 2000 }: Im
     resetKey: selectedFile?.name ?? '',
     preview,
     validationSource,
+    discoveredProfilesCount,
   });
 
   useEffect(() => {
@@ -95,6 +99,7 @@ export function ImportFileForm({ onImport, onCancel, pollIntervalMs = 2000 }: Im
       setProgress(null);
       setAgentError(null);
       setValidationSource('agent');
+      setDiscoveredProfilesCount(jobStatus.discoveredProfilesCount);
       setJsonText(formatJsonForEditor(JSON.stringify(jobStatus.previewData)));
       return;
     }
@@ -123,6 +128,7 @@ export function ImportFileForm({ onImport, onCancel, pollIntervalMs = 2000 }: Im
     setProgress(null);
     setAgentError(null);
     setImportError(null);
+    setDiscoveredProfilesCount(undefined);
   };
 
   const handleFileSelect = async (file: File | null) => {

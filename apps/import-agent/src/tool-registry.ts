@@ -5,6 +5,7 @@ import { normalizeDatesTool } from './tools/normalize-dates.tool';
 import { tavilyExtractTool } from './tools/tavily-extract.tool';
 import { validateResumeSchemaTool } from './tools/validate-resume-schema.tool';
 import { webLookupTool } from './tools/web-lookup.tool';
+import { discoverSocialProfilesTool } from './tools/discover-social-profiles.tool';
 
 export const toolRegistry = {
   extractPdfText: extractPdfTextTool,
@@ -14,6 +15,7 @@ export const toolRegistry = {
   validateResumeSchema: validateResumeSchemaTool,
   normalizeDates: normalizeDatesTool,
   webLookup: webLookupTool,
+  discoverSocialProfiles: discoverSocialProfilesTool,
 };
 
 export type ToolRegistry = typeof toolRegistry;

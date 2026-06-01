@@ -52,6 +52,7 @@ vi.mock('@/lib/queries/ai-agent-queries', () => ({
       ? {
           status: 'succeeded',
           previewData: { basics: { name: 'Jane Doe' } },
+          discoveredProfilesCount: 2,
         }
       : undefined,
     error: undefined,
@@ -128,7 +129,9 @@ describe('ImportFileForm', () => {
     await user.click(screen.getByRole('button', { name: 'Import' }));
 
     await waitFor(() => {
-      expect(mockToastSuccess).toHaveBeenCalledWith('Résumé is ready to import.');
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Résumé is ready to import. We found 2 social profiles—review them in Preview or Edit before Save.',
+      );
     });
     expect(screen.queryByText(/JSON Resume data is valid/i)).not.toBeInTheDocument();
 
@@ -154,7 +157,9 @@ describe('ImportFileForm', () => {
     await user.click(screen.getByRole('button', { name: 'Import' }));
 
     await waitFor(() => {
-      expect(mockToastSuccess).toHaveBeenCalledWith('Résumé is ready to import.');
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Résumé is ready to import. We found 2 social profiles—review them in Preview or Edit before Save.',
+      );
     });
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));

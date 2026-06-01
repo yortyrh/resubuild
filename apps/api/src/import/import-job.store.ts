@@ -9,6 +9,8 @@ export interface ImportJobRecord {
   cvId?: string;
   /** Normalized JSON Resume draft for client preview (website import, no CV created yet). */
   previewData?: Record<string, unknown>;
+  /** Count of social profiles auto-discovered during agent import. */
+  discoveredProfilesCount?: number;
   errors?: string[];
   createdAt: number;
   updatedAt: number;

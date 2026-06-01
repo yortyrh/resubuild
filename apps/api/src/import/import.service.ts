@@ -209,6 +209,7 @@ export class ImportService {
       progress: job.progress,
       cvId: job.cvId,
       previewData: job.previewData,
+      discoveredProfilesCount: job.discoveredProfilesCount,
       errors: job.errors,
     };
   }
@@ -447,7 +448,7 @@ export class ImportService {
 
   private finishPreviewJob(
     jobId: string,
-    result: { draft?: Record<string, unknown>; errors: string[] },
+    result: { draft?: Record<string, unknown>; errors: string[]; discoveredProfilesCount?: number },
   ) {
     if (result.errors.length > 0 || !result.draft) {
       const errors = result.errors.length ? result.errors : ['Import failed before preview'];
@@ -472,6 +473,7 @@ export class ImportService {
       status: 'succeeded',
       previewData: prepared,
       progress: 'finalizing',
+      discoveredProfilesCount: result.discoveredProfilesCount,
     });
   }
 

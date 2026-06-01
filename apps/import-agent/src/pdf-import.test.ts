@@ -12,7 +12,16 @@ import { extractPdfTextTool } from './tools/extract-pdf-text.tool';
 import { normalizeDatesTool } from './tools/normalize-dates.tool';
 import { validateResumeSchemaTool } from './tools/validate-resume-schema.tool';
 import { webLookupTool } from './tools/web-lookup.tool';
+import { discoverSocialProfilesTool } from './tools/discover-social-profiles.tool';
 import { runPdfImportWorkflow } from './workflows/pdf-import.workflow';
+
+vi.mock('./tools/discover-social-profiles.tool', () => ({
+  discoverSocialProfilesTool: vi.fn(async ({ draft }: { draft: Record<string, unknown> }) => ({
+    skipped: false,
+    draft,
+    discoveredProfilesCount: 0,
+  })),
+}));
 
 const fixturePath = path.join(__dirname, '../test-fixtures/minimal.pdf');
 
@@ -112,5 +121,48 @@ describe('runPdfImportWorkflow', () => {
 
     expect(repairCalls).toBeGreaterThan(0);
     expect(result.cvId).toBe('cv-123');
+  });
+
+  it('merges discovered profiles into the validated draft', async () => {
+    vi.mocked(discoverSocialProfilesTool).mockResolvedValueOnce({
+      skipped: false,
+      discoveredProfilesCount: 1,
+      draft: {
+        ...createEmptyResume(),
+        basics: {
+          name: 'Jane Doe',
+          profiles: [
+            {
+              network: 'LinkedIn',
+              url: 'https://www.linkedin.com/in/jane-doe',
+              username: 'jane-doe',
+            },
+          ],
+        },
+      },
+    });
+
+    const buffer = readFileSync(fixturePath);
+    const result = await runPdfImportWorkflow({
+      pdfBuffer: buffer,
+      modelId: 'openai/gpt-4o-mini',
+      apiKey: 'test-key',
+      searchApiKey: 'search-key',
+      generateDraft: async () => ({
+        ...createEmptyResume(),
+        basics: { name: 'Jane Doe', profiles: [] },
+      }),
+    });
+
+    expect(discoverSocialProfilesTool).toHaveBeenCalled();
+    expect(result.discoveredProfilesCount).toBe(1);
+    expect(result.draft?.basics).toMatchObject({
+      profiles: [
+        expect.objectContaining({
+          network: 'LinkedIn',
+          url: 'https://www.linkedin.com/in/jane-doe',
+        }),
+      ],
+    });
   });
 });

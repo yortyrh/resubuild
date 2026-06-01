@@ -17,6 +17,7 @@ export { normalizeDatesTool } from './tools/normalize-dates.tool';
 export { tavilyExtractTool } from './tools/tavily-extract.tool';
 export { validateResumeSchemaTool } from './tools/validate-resume-schema.tool';
 export { webLookupTool } from './tools/web-lookup.tool';
+export { discoverSocialProfilesTool } from './tools/discover-social-profiles.tool';
 export {
   buildWebsiteImportTools,
   type WebScrapeProvider,
