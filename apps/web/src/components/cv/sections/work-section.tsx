@@ -1,6 +1,8 @@
 'use client';
 
 import type { ResumeWork } from '@resumind/types';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import {
   formatDateRange,
@@ -15,20 +17,37 @@ import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { cvWorkApi } from '@/lib/cv-item-api';
-import { sortDateRangeSectionItems } from '@/lib/cv-section-order';
+import { removeItemById, sortDateRangeSectionItems } from '@/lib/cv-section-order';
 import type { SectionItem } from '@/lib/cv-section-refetch';
+import { moveWorkVolunteerEntry } from '@/lib/move-work-volunteer-entry';
 
 type WorkItem = SectionItem<ResumeWork>;
 
 export function WorkSection() {
   useSectionMount('work');
   const { cvId, resume, setResume } = useCvEditor();
+  const queryClient = useQueryClient();
+  const workItems = (resume.work ?? []) as WorkItem[];
+
+  const handleMoveToVolunteer = useCallback(
+    async (item: WorkItem) => {
+      if (!item.id) {
+        throw new Error('Cannot move an unsaved work entry');
+      }
+      await moveWorkVolunteerEntry(queryClient, cvId, 'work-to-volunteer', item, item.id);
+      setResume((prev) => ({
+        ...prev,
+        work: removeItemById(workItems, item.id!),
+      }));
+    },
+    [cvId, queryClient, setResume, workItems],
+  );
 
   return (
     <ManagedArraySection<WorkItem>
       cvId={cvId}
       sectionKey="work"
-      items={resume.work ?? []}
+      items={workItems}
       onItemsChange={(work) => setResume((prev) => ({ ...prev, work }))}
       entityLabel="Work entry"
       addLabel="Add work experience"
@@ -40,6 +59,15 @@ export function WorkSection() {
       api={cvWorkApi}
       validateBeforeSave={validateRequiredStartDate}
       sortItems={sortDateRangeSectionItems}
+      crossSectionMove={{
+        buttonLabel: 'Move to Volunteer',
+        dialogTitle: 'Move to Volunteer?',
+        dialogDescription:
+          'This entry will be moved to the Volunteer section. It will be removed from Work after the transfer succeeds.',
+        confirmLabel: 'Move to Volunteer',
+        successMessage: 'Moved to Volunteer',
+        onMove: handleMoveToVolunteer,
+      }}
       renderView={(item) => {
         const { title, subtitle } = positionEntityView(
           item.position,

@@ -62,6 +62,69 @@ export function DeleteItemDialog({
   );
 }
 
+interface MoveItemDialogProps {
+  open: boolean;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  confirming?: boolean;
+}
+
+export function MoveItemDialog({
+  open,
+  title,
+  description,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+  confirming = false,
+}: MoveItemDialogProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+    if (open && !dialog.open) {
+      dialog.showModal();
+    }
+    if (!open && dialog.open) {
+      dialog.close();
+    }
+  }, [open]);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="bg-background ring-border/50 fixed left-1/2 top-1/2 w-[min(100%,24rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl p-6 shadow-lg ring-1 backdrop:bg-black/50"
+      onCancel={(e) => {
+        e.preventDefault();
+        onCancel();
+      }}
+    >
+      <h2 className="text-lg font-semibold">{title}</h2>
+      <p className="text-muted-foreground mt-2 text-sm">{description}</p>
+      <div className="mt-6 flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={confirming}>
+          Cancel
+        </Button>
+        <Button type="button" onClick={onConfirm} disabled={confirming}>
+          {confirming ? 'Moving…' : confirmLabel}
+        </Button>
+      </div>
+    </dialog>
+  );
+}
+
+export interface ResumeItemSecondaryAction {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}
+
 export interface ResumeItemRowReorderProps {
   sectionLabel: string;
   dragHandleProps?: ButtonHTMLAttributes<HTMLButtonElement>;
@@ -78,6 +141,7 @@ interface ResumeItemRowProps {
   children?: ReactNode;
   onEdit: () => void;
   onDelete?: () => void;
+  secondaryAction?: ResumeItemSecondaryAction;
   reorder?: ResumeItemRowReorderProps;
   isDragging?: boolean;
 }
@@ -89,6 +153,7 @@ export function ResumeItemRow({
   children,
   onEdit,
   onDelete,
+  secondaryAction,
   reorder,
   isDragging = false,
 }: ResumeItemRowProps) {
@@ -147,6 +212,17 @@ export function ResumeItemRow({
               <ChevronDown className="size-4" aria-hidden />
             </Button>
           </div>
+        ) : null}
+        {secondaryAction ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={secondaryAction.onClick}
+            disabled={secondaryAction.disabled}
+          >
+            {secondaryAction.label}
+          </Button>
         ) : null}
         <Button type="button" variant="outline" size="sm" onClick={onEdit}>
           Edit
