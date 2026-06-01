@@ -16,6 +16,7 @@ import {
   parseMediaIdFromImageUrl,
   profilePhotoPreviewUrl,
 } from '@/lib/api';
+import { stripVolunteerHiddenStorage } from '@/lib/work-volunteer-move';
 
 function nonEmpty<T>(items: T[] | undefined): T[] | undefined {
   if (!items || items.length === 0) return undefined;
@@ -67,7 +68,9 @@ export async function fetchCvResumeForPreview(cvId: string): Promise<Resume> {
       profiles: nonEmpty(profiles as NonNullable<Resume['basics']>['profiles']),
     },
     work: nonEmpty(work as NonNullable<Resume['work']>),
-    volunteer: nonEmpty(volunteer as NonNullable<Resume['volunteer']>),
+    volunteer: nonEmpty(
+      (volunteer as Record<string, unknown>[] | undefined)?.map(stripVolunteerHiddenStorage),
+    ) as Resume['volunteer'],
     education: nonEmpty(education as NonNullable<Resume['education']>),
     skills: nonEmpty(skills as NonNullable<Resume['skills']>),
     projects: nonEmpty(projects as NonNullable<Resume['projects']>),

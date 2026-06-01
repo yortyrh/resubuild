@@ -26,9 +26,11 @@ import {
   useRef,
   useState,
 } from 'react';
+import { toast } from 'sonner';
 import { CvGenericSectionSkeleton } from '@/components/cv/cv-editor-skeleton';
 import {
   DeleteItemDialog,
+  MoveItemDialog,
   ResumeItemForm,
   ResumeItemRow,
   SectionCreateForm,
@@ -57,6 +59,15 @@ import { useCvSection } from '@/lib/queries/cv-queries';
 interface SectionReorderConfig {
   section: ReorderableCvSection;
   sectionLabel: string;
+}
+
+export interface CrossSectionMoveConfig<T extends WithItemId> {
+  buttonLabel: string;
+  dialogTitle: string;
+  dialogDescription: string;
+  confirmLabel: string;
+  successMessage: string;
+  onMove: (item: T) => Promise<void>;
 }
 
 function SortableItemShell({
@@ -122,6 +133,7 @@ export interface ManagedArraySectionProps<T extends WithItemId> {
   reorder?: SectionReorderConfig;
   validateBeforeSave?: (item: T, mode: 'create' | 'edit') => Record<string, string> | null;
   sortItems?: (items: T[]) => T[];
+  crossSectionMove?: CrossSectionMoveConfig<T>;
 }
 
 export function ManagedArraySection<T extends WithItemId>({
@@ -140,6 +152,7 @@ export function ManagedArraySection<T extends WithItemId>({
   reorder,
   validateBeforeSave,
   sortItems,
+  crossSectionMove,
 }: ManagedArraySectionProps<T>) {
   const needsHydration = sectionItemsNeedHydration(items);
   const {
@@ -160,6 +173,8 @@ export function ManagedArraySection<T extends WithItemId>({
   const [creating, setCreating] = useState(false);
   const [createDraft, setCreateDraft] = useState<T | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [moveItem, setMoveItem] = useState<T | null>(null);
+  const [moving, setMoving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const reorderSeqRef = useRef(0);
   const onItemsChangeRef = useRef(onItemsChange);
@@ -325,6 +340,30 @@ export function ManagedArraySection<T extends WithItemId>({
     );
   };
 
+  const confirmMove = async () => {
+    if (!moveItem || !crossSectionMove) {
+      return;
+    }
+
+    const item = moveItem;
+    setMoving(true);
+    setError(null);
+
+    try {
+      await crossSectionMove.onMove(item);
+      toast.success(crossSectionMove.successMessage);
+      setMoveItem(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Move failed';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setMoving(false);
+    }
+  };
+
+  const actionsDisabled = saving || moving;
+
   const reorderEnabled =
     reorder !== undefined &&
     items.length >= 2 &&
@@ -434,6 +473,15 @@ export function ManagedArraySection<T extends WithItemId>({
             setError(err instanceof Error ? err.message : 'Cannot delete this entry');
           }
         }}
+        secondaryAction={
+          crossSectionMove && item.id
+            ? {
+                label: crossSectionMove.buttonLabel,
+                onClick: () => setMoveItem(item),
+                disabled: actionsDisabled,
+              }
+            : undefined
+        }
         reorder={
           reorderProps
             ? {
@@ -449,7 +497,7 @@ export function ManagedArraySection<T extends WithItemId>({
 
     if (reorderEnabled && item.id) {
       return (
-        <SortableItemShell id={item.id} disabled={saving}>
+        <SortableItemShell id={item.id} disabled={actionsDisabled}>
           {({ isDragging, dragHandleProps }) => rowElement(dragHandleProps, isDragging)}
         </SortableItemShell>
       );
@@ -480,7 +528,7 @@ export function ManagedArraySection<T extends WithItemId>({
     return editingId === item.id && draft ? (
       <ResumeItemForm
         key={itemKey}
-        saving={saving}
+        saving={actionsDisabled}
         error={error}
         onSave={saveEdit}
         onCancel={cancelEdit}
@@ -514,7 +562,7 @@ export function ManagedArraySection<T extends WithItemId>({
         label={addLabel}
         open={creating && createDraft !== null}
         onOpen={startCreate}
-        saving={saving}
+        saving={actionsDisabled}
         error={error}
         onSave={saveCreate}
         onCancel={cancelCreate}
@@ -532,6 +580,18 @@ export function ManagedArraySection<T extends WithItemId>({
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}
       />
+
+      {crossSectionMove ? (
+        <MoveItemDialog
+          open={moveItem !== null}
+          title={crossSectionMove.dialogTitle}
+          description={crossSectionMove.dialogDescription}
+          confirmLabel={crossSectionMove.confirmLabel}
+          confirming={moving}
+          onConfirm={confirmMove}
+          onCancel={() => setMoveItem(null)}
+        />
+      ) : null}
     </div>
   );
 }

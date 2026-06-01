@@ -288,4 +288,75 @@ describe('resumeItemToDbPayload', () => {
       start_date: '2020-01',
     });
   });
+
+  it('persists hidden volunteer storage fields on create payloads', () => {
+    expect(
+      resumeItemToDbPayload('volunteer', {
+        organization: 'NPO',
+        location: 'Remote',
+        description: 'Contract',
+        startDate: '2020-01',
+      }),
+    ).toEqual({
+      organization: 'NPO',
+      location: 'Remote',
+      description: 'Contract',
+      start_date: '2020-01',
+    });
+  });
+});
+
+describe('volunteer hidden storage export', () => {
+  it('includes hidden fields in editor API rows but omits them from assembleResume export', () => {
+    const editorItem = dbRowToResumeItem('volunteer', {
+      id: 'v1',
+      cv_id: 'cv-1',
+      organization: 'NPO',
+      location: 'Remote',
+      description: 'Hidden role',
+      start_date: '2020-01',
+      highlights: [],
+    });
+
+    expect(editorItem).toMatchObject({
+      id: 'v1',
+      organization: 'NPO',
+      location: 'Remote',
+      description: 'Hidden role',
+    });
+
+    const resume = assembleResume(
+      { id: 'cv-1', user_id: 'user-1' },
+      {
+        profiles: [],
+        work: [],
+        volunteer: [
+          {
+            id: 'v1',
+            cv_id: 'cv-1',
+            organization: 'NPO',
+            location: 'Remote',
+            description: 'Hidden role',
+            start_date: '2020-01',
+            highlights: [],
+          },
+        ],
+        education: [],
+        awards: [],
+        certificates: [],
+        publications: [],
+        skills: [],
+        languages: [],
+        interests: [],
+        references: [],
+        projects: [],
+      },
+    );
+
+    expect(resume.volunteer?.[0]).toEqual({
+      id: 'v1',
+      organization: 'NPO',
+      startDate: '2020-01',
+    });
+  });
 });

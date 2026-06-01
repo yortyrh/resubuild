@@ -67,6 +67,10 @@ export interface CvVolunteerRow {
   id: string;
   cv_id: string;
   organization?: string | null;
+  /** Hidden storage for Work → Volunteer round-trip; excluded from JSON Resume export. */
+  location?: string | null;
+  /** Hidden storage for Work → Volunteer round-trip; excluded from JSON Resume export. */
+  description?: string | null;
   position?: string | null;
   url?: string | null;
   start_date?: string | null;
