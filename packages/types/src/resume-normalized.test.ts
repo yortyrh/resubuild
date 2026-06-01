@@ -4,10 +4,12 @@ import { describe, expect, it } from 'vitest';
 import type { Resume } from './resume';
 import {
   assembleResume,
+  compareEndDateDescNullsFirst,
   dbRowToResumeItem,
   disassembleResume,
   headerToSlimCvData,
   resumeItemToDbPayload,
+  sortWorkRows,
 } from './resume-normalized';
 
 const samplesDir = join(process.cwd(), '../../.samples/resumes/jsonresume');
@@ -31,30 +33,45 @@ function compareDateDesc(a?: string, b?: string): number {
   return (b ?? '').localeCompare(a ?? '');
 }
 
+function compareEndDateNullsFirst(a?: string, b?: string): number {
+  const aEmpty = !a;
+  const bEmpty = !b;
+  if (aEmpty && bEmpty) return 0;
+  if (aEmpty) return -1;
+  if (bEmpty) return 1;
+  return compareDateDesc(a, b);
+}
+
 function normalizeDateSections(resume: Resume): Resume {
   const normalized = { ...resume };
 
   if (normalized.work?.length) {
     normalized.work = [...normalized.work].sort((a, b) => {
+      const byEnd = compareEndDateNullsFirst(a.endDate, b.endDate);
+      if (byEnd !== 0) return byEnd;
       const byStart = compareDateDesc(a.startDate, b.startDate);
       if (byStart !== 0) return byStart;
-      return compareDateDesc(a.endDate, b.endDate);
+      return (a.id ?? '').localeCompare(b.id ?? '');
     });
   }
 
   if (normalized.volunteer?.length) {
     normalized.volunteer = [...normalized.volunteer].sort((a, b) => {
+      const byEnd = compareEndDateNullsFirst(a.endDate, b.endDate);
+      if (byEnd !== 0) return byEnd;
       const byStart = compareDateDesc(a.startDate, b.startDate);
       if (byStart !== 0) return byStart;
-      return compareDateDesc(a.endDate, b.endDate);
+      return (a.id ?? '').localeCompare(b.id ?? '');
     });
   }
 
   if (normalized.education?.length) {
     normalized.education = [...normalized.education].sort((a, b) => {
+      const byEnd = compareEndDateNullsFirst(a.endDate, b.endDate);
+      if (byEnd !== 0) return byEnd;
       const byStart = compareDateDesc(a.startDate, b.startDate);
       if (byStart !== 0) return byStart;
-      return compareDateDesc(a.endDate, b.endDate);
+      return (a.id ?? '').localeCompare(b.id ?? '');
     });
   }
 
@@ -76,9 +93,11 @@ function normalizeDateSections(resume: Resume): Resume {
 
   if (normalized.projects?.length) {
     normalized.projects = [...normalized.projects].sort((a, b) => {
+      const byEnd = compareEndDateNullsFirst(a.endDate, b.endDate);
+      if (byEnd !== 0) return byEnd;
       const byStart = compareDateDesc(a.startDate, b.startDate);
       if (byStart !== 0) return byStart;
-      return compareDateDesc(a.endDate, b.endDate);
+      return (a.id ?? '').localeCompare(b.id ?? '');
     });
   }
 
@@ -110,19 +129,23 @@ describe('resume-normalized round-trip', () => {
     expect(assembled.skills).toBeUndefined();
   });
 
-  it('orders work by start_date descending', () => {
+  it('orders work by end_date descending with ongoing entries first', () => {
     const cvId = '00000000-0000-4000-8000-000000000003';
     const resume: Resume = {
       work: [
-        { name: 'Old', startDate: '2018-01', endDate: '2019-01' },
-        { name: 'New', startDate: '2022-06', endDate: '2024-01' },
+        { name: 'Past', startDate: '2018-01', endDate: '2019-01' },
+        { name: 'Current', startDate: '2022-06' },
+        { name: 'RecentPast', startDate: '2020-01', endDate: '2024-01' },
       ],
     };
     const payload = disassembleResume(resume, cvId);
+    payload.sections.work[0].id = '00000000-0000-4000-8000-000000000030';
+    payload.sections.work[1].id = '00000000-0000-4000-8000-000000000031';
+    payload.sections.work[2].id = '00000000-0000-4000-8000-000000000032';
     const header = { id: cvId, user_id: 'user-1', ...payload.header };
     const assembled = assembleResume(header, payload.sections);
 
-    expect(assembled.work?.map((w) => w.name)).toEqual(['New', 'Old']);
+    expect(assembled.work?.map((w) => w.name)).toEqual(['Current', 'RecentPast', 'Past']);
   });
 
   it('orders skills by sort ascending', () => {
@@ -155,6 +178,51 @@ describe('resume-normalized round-trip', () => {
     const assembled = assembleResume(header, payload.sections);
 
     expect(assembled.work?.[0]).toMatchObject({ name: 'Acme', id: workId });
+  });
+});
+
+describe('sortWorkRows', () => {
+  it('ranks ongoing entries before dated entries', () => {
+    const sorted = sortWorkRows([
+      {
+        id: 'b',
+        cv_id: 'cv-1',
+        start_date: '2018-01',
+        end_date: '2020-01',
+      },
+      {
+        id: 'a',
+        cv_id: 'cv-1',
+        start_date: '2022-01',
+        end_date: null,
+      },
+    ]);
+    expect(sorted.map((row) => row.id)).toEqual(['a', 'b']);
+  });
+
+  it('uses start_date then id as tiebreakers', () => {
+    const sorted = sortWorkRows([
+      {
+        id: 'z',
+        cv_id: 'cv-1',
+        start_date: '2019-01',
+        end_date: '2021-01',
+      },
+      {
+        id: 'a',
+        cv_id: 'cv-1',
+        start_date: '2020-01',
+        end_date: '2021-01',
+      },
+    ]);
+    expect(sorted.map((row) => row.id)).toEqual(['a', 'z']);
+  });
+});
+
+describe('compareEndDateDescNullsFirst', () => {
+  it('treats empty end dates as ongoing (sort first)', () => {
+    expect(compareEndDateDescNullsFirst(null, '2024-01')).toBeLessThan(0);
+    expect(compareEndDateDescNullsFirst('', '2024-01')).toBeLessThan(0);
   });
 });
 

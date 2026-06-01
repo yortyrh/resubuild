@@ -155,11 +155,20 @@ describe('CvNormalizedRepository', () => {
   });
 
   it('fetchSections loads and sorts all section tables', async () => {
-    const workRow = {
-      id: 'w1',
+    const workRowOngoing = {
+      id: 'w-ongoing',
       cv_id: 'cv-1',
-      name: 'Co',
-      start_date: '2020-01',
+      name: 'Current Co',
+      start_date: '2022-01',
+      end_date: null,
+      highlights: [],
+    };
+    const workRowPast = {
+      id: 'w-past',
+      cv_id: 'cv-1',
+      name: 'Past Co',
+      start_date: '2018-01',
+      end_date: '2020-01',
       highlights: [],
     };
     const skillRow = { id: 's1', cv_id: 'cv-1', sort: 0, name: 'TS', keywords: [] };
@@ -168,7 +177,12 @@ describe('CvNormalizedRepository', () => {
       from: (table) => ({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockResolvedValue({
-            data: table === 'cv_work' ? [workRow] : table === 'cv_skill' ? [skillRow] : [],
+            data:
+              table === 'cv_work'
+                ? [workRowPast, workRowOngoing]
+                : table === 'cv_skill'
+                  ? [skillRow]
+                  : [],
             error: null,
           }),
         }),
@@ -176,7 +190,7 @@ describe('CvNormalizedRepository', () => {
     });
 
     const sections = await repo.fetchSections(supabase, 'cv-1');
-    expect(sections.work).toHaveLength(1);
+    expect(sections.work.map((row) => row.id)).toEqual(['w-ongoing', 'w-past']);
     expect(sections.skills).toHaveLength(1);
     expect(sections.awards).toEqual([]);
   });

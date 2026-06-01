@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   getOrderedItemIds,
   idsOrderEqual,
+  mergeItemById,
   moveIdDown,
   moveIdUp,
   orderItemsByIds,
   reorderIdsByIndex,
+  sortDateRangeSectionItems,
 } from './cv-section-order';
 
 describe('cv-section-order reorder helpers', () => {
@@ -41,5 +43,21 @@ describe('cv-section-order reorder helpers', () => {
   it('idsOrderEqual compares id sequences', () => {
     expect(idsOrderEqual(['a', 'b'], ['a', 'b'])).toBe(true);
     expect(idsOrderEqual(['a', 'b'], ['b', 'a'])).toBe(false);
+  });
+
+  it('sortDateRangeSectionItems puts ongoing entries first then re-sorts after merge', () => {
+    const items = [
+      { id: 'past', name: 'Past', startDate: '2018-01', endDate: '2020-01' },
+      { id: 'current', name: 'Current', startDate: '2022-01' },
+    ];
+    expect(sortDateRangeSectionItems(items).map((item) => item.id)).toEqual(['current', 'past']);
+
+    const merged = mergeItemById(items, {
+      id: 'past',
+      name: 'Past',
+      startDate: '2018-01',
+      endDate: '2024-01',
+    });
+    expect(sortDateRangeSectionItems(merged).map((item) => item.id)).toEqual(['current', 'past']);
   });
 });

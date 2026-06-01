@@ -2,7 +2,7 @@
 
 import type { ResumeProject } from '@resumind/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { formatDateRange, highlightBody, trimStringList } from '@/components/cv/cv-section-helpers';
+import { formatDateRange, highlightBody, trimStringList, validateRequiredStartDate } from '@/components/cv/cv-section-helpers';
 import { linkedEntityLabel } from '@/components/cv/external-link';
 import { StringListField, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
@@ -13,6 +13,7 @@ import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { cvProjectApi } from '@/lib/cv-item-api';
+import { sortDateRangeSectionItems } from '@/lib/cv-section-order';
 import type { SectionItem } from '@/lib/cv-section-refetch';
 
 type ProjectItem = SectionItem<ResumeProject>;
@@ -35,6 +36,8 @@ export function ProjectsSection() {
         highlights: trimStringList(item.highlights),
       })}
       api={cvProjectApi}
+      validateBeforeSave={validateRequiredStartDate}
+      sortItems={sortDateRangeSectionItems}
       renderView={(item) => {
         const projectLabel = item.name || 'Project';
         return {
@@ -54,7 +57,7 @@ export function ProjectsSection() {
           ),
         };
       }}
-      renderForm={(item, onChange) => (
+      renderForm={(item, onChange, context) => (
         <>
           <TextField
             label="Name"
@@ -86,7 +89,9 @@ export function ProjectsSection() {
           />
           <IsoDateField
             label="Start date"
+            required
             value={item.startDate}
+            error={context?.fieldErrors.startDate}
             onChange={(startDate) => onChange({ ...item, startDate })}
           />
           <IsoDateField

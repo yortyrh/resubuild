@@ -556,18 +556,35 @@ function rowToProject(row: CvProjectRow): ResumeProject {
   }) as ResumeProject;
 }
 
+function isEmptyDate(value: string | null | undefined): boolean {
+  return value === undefined || value === null || value === '';
+}
+
 function compareDateDesc(a: string | null | undefined, b: string | null | undefined): number {
   const aVal = a ?? '';
   const bVal = b ?? '';
   return bVal.localeCompare(aVal);
 }
 
+/** Ongoing entries (empty end date) sort before dated entries in descending order. */
+export function compareEndDateDescNullsFirst(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): number {
+  const aEmpty = isEmptyDate(a);
+  const bEmpty = isEmptyDate(b);
+  if (aEmpty && bEmpty) return 0;
+  if (aEmpty) return -1;
+  if (bEmpty) return 1;
+  return compareDateDesc(a, b);
+}
+
 export function sortWorkRows(rows: CvWorkRow[]): CvWorkRow[] {
   return [...rows].sort((a, b) => {
+    const byEnd = compareEndDateDescNullsFirst(a.end_date, b.end_date);
+    if (byEnd !== 0) return byEnd;
     const byStart = compareDateDesc(a.start_date, b.start_date);
     if (byStart !== 0) return byStart;
-    const byEnd = compareDateDesc(a.end_date, b.end_date);
-    if (byEnd !== 0) return byEnd;
     return a.id.localeCompare(b.id);
   });
 }

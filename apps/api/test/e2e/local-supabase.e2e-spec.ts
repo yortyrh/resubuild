@@ -201,7 +201,7 @@ describe('E2E — CV REST (local Supabase)', () => {
       .post(`/cv/${cvId}/work`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
-        work: { name: 'Older Co', position: 'Engineer', startDate: '2018-01' },
+        work: { name: 'Older Co', position: 'Engineer', startDate: '2018-01', endDate: '2020-01' },
       })
       .expect(201);
     const olderId = older.body.item.id as string;
@@ -210,7 +210,7 @@ describe('E2E — CV REST (local Supabase)', () => {
       .post(`/cv/${cvId}/work`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
-        work: { name: 'Newer Co', position: 'Lead', startDate: '2024-01' },
+        work: { name: 'Newer Co', position: 'Lead', startDate: '2022-01' },
       })
       .expect(201);
 

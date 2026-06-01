@@ -7,6 +7,7 @@ import {
   highlightBody,
   positionEntityView,
   trimStringList,
+  validateRequiredStartDate,
 } from '@/components/cv/cv-section-helpers';
 import { StringListField, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
@@ -14,6 +15,7 @@ import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { cvWorkApi } from '@/lib/cv-item-api';
+import { sortDateRangeSectionItems } from '@/lib/cv-section-order';
 import type { SectionItem } from '@/lib/cv-section-refetch';
 
 type WorkItem = SectionItem<ResumeWork>;
@@ -36,6 +38,8 @@ export function WorkSection() {
         highlights: trimStringList(item.highlights),
       })}
       api={cvWorkApi}
+      validateBeforeSave={validateRequiredStartDate}
+      sortItems={sortDateRangeSectionItems}
       renderView={(item) => {
         const { title, subtitle } = positionEntityView(
           item.position,
@@ -63,7 +67,7 @@ export function WorkSection() {
           ),
         };
       }}
-      renderForm={(item, onChange) => (
+      renderForm={(item, onChange, context) => (
         <>
           <TextField
             label="Company"
@@ -88,7 +92,9 @@ export function WorkSection() {
           />
           <IsoDateField
             label="Start date"
+            required
             value={item.startDate}
+            error={context?.fieldErrors.startDate}
             onChange={(startDate) => onChange({ ...item, startDate })}
           />
           <IsoDateField
