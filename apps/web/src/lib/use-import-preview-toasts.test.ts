@@ -1,7 +1,17 @@
 // @vitest-environment jsdom
 import { renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ImportJsonPreview } from './import-cv-preview';
 import { useImportPreviewToasts } from './use-import-preview-toasts';
+
+const validPreview: ImportJsonPreview = {
+  valid: true,
+  prepared: {},
+  basicsEmail: 'test@example.com',
+  basicsImage: '',
+  imageStatus: 'owned',
+  showGravatarOption: false,
+};
 
 const mockToastSuccess = vi.fn();
 const mockToastInfo = vi.fn();
@@ -22,7 +32,7 @@ describe('useImportPreviewToasts', () => {
     renderHook(() =>
       useImportPreviewToasts({
         resetKey: 'file-a',
-        preview: { valid: true, imageStatus: 'owned' },
+        preview: validPreview,
         validationSource: 'agent',
       }),
     );
@@ -34,7 +44,7 @@ describe('useImportPreviewToasts', () => {
     renderHook(() =>
       useImportPreviewToasts({
         resetKey: 'file-b',
-        preview: { valid: true, imageStatus: 'owned' },
+        preview: validPreview,
         validationSource: 'agent',
         discoveredProfilesCount: 2,
       }),
