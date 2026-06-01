@@ -7,6 +7,11 @@ import { SocialNetworkCombobox } from './social-network-combobox';
 describe('SocialNetworkCombobox', () => {
   afterEach(() => cleanup());
 
+  it('renders empty input when value is null', () => {
+    render(<SocialNetworkCombobox value={null} onChange={vi.fn()} />);
+    expect(screen.getByPlaceholderText(/LinkedIn/i)).toHaveValue('');
+  });
+
   it('commits custom network on blur', () => {
     const onChange = vi.fn();
     render(<SocialNetworkCombobox value="" onChange={onChange} />);

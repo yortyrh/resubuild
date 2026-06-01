@@ -10,6 +10,13 @@ describe('LanguageField', () => {
     cleanup();
   });
 
+  it('renders empty trigger when value is null', () => {
+    render(<LanguageField value={null} onChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /Language, choose language/i })).toHaveTextContent(
+      'Select language…',
+    );
+  });
+
   it('displays legacy custom value when not in canonical list', () => {
     render(<LanguageField value="Klingon" onChange={vi.fn()} />);
     expect(screen.getByRole('button', { name: /Language, choose language/i })).toHaveTextContent(

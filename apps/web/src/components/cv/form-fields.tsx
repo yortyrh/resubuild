@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 interface TextFieldProps {
   label: string;
   description?: string;
-  value?: string;
+  value?: string | null;
   onChange: (value: string) => void;
   type?: 'text' | 'email' | 'url';
   multiline?: boolean;
@@ -22,26 +22,31 @@ interface TextFieldProps {
 export function TextField({
   label,
   description,
-  value = '',
+  value,
   onChange,
   type = 'text',
   multiline = false,
   markdown,
   placeholder,
 }: TextFieldProps) {
+  const safeValue = value ?? '';
   const control = markdown ? (
     <MarkdownEditor
-      value={value}
+      value={safeValue}
       onChange={onChange}
       variant={markdown}
       placeholder={placeholder}
     />
   ) : multiline ? (
-    <Textarea value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+    <Textarea
+      value={safeValue}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+    />
   ) : (
     <Input
       type={type}
-      value={value}
+      value={safeValue}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
     />

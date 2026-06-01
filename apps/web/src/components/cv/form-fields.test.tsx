@@ -14,7 +14,7 @@ vi.mock('@/components/cv/markdown-editor', () => ({
   ),
 }));
 
-import { StringListField } from './form-fields';
+import { StringListField, TextField } from './form-fields';
 
 function ControlledStringListField({
   initialValues = [] as string[],
@@ -28,6 +28,35 @@ function ControlledStringListField({
   const [values, setValues] = useState(initialValues);
   return <StringListField label={label} values={values} onChange={setValues} markdown={markdown} />;
 }
+
+describe('TextField', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('renders an empty input when value is null', () => {
+    render(<TextField label="Company" value={null} onChange={vi.fn()} />);
+    expect(screen.getByRole('textbox')).toHaveValue('');
+  });
+
+  it('renders an empty textarea when value is null and multiline', () => {
+    render(<TextField label="Notes" value={null} onChange={vi.fn()} multiline />);
+    expect(screen.getByRole('textbox')).toHaveValue('');
+  });
+
+  it('passes coerced empty string to markdown editor when value is null', () => {
+    render(<TextField label="Summary" value={null} onChange={vi.fn()} markdown="block" />);
+    const editable = document.querySelector('[contenteditable="true"]');
+    expect(editable?.textContent).toBe('');
+  });
+
+  it('renders empty list item input when a value entry is null', () => {
+    render(
+      <StringListField label="Courses" values={[null as unknown as string]} onChange={vi.fn()} />,
+    );
+    expect(screen.getByRole('textbox')).toHaveValue('');
+  });
+});
 
 describe('StringListField', () => {
   afterEach(() => {

@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 interface CountryCodeFieldProps {
   label?: string;
   description?: string;
-  value?: string;
+  value?: string | null;
   onChange: (countryCodeUpper: string) => void;
 }
 
@@ -36,16 +36,17 @@ const SEARCH_RESULT_CAP = 120;
 export function CountryCodeField({
   label = 'Country',
   description,
-  value = '',
+  value,
   onChange,
 }: CountryCodeFieldProps) {
+  const safeValue = value ?? '';
   const listId = useId();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
 
-  const normalized = value.trim().toUpperCase();
+  const normalized = safeValue.trim().toUpperCase();
 
   const trimmedQuery = query.trim().toLowerCase();
 

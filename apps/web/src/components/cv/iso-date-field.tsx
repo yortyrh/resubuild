@@ -15,7 +15,7 @@ import {
 interface IsoDateFieldProps {
   label: string;
   description?: string;
-  value?: string;
+  value?: string | null;
   onChange: (value: string) => void;
   defaultPrecision?: IsoDatePrecision;
   required?: boolean;
@@ -31,30 +31,31 @@ const precisionLabels: Record<IsoDatePrecision, string> = {
 export function IsoDateField({
   label,
   description,
-  value = '',
+  value,
   onChange,
   defaultPrecision = 'month',
   required = false,
   error,
 }: IsoDateFieldProps) {
+  const safeValue = value ?? '';
   const [precision, setPrecision] = useState<IsoDatePrecision>(
-    () => parseIsoDate(value)?.precision ?? defaultPrecision,
+    () => parseIsoDate(safeValue)?.precision ?? defaultPrecision,
   );
 
   useEffect(() => {
-    const nextPrecision = parseIsoDate(value)?.precision ?? defaultPrecision;
+    const nextPrecision = parseIsoDate(safeValue)?.precision ?? defaultPrecision;
     // Defer snapshot update so ESLint/React don't treat this as cascading sync renders.
     queueMicrotask(() => setPrecision(nextPrecision));
-  }, [value, defaultPrecision]);
+  }, [safeValue, defaultPrecision]);
 
   const handlePrecisionChange = (next: IsoDatePrecision) => {
     setPrecision(next);
-    if (value) {
-      onChange(convertIsoDatePrecision(value, next));
+    if (safeValue) {
+      onChange(convertIsoDatePrecision(safeValue, next));
     }
   };
 
-  const inputValue = toNativeInputValue(value, precision);
+  const inputValue = toNativeInputValue(safeValue, precision);
 
   return (
     <div className="space-y-2">

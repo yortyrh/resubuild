@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 interface LanguageFieldProps {
   label?: string;
   description?: string;
-  value?: string;
+  value?: string | null;
   onChange: (languageName: string) => void;
 }
 
@@ -36,16 +36,17 @@ const SEARCH_RESULT_CAP = 120;
 export function LanguageField({
   label = 'Language',
   description,
-  value = '',
+  value,
   onChange,
 }: LanguageFieldProps) {
+  const safeValue = value ?? '';
   const listId = useId();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
 
-  const trimmedValue = value.trim();
+  const trimmedValue = safeValue.trim();
 
   const trimmedQuery = query.trim().toLowerCase();
 

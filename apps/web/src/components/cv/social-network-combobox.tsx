@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 interface SocialNetworkComboboxProps {
   label?: string;
   description?: string;
-  value?: string;
+  value?: string | null;
   onChange: (network: string) => void;
 }
 
@@ -37,9 +37,10 @@ function sortFiltered(matches: string[]): string[] {
 export function SocialNetworkCombobox({
   label = 'Network',
   description,
-  value = '',
+  value,
   onChange,
 }: SocialNetworkComboboxProps) {
+  const safeValue = value ?? '';
   const listId = useId();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,7 +48,7 @@ export function SocialNetworkCombobox({
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
 
-  const trimmedValue = value.trim();
+  const trimmedValue = safeValue.trim();
   const trimmedQuery = query.trim().toLowerCase();
 
   const filtered = useMemo(() => {
