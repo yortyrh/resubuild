@@ -519,7 +519,9 @@ export function ManagedArraySection<T extends WithItemId>({
         onSave={saveCreate}
         onCancel={cancelCreate}
       >
-        {createDraft ? renderForm(createDraft, handleCreateDraftChange, { fieldErrors, mode: 'create' }) : null}
+        {createDraft
+          ? renderForm(createDraft, handleCreateDraftChange, { fieldErrors, mode: 'create' })
+          : null}
       </SectionCreateForm>
 
       <DeleteItemDialog

@@ -2,8 +2,8 @@
 
 import type { ResumeCertificate } from '@resumind/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { linkedEntityLabel } from '@/components/cv/external-link';
 import { validateRequiredDateOnCreate } from '@/components/cv/cv-section-helpers';
+import { linkedEntityLabel } from '@/components/cv/external-link';
 import { TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';

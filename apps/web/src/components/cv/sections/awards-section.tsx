@@ -2,8 +2,8 @@
 
 import type { ResumeAward } from '@resumind/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { TextField } from '@/components/cv/form-fields';
 import { validateRequiredDateOnCreate } from '@/components/cv/cv-section-helpers';
+import { TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';

@@ -2,7 +2,12 @@
 
 import type { ResumeProject } from '@resumind/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { formatDateRange, highlightBody, trimStringList, validateRequiredStartDate } from '@/components/cv/cv-section-helpers';
+import {
+  formatDateRange,
+  highlightBody,
+  trimStringList,
+  validateRequiredStartDate,
+} from '@/components/cv/cv-section-helpers';
 import { linkedEntityLabel } from '@/components/cv/external-link';
 import { StringListField, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';

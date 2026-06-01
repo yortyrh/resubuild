@@ -126,9 +126,9 @@ export function sortDatedSectionItems<T extends { id?: string; date?: string }>(
 }
 
 /** Sort publications by release date descending. */
-export function sortPublicationSectionItems<
-  T extends { id?: string; releaseDate?: string },
->(items: T[]): T[] {
+export function sortPublicationSectionItems<T extends { id?: string; releaseDate?: string }>(
+  items: T[],
+): T[] {
   const rows = items.map((item, index) => ({
     id: item.id ?? `__unsaved-${index}`,
     cv_id: '',
