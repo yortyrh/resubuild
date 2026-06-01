@@ -1,3 +1,5 @@
+import { sortAwardRows, sortPublicationRows, sortWorkRows } from '@resumind/types';
+
 export type WithItemId = { id?: string };
 
 /** Replace or append an item matched by `id`. */
@@ -73,4 +75,64 @@ export function orderItemsByIds<T extends WithItemId>(items: T[], order: string[
     }
   }
   return order.map((id) => byId.get(id)).filter((item): item is T => item !== undefined);
+}
+
+function reorderBySortedRowIds<T extends WithItemId>(
+  items: T[],
+  sortedRows: { id: string }[],
+): T[] {
+  const byId = new Map(items.filter((item) => item.id).map((item) => [item.id!, item]));
+  const seen = new Set<string>();
+  const result: T[] = [];
+
+  for (const row of sortedRows) {
+    const item = byId.get(row.id);
+    if (item) {
+      result.push(item);
+      seen.add(row.id);
+    }
+  }
+
+  for (const item of items) {
+    if (!item.id || !seen.has(item.id)) {
+      result.push(item);
+    }
+  }
+
+  return result;
+}
+
+/** Sort date-range section items (work, volunteer, education, projects) by end date. */
+export function sortDateRangeSectionItems<
+  T extends { id?: string; startDate?: string; endDate?: string },
+>(items: T[]): T[] {
+  const rows = items.map((item, index) => ({
+    id: item.id ?? `__unsaved-${index}`,
+    cv_id: '',
+    start_date: item.startDate ?? null,
+    end_date: item.endDate ?? null,
+  }));
+  return reorderBySortedRowIds(items, sortWorkRows(rows));
+}
+
+/** Sort awards or certificates by date descending. */
+export function sortDatedSectionItems<T extends { id?: string; date?: string }>(items: T[]): T[] {
+  const rows = items.map((item, index) => ({
+    id: item.id ?? `__unsaved-${index}`,
+    cv_id: '',
+    date: item.date ?? null,
+  }));
+  return reorderBySortedRowIds(items, sortAwardRows(rows));
+}
+
+/** Sort publications by release date descending. */
+export function sortPublicationSectionItems<
+  T extends { id?: string; releaseDate?: string },
+>(items: T[]): T[] {
+  const rows = items.map((item, index) => ({
+    id: item.id ?? `__unsaved-${index}`,
+    cv_id: '',
+    release_date: item.releaseDate ?? null,
+  }));
+  return reorderBySortedRowIds(items, sortPublicationRows(rows));
 }

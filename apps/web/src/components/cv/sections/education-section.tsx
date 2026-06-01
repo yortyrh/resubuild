@@ -2,13 +2,14 @@
 
 import type { ResumeEducation } from '@resumind/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { formatDateRange, highlightBody, trimStringList } from '@/components/cv/cv-section-helpers';
+import { formatDateRange, highlightBody, trimStringList, validateRequiredStartDate } from '@/components/cv/cv-section-helpers';
 import { linkedEntityLabel } from '@/components/cv/external-link';
 import { StringListField, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { cvEducationApi } from '@/lib/cv-item-api';
+import { sortDateRangeSectionItems } from '@/lib/cv-section-order';
 import type { SectionItem } from '@/lib/cv-section-refetch';
 
 type EducationItem = SectionItem<ResumeEducation>;
@@ -31,6 +32,8 @@ export function EducationSection() {
         courses: trimStringList(item.courses),
       })}
       api={cvEducationApi}
+      validateBeforeSave={validateRequiredStartDate}
+      sortItems={sortDateRangeSectionItems}
       renderView={(item) => {
         const institutionLabel = item.institution || 'Education entry';
         const subtitle = [item.studyType, item.area].filter(Boolean).join(' — ');
@@ -46,7 +49,7 @@ export function EducationSection() {
           body: highlightBody(item.courses, { title: 'Courses' }),
         };
       }}
-      renderForm={(item, onChange) => (
+      renderForm={(item, onChange, context) => (
         <>
           <TextField
             label="Institution"
@@ -73,7 +76,9 @@ export function EducationSection() {
           />
           <IsoDateField
             label="Start date"
+            required
             value={item.startDate}
+            error={context?.fieldErrors.startDate}
             onChange={(startDate) => onChange({ ...item, startDate })}
           />
           <IsoDateField

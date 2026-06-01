@@ -18,6 +18,8 @@ interface IsoDateFieldProps {
   value?: string;
   onChange: (value: string) => void;
   defaultPrecision?: IsoDatePrecision;
+  required?: boolean;
+  error?: string;
 }
 
 const precisionLabels: Record<IsoDatePrecision, string> = {
@@ -32,6 +34,8 @@ export function IsoDateField({
   value = '',
   onChange,
   defaultPrecision = 'month',
+  required = false,
+  error,
 }: IsoDateFieldProps) {
   const [precision, setPrecision] = useState<IsoDatePrecision>(
     () => parseIsoDate(value)?.precision ?? defaultPrecision,
@@ -55,7 +59,10 @@ export function IsoDateField({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Label>{label}</Label>
+        <Label>
+          {label}
+          {required ? <span className="text-destructive ml-0.5">*</span> : null}
+        </Label>
         <div className="flex gap-1" role="group" aria-label={`${label} precision`}>
           {(['year', 'month', 'date'] as const).map((option) => (
             <Button
@@ -99,6 +106,7 @@ export function IsoDateField({
           onChange={(event) => onChange(fromNativeInputValue(event.target.value, 'date'))}
         />
       ) : null}
+      {error ? <p className="text-destructive text-sm">{error}</p> : null}
     </div>
   );
 }

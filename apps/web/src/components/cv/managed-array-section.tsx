@@ -33,7 +33,6 @@ import {
   ResumeItemRow,
   SectionCreateForm,
 } from '@/components/cv/cv-item-ui';
-import { Button } from '@/components/ui/button';
 import {
   type CvItemMutationResponse,
   type ReorderableCvSection,
@@ -113,10 +112,16 @@ export interface ManagedArraySectionProps<T extends WithItemId> {
     meta?: ReactNode;
     body?: ReactNode;
   };
-  renderForm: (item: T, onChange: (next: T) => void) => ReactNode;
+  renderForm: (
+    item: T,
+    onChange: (next: T) => void,
+    context?: { fieldErrors: Record<string, string>; mode: 'create' | 'edit' },
+  ) => ReactNode;
   api: ArraySectionApi;
   successMessages?: { create?: string; update?: string; delete?: string };
   reorder?: SectionReorderConfig;
+  validateBeforeSave?: (item: T, mode: 'create' | 'edit') => Record<string, string> | null;
+  sortItems?: (items: T[]) => T[];
 }
 
 export function ManagedArraySection<T extends WithItemId>({
@@ -133,6 +138,8 @@ export function ManagedArraySection<T extends WithItemId>({
   api,
   successMessages,
   reorder,
+  validateBeforeSave,
+  sortItems,
 }: ManagedArraySectionProps<T>) {
   const needsHydration = sectionItemsNeedHydration(items);
   const {
@@ -153,6 +160,7 @@ export function ManagedArraySection<T extends WithItemId>({
   const [creating, setCreating] = useState(false);
   const [createDraft, setCreateDraft] = useState<T | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const reorderSeqRef = useRef(0);
   const onItemsChangeRef = useRef(onItemsChange);
   const setErrorRef = useRef(setError);
@@ -189,12 +197,47 @@ export function ManagedArraySection<T extends WithItemId>({
     }
   }, [sectionQueryError]);
 
+  const applySortedItems = useCallback(
+    (nextItems: T[]) => (sortItems ? sortItems(nextItems) : nextItems),
+    [sortItems],
+  );
+
+  const handleEditDraftChange = useCallback(
+    (next: T) => {
+      setDraft(next);
+      setFieldErrors({});
+      if (sortItems && editingId) {
+        onItemsChange(applySortedItems(mergeItemById(items, next)));
+      }
+    },
+    [applySortedItems, editingId, items, onItemsChange, sortItems],
+  );
+
+  const handleCreateDraftChange = useCallback((next: T) => {
+    setCreateDraft(next);
+    setFieldErrors({});
+  }, []);
+
+  const runValidation = (item: T, mode: 'create' | 'edit'): boolean => {
+    if (!validateBeforeSave) {
+      return true;
+    }
+    const errors = validateBeforeSave(item, mode);
+    if (errors && Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return false;
+    }
+    setFieldErrors({});
+    return true;
+  };
+
   const startEdit = (item: T) => {
     setCreating(false);
     setCreateDraft(null);
     try {
       setEditingId(getItemId(item, entityLabel));
       setDraft({ ...item });
+      setFieldErrors({});
       setError(null);
     } catch (err) {
       setError(
@@ -206,6 +249,7 @@ export function ManagedArraySection<T extends WithItemId>({
   const cancelEdit = () => {
     setEditingId(null);
     setDraft(null);
+    setFieldErrors({});
     setError(null);
   };
 
@@ -213,11 +257,14 @@ export function ManagedArraySection<T extends WithItemId>({
     if (!editingId || !draft) {
       return;
     }
+    if (!runValidation(draft, 'edit')) {
+      return;
+    }
     await run(
       () => api.update(cvId, editingId, sanitizeResumeItemPayload(toPayload(draft))),
       (result) => {
         const updated = (result.item ?? draft) as T;
-        onItemsChange(mergeItemById(items, updated));
+        onItemsChange(applySortedItems(mergeItemById(items, updated)));
         cancelEdit();
       },
       successMessages?.update ?? `${entityLabel} updated`,
@@ -230,17 +277,22 @@ export function ManagedArraySection<T extends WithItemId>({
     setDraft(null);
     setCreating(true);
     setCreateDraft(createEmpty());
+    setFieldErrors({});
     setError(null);
   };
 
   const cancelCreate = () => {
     setCreating(false);
     setCreateDraft(null);
+    setFieldErrors({});
     setError(null);
   };
 
   const saveCreate = async () => {
     if (!createDraft) {
+      return;
+    }
+    if (!runValidation(createDraft, 'create')) {
       return;
     }
     await run(
@@ -433,7 +485,7 @@ export function ManagedArraySection<T extends WithItemId>({
         onSave={saveEdit}
         onCancel={cancelEdit}
       >
-        {renderForm(draft, setDraft)}
+        {renderForm(draft, handleEditDraftChange, { fieldErrors, mode: 'edit' })}
       </ResumeItemForm>
     ) : (
       <div key={itemKey}>{renderViewRow(item, index)}</div>
@@ -467,7 +519,7 @@ export function ManagedArraySection<T extends WithItemId>({
         onSave={saveCreate}
         onCancel={cancelCreate}
       >
-        {createDraft ? renderForm(createDraft, setCreateDraft) : null}
+        {createDraft ? renderForm(createDraft, handleCreateDraftChange, { fieldErrors, mode: 'create' }) : null}
       </SectionCreateForm>
 
       <DeleteItemDialog

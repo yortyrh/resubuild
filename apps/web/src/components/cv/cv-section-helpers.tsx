@@ -10,9 +10,38 @@ export function formatDateRange(start?: string, end?: string): string {
     return '';
   }
   if (!end) {
-    return start ?? '';
+    return start ? `${start} – Current` : '';
   }
   return `${start ?? ''} – ${end}`;
+}
+
+export function validateRequiredStartDate(item: {
+  startDate?: string;
+}): Record<string, string> | null {
+  if (!item.startDate?.trim()) {
+    return { startDate: 'Start date is required' };
+  }
+  return null;
+}
+
+export function validateRequiredDateOnCreate(
+  item: { date?: string },
+  mode: 'create' | 'edit',
+): Record<string, string> | null {
+  if (mode === 'create' && !item.date?.trim()) {
+    return { date: 'Date is required' };
+  }
+  return null;
+}
+
+export function validateRequiredReleaseDateOnCreate(
+  item: { releaseDate?: string },
+  mode: 'create' | 'edit',
+): Record<string, string> | null {
+  if (mode === 'create' && !item.releaseDate?.trim()) {
+    return { releaseDate: 'Release date is required' };
+  }
+  return null;
 }
 
 export function trimStringList(values?: string[]): string[] {
