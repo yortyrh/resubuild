@@ -21,11 +21,13 @@ Integrate one finished parallel OpenSpec change. Two modes:
 
 ```
 /opsx-plan-parallel
-/opsx-launch-parallel
+/opsx-launch-parallel      ← default: runs this skill's merge loop automatically after each batch
 /opsx-parallel-status
-/opsx-parallel-integrate   ← this skill
+/opsx-parallel-integrate   ← this skill (manual single-change landing, or --no-auto-integrate)
 /opsx-parallel-cleanup
 ```
+
+When `/opsx-launch-parallel` runs without `--no-auto-integrate`, it executes the **Merge mode checklist** below for every completed change before the next batch. This skill remains for one-off integration, PR mode, or `--rebase-only`.
 
 ## Select change
 

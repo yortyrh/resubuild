@@ -2,17 +2,18 @@
 name: /opsx-launch-parallel
 id: opsx-launch-parallel
 category: Workflow
-description: Execute the parallel-execution plan by creating worktrees and spawning implementer subagents in parallel
+description: Execute parallel OpenSpec changes, then auto-merge each to main with verify/fix between integrations
 ---
 
-Execute the parallel-execution plan from `.cursor/agents/state/parallel-plan.json`. Creates one git worktree per change in each batch, then launches one `opsx-change-implementer` subagent per worktree in parallel.
+Execute the parallel-execution plan from `.cursor/agents/state/parallel-plan.json`. Creates one git worktree per change in each batch, launches one `opsx-change-implementer` subagent per worktree in parallel, then **automatically lands every completed change on `main`** before starting the next batch.
 
 **Input** (optional, after `/opsx-launch-parallel`):
 
-- Empty → run every batch sequentially, each batch's members in parallel
+- Empty → run every batch sequentially, each batch's members in parallel, auto-integrate after each batch
 - `--batch N` → run only batch N (1-indexed)
 - `--changes a b c` → ignore batches, run only these named changes (skips conflict guarantees — use with care)
 - `--dry-run` → print the actions that would be taken, create nothing, spawn nothing
+- `--no-auto-integrate` → legacy behavior: implement only, do not merge (user runs `/opsx-parallel-integrate` manually)
 
 **Steps**
 
@@ -55,9 +56,9 @@ Execute the parallel-execution plan from `.cursor/agents/state/parallel-plan.jso
 
 5. **For each batch (sequentially)**
 
-   a. **Create worktrees in parallel** (cheap, no model calls). Run these as one Bash subagent invocation or one Shell call.
+   a. **Create worktrees** (cheap, no model calls).
 
-   **Important:** Cursor sandbox shells often start with a stripped `PATH` (`git`, `grep`, `date` not found). Always use `.cursor/scripts/worktree-add.sh` (sources `.cursor/scripts/env.sh` and resolves an absolute `git` path) — do not call bare `git`.
+   **Important:** Cursor sandbox shells often start with a stripped `PATH`. Always use `.cursor/scripts/worktree-add.sh` — do not call bare `git`.
 
    ```bash
    set -euo pipefail
@@ -72,75 +73,72 @@ Execute the parallel-execution plan from `.cursor/agents/state/parallel-plan.jso
    Send ONE message containing N Task tool calls (one per batch member). Each call:
    - `subagent_type`: `opsx-change-implementer`
    - `run_in_background`: `true`
-   - `prompt`: a JSON object matching the implementer's input contract, e.g.
-
-     ```json
-     {
-       "change": "sidebar-tab-navigation",
-       "branch": "opsx/sidebar-tab-navigation",
-       "worktreePath": ".worktrees/sidebar-tab-navigation",
-       "absoluteWorktreePath": "/Users/.../jsonresume-web/.worktrees/sidebar-tab-navigation"
-     }
-     ```
-
-     resolve `absoluteWorktreePath` via `git rev-parse --show-toplevel` from the main repo + the relative path.
+   - `prompt`: JSON with `change`, `branch`, `worktreePath`, `absoluteWorktreePath`
 
    c. **Wait for batch completion**
 
-   Collect the JSON output from each implementer. If any failed or paused, surface the report but DO NOT auto-rollback — the user decides whether to continue to the next batch.
+   Collect JSON from each implementer. If any failed or paused, surface the report. Skip failed/paused changes in the integration loop; continue with completed siblings unless the user stops.
 
-   d. **Confirm before next batch** (only if more batches remain)
+   d. **Auto-integrate loop (default — skip with `--no-auto-integrate`)**
 
-   Show a one-line summary:
+   After implementers finish, for **each completed change in the batch** (plan order within the batch):
+   1. **Pre-merge verify in worktree** — run targeted unit/integration tests for touched packages (not only filtered `pnpm test`, which can fail coverage gates).
+   2. **Merge to `main`** — `git checkout main && git merge --no-ff opsx/<change>` with a conventional commit message.
+   3. **Delete worktree** — `git worktree remove .worktrees/<change> --force`.
+   4. **Rebase remaining batch worktrees** — for each sibling still under `.worktrees/` from this batch: `git -C .worktrees/<sibling> rebase main`. Stop on conflict; report paths; do not auto-resolve.
+   5. **Verify on `main`** — use Node from `.nvmrc` (e.g. `fnm use`), then:
+      - `pnpm verify` (format, lint, typecheck, unit tests, build)
+      - `pnpm test:e2e` when API/CV/import paths changed
+   6. **Fix regressions on `main`** — commit fixes (format, lint, type errors, broken tests). Re-run verify until green.
+   7. **Optional browser smoke** — when import/LLM/search or CV editor UX changed, use Cursor internal browser (configured API keys) to exercise critical flows.
+   8. **Record integration** — append to `.cursor/agents/state/parallel-integration.json` (`change`, `mergeCommitSha`, `rebasedSiblings`, `postMergeFixes`).
 
-   ```
-   Batch 1 done: 3 completed, 0 paused, 0 failed.
-   Proceed to Batch 2? (y/N)
-   ```
+   Repeat until every completed change in the batch is on `main` and its worktree is removed.
 
-   Use the AskUserQuestion tool. If the user declines, stop and tell them to resume via `/opsx-launch-parallel --batch <next>`.
+   e. **Proceed to next batch automatically**
 
-   e. **Optional: integrate completed changes before next batch**
-
-   After a batch completes, ask whether to land changes now:
-   - **Merge loop:** `/opsx-parallel-integrate --next --mode merge` for each completed change in the batch (rebases remaining worktrees onto `main` before batch 2 starts)
-   - **PR loop:** `/opsx-parallel-integrate --change <name> --mode pr` for review-first workflow
-
-   If the user skips integration, remind them that later batches may hit avoidable merge conflicts until siblings are rebased.
+   Do not ask "Proceed to Batch N?" unless a prior step blocked (merge conflict, paused implementer, verify still failing after fix attempts). When batch N−1 is fully integrated, start batch N.
 
 6. **Final report**
-
-   After all selected batches finish (or the user stops), print:
 
    ```
    ## Parallel Run Complete
 
-   **Batches run:** 2/3
-   **Changes:** 6 completed, 1 paused, 0 failed
+   **Batches run:** 2/2
+   **Changes:** 3 completed, 0 paused, 0 failed
+   **Merged to main:** import-social-profile-discovery, fix-cv-section-sorting, move-work-volunteer
+   **Worktrees remaining:** none (batch paths)
 
-   ### Branches created (local only, not pushed)
-   - opsx/sidebar-tab-navigation @ abc1234 — .worktrees/sidebar-tab-navigation
-   - opsx/markdown-view-rendering @ def5678 — .worktrees/markdown-view-rendering
-   - ...
+   ### Merge commits on main
+   - import-social-profile-discovery @ 1f65db0 (+ post-merge fixes)
+   - fix-cv-section-sorting @ d8a7d96
+   - move-work-volunteer @ c564575
 
-   ### Paused
-   - language-select-filter: <pauseReason>
+   ### Verify
+   - pnpm verify: pass
+   - pnpm test:e2e: <pass|N failures — list>
+
+   ### Paused / failed
+   - (none)
 
    ### Next steps
-   - Check readiness: `/opsx-parallel-status`
-   - **Integrate one change at a time** (merge to main + rebase siblings, or open documented PR):
-     `/opsx-parallel-integrate --next --mode merge`
-     or `/opsx-parallel-integrate --change <name> --mode pr`
-   - Review a branch manually: `git -C .worktrees/<name> log --stat`
-   - Clean up finished worktrees: `/opsx-parallel-cleanup`
+   - Push when ready: `git push origin main`
+   - Clean stale worktrees: `/opsx-parallel-cleanup`
+   - Status: `/opsx-parallel-status`
    ```
 
 **Guardrails**
 
-- NEVER push branches. Implementers are forbidden from pushing; the orchestrator must not either.
-- NEVER merge to main. Surface results, let the user merge.
+- NEVER push branches unless the user explicitly asks.
+- Auto-integrate **does** merge to `main` locally — that is the default behavior of this command.
 - NEVER run more than one batch in parallel (only members WITHIN a batch are parallel).
-- NEVER spawn more than 6 implementer subagents in parallel by default — token cost grows linearly. If a batch has >6 members, split it into chunks of 6 and confirm with the user.
-- If `--dry-run`, print every `git worktree add` command and every subagent prompt that would be sent, then stop.
-- If a worktree's `pnpm install` is likely to take >2 minutes (first run on a cold machine), warn the user upfront.
-- Pass the resolved absolute path of the worktree to each subagent. Subagents cannot `cd` outside their worktree.
+- NEVER spawn more than 6 implementer subagents in parallel by default.
+- NEVER auto-resolve merge/rebase conflicts — stop and report.
+- If `--dry-run`, print worktree adds, subagent prompts, and the full integrate loop actions, then stop.
+- Use Node 22.x from `.nvmrc` before `pnpm verify` / `pnpm test:e2e`.
+- Pass absolute worktree paths to subagents.
+
+**Related**
+
+- Read `.cursor/skills/openspec-launch-parallel/SKILL.md` for the full integrate-loop checklist.
+- Manual one-off integration: `/opsx-parallel-integrate` (same merge/rebase/verify steps, single change).
