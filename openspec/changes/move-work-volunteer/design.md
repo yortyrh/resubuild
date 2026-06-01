@@ -16,7 +16,7 @@ There is no server-side “move” endpoint today; item CRUD already supports cr
 **Non-Goals:**
 
 - Moving entries to or from Education, Projects, or other sections.
-- Merging `description` into `summary` or preserving Work-only fields on volunteer rows.
+- Merging `description` into `summary` or surfacing hidden volunteer storage fields in the editor or JSON Resume export.
 - New Nest “move” endpoints or database transactions (unless rollback issues appear in practice).
 - Auto-navigating the user to the destination tab after move.
 
@@ -36,17 +36,21 @@ There is no server-side “move” endpoint today; item CRUD already supports cr
 
 **Mapping rules:**
 
-| Source (Work)                                                      | Target (Volunteer) |
-| ------------------------------------------------------------------ | ------------------ |
-| `name`                                                             | `organization`     |
-| `position`, `url`, `startDate`, `endDate`, `summary`, `highlights` | copied             |
-| `location`, `description`                                          | omitted            |
+| Source (Work)                                                      | Target (Volunteer)                          |
+| ------------------------------------------------------------------ | ------------------------------------------- |
+| `name`                                                             | `organization`                              |
+| `position`, `url`, `startDate`, `endDate`, `summary`, `highlights` | copied                                      |
+| `location`, `description`                                          | stored as hidden DB columns (not in export) |
 
-| Source (Volunteer) | Target (Work)                   |
-| ------------------ | ------------------------------- |
-| `organization`     | `name`                          |
-| shared fields      | copied                          |
-| —                  | `location`, `description` unset |
+| Source (Volunteer) | Target (Work)                                   |
+| ------------------ | ----------------------------------------------- |
+| `organization`     | `name`                                          |
+| shared fields      | copied                                          |
+| hidden storage     | `location`, `description` restored when present |
+
+Hidden volunteer fields are persisted on `cv_volunteer` but excluded from editor forms, section API responses used by the UI (or stripped client-side), and `rowToVolunteer` / JSON Resume export.
+
+Add nullable `location` and `description` text columns to `cv_volunteer`. Populate them only during Work → Volunteer moves; read them back on Volunteer → Work. Move orchestration passes hidden fields via an extended volunteer create payload accepted by the API but omitted from export mappers.
 
 Payloads pass through existing `sanitizeResumeItemPayload` before POST.
 
@@ -83,12 +87,12 @@ If step 3 fails after successful create, show error toast instructing user that 
 ## Risks / Trade-offs
 
 - **[Partial failure after create]** → User may see duplicate content if delete fails; mitigated by error message and manual cleanup; monitor before adding transactional API.
-- **[Work-only data loss on move to volunteer]** → `location` and `description` are dropped by design; confirmation copy mentions non-transferable fields.
+- **[Hidden fields diverge from export]** → Volunteer export and editor MUST strip `location`/`description`; mitigated by `rowToVolunteer` and form field lists excluding them.
 - **[Stale opposite-section cache]** → Must invalidate both section queries; Work tab may not remount Volunteer cache until visited — acceptable if preview/export reads server state.
 
 ## Migration Plan
 
-No migration. Ship as a frontend-only feature behind existing auth. Rollback = remove UI actions; no data migration.
+Add nullable `location` and `description` columns to `cv_volunteer` via migration (no backfill). Ship editor move UI with API support for hidden fields. Rollback = remove UI actions and ignore columns; no data loss for existing volunteer rows.
 
 ## Open Questions
 

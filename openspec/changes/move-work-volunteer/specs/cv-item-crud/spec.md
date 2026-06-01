@@ -21,7 +21,13 @@ When the editor moves an entry between Work and Volunteer, the client SHALL map 
 
 - **WHEN** the client POSTs a volunteer item created from work data
 - **THEN** the request body SHALL use the volunteer item DTO shape (`volunteer` property with `organization`, not `name`)
-- **AND** omitted work-only fields SHALL NOT be sent as empty strings
+- **AND** work-only `location` and `description` MAY be included as hidden storage fields on the volunteer row
+- **AND** those hidden fields SHALL NOT appear in JSON Resume export
+
+#### Scenario: Round-trip preserves work-only fields
+
+- **WHEN** a work entry with `location` "Remote" and `description` "Contract role" is moved to volunteer and later moved back to work
+- **THEN** the final work entry SHALL have `location` "Remote" and `description` "Contract role"
 
 #### Scenario: Highlights travel with parent on move
 

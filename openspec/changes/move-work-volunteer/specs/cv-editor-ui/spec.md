@@ -29,17 +29,24 @@ Activating a move control SHALL open a confirmation dialog stating the destinati
 - **AND** confirming SHALL proceed with the transfer
 - **AND** canceling SHALL leave the work entry unchanged
 
-#### Scenario: Work-only fields not shown after move to volunteer
+#### Scenario: Work-only fields stored hidden on move to volunteer
 
 - **WHEN** a user confirms moving a work entry that has `location` and/or `description` populated
-- **THEN** the created volunteer entry SHALL NOT include `location` or `description`
+- **THEN** the created volunteer row SHALL persist those values as hidden storage fields
+- **AND** the volunteer editor and JSON Resume export SHALL NOT expose `location` or `description`
 - **AND** the source work entry SHALL be removed after successful persistence
+
+#### Scenario: Hidden fields restored on move to work
+
+- **WHEN** a user confirms moving a volunteer entry that has hidden `location` and/or `description` from a prior work move
+- **THEN** the created work entry SHALL restore those field values on `location` and `description`
+- **AND WHEN** no hidden values exist
+- **THEN** `location` and `description` SHALL be unset until the author edits them
 
 #### Scenario: Organization maps to company on move to work
 
 - **WHEN** a user confirms moving a volunteer entry with `organization` "Open Source Foundation"
 - **THEN** the created work entry SHALL have `name` equal to "Open Source Foundation"
-- **AND** `location` and `description` SHALL be unset until the author edits them
 
 #### Scenario: Shared fields preserved on transfer
 

@@ -1,7 +1,12 @@
 ## 1. Field mapping utilities
 
-- [ ] 1.1 Add `mapWorkToVolunteer` and `mapVolunteerToWork` in `apps/web/src/lib/work-volunteer-move.ts` with mapping rules from `design.md`
-- [ ] 1.2 Colocated Vitest in `apps/web/src/lib/work-volunteer-move.test.ts` covering shared fields, organization/name mapping, and omission of work-only fields
+- [ ] 1.1 Add `mapWorkToVolunteer` and `mapVolunteerToWork` in `apps/web/src/lib/work-volunteer-move.ts` with mapping rules from `design.md` (including hidden `location`/`description` on volunteer)
+- [ ] 1.2 Colocated Vitest in `apps/web/src/lib/work-volunteer-move.test.ts` covering shared fields, organization/name mapping, hidden storage on work→volunteer, and restoration on volunteer→work
+
+## 1b. Hidden volunteer storage (API / types)
+
+- [ ] 1b.1 Migration: add nullable `location` and `description` to `cv_volunteer`
+- [ ] 1b.2 Extend `CvVolunteerRow`, item service, and `rowToVolunteer` so hidden fields persist but are excluded from JSON Resume export and volunteer editor forms
 
 ## 2. Move orchestration
 
@@ -32,8 +37,8 @@
 
 ### Update required
 
-- None
+- None for E2E routes; hidden volunteer columns are additive and excluded from export assertions
 
 ### Add
 
-- None — UI-only change reusing existing work and volunteer item CRUD endpoints; no new API contract
+- Unit tests for round-trip hidden field storage and export omission
