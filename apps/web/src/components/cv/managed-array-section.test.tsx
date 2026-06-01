@@ -80,9 +80,7 @@ describe('ManagedArraySection cross-section move', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Move to Volunteer' })[1]!);
 
     await waitFor(() => {
-      expect(onMove).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'w1', name: 'Acme' }),
-      );
+      expect(onMove).toHaveBeenCalledWith(expect.objectContaining({ id: 'w1', name: 'Acme' }));
     });
   });
 
