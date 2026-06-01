@@ -57,6 +57,9 @@ export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: Imp
   const [fetchProgress, setFetchProgress] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [discoveredProfilesCount, setDiscoveredProfilesCount] = useState<number | undefined>(
+    undefined,
+  );
 
   const { preview, useGravatar, setUseGravatar } = useImportJsonPreview(jsonText);
   const { data: jobStatus, error: jobError } = usePdfImportJob(jobId, pollIntervalMs);
@@ -65,6 +68,7 @@ export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: Imp
     resetKey: urlInput.trim(),
     preview,
     validationSource,
+    discoveredProfilesCount,
   });
 
   useEffect(() => {
@@ -82,6 +86,7 @@ export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: Imp
       setUrlFetchError(null);
       setFetchProgress(null);
       setValidationSource('agent');
+      setDiscoveredProfilesCount(jobStatus.discoveredProfilesCount);
       setUrlKind('html');
       setJsonText(formatJsonForEditor(JSON.stringify(jobStatus.previewData)));
       return;
@@ -116,6 +121,7 @@ export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: Imp
     setValidationSource('none');
     setUrlKind(null);
     setJobId(null);
+    setDiscoveredProfilesCount(undefined);
     setFetchProgress('fetching');
     setUrlFetching(true);
 

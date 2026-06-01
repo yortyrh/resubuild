@@ -122,6 +122,7 @@ describe('ImportController', () => {
       progress: 'drafting',
       cvId: undefined,
       previewData: undefined,
+      discoveredProfilesCount: undefined,
       errors: undefined,
     });
     expect(controller.getJob(req, 'job-1')).toEqual({
@@ -129,8 +130,23 @@ describe('ImportController', () => {
       progress: 'drafting',
       cvId: undefined,
       previewData: undefined,
+      discoveredProfilesCount: undefined,
       errors: undefined,
     });
     expect(service.getJob).toHaveBeenCalledWith(user, 'job-1');
+  });
+
+  it('returns discoveredProfilesCount from getJob when present', () => {
+    service.getJob.mockReturnValue({
+      status: 'succeeded',
+      progress: 'finalizing',
+      cvId: undefined,
+      previewData: { basics: { name: 'Jane Doe' } },
+      discoveredProfilesCount: 2,
+      errors: undefined,
+    });
+    expect(controller.getJob(req, 'job-2')).toMatchObject({
+      discoveredProfilesCount: 2,
+    });
   });
 });

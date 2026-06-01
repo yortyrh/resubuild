@@ -8,6 +8,7 @@ import {
   type WebsiteImportToolsConfig,
 } from '../tools/website-import-tools';
 import type { ImportJobProgress, TextImportWorkflowResult } from '../types';
+import { applySocialProfileDiscovery } from './social-profile-discovery';
 
 const MAX_REPAIR_ATTEMPTS = 3;
 const MAX_AGENT_STEPS = 12;
@@ -138,12 +139,28 @@ export async function runWebsiteImportWorkflow(
 
     const validation = validateResumeSchemaTool(draft);
     if (validation.valid) {
+      const discovery = await applySocialProfileDiscovery(
+        draft,
+        input.toolsConfig.searchApiKey,
+        input.onProgress,
+      );
+      draft = discovery.draft;
+
       input.onProgress?.('finalizing');
       if (input.finalize) {
         const cvId = await input.finalize(draft);
-        return { cvId, draft, errors };
+        return {
+          cvId,
+          draft,
+          errors,
+          discoveredProfilesCount: discovery.discoveredProfilesCount,
+        };
       }
-      return { draft, errors };
+      return {
+        draft,
+        errors,
+        discoveredProfilesCount: discovery.discoveredProfilesCount,
+      };
     }
 
     if (attempt === MAX_REPAIR_ATTEMPTS - 1) {

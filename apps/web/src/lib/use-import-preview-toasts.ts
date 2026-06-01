@@ -10,12 +10,22 @@ export interface UseImportPreviewToastsOptions {
   resetKey: string;
   preview: ImportSourcePreview | null;
   validationSource: ImportValidationSource;
+  discoveredProfilesCount?: number;
+}
+
+function agentReadyMessage(discoveredProfilesCount?: number): string {
+  if (discoveredProfilesCount && discoveredProfilesCount > 0) {
+    const label = discoveredProfilesCount === 1 ? 'profile' : 'profiles';
+    return `Résumé is ready to import. We found ${discoveredProfilesCount} social ${label}—review them in Preview or Edit before Save.`;
+  }
+  return 'Résumé is ready to import.';
 }
 
 export function useImportPreviewToasts({
   resetKey,
   preview,
   validationSource,
+  discoveredProfilesCount,
 }: UseImportPreviewToastsOptions): void {
   const readySourceRef = useRef<ImportValidationSource | null>(null);
   const imageStatusRef = useRef<string | null>(null);
@@ -31,7 +41,7 @@ export function useImportPreviewToasts({
     }
 
     if (validationSource === 'agent' && readySourceRef.current !== 'agent') {
-      toast.success('Résumé is ready to import.');
+      toast.success(agentReadyMessage(discoveredProfilesCount));
       readySourceRef.current = 'agent';
       return;
     }
@@ -43,7 +53,7 @@ export function useImportPreviewToasts({
       toast.success('JSON Resume data is valid.');
       readySourceRef.current = validationSource;
     }
-  }, [preview?.valid, validationSource]);
+  }, [preview?.valid, validationSource, discoveredProfilesCount]);
 
   useEffect(() => {
     if (!preview?.valid) {

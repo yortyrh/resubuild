@@ -286,6 +286,32 @@ describe('ImportService', () => {
     expect(service.getJob(user, result.jobId).cvId).toBeUndefined();
   });
 
+  it('stores discoveredProfilesCount when workflow returns it', async () => {
+    aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+      modelId: 'openai/gpt-4o-mini',
+      apiKey: 'sk-test',
+      accountId: 'acc-1',
+    });
+    schemaValidator.validate.mockReturnValue(undefined);
+    jest.mocked(runPdfImportWorkflow).mockResolvedValue({
+      draft: { basics: { name: 'Jane Doe', profiles: [{ network: 'GitHub', url: 'https://github.com/jane' }] } },
+      errors: [],
+      discoveredProfilesCount: 1,
+    });
+
+    const result = await service.startPdfImport(user, {
+      mimetype: 'application/pdf',
+      size: 100,
+      buffer: Buffer.from('%PDF'),
+    } as Express.Multer.File);
+
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(service.getJob(user, result.jobId)).toMatchObject({
+      status: 'succeeded',
+      discoveredProfilesCount: 1,
+    });
+  });
+
   it('marks job failed with generic workflow errors', async () => {
     aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
       modelId: 'openai/gpt-4o-mini',

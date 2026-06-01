@@ -340,6 +340,7 @@ export interface PdfImportJobStatus {
   progress?: string;
   cvId?: string;
   previewData?: Record<string, unknown>;
+  discoveredProfilesCount?: number;
   errors?: string[];
 }
 
