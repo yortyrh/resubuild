@@ -8,11 +8,11 @@ vi.mock('pdf-parse', () => ({
 
 import { createEmptyResume } from '@resumind/types';
 import pdfParse from 'pdf-parse';
+import { discoverSocialProfilesTool } from './tools/discover-social-profiles.tool';
 import { extractPdfTextTool } from './tools/extract-pdf-text.tool';
 import { normalizeDatesTool } from './tools/normalize-dates.tool';
 import { validateResumeSchemaTool } from './tools/validate-resume-schema.tool';
 import { webLookupTool } from './tools/web-lookup.tool';
-import { discoverSocialProfilesTool } from './tools/discover-social-profiles.tool';
 import { runPdfImportWorkflow } from './workflows/pdf-import.workflow';
 
 vi.mock('./tools/discover-social-profiles.tool', () => ({

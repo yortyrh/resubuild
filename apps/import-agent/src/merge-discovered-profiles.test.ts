@@ -3,12 +3,15 @@ import { mergeDiscoveredProfiles, mergeProfilesIntoDraft } from './merge-discove
 
 describe('mergeDiscoveredProfiles', () => {
   it('appends new profiles with derived username', () => {
-    const { profiles, addedCount } = mergeDiscoveredProfiles([], [
-      {
-        network: 'GitHub',
-        url: 'https://github.com/janedoe',
-      },
-    ]);
+    const { profiles, addedCount } = mergeDiscoveredProfiles(
+      [],
+      [
+        {
+          network: 'GitHub',
+          url: 'https://github.com/janedoe',
+        },
+      ],
+    );
 
     expect(addedCount).toBe(1);
     expect(profiles).toEqual([
@@ -42,10 +45,13 @@ describe('mergeDiscoveredProfiles', () => {
   });
 
   it('rejects invalid URLs', () => {
-    const { profiles, addedCount } = mergeDiscoveredProfiles([], [
-      { network: 'GitHub', url: 'http://github.com/jane' },
-      { network: 'GitHub', url: 'not-a-url' },
-    ]);
+    const { profiles, addedCount } = mergeDiscoveredProfiles(
+      [],
+      [
+        { network: 'GitHub', url: 'http://github.com/jane' },
+        { network: 'GitHub', url: 'not-a-url' },
+      ],
+    );
 
     expect(addedCount).toBe(0);
     expect(profiles).toEqual([]);

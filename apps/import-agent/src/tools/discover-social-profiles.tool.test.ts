@@ -65,10 +65,7 @@ describe('discoverSocialProfilesTool', () => {
     };
 
     const searchFn = vi.fn().mockResolvedValue([{ url: 'https://github.com/other-user' }]);
-    const result = await discoverSocialProfilesTool(
-      { draft, searchApiKey: 'test-key' },
-      searchFn,
-    );
+    const result = await discoverSocialProfilesTool({ draft, searchApiKey: 'test-key' }, searchFn);
 
     const profiles = (result.draft.basics as { profiles?: Array<{ url: string }> }).profiles;
     expect(profiles).toEqual([

@@ -115,7 +115,9 @@ export function mergeProfilesIntoDraft(
 
   const existingRaw = Array.isArray(basics.profiles) ? basics.profiles : [];
   const existing: JsonResumeProfile[] = existingRaw
-    .filter((entry): entry is Record<string, unknown> => Boolean(entry && typeof entry === 'object'))
+    .filter((entry): entry is Record<string, unknown> =>
+      Boolean(entry && typeof entry === 'object'),
+    )
     .map((entry) => ({
       network: String(entry.network ?? ''),
       url: String(entry.url ?? ''),

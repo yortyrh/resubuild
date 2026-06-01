@@ -28,8 +28,7 @@ export const SOCIAL_PROFILE_PLATFORMS: readonly SocialProfilePlatform[] = [
   {
     key: 'linkedin',
     network: 'LinkedIn',
-    buildQuery: ({ name, company }) =>
-      [name, company, 'LinkedIn'].filter(Boolean).join(' '),
+    buildQuery: ({ name, company }) => [name, company, 'LinkedIn'].filter(Boolean).join(' '),
     isValidProfileUrl: (url) =>
       /(^|\.)linkedin\.com$/i.test(url.hostname) && /\/in\//i.test(url.pathname),
     deriveUsername: (url) => {
@@ -134,7 +133,9 @@ export function parseHttpsProfileUrl(raw: string | undefined): URL | null {
   }
 }
 
-export function buildSearchContextFromDraft(draft: Record<string, unknown>): SocialProfileSearchContext | null {
+export function buildSearchContextFromDraft(
+  draft: Record<string, unknown>,
+): SocialProfileSearchContext | null {
   const basics =
     draft.basics && typeof draft.basics === 'object'
       ? (draft.basics as Record<string, unknown>)

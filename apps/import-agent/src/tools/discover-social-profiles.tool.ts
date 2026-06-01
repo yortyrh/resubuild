@@ -1,4 +1,7 @@
-import { type DiscoveredProfileCandidate, mergeProfilesIntoDraft } from '../merge-discovered-profiles';
+import {
+  type DiscoveredProfileCandidate,
+  mergeProfilesIntoDraft,
+} from '../merge-discovered-profiles';
 import {
   buildSearchContextFromDraft,
   DISCOVERY_SEARCH_TIMEOUT_MS,

@@ -294,7 +294,12 @@ describe('ImportService', () => {
     });
     schemaValidator.validate.mockReturnValue(undefined);
     jest.mocked(runPdfImportWorkflow).mockResolvedValue({
-      draft: { basics: { name: 'Jane Doe', profiles: [{ network: 'GitHub', url: 'https://github.com/jane' }] } },
+      draft: {
+        basics: {
+          name: 'Jane Doe',
+          profiles: [{ network: 'GitHub', url: 'https://github.com/jane' }],
+        },
+      },
       errors: [],
       discoveredProfilesCount: 1,
     });
