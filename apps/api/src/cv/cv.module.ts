@@ -31,6 +31,7 @@ import { CvTemplatePresentationService } from './cv-template-presentation.servic
     CvItemService,
     CvNormalizedRepository,
     CvTemplatePresentationService,
+    ResumeSchemaValidator,
   ],
 })
 export class CvModule {}
