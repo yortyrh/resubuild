@@ -65,6 +65,48 @@ export class CvCloneService {
     return { id: inserted.id, sourceCvId };
   }
 
+  async cloneFromResume(
+    user: AuthenticatedRequest['user'],
+    resume: Resume,
+    options: {
+      kind?: 'application_clone' | 'primary';
+      sourceCvId?: string | null;
+      templateId?: string;
+    } = {},
+  ): Promise<CloneCvResult> {
+    this.resumeValidator.validate(resume as unknown as Record<string, unknown>);
+
+    const supabase = this.normalizedRepo.createClientForUser(user);
+    const kind = options.kind ?? 'application_clone';
+
+    const { data: inserted, error: insertError } = await supabase
+      .from('cv')
+      .insert({
+        user_id: user.id,
+        source_cv_id: options.sourceCvId ?? null,
+        kind,
+        location: resume.basics?.location ?? {},
+        template_id: options.templateId ?? 'classic',
+      })
+      .select('id')
+      .single();
+
+    if (insertError) {
+      throw new BadRequestException(insertError.message);
+    }
+
+    await this.normalizedRepo.insertNormalizedCv(supabase, inserted.id, user.id, resume);
+
+    const assembled = await this.normalizedRepo.assembleFullResume(supabase, inserted.id);
+    if (!assembled) {
+      throw new BadRequestException('Clone assembly failed');
+    }
+
+    this.resumeValidator.validate(assembled as unknown as Record<string, unknown>);
+
+    return { id: inserted.id, sourceCvId: options.sourceCvId ?? inserted.id };
+  }
+
   async promoteClone(
     user: AuthenticatedRequest['user'],
     cloneCvId: string,

@@ -645,6 +645,8 @@ export interface JobApplicationSummary {
   selectionRationale?: string | null;
   userMessage?: string | null;
   intakeSourceCvId?: string | null;
+  sourceCvTitle?: string | null;
+  sourceCvFromSnapshot?: boolean;
   createdAt: string;
   updatedAt: string;
   progress?: string;

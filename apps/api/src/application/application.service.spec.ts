@@ -18,6 +18,30 @@ import { ApplicationService } from './application.service';
 
 const testCatalog = catalog as ImportModelCatalog;
 
+const baseApplicationSource = {
+  source_cv_id: 'cv-1',
+  source_cv_snapshot: {
+    basics: { name: 'Jane Doe', label: 'Engineer' },
+    work: [],
+    skills: [],
+  },
+};
+
+function mockLiveBaseCv(
+  normalizedRepo: { fetchHeader: jest.Mock },
+  overrides: Partial<ReturnType<typeof mockCvHeader>> = {},
+) {
+  normalizedRepo.fetchHeader.mockResolvedValue(
+    mockCvHeader({
+      id: 'cv-1',
+      name: 'Jane Doe',
+      label: 'Engineer',
+      kind: 'primary',
+      ...overrides,
+    }),
+  );
+}
+
 jest.mock('@resumind/import-agent', () => {
   const actual =
     jest.requireActual<typeof import('@resumind/import-agent')>('@resumind/import-agent');
@@ -62,6 +86,7 @@ describe('ApplicationService', () => {
   };
   const cvCloneService = {
     deepClone: jest.fn(),
+    cloneFromResume: jest.fn(),
     promoteClone: jest.fn(),
   };
   const supabase = {
@@ -310,15 +335,17 @@ describe('ApplicationService', () => {
       cover_letter: 'Old letter',
       job_title: 'Engineer',
       job_company: 'Acme',
+      ...baseApplicationSource,
     };
     repository.findOne.mockResolvedValue(readyRow);
     repository.update.mockImplementation(async (_user, _id, patch) => ({
       ...readyRow,
       ...patch,
     }));
-    cvService.findAll.mockResolvedValue([]);
+    mockLiveBaseCv(normalizedRepo);
     normalizedRepo.assembleFullResume
       .mockResolvedValueOnce({ basics: { name: 'Jane Doe' }, work: [], skills: [] })
+      .mockResolvedValueOnce({ basics: { name: 'Jane Doe', label: 'Lead' }, work: [], skills: [] })
       .mockResolvedValueOnce({ basics: { name: 'Jane Doe', label: 'Lead' }, work: [], skills: [] });
     jest.mocked(runUpdateApplicationWorkflow).mockResolvedValue({
       sourceCvId: 'cv-1',
@@ -427,6 +454,72 @@ describe('ApplicationService', () => {
     expect(runPrepareApplicationWorkflow).toHaveBeenCalled();
   });
 
+  it('retries update workflow from saved base CV snapshot when library is empty', async () => {
+    const snapshot = {
+      basics: { name: 'Jane Doe', label: 'Engineer', summary: 'Backend' },
+      work: [{ highlights: ['APIs'] }],
+      skills: [{ name: 'TypeScript' }],
+    };
+    const failedRow = {
+      id: 'app-1',
+      status: 'failed',
+      job_raw_text: 'Job text',
+      tailored_cv_id: 'clone-1',
+      job_title: 'Engineer',
+      job_company: 'Acme',
+      cover_letter: 'Old letter',
+      source_cv_id: null,
+      source_cv_snapshot: snapshot,
+    };
+    repository.findOne.mockResolvedValue(failedRow);
+    repository.update.mockImplementation(async (_user, _id, patch) => ({
+      ...failedRow,
+      ...patch,
+    }));
+    cvService.findAll.mockResolvedValue([]);
+    normalizedRepo.fetchHeader.mockResolvedValue(null);
+    normalizedRepo.assembleFullResume
+      .mockResolvedValueOnce({ basics: { name: 'Jane Doe' }, work: [], skills: [] })
+      .mockResolvedValueOnce({ basics: { name: 'Jane Doe', label: 'Lead' }, work: [], skills: [] });
+    jest.mocked(runUpdateApplicationWorkflow).mockResolvedValue({
+      sourceCvId: 'cv-1',
+      coverLetter: 'Updated',
+      coverLetterEmailSubject: 'Subject',
+      selectionRationale: 'Rationale',
+      tailorPatch: { basics: { label: 'Lead Engineer' } },
+      errors: [],
+    });
+    cvCloneService.cloneFromResume.mockResolvedValue({ id: 'clone-2', sourceCvId: 'cv-1' });
+    cvService.remove.mockResolvedValue(undefined);
+    normalizedRepo.replaceNormalizedCv.mockResolvedValue(undefined);
+
+    const result = await service.retry(user, 'app-1');
+
+    expect(result.status).toBe('queued');
+    await flushBackgroundJobs();
+    expect(runUpdateApplicationWorkflow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceCvId: expect.any(String),
+        cvSummaries: [
+          expect.objectContaining({
+            name: 'Jane Doe',
+            skills: ['TypeScript'],
+          }),
+        ],
+      }),
+    );
+    expect(cvCloneService.cloneFromResume).toHaveBeenCalled();
+    expect(cvCloneService.deepClone).not.toHaveBeenCalled();
+    expect(repository.update).toHaveBeenCalledWith(
+      user,
+      'app-1',
+      expect.objectContaining({
+        status: 'ready',
+        source_cv_snapshot: snapshot,
+      }),
+    );
+  });
+
   it('retries update workflow when tailored clone exists', async () => {
     const failedRow = {
       id: 'app-1',
@@ -436,15 +529,17 @@ describe('ApplicationService', () => {
       job_title: 'Engineer',
       job_company: 'Acme',
       cover_letter: 'Old letter',
+      ...baseApplicationSource,
     };
     repository.findOne.mockResolvedValue(failedRow);
     repository.update.mockImplementation(async (_user, _id, patch) => ({
       ...failedRow,
       ...patch,
     }));
-    cvService.findAll.mockResolvedValue([]);
+    mockLiveBaseCv(normalizedRepo);
     normalizedRepo.assembleFullResume
       .mockResolvedValueOnce({ basics: { name: 'Jane' }, work: [], skills: [] })
+      .mockResolvedValueOnce({ basics: { name: 'Jane', label: 'Lead' }, work: [], skills: [] })
       .mockResolvedValueOnce({ basics: { name: 'Jane', label: 'Lead' }, work: [], skills: [] });
     jest.mocked(runUpdateApplicationWorkflow).mockResolvedValue({
       sourceCvId: 'cv-1',
@@ -731,7 +826,9 @@ describe('ApplicationService', () => {
       id: 'app-1',
       cover_letter: 'Dear team,\n\n**[Your Name]**',
       source_cv_id: null,
+      source_cv_snapshot: null,
     });
+    supabase.auth.getUser.mockResolvedValue({ data: { user: { user_metadata: {} } } });
 
     await expect(service.getCoverLetterMarkdown(user, 'app-1')).resolves.toContain('[Your Name]');
   });
@@ -1081,7 +1178,63 @@ describe('ApplicationService', () => {
     expect(runUpdateApplicationWorkflow).not.toHaveBeenCalled();
   });
 
-  it('rejects update when selected source CV is not owned', async () => {
+  it('regenerates update workflow using the application base CV even when another CV is requested', async () => {
+    const readyRow = {
+      id: 'app-1',
+      status: 'ready',
+      job_raw_text: 'Job text',
+      tailored_cv_id: 'clone-1',
+      cover_letter: 'Old letter',
+      job_title: 'Engineer',
+      job_company: 'Acme',
+      source_cv_id: 'cv-1',
+      source_cv_snapshot: {
+        basics: { name: 'Jane Doe', label: 'Engineer' },
+        work: [],
+        skills: [],
+      },
+    };
+    repository.findOne.mockResolvedValue(readyRow);
+    repository.update.mockImplementation(async (_user, _id, patch) => ({
+      ...readyRow,
+      ...patch,
+    }));
+    normalizedRepo.fetchHeader.mockResolvedValue(
+      mockCvHeader({ id: 'cv-1', name: 'Jane Doe', label: 'Engineer' }),
+    );
+    normalizedRepo.assembleFullResume
+      .mockResolvedValueOnce({ basics: { name: 'Jane Doe' }, work: [], skills: [] })
+      .mockResolvedValueOnce({ basics: { name: 'Jane Doe', label: 'Lead' }, work: [], skills: [] })
+      .mockResolvedValueOnce({ basics: { name: 'Jane Doe', label: 'Lead' }, work: [], skills: [] });
+    jest.mocked(runUpdateApplicationWorkflow).mockResolvedValue({
+      sourceCvId: 'cv-1',
+      coverLetter: 'Updated letter',
+      coverLetterEmailSubject: 'Updated subject',
+      selectionRationale: 'Updated rationale',
+      tailorPatch: { basics: { label: 'Lead Engineer' } },
+      errors: [],
+    });
+    cvCloneService.deepClone.mockResolvedValue({ id: 'clone-2', sourceCvId: 'cv-1' });
+    cvService.remove.mockResolvedValue(undefined);
+    normalizedRepo.replaceNormalizedCv.mockResolvedValue(undefined);
+
+    await service.updateApplication(user, 'app-1', {
+      message: 'Emphasize leadership',
+      sourceCvId: 'missing-cv',
+    });
+    await flushBackgroundJobs();
+
+    expect(runUpdateApplicationWorkflow).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceCvId: 'cv-1' }),
+    );
+    expect(repository.update).toHaveBeenCalledWith(
+      user,
+      'app-1',
+      expect.objectContaining({ status: 'ready', tailored_cv_id: 'clone-2' }),
+    );
+  });
+
+  it('rejects update when application has no resolvable base CV', async () => {
     const readyRow = {
       id: 'app-1',
       status: 'ready',
@@ -1118,13 +1271,14 @@ describe('ApplicationService', () => {
       cover_letter: 'Old letter',
       job_title: 'Engineer',
       job_company: 'Acme',
+      ...baseApplicationSource,
     };
     repository.findOne.mockResolvedValue(readyRow);
     repository.update.mockImplementation(async (_user, _id, patch) => ({
       ...readyRow,
       ...patch,
     }));
-    cvService.findAll.mockResolvedValue([]);
+    mockLiveBaseCv(normalizedRepo);
     cvService.remove.mockResolvedValue(undefined);
     normalizedRepo.assembleFullResume.mockResolvedValue({
       basics: { name: 'Jane Doe' },
@@ -1148,13 +1302,14 @@ describe('ApplicationService', () => {
       cover_letter: 'Old letter',
       job_title: 'Engineer',
       job_company: 'Acme',
+      ...baseApplicationSource,
     };
     repository.findOne.mockResolvedValue(readyRow);
     repository.update.mockImplementation(async (_user, _id, patch) => ({
       ...readyRow,
       ...patch,
     }));
-    cvService.findAll.mockResolvedValue([]);
+    mockLiveBaseCv(normalizedRepo);
     cvService.remove.mockResolvedValue(undefined);
     normalizedRepo.assembleFullResume.mockResolvedValue({
       basics: { name: 'Jane Doe' },
@@ -1185,13 +1340,14 @@ describe('ApplicationService', () => {
       cover_letter: 'Old letter',
       job_title: 'Engineer',
       job_company: 'Acme',
+      ...baseApplicationSource,
     };
     repository.findOne.mockResolvedValue(readyRow);
     repository.update.mockImplementation(async (_user, _id, patch) => ({
       ...readyRow,
       ...patch,
     }));
-    cvService.findAll.mockResolvedValue([]);
+    mockLiveBaseCv(normalizedRepo);
     cvService.remove.mockRejectedValue(new NotFoundException('Clone missing'));
     normalizedRepo.assembleFullResume.mockResolvedValue({
       basics: { name: 'Jane Doe' },
@@ -1468,6 +1624,7 @@ describe('ApplicationService', () => {
       cover_letter: 'Old letter',
       job_title: 'Engineer',
       job_company: 'Acme',
+      ...baseApplicationSource,
     };
     let applicationStatus: 'ready' | 'queued' | 'running' | 'failed' = 'ready';
     repository.findOne.mockImplementation(async () => ({
@@ -1484,7 +1641,7 @@ describe('ApplicationService', () => {
       }
       return { ...readyRow, ...patch, status: patch.status ?? applicationStatus };
     });
-    cvService.findAll.mockResolvedValue([]);
+    mockLiveBaseCv(normalizedRepo);
     cvService.remove.mockResolvedValue(undefined);
     normalizedRepo.assembleFullResume.mockResolvedValue({
       basics: { name: 'Jane Doe' },
@@ -1634,6 +1791,7 @@ describe('ApplicationService', () => {
       cover_letter: 'Old letter',
       job_title: 'Engineer',
       job_company: 'Acme',
+      ...baseApplicationSource,
     };
     let applicationStatus: 'ready' | 'queued' | 'running' | 'failed' = 'ready';
     repository.findOne.mockImplementation(async () => ({
@@ -1650,7 +1808,7 @@ describe('ApplicationService', () => {
       }
       return { ...readyRow, ...patch, status: patch.status ?? applicationStatus };
     });
-    cvService.findAll.mockResolvedValue([]);
+    mockLiveBaseCv(normalizedRepo);
     cvService.remove.mockResolvedValue(undefined);
     normalizedRepo.assembleFullResume.mockResolvedValue({
       basics: { name: 'Jane Doe' },

@@ -24,6 +24,7 @@ export type UpdateJobApplicationInput = Partial<
     | 'selection_rationale'
     | 'user_message'
     | 'intake_source_cv_id'
+    | 'source_cv_snapshot'
   >
 >;
 

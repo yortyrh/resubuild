@@ -91,6 +91,34 @@ describe('CvCloneService', () => {
     );
   });
 
+  it('creates application clone from resume JSON when source CV was deleted', async () => {
+    const resume = {
+      basics: { name: 'Jane Doe', label: 'Engineer', location: { city: 'Paris' } },
+      work: [{ name: 'Acme', highlights: ['APIs'] }],
+    } as Resume;
+
+    const insertChain = {
+      insert: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: { id: 'clone-3' }, error: null }),
+    };
+    supabase.from.mockReturnValue(insertChain);
+    normalizedRepo.insertNormalizedCv.mockResolvedValue(mockCvHeader({ id: 'clone-3' }));
+    normalizedRepo.assembleFullResume.mockResolvedValue(resume);
+
+    const result = await service.cloneFromResume(user, resume, { kind: 'application_clone' });
+
+    expect(result).toEqual({ id: 'clone-3', sourceCvId: 'clone-3' });
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source_cv_id: null,
+        kind: 'application_clone',
+        location: { city: 'Paris' },
+      }),
+    );
+    expect(validator.validate).toHaveBeenCalled();
+  });
+
   it('throws when source CV is missing', async () => {
     normalizedRepo.fetchHeader.mockResolvedValue(null);
 

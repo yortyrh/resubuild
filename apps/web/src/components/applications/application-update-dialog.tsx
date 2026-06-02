@@ -1,9 +1,8 @@
 'use client';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { ApplicationIntakeOptions } from '@/components/applications/application-intake-options';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -13,12 +12,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { type JobApplicationSummary, listCvs, updateApplication } from '@/lib/api';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { type JobApplicationSummary, updateApplication } from '@/lib/api';
 
 export interface ApplicationUpdateDialogProps {
   application: JobApplicationSummary;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+function formatBaseCvLabel(application: JobApplicationSummary): string {
+  const title = application.sourceCvTitle?.trim() || 'Saved base CV';
+  if (application.sourceCvFromSnapshot) {
+    return `${title} (saved copy — original CV was deleted)`;
+  }
+
+  return title;
 }
 
 export function ApplicationUpdateDialog({
@@ -27,36 +37,19 @@ export function ApplicationUpdateDialog({
   onOpenChange,
 }: ApplicationUpdateDialogProps) {
   const queryClient = useQueryClient();
-  const { data: cvs = [] } = useQuery({ queryKey: ['cvs'], queryFn: listCvs });
-  const [pickMode, setPickMode] = useState<'auto' | 'manual'>('auto');
-  const [sourceCvId, setSourceCvId] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-
     setMessage(application.userMessage ?? '');
-    if (application.intakeSourceCvId) {
-      setPickMode('manual');
-      setSourceCvId(application.intakeSourceCvId);
-    } else {
-      setPickMode('auto');
-      setSourceCvId('');
-    }
-  }, [open, application.intakeSourceCvId, application.userMessage]);
+  }, [open, application.userMessage]);
 
   const onSubmit = async () => {
-    if (pickMode === 'manual' && !sourceCvId) {
-      toast.error('Select a base CV or choose AI pick');
-      return;
-    }
-
     setSubmitting(true);
     try {
       await updateApplication(application.id, {
         message: message || undefined,
-        sourceCvId: pickMode === 'manual' ? sourceCvId : undefined,
       });
       onOpenChange(false);
       await queryClient.invalidateQueries({ queryKey: ['application', application.id] });
@@ -74,21 +67,28 @@ export function ApplicationUpdateDialog({
         <DialogHeader>
           <DialogTitle>Update application</DialogTitle>
           <DialogDescription>
-            Regenerate the tailored CV and cover letter using the saved job posting and your updated
-            instructions.
+            Regenerate the tailored CV and cover letter using the saved job posting, the same base
+            CV as before, and your updated instructions.
           </DialogDescription>
         </DialogHeader>
 
-        <ApplicationIntakeOptions
-          cvs={cvs}
-          pickMode={pickMode}
-          onPickModeChange={setPickMode}
-          sourceCvId={sourceCvId}
-          onSourceCvIdChange={setSourceCvId}
-          message={message}
-          onMessageChange={setMessage}
-          messageId="update-application-message"
-        />
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Base CV</p>
+            <p className="text-muted-foreground text-sm">{formatBaseCvLabel(application)}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="update-application-message">Optional instruction</Label>
+            <Textarea
+              id="update-application-message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={3}
+              placeholder="Emphasize React experience…"
+            />
+          </div>
+        </div>
 
         <DialogFooter className="flex-col items-stretch gap-3 sm:flex-col sm:space-x-0">
           <Button type="button" disabled={submitting} onClick={() => void onSubmit()}>

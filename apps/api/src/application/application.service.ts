@@ -32,6 +32,12 @@ import { PDF_IMPORT_MAX_BYTES_DEFAULT } from '../import/import.service';
 import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import { ApplicationRepository } from './application.repository';
 import { ApplicationPrepareStore, type PrepareIntakeSnapshot } from './application-prepare.store';
+import {
+  buildSourceCvSnapshot,
+  type ResolvedApplicationSource,
+  resolveApplicationSource,
+  resumeToCvSummary,
+} from './application-source-resolver';
 
 export const APPLICATION_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
@@ -171,7 +177,6 @@ export class ApplicationService {
           id,
           {
             message: row.user_message ?? undefined,
-            sourceCvId: row.intake_source_cv_id ?? undefined,
           },
           llmConfig.modelId,
           llmConfig.apiKey,
@@ -185,7 +190,6 @@ export class ApplicationService {
     const textIntake: PrepareApplicationIntake = {
       text: jobRawText,
       message: row.user_message ?? undefined,
-      sourceCvId: row.intake_source_cv_id ?? undefined,
     };
 
     await this.repository.update(user, id, { status: 'queued' });
@@ -195,7 +199,17 @@ export class ApplicationService {
     this.prepareStore.clearCancelled(id);
     this.prepareStore.update(id, { progress: undefined, errors: [] });
 
-    this.enqueuePrepareJob(user, id, textIntake, sourceType, llmConfig.modelId, llmConfig.apiKey);
+    const resolvedSource = await this.resolveApplicationSourceForRegeneration(user, row);
+
+    this.enqueuePrepareJob(
+      user,
+      id,
+      textIntake,
+      sourceType,
+      llmConfig.modelId,
+      llmConfig.apiKey,
+      resolvedSource ?? undefined,
+    );
 
     return { applicationId: id, status: 'queued' as const };
   }
@@ -213,13 +227,27 @@ export class ApplicationService {
 
     const state = this.prepareStore.get(id, user.id);
     const coverLetter = await this.enrichCoverLetter(user, row);
-    return jobApplicationRowToDetail(
+    const detail = jobApplicationRowToDetail(
       { ...row, cover_letter: coverLetter },
       {
         progress: state?.progress,
         errors: state?.errors,
       },
     );
+
+    if (row.source_cv_id) {
+      const supabase = this.normalizedRepo.createClientForUser(user);
+      const header = await this.normalizedRepo.fetchHeader(supabase, row.source_cv_id);
+      if (header) {
+        detail.sourceCvTitle = deriveCvTitleFromBasics({
+          name: header.name ?? undefined,
+          label: header.label ?? undefined,
+        });
+        detail.sourceCvFromSnapshot = false;
+      }
+    }
+
+    return detail;
   }
 
   async updateCoverLetter(user: AuthenticatedRequest['user'], id: string, coverLetter: string) {
@@ -274,8 +302,6 @@ export class ApplicationService {
 
     const llmConfig = await this.aiAgentCredentialService.getActiveCredentials(user);
     await this.repository.update(user, id, { status: 'queued' });
-    this.prepareStore.init(id, user.id);
-
     this.prepareStore.init(id, user.id);
 
     setImmediate(() => {
@@ -361,7 +387,7 @@ export class ApplicationService {
     row: JobApplicationRow,
   ): Promise<string> {
     let letter = sanitizeAiTypography(row.cover_letter ?? '');
-    if (!letter || !row.source_cv_id) {
+    if (!letter) {
       return letter;
     }
 
@@ -369,15 +395,106 @@ export class ApplicationService {
       return letter;
     }
 
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, row.source_cv_id);
-    const name = header?.name?.trim() || (await this.resolveAccountDisplayName(user));
+    let name: string | undefined;
+    if (row.source_cv_id) {
+      const supabase = this.normalizedRepo.createClientForUser(user);
+      const header = await this.normalizedRepo.fetchHeader(supabase, row.source_cv_id);
+      name = header?.name?.trim() || undefined;
+    }
+
+    if (!name) {
+      const resolved = await this.resolveApplicationSourceForRegeneration(user, row);
+      name = resolved?.resume.basics?.name?.trim() || undefined;
+    }
+
+    if (!name) {
+      name = await this.resolveAccountDisplayName(user);
+    }
+
     if (!name) {
       return letter;
     }
 
     letter = applyCoverLetterCandidateName(letter, name);
     return sanitizeAiTypography(letter);
+  }
+
+  private async resolveApplicationSourceForRegeneration(
+    user: AuthenticatedRequest['user'],
+    row: JobApplicationRow,
+  ): Promise<ResolvedApplicationSource | null> {
+    const resolved = await resolveApplicationSource(user, row, this.normalizedRepo);
+    if (!resolved) {
+      return null;
+    }
+
+    if (!resolved.fromSnapshot && resolved.liveSourceCvId && !row.source_cv_snapshot) {
+      await this.repository.update(user, row.id, {
+        source_cv_snapshot: resolved.resume as unknown as Record<string, unknown>,
+      });
+    }
+
+    return resolved;
+  }
+
+  private async resolveLiveSource(
+    user: AuthenticatedRequest['user'],
+    sourceCvId: string,
+  ): Promise<ResolvedApplicationSource | null> {
+    const supabase = this.normalizedRepo.createClientForUser(user);
+    const header = await this.normalizedRepo.fetchHeader(supabase, sourceCvId);
+    if (!header || header.kind !== 'primary') {
+      return null;
+    }
+
+    const resume = await this.normalizedRepo.assembleFullResume(supabase, sourceCvId);
+    if (!resume) {
+      return null;
+    }
+
+    return {
+      workflowCvId: sourceCvId,
+      liveSourceCvId: sourceCvId,
+      resume,
+      cvSummary: resumeToCvSummary(resume, sourceCvId),
+      fromSnapshot: false,
+    };
+  }
+
+  private async createTailoredClone(
+    user: AuthenticatedRequest['user'],
+    resolvedSource: ResolvedApplicationSource | undefined,
+    workflowSourceCvId: string,
+  ): Promise<{ id: string; sourceCvId: string }> {
+    if (resolvedSource?.fromSnapshot) {
+      return this.cvCloneService.cloneFromResume(user, resolvedSource.resume, {
+        kind: 'application_clone',
+        sourceCvId: resolvedSource.liveSourceCvId,
+      });
+    }
+
+    const liveSourceCvId = resolvedSource?.liveSourceCvId ?? workflowSourceCvId;
+    return this.cvCloneService.deepClone(user, liveSourceCvId, {
+      kind: 'application_clone',
+    });
+  }
+
+  private async buildPersistedSourceSnapshot(
+    user: AuthenticatedRequest['user'],
+    resolvedSource: ResolvedApplicationSource | undefined,
+    workflowSourceCvId: string,
+  ): Promise<Resume> {
+    if (resolvedSource?.fromSnapshot) {
+      return resolvedSource.resume;
+    }
+
+    const liveSourceCvId = resolvedSource?.liveSourceCvId ?? workflowSourceCvId;
+    const snapshot = await buildSourceCvSnapshot(user, liveSourceCvId, this.normalizedRepo);
+    if (!snapshot) {
+      throw new NotFoundException('Source CV not found');
+    }
+
+    return snapshot;
   }
 
   private resolveSourceType(intake: PrepareApplicationIntake): JobSourceType {
@@ -448,9 +565,18 @@ export class ApplicationService {
     sourceType: JobSourceType,
     modelId: string,
     apiKey: string,
+    forcedSource?: ResolvedApplicationSource,
   ): void {
     setImmediate(() => {
-      void this.runPrepareJob(user, applicationId, intake, sourceType, modelId, apiKey);
+      void this.runPrepareJob(
+        user,
+        applicationId,
+        intake,
+        sourceType,
+        modelId,
+        apiKey,
+        forcedSource,
+      );
     });
   }
 
@@ -461,6 +587,7 @@ export class ApplicationService {
     sourceType: JobSourceType,
     modelId: string,
     apiKey: string,
+    forcedSource?: ResolvedApplicationSource,
   ): Promise<void> {
     if (this.prepareStore.isCancelled(applicationId)) {
       return;
@@ -469,10 +596,13 @@ export class ApplicationService {
     await this.repository.update(user, applicationId, { status: 'running' });
 
     try {
-      const cvSummaries = await this.buildCvSummaries(user);
+      const cvSummaries = forcedSource
+        ? [forcedSource.cvSummary]
+        : await this.buildCvSummaries(user);
       const accountDisplayName = await this.resolveAccountDisplayName(user);
+      const sourceCvId = forcedSource?.workflowCvId ?? intake.sourceCvId;
 
-      if (intake.sourceCvId) {
+      if (!forcedSource && intake.sourceCvId) {
         const owned = cvSummaries.some((cv) => cv.id === intake.sourceCvId);
         if (!owned) {
           throw new BadRequestException('Selected source CV is not in your library');
@@ -488,7 +618,7 @@ export class ApplicationService {
           imageBuffer: sourceType === 'image' ? intake.file?.buffer : undefined,
           imageMimeType: intake.file?.mimetype,
           userMessage: intake.message,
-          sourceCvId: intake.sourceCvId,
+          sourceCvId,
           cvSummaries,
           accountDisplayName,
           modelId,
@@ -510,9 +640,10 @@ export class ApplicationService {
 
       this.prepareStore.update(applicationId, { progress: 'finalizing' });
 
-      const clone = await this.cvCloneService.deepClone(user, result.sourceCvId, {
-        kind: 'application_clone',
-      });
+      const resolvedSource =
+        forcedSource ?? (await this.resolveLiveSource(user, result.sourceCvId)) ?? undefined;
+
+      const clone = await this.createTailoredClone(user, resolvedSource, result.sourceCvId);
 
       await this.applyTailorPatch(user, clone.id, result.tailorPatch);
 
@@ -527,18 +658,27 @@ export class ApplicationService {
         return;
       }
 
+      const sourceCvSnapshot = await this.buildPersistedSourceSnapshot(
+        user,
+        resolvedSource,
+        result.sourceCvId,
+      );
+
       await this.repository.update(user, applicationId, {
         status: 'ready',
         job_title: result.jobSummary.title,
         job_company: result.jobSummary.company,
         job_raw_text: result.jobRawText,
-        source_cv_id: result.sourceCvId,
+        source_cv_id: resolvedSource?.liveSourceCvId ?? null,
+        source_cv_snapshot: sourceCvSnapshot as unknown as Record<string, unknown>,
         tailored_cv_id: clone.id,
         cover_letter: result.coverLetter,
         cover_letter_email_subject: result.coverLetterEmailSubject,
-        selection_rationale: result.selectionRationale,
+        selection_rationale: forcedSource?.fromSnapshot
+          ? sanitizeAiTypography(`${result.selectionRationale} (using saved base CV copy)`)
+          : result.selectionRationale,
         user_message: intake.message ?? null,
-        intake_source_cv_id: intake.sourceCvId ?? null,
+        intake_source_cv_id: resolvedSource?.liveSourceCvId ?? intake.sourceCvId ?? null,
       });
 
       this.prepareStore.update(applicationId, { progress: 'finalizing', errors: [] });
@@ -611,24 +751,24 @@ export class ApplicationService {
     }
 
     try {
-      const cvSummaries = await this.buildCvSummaries(user);
+      const resolvedSource = await this.resolveApplicationSourceForRegeneration(user, row);
+      if (!resolvedSource) {
+        throw new BadRequestException(
+          'Cannot regenerate this application because its base CV is no longer available.',
+        );
+      }
+
+      const cvSummaries = [resolvedSource.cvSummary];
       const accountDisplayName = await this.resolveAccountDisplayName(user);
       const jobRawText = row.job_raw_text!.trim();
       const jobSummary = this.buildJobSummaryFromRow(row);
-
-      if (intake.sourceCvId) {
-        const owned = cvSummaries.some((cv) => cv.id === intake.sourceCvId);
-        if (!owned) {
-          throw new BadRequestException('Selected source CV is not in your library');
-        }
-      }
 
       const result = await this.withScopedApiKey(modelId, apiKey, async () =>
         runUpdateApplicationWorkflow({
           jobSummary,
           jobRawText,
           userMessage: intake.message,
-          sourceCvId: intake.sourceCvId,
+          sourceCvId: resolvedSource.workflowCvId,
           currentResume: currentResume as unknown as Record<string, unknown>,
           currentCoverLetter,
           cvSummaries,
@@ -652,9 +792,7 @@ export class ApplicationService {
 
       this.prepareStore.update(applicationId, { progress: 'finalizing' });
 
-      const clone = await this.cvCloneService.deepClone(user, result.sourceCvId, {
-        kind: 'application_clone',
-      });
+      const clone = await this.createTailoredClone(user, resolvedSource, result.sourceCvId);
 
       await this.applyTailorPatch(user, clone.id, result.tailorPatch);
 
@@ -669,15 +807,24 @@ export class ApplicationService {
         return;
       }
 
+      const sourceCvSnapshot = await this.buildPersistedSourceSnapshot(
+        user,
+        resolvedSource,
+        result.sourceCvId,
+      );
+
       await this.repository.update(user, applicationId, {
         status: 'ready',
-        source_cv_id: result.sourceCvId,
+        source_cv_id: resolvedSource.liveSourceCvId ?? row.source_cv_id,
+        source_cv_snapshot: sourceCvSnapshot as unknown as Record<string, unknown>,
         tailored_cv_id: clone.id,
         cover_letter: result.coverLetter,
         cover_letter_email_subject: result.coverLetterEmailSubject,
-        selection_rationale: result.selectionRationale,
+        selection_rationale: resolvedSource.fromSnapshot
+          ? sanitizeAiTypography(`${result.selectionRationale} (using saved base CV copy)`)
+          : result.selectionRationale,
         user_message: intake.message ?? null,
-        intake_source_cv_id: intake.sourceCvId ?? null,
+        intake_source_cv_id: resolvedSource.liveSourceCvId ?? row.intake_source_cv_id ?? null,
       });
 
       this.prepareStore.update(applicationId, { progress: 'finalizing', errors: [] });

@@ -1,3 +1,5 @@
+import { deriveCvTitleFromBasics } from './cv-title';
+import type { Resume } from './resume';
 import { sanitizeAiTypography } from './sanitize-ai-typography';
 
 export type JobApplicationStatus = 'queued' | 'running' | 'ready' | 'failed';
@@ -19,6 +21,7 @@ export interface JobApplicationRow {
   selection_rationale?: string | null;
   user_message?: string | null;
   intake_source_cv_id?: string | null;
+  source_cv_snapshot?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -38,10 +41,23 @@ export interface JobApplicationDetail {
   selectionRationale?: string | null;
   userMessage?: string | null;
   intakeSourceCvId?: string | null;
+  sourceCvTitle?: string | null;
+  sourceCvFromSnapshot?: boolean;
   createdAt: string;
   updatedAt: string;
   progress?: string;
   errors?: string[];
+}
+
+function deriveSourceCvTitleFromRow(
+  row: Pick<JobApplicationRow, 'source_cv_snapshot'>,
+): string | null {
+  const snapshot = row.source_cv_snapshot as Resume | null | undefined;
+  if (!snapshot?.basics) {
+    return null;
+  }
+
+  return deriveCvTitleFromBasics(snapshot.basics);
 }
 
 function sanitizeOptionalAiText(value: string | null | undefined): string | null | undefined {
@@ -69,6 +85,8 @@ export function jobApplicationRowToDetail(
     selectionRationale: sanitizeOptionalAiText(row.selection_rationale),
     userMessage: row.user_message,
     intakeSourceCvId: row.intake_source_cv_id,
+    sourceCvTitle: deriveSourceCvTitleFromRow(row),
+    sourceCvFromSnapshot: row.source_cv_id == null && row.source_cv_snapshot != null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     progress: extras?.progress,
