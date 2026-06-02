@@ -84,11 +84,15 @@ export class ApplicationRepository {
 
   async findAll(user: AuthenticatedRequest['user']): Promise<JobApplicationRow[]> {
     const supabase = this.createClient(user);
-    const { data, error } = await supabase
-      .from('job_application')
-      .select('*')
-      .eq('is_list_visible', true)
-      .order('updated_at', { ascending: false });
+    let query = supabase.from('job_application').select('*').eq('is_list_visible', true);
+
+    // When using service-role client (MCP auth path), no RLS token scopes the query,
+    // so we must filter explicitly by user_id to avoid returning all users' applications.
+    if (user.authMethod === 'mcp') {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { data, error } = await query.order('updated_at', { ascending: false });
 
     if (error) {
       throw new BadRequestException(error.message);

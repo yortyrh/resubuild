@@ -45,11 +45,15 @@ export class CvService {
 
   async findAll(user: AuthenticatedRequest['user']): Promise<CvRecord[]> {
     const supabase = this.normalizedRepo.createClientForUser(user);
-    const { data, error } = await supabase
-      .from('cv')
-      .select('*')
-      .eq('kind', 'primary')
-      .order('updated_at', { ascending: false });
+    let query = supabase.from('cv').select('*').eq('kind', 'primary');
+
+    // When using service-role client (MCP auth path), no RLS token scopes the query,
+    // so we must filter explicitly by user_id to avoid returning all users' CVs.
+    if (user.authMethod === 'mcp') {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { data, error } = await query.order('updated_at', { ascending: false });
 
     if (error) {
       throw new BadRequestException(error.message);
