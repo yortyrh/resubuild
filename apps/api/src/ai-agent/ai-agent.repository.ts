@@ -70,7 +70,7 @@ export class AiAgentRepository {
   }
 
   private createClient(user: AuthenticatedRequest['user']) {
-    return this.normalizedRepo.createUserClient(user.accessToken);
+    return this.normalizedRepo.createClientForUser(user);
   }
 
   private async getActiveAccountId(user: AuthenticatedRequest['user']): Promise<string | null> {

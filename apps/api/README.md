@@ -90,6 +90,41 @@ Requires **`cv-html-view-pdf-export`** (Puppeteer HTML/PDF pipeline) for cover l
 
 Routes under `/applications/*` reuse the active AI agent account (`AiAgentCredentialService`) and the prepare workflow in `@resumind/import-agent`.
 
+## MCP server (Streamable HTTP)
+
+Users enable MCP in the dashboard, create up to **two** API keys, and connect external agents (Cursor, Claude Desktop, etc.). MCP requests use `Authorization: Bearer <mcp_api_key>` — not the Supabase JWT used by the web app.
+
+| Variable               | Purpose                                                                                                              |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `MCP_SERVER_ENABLED`   | Set to `false` to return `503` on `/mcp` while keeping key management routes available. Default: enabled when unset. |
+| `MCP_KEY_PEPPER`       | Optional HMAC pepper for API key hashing (defaults to `SUPABASE_SERVICE_ROLE_KEY`).                                  |
+| `MCP_EXPORT_MAX_BYTES` | Max decoded size for PDF/PNG base64 MCP exports (default 10 MiB).                                                    |
+
+| Method         | Path                     | Auth                                                             |
+| -------------- | ------------------------ | ---------------------------------------------------------------- |
+| `GET`          | `/settings/mcp`          | Supabase JWT                                                     |
+| `PATCH`        | `/settings/mcp`          | Supabase JWT — `{ "mcpEnabled": true }`                          |
+| `POST`         | `/settings/mcp/keys`     | Supabase JWT — optional `{ "label" }`; returns `{ secret }` once |
+| `DELETE`       | `/settings/mcp/keys/:id` | Supabase JWT — revoke key                                        |
+| `POST` / `GET` | `/mcp` and `/mcp/`       | MCP API key                                                      |
+
+### Example MCP client config (Cursor / Claude)
+
+```json
+{
+  "mcpServers": {
+    "resumind": {
+      "url": "http://localhost:3001/mcp",
+      "headers": {
+        "Authorization": "Bearer rm_YOUR_KEY_FROM_SETTINGS"
+      }
+    }
+  }
+}
+```
+
+Tools include CV list/read/delete, JSON Resume create/replace, HTML/PDF/PNG export, template presentation, and job application read/update. They intentionally exclude web search, import, and AI agent configuration — use your client’s own tools for those.
+
 ## Scripts
 
 See `package.json`: `pnpm dev`, `pnpm build`, `pnpm test`.

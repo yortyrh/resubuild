@@ -324,6 +324,32 @@ export function getImportLlmConfig() {
   return getAiAgentActive();
 }
 
+export type { McpApiKeySummary, McpCreateKeyResponse, McpSettingsResponse } from '@resumind/types';
+
+export function getMcpSettings() {
+  return apiFetch<import('@resumind/types').McpSettingsResponse>('/settings/mcp');
+}
+
+export function patchMcpSettings(payload: { mcpEnabled?: boolean }) {
+  return apiFetch<import('@resumind/types').McpSettingsResponse>('/settings/mcp', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createMcpApiKey(payload: { label?: string }) {
+  return apiFetch<import('@resumind/types').McpCreateKeyResponse>('/settings/mcp/keys', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function revokeMcpApiKey(id: string) {
+  return apiFetch<import('@resumind/types').McpSettingsResponse>(`/settings/mcp/keys/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 export function saveImportLlmConfig(payload: {
   modelId: string;
   apiKey?: string;

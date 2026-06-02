@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  PayloadTooLargeException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -38,6 +39,17 @@ export interface CvExportContext {
   resume: Resume;
   templateId: string;
 }
+
+export type CvScreenshotMode = 'full_document' | 'first_page';
+
+export interface CvExportScreenshotResult {
+  buffer: Buffer;
+  filename: string;
+  mode: CvScreenshotMode;
+  templateId: string;
+}
+
+const DEFAULT_MCP_BINARY_MAX_BYTES = 10 * 1024 * 1024;
 
 @Injectable()
 export class CvExportService {
@@ -76,7 +88,7 @@ export class CvExportService {
     queryTemplate?: string,
   ): Promise<CvExportContext> {
     const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, cvId);
+    const header = await this.normalizedRepo.fetchHeader(supabase, cvId, user.id);
 
     if (!header) {
       throw new NotFoundException('CV not found');
@@ -167,7 +179,7 @@ export class CvExportService {
 
   async renderJson(user: AuthenticatedRequest['user'], cvId: string): Promise<CvExportJsonResult> {
     const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, cvId);
+    const header = await this.normalizedRepo.fetchHeader(supabase, cvId, user.id);
 
     if (!header) {
       throw new NotFoundException('CV not found');
@@ -199,7 +211,74 @@ export class CvExportService {
     return { body: JSON.stringify(exported, null, 2), filename };
   }
 
+  getMcpBinaryMaxBytes(): number {
+    const configured = Number(this.configService.get<string>('MCP_EXPORT_MAX_BYTES'));
+    return Number.isFinite(configured) && configured > 0
+      ? configured
+      : DEFAULT_MCP_BINARY_MAX_BYTES;
+  }
+
+  assertMcpBinarySize(buffer: Buffer, label: string): void {
+    const max = this.getMcpBinaryMaxBytes();
+    if (buffer.length > max) {
+      throw new PayloadTooLargeException(
+        `${label} exceeds the ${Math.floor(max / (1024 * 1024))} MiB limit. Reduce content or hide sections via template presentation.`,
+      );
+    }
+  }
+
+  toMcpBase64Payload(buffer: Buffer, contentType: string, filename: string) {
+    this.assertMcpBinarySize(buffer, 'Export');
+    return {
+      filename,
+      contentType,
+      contentBase64: buffer.toString('base64'),
+    };
+  }
+
+  async renderScreenshot(
+    user: AuthenticatedRequest['user'],
+    cvId: string,
+    options: { template?: string; mode?: CvScreenshotMode } = {},
+  ): Promise<CvExportScreenshotResult> {
+    const mode = options.mode ?? 'first_page';
+    const html = await this.renderHtml(user, cvId, options.template);
+    const { resume, templateId } = await this.loadExportContext(user, cvId, options.template);
+    const buffer = await this.renderScreenshotFromHtml(html, mode);
+    const title = deriveCvTitleFromBasics(resume.basics);
+    const filename = `${slugifyExportFilename(title)}-${mode}.png`;
+    return { buffer, filename, mode, templateId };
+  }
+
+  async renderScreenshotFromHtml(html: string, mode: CvScreenshotMode): Promise<Buffer> {
+    return this.withBrowserPage(async (page) => {
+      if (mode === 'first_page') {
+        await page.setViewport({
+          width: 816,
+          height: 1056,
+          deviceScaleFactor: 1,
+        });
+      }
+      await page.setContent(html, { waitUntil: 'networkidle0' as 'load' });
+      const screenshot = await page.screenshot({
+        type: 'png',
+        fullPage: mode === 'full_document',
+      });
+      return Buffer.from(screenshot);
+    });
+  }
+
   async renderPdfFromHtml(html: string): Promise<Buffer> {
+    return this.withBrowserPage(async (page) => {
+      await page.setContent(html, { waitUntil: 'networkidle0' as 'load' });
+      const pdf = await page.pdf(PDF_EXPORT_OPTIONS);
+      return Buffer.from(pdf);
+    });
+  }
+
+  private async withBrowserPage<T>(
+    action: (page: import('puppeteer').Page) => Promise<T>,
+  ): Promise<T> {
     try {
       const puppeteer = await import('puppeteer');
       const executablePath =
@@ -212,16 +291,14 @@ export class CvExportService {
 
       try {
         const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0' as 'load' });
-        const pdf = await page.pdf(PDF_EXPORT_OPTIONS);
-        return Buffer.from(pdf);
+        return await action(page);
       } finally {
         await browser.close();
       }
     } catch (error) {
-      this.logger.error('PDF generation failed', error instanceof Error ? error.stack : error);
+      this.logger.error('Chromium export failed', error instanceof Error ? error.stack : error);
       throw new ServiceUnavailableException(
-        'PDF export is temporarily unavailable. HTML preview is still available.',
+        'PDF and screenshot export are temporarily unavailable. HTML preview is still available.',
       );
     }
   }

@@ -32,7 +32,7 @@ export class CvTemplatePresentationService {
   ): Promise<{ templateId: string; config: CvTemplatePresentationConfig }> {
     const canonical = this.resolveTemplate(templateId);
     const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, cvId);
+    const header = await this.normalizedRepo.fetchHeader(supabase, cvId, user.id);
     if (!header) {
       throw new NotFoundException('CV not found');
     }
@@ -51,7 +51,7 @@ export class CvTemplatePresentationService {
   ): Promise<{ templateId: string; config: CvTemplatePresentationConfig }> {
     const canonical = this.resolveTemplate(templateId);
     const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, cvId);
+    const header = await this.normalizedRepo.fetchHeader(supabase, cvId, user.id);
     if (!header) {
       throw new NotFoundException('CV not found');
     }

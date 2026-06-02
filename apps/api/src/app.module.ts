@@ -9,6 +9,7 @@ import { CvExportModule } from './cv-export/cv-export.module';
 import { ImportModule } from './import/import.module';
 import { ImportLlmConfigModule } from './import-llm-config/import-llm-config.module';
 import { ImportModelsCatalogModule } from './import-models-catalog/import-models-catalog.module';
+import { McpModule } from './mcp/mcp.module';
 import { MediaModule } from './media/media.module';
 import { WebScrapeModule } from './web-scrape/web-scrape.module';
 
@@ -28,6 +29,7 @@ import { WebScrapeModule } from './web-scrape/web-scrape.module';
     ImportModule,
     ApplicationModule,
     WebScrapeModule,
+    McpModule,
   ],
 })
 export class AppModule {}

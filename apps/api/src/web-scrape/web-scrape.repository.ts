@@ -48,7 +48,7 @@ export class WebScrapeRepository {
   }
 
   private createClient(user: AuthenticatedRequest['user']) {
-    return this.normalizedRepo.createUserClient(user.accessToken);
+    return this.normalizedRepo.createClientForUser(user);
   }
 
   async getStatus(user: AuthenticatedRequest['user']): Promise<WebScrapeConfigStatus> {

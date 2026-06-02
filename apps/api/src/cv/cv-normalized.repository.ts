@@ -13,7 +13,7 @@ import {
   sortSectionRows,
 } from '@resumind/types';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthUser } from '../auth/auth-user.types';
 
 const SECTION_KEYS: CvSectionKey[] = [
   'profiles',
@@ -34,6 +34,23 @@ const SECTION_KEYS: CvSectionKey[] = [
 export class CvNormalizedRepository {
   constructor(private readonly configService: ConfigService) {}
 
+  createServiceRoleClient(): SupabaseClient {
+    const url = this.configService.get<string>('SUPABASE_URL');
+    const serviceRoleKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!url || !serviceRoleKey) {
+      throw new Error('Supabase service role is not configured');
+    }
+
+    return createClient(url, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+  }
+
   createUserClient(accessToken: string): SupabaseClient {
     const url = this.configService.get<string>('SUPABASE_URL');
     const anonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
@@ -51,8 +68,16 @@ export class CvNormalizedRepository {
     });
   }
 
-  async fetchHeader(supabase: SupabaseClient, cvId: string): Promise<CvHeaderRow | null> {
-    const { data, error } = await supabase.from('cv').select('*').eq('id', cvId).maybeSingle();
+  async fetchHeader(
+    supabase: SupabaseClient,
+    cvId: string,
+    userId?: string,
+  ): Promise<CvHeaderRow | null> {
+    let query = supabase.from('cv').select('*').eq('id', cvId);
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    const { data, error } = await query.maybeSingle();
 
     if (error) {
       throw new BadRequestException(error.message);
@@ -350,7 +375,18 @@ export class CvNormalizedRepository {
     return this.listSectionRows(supabase, cvId, section);
   }
 
-  createClientForUser(user: AuthenticatedRequest['user']): SupabaseClient {
-    return this.createUserClient(user.accessToken);
+  createClientForUser(user: AuthUser): SupabaseClient {
+    if (user.accessToken?.trim()) {
+      return this.createUserClient(user.accessToken);
+    }
+    if (user.authMethod === 'mcp') {
+      return this.createServiceRoleClient();
+    }
+    throw new Error('Missing access token for user-scoped Supabase client');
+  }
+
+  /** User id for ownership-scoped queries when using the service-role client. */
+  ownerUserId(user: AuthUser): string | undefined {
+    return user.accessToken ? undefined : user.id;
   }
 }

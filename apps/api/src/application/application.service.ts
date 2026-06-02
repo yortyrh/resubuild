@@ -273,6 +273,39 @@ export class ApplicationService {
     return detail;
   }
 
+  async patchApplicationMetadata(
+    user: AuthenticatedRequest['user'],
+    id: string,
+    patch: {
+      jobTitle?: string | null;
+      jobCompany?: string | null;
+      jobRawText?: string | null;
+      selectionRationale?: string | null;
+      coverLetterEmailSubject?: string | null;
+      userMessage?: string | null;
+    },
+  ) {
+    const existing = await this.repository.findOne(user, id);
+    if (!existing) {
+      throw new NotFoundException('Application not found');
+    }
+
+    const updated = await this.repository.update(user, id, {
+      job_title: patch.jobTitle,
+      job_company: patch.jobCompany,
+      job_raw_text: patch.jobRawText,
+      selection_rationale: patch.selectionRationale,
+      cover_letter_email_subject: patch.coverLetterEmailSubject,
+      user_message: patch.userMessage,
+    });
+
+    if (!updated) {
+      throw new NotFoundException('Application not found');
+    }
+
+    return jobApplicationRowToDetail(updated);
+  }
+
   async updateCoverLetter(user: AuthenticatedRequest['user'], id: string, coverLetter: string) {
     const existing = await this.repository.findOne(user, id);
     if (!existing) {

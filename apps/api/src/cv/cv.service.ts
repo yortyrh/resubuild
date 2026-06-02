@@ -61,7 +61,7 @@ export class CvService {
 
   async findOne(user: AuthenticatedRequest['user'], id: string): Promise<CvRecord> {
     const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, id);
+    const header = await this.normalizedRepo.fetchHeader(supabase, id, user.id);
 
     if (!header) {
       throw new NotFoundException('CV not found');
@@ -72,7 +72,7 @@ export class CvService {
 
   async getHeader(user: AuthenticatedRequest['user'], id: string): Promise<CvHeaderRow> {
     const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, id);
+    const header = await this.normalizedRepo.fetchHeader(supabase, id, user.id);
 
     if (!header) {
       throw new NotFoundException('CV not found');
@@ -135,7 +135,7 @@ export class CvService {
       await this.normalizedRepo.replaceNormalizedCv(supabase, id, dto.data as unknown as Resume);
     }
 
-    const header = await this.normalizedRepo.fetchHeader(supabase, id);
+    const header = await this.normalizedRepo.fetchHeader(supabase, id, user.id);
     if (!header) {
       throw new NotFoundException('CV not found');
     }

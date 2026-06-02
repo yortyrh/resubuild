@@ -39,6 +39,12 @@ export function UserMenu() {
             AI agent settings
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/settings/mcp" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            MCP settings
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => void handleSignOut()}>Sign out</DropdownMenuItem>
       </DropdownMenuContent>

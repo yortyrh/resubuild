@@ -6,15 +6,9 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from '@supabase/supabase-js';
-import type { Request } from 'express';
+import type { AuthenticatedRequest } from './auth-user.types';
 
-export interface AuthenticatedRequest extends Request {
-  user: {
-    id: string;
-    email?: string;
-    accessToken: string;
-  };
-}
+export type { AuthenticatedRequest, AuthUser } from './auth-user.types';
 
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
@@ -50,6 +44,7 @@ export class SupabaseAuthGuard implements CanActivate {
       id: user.id,
       email: user.email,
       accessToken: token,
+      authMethod: 'jwt',
     };
 
     return true;
