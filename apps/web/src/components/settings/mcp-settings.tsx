@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -234,6 +235,9 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create MCP API key</DialogTitle>
+            <DialogDescription>
+              Generate a bearer token for your MCP client. You can only view the full key once.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <Label htmlFor="mcp-key-label">Label (optional)</Label>
@@ -259,10 +263,10 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Revoke API key?</DialogTitle>
+            <DialogDescription>
+              Clients using this key will stop working immediately.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-muted-foreground text-sm">
-            Clients using this key will stop working immediately.
-          </p>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setRevokeTarget(null)}>
               Cancel

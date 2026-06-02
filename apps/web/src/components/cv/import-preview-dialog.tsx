@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -68,6 +69,9 @@ export function ImportPreviewDialog({ open, onOpenChange, resume }: ImportPrevie
       <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col gap-4 overflow-hidden">
         <DialogHeader className="shrink-0">
           <DialogTitle>Import preview</DialogTitle>
+          <DialogDescription>
+            Preview how the imported resume renders with your selected template.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex shrink-0 items-end gap-4">

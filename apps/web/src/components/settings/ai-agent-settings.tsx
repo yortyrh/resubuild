@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -277,6 +278,11 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
             <DialogTitle>
               {dialogMode === 'create' ? 'Add AI agent account' : 'Edit AI agent account'}
             </DialogTitle>
+            <DialogDescription>
+              {dialogMode === 'create'
+                ? 'Connect a provider and model for AI-assisted CV and application workflows.'
+                : 'Update the label, provider, model, or API key for this account.'}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -365,11 +371,11 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete account?</DialogTitle>
+            <DialogDescription>
+              This removes the saved credentials for{' '}
+              {deleteTarget?.label || deleteTarget?.providerId}. This cannot be undone.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-muted-foreground text-sm">
-            This removes the saved credentials for {deleteTarget?.label || deleteTarget?.providerId}
-            . This cannot be undone.
-          </p>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
               Cancel
