@@ -66,7 +66,47 @@ describe('ApplicationService', () => {
     findOne: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
+    findActiveUpdateDraft: jest.fn(),
+    findDanglingUpdateDrafts: jest.fn(),
   };
+
+  function setupStagedUpdateMocks(
+    readyRow: Record<string, unknown> & { id: string; tailored_cv_id?: string | null },
+  ) {
+    const draftRow = {
+      ...readyRow,
+      id: 'draft-1',
+      status: 'queued',
+      source_application_id: readyRow.id,
+      is_list_visible: false,
+      tailored_cv_id: null,
+    };
+
+    repository.findDanglingUpdateDrafts.mockResolvedValue([]);
+    repository.create.mockResolvedValue(draftRow);
+    repository.findOne.mockImplementation(async (_user, id: string) => {
+      if (id === readyRow.id) {
+        return readyRow;
+      }
+      if (id === 'draft-1') {
+        return draftRow;
+      }
+      return null;
+    });
+    repository.update.mockImplementation(
+      async (_user, id: string, patch: Record<string, unknown>) => {
+        if (id === 'draft-1') {
+          Object.assign(draftRow, patch);
+          return { ...draftRow };
+        }
+        Object.assign(readyRow, patch);
+        return { ...readyRow };
+      },
+    );
+    repository.remove.mockResolvedValue(true);
+
+    return { draftRow, readyRow };
+  }
   const aiAgentCredentialService = {
     getActiveCredentials: jest.fn(),
   };
@@ -97,6 +137,8 @@ describe('ApplicationService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    repository.findDanglingUpdateDrafts.mockResolvedValue([]);
+    repository.findActiveUpdateDraft.mockResolvedValue(null);
     normalizedRepo.createClientForUser.mockReturnValue(supabase);
     normalizedRepo.fetchHeader.mockResolvedValue(null);
     normalizedRepo.fetchSections.mockResolvedValue({
@@ -326,10 +368,11 @@ describe('ApplicationService', () => {
     await expect(service.promoteClone(user, 'app-1')).rejects.toThrow(BadRequestException);
   });
 
-  it('queues update workflow for ready applications', async () => {
+  it('removes dangling update drafts before starting a new update', async () => {
     const readyRow = {
       id: 'app-1',
       status: 'ready',
+      job_source_type: 'text',
       job_raw_text: 'Job text',
       tailored_cv_id: 'clone-1',
       cover_letter: 'Old letter',
@@ -338,10 +381,43 @@ describe('ApplicationService', () => {
       ...baseApplicationSource,
     };
     repository.findOne.mockResolvedValue(readyRow);
-    repository.update.mockImplementation(async (_user, _id, patch) => ({
-      ...readyRow,
-      ...patch,
-    }));
+    repository.findDanglingUpdateDrafts.mockResolvedValue([
+      {
+        id: 'stale-draft',
+        tailored_cv_id: 'stale-clone',
+        is_list_visible: false,
+        source_application_id: 'app-1',
+      },
+    ]);
+    repository.remove.mockResolvedValue(true);
+    repository.create.mockResolvedValue({
+      id: 'draft-1',
+      source_application_id: 'app-1',
+      is_list_visible: false,
+      status: 'queued',
+      job_source_type: 'text',
+    });
+    cvService.remove.mockResolvedValue(undefined);
+
+    await service.updateApplication(user, 'app-1', { message: 'Try again' });
+
+    expect(repository.remove).toHaveBeenCalledWith(user, 'stale-draft');
+    expect(cvService.remove).toHaveBeenCalledWith(user, 'stale-clone');
+  });
+
+  it('queues update workflow for ready applications', async () => {
+    const readyRow = {
+      id: 'app-1',
+      status: 'ready',
+      job_source_type: 'text',
+      job_raw_text: 'Job text',
+      tailored_cv_id: 'clone-1',
+      cover_letter: 'Old letter',
+      job_title: 'Engineer',
+      job_company: 'Acme',
+      ...baseApplicationSource,
+    };
+    setupStagedUpdateMocks(readyRow);
     mockLiveBaseCv(normalizedRepo);
     normalizedRepo.assembleFullResume
       .mockResolvedValueOnce({ basics: { name: 'Jane Doe' }, work: [], skills: [] })
@@ -363,14 +439,24 @@ describe('ApplicationService', () => {
       message: 'Emphasize leadership',
     });
 
-    expect(result).toEqual({ applicationId: 'app-1', status: 'queued' });
+    expect(result).toEqual({
+      applicationId: 'app-1',
+      draftApplicationId: 'draft-1',
+      status: 'queued',
+    });
     await flushBackgroundJobs();
     expect(runUpdateApplicationWorkflow).toHaveBeenCalled();
     expect(repository.update).toHaveBeenCalledWith(
       user,
-      'app-1',
+      'draft-1',
       expect.objectContaining({ status: 'ready', tailored_cv_id: 'clone-2' }),
     );
+    expect(repository.update).toHaveBeenCalledWith(user, 'draft-1', {
+      is_list_visible: true,
+      source_application_id: null,
+    });
+    expect(repository.remove).toHaveBeenCalledWith(user, 'app-1');
+    expect(cvService.remove).toHaveBeenCalledWith(user, 'clone-1');
   });
 
   it('rejects update when application is not ready', async () => {
@@ -463,6 +549,7 @@ describe('ApplicationService', () => {
     const failedRow = {
       id: 'app-1',
       status: 'failed',
+      job_source_type: 'text',
       job_raw_text: 'Job text',
       tailored_cv_id: 'clone-1',
       job_title: 'Engineer',
@@ -471,11 +558,7 @@ describe('ApplicationService', () => {
       source_cv_id: null,
       source_cv_snapshot: snapshot,
     };
-    repository.findOne.mockResolvedValue(failedRow);
-    repository.update.mockImplementation(async (_user, _id, patch) => ({
-      ...failedRow,
-      ...patch,
-    }));
+    setupStagedUpdateMocks(failedRow);
     cvService.findAll.mockResolvedValue([]);
     normalizedRepo.fetchHeader.mockResolvedValue(null);
     normalizedRepo.assembleFullResume
@@ -512,7 +595,7 @@ describe('ApplicationService', () => {
     expect(cvCloneService.deepClone).not.toHaveBeenCalled();
     expect(repository.update).toHaveBeenCalledWith(
       user,
-      'app-1',
+      'draft-1',
       expect.objectContaining({
         status: 'ready',
         source_cv_snapshot: snapshot,
@@ -524,6 +607,7 @@ describe('ApplicationService', () => {
     const failedRow = {
       id: 'app-1',
       status: 'failed',
+      job_source_type: 'text',
       job_raw_text: 'Job text',
       tailored_cv_id: 'clone-1',
       job_title: 'Engineer',
@@ -531,11 +615,7 @@ describe('ApplicationService', () => {
       cover_letter: 'Old letter',
       ...baseApplicationSource,
     };
-    repository.findOne.mockResolvedValue(failedRow);
-    repository.update.mockImplementation(async (_user, _id, patch) => ({
-      ...failedRow,
-      ...patch,
-    }));
+    setupStagedUpdateMocks(failedRow);
     mockLiveBaseCv(normalizedRepo);
     normalizedRepo.assembleFullResume
       .mockResolvedValueOnce({ basics: { name: 'Jane' }, work: [], skills: [] })
@@ -1158,23 +1238,21 @@ describe('ApplicationService', () => {
     const readyRow = {
       id: 'app-1',
       status: 'ready',
+      job_source_type: 'text',
       job_raw_text: 'Job text',
       tailored_cv_id: 'clone-1',
       cover_letter: 'Old letter',
       job_title: 'Engineer',
       job_company: 'Acme',
     };
-    repository.findOne.mockResolvedValue(readyRow);
-    repository.update.mockImplementation(async (_user, _id, patch) => ({
-      ...readyRow,
-      ...patch,
-    }));
+    setupStagedUpdateMocks(readyRow);
     normalizedRepo.assembleFullResume.mockResolvedValue(null);
 
     await service.updateApplication(user, 'app-1', { message: 'Refresh summary' });
     await flushBackgroundJobs();
 
-    expect(repository.update).toHaveBeenCalledWith(user, 'app-1', { status: 'failed' });
+    expect(repository.update).toHaveBeenCalledWith(user, 'draft-1', { status: 'failed' });
+    expect(repository.update).not.toHaveBeenCalledWith(user, 'app-1', { status: 'failed' });
     expect(runUpdateApplicationWorkflow).not.toHaveBeenCalled();
   });
 
@@ -1182,6 +1260,7 @@ describe('ApplicationService', () => {
     const readyRow = {
       id: 'app-1',
       status: 'ready',
+      job_source_type: 'text',
       job_raw_text: 'Job text',
       tailored_cv_id: 'clone-1',
       cover_letter: 'Old letter',
@@ -1194,11 +1273,7 @@ describe('ApplicationService', () => {
         skills: [],
       },
     };
-    repository.findOne.mockResolvedValue(readyRow);
-    repository.update.mockImplementation(async (_user, _id, patch) => ({
-      ...readyRow,
-      ...patch,
-    }));
+    setupStagedUpdateMocks(readyRow);
     normalizedRepo.fetchHeader.mockResolvedValue(
       mockCvHeader({ id: 'cv-1', name: 'Jane Doe', label: 'Engineer' }),
     );
@@ -1229,7 +1304,7 @@ describe('ApplicationService', () => {
     );
     expect(repository.update).toHaveBeenCalledWith(
       user,
-      'app-1',
+      'draft-1',
       expect.objectContaining({ status: 'ready', tailored_cv_id: 'clone-2' }),
     );
   });
@@ -1238,17 +1313,14 @@ describe('ApplicationService', () => {
     const readyRow = {
       id: 'app-1',
       status: 'ready',
+      job_source_type: 'text',
       job_raw_text: 'Job text',
       tailored_cv_id: 'clone-1',
       cover_letter: 'Old letter',
       job_title: 'Engineer',
       job_company: 'Acme',
     };
-    repository.findOne.mockResolvedValue(readyRow);
-    repository.update.mockImplementation(async (_user, _id, patch) => ({
-      ...readyRow,
-      ...patch,
-    }));
+    setupStagedUpdateMocks(readyRow);
     cvService.findAll.mockResolvedValue([]);
     normalizedRepo.assembleFullResume.mockResolvedValue({
       basics: { name: 'Jane Doe' },
@@ -1259,13 +1331,14 @@ describe('ApplicationService', () => {
     await service.updateApplication(user, 'app-1', { sourceCvId: 'missing-cv' });
     await flushBackgroundJobs();
 
-    expect(repository.update).toHaveBeenCalledWith(user, 'app-1', { status: 'failed' });
+    expect(repository.update).toHaveBeenCalledWith(user, 'draft-1', { status: 'failed' });
   });
 
   it('maps auth failures during update to a friendly error', async () => {
     const readyRow = {
       id: 'app-1',
       status: 'ready',
+      job_source_type: 'text',
       job_raw_text: 'Job text',
       tailored_cv_id: 'clone-1',
       cover_letter: 'Old letter',
@@ -1273,11 +1346,7 @@ describe('ApplicationService', () => {
       job_company: 'Acme',
       ...baseApplicationSource,
     };
-    repository.findOne.mockResolvedValue(readyRow);
-    repository.update.mockImplementation(async (_user, _id, patch) => ({
-      ...readyRow,
-      ...patch,
-    }));
+    setupStagedUpdateMocks(readyRow);
     mockLiveBaseCv(normalizedRepo);
     cvService.remove.mockResolvedValue(undefined);
     normalizedRepo.assembleFullResume.mockResolvedValue({
@@ -1290,13 +1359,14 @@ describe('ApplicationService', () => {
     await service.updateApplication(user, 'app-1', { message: 'Refresh summary' });
     await flushBackgroundJobs();
 
-    expect(repository.update).toHaveBeenCalledWith(user, 'app-1', { status: 'failed' });
+    expect(repository.update).toHaveBeenCalledWith(user, 'draft-1', { status: 'failed' });
   });
 
   it('marks update failed when workflow returns errors', async () => {
     const readyRow = {
       id: 'app-1',
       status: 'ready',
+      job_source_type: 'text',
       job_raw_text: 'Job text',
       tailored_cv_id: 'clone-1',
       cover_letter: 'Old letter',
@@ -1304,11 +1374,7 @@ describe('ApplicationService', () => {
       job_company: 'Acme',
       ...baseApplicationSource,
     };
-    repository.findOne.mockResolvedValue(readyRow);
-    repository.update.mockImplementation(async (_user, _id, patch) => ({
-      ...readyRow,
-      ...patch,
-    }));
+    setupStagedUpdateMocks(readyRow);
     mockLiveBaseCv(normalizedRepo);
     cvService.remove.mockResolvedValue(undefined);
     normalizedRepo.assembleFullResume.mockResolvedValue({
@@ -1328,13 +1394,14 @@ describe('ApplicationService', () => {
     await service.updateApplication(user, 'app-1', { message: 'Refresh summary' });
     await flushBackgroundJobs();
 
-    expect(repository.update).toHaveBeenCalledWith(user, 'app-1', { status: 'failed' });
+    expect(repository.update).toHaveBeenCalledWith(user, 'draft-1', { status: 'failed' });
   });
 
   it('ignores missing clone removal during update cleanup', async () => {
     const readyRow = {
       id: 'app-1',
       status: 'ready',
+      job_source_type: 'text',
       job_raw_text: 'Job text',
       tailored_cv_id: 'clone-1',
       cover_letter: 'Old letter',
@@ -1342,11 +1409,7 @@ describe('ApplicationService', () => {
       job_company: 'Acme',
       ...baseApplicationSource,
     };
-    repository.findOne.mockResolvedValue(readyRow);
-    repository.update.mockImplementation(async (_user, _id, patch) => ({
-      ...readyRow,
-      ...patch,
-    }));
+    setupStagedUpdateMocks(readyRow);
     mockLiveBaseCv(normalizedRepo);
     cvService.remove.mockRejectedValue(new NotFoundException('Clone missing'));
     normalizedRepo.assembleFullResume.mockResolvedValue({
@@ -1601,13 +1664,21 @@ describe('ApplicationService', () => {
     const readyRow = {
       id: 'app-1',
       status: 'ready',
+      job_source_type: 'text',
       job_raw_text: 'Job text',
       tailored_cv_id: 'clone-1',
       cover_letter: 'Old letter',
       job_title: 'Engineer',
       job_company: 'Acme',
+      ...baseApplicationSource,
     };
-    repository.findOne.mockResolvedValueOnce(readyRow).mockResolvedValueOnce(null);
+    setupStagedUpdateMocks(readyRow);
+    repository.findOne.mockImplementation(async (_user, id: string) => {
+      if (id === 'app-1') {
+        return readyRow;
+      }
+      return null;
+    });
 
     await service.updateApplication(user, 'app-1', { message: 'Refresh summary' });
     await flushBackgroundJobs();
@@ -1619,6 +1690,7 @@ describe('ApplicationService', () => {
     const readyRow = {
       id: 'app-1',
       status: 'ready',
+      job_source_type: 'text',
       job_raw_text: 'Job text',
       tailored_cv_id: 'clone-1',
       cover_letter: 'Old letter',
@@ -1626,21 +1698,7 @@ describe('ApplicationService', () => {
       job_company: 'Acme',
       ...baseApplicationSource,
     };
-    let applicationStatus: 'ready' | 'queued' | 'running' | 'failed' = 'ready';
-    repository.findOne.mockImplementation(async () => ({
-      ...readyRow,
-      status: applicationStatus,
-      tailored_cv_id: applicationStatus === 'ready' ? 'clone-1' : readyRow.tailored_cv_id,
-    }));
-    repository.update.mockImplementation(async (_user, _id, patch) => {
-      if (patch.status === 'running') {
-        applicationStatus = 'running';
-      }
-      if (patch.status === 'failed') {
-        applicationStatus = 'failed';
-      }
-      return { ...readyRow, ...patch, status: patch.status ?? applicationStatus };
-    });
+    const { draftRow } = setupStagedUpdateMocks(readyRow);
     mockLiveBaseCv(normalizedRepo);
     cvService.remove.mockResolvedValue(undefined);
     normalizedRepo.assembleFullResume.mockResolvedValue({
@@ -1657,9 +1715,8 @@ describe('ApplicationService', () => {
       errors: [],
     });
     cvCloneService.deepClone.mockImplementation(async () => {
-      applicationStatus = 'running';
-      await service.cancel(user, 'app-1');
-      applicationStatus = 'failed';
+      draftRow.status = 'running';
+      await service.cancel(user, 'draft-1');
       return { id: 'clone-2', sourceCvId: 'cv-1' };
     });
 

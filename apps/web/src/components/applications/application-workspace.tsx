@@ -4,6 +4,7 @@ import type { Resume, ResumeProfile } from '@resumind/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, Eye, FileDown, PenLine, Printer, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { ApplicationPrepareActions } from '@/components/applications/application-prepare-actions';
@@ -33,15 +34,39 @@ import { cvKeys } from '@/lib/queries/keys';
 const POLL_MS = 2500;
 
 export function ApplicationWorkspace({ id }: { id: string }) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { data, refetch } = useQuery({
     queryKey: ['application', id],
     queryFn: () => getApplication(id),
     refetchInterval: (query) => {
+      const app = query.state.data;
+      if (!app) return false;
+      if (app.updateInProgress) return POLL_MS;
+      const status = app.status;
+      return status === 'queued' || status === 'running' ? POLL_MS : false;
+    },
+  });
+
+  const updateDraftId = data?.updateDraftId;
+  const { data: updateDraft } = useQuery({
+    queryKey: ['application', updateDraftId],
+    queryFn: () => getApplication(updateDraftId!),
+    enabled: Boolean(updateDraftId),
+    refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status === 'queued' || status === 'running' ? POLL_MS : false;
     },
   });
+
+  useEffect(() => {
+    if (updateDraft?.status !== 'ready' || !updateDraftId) {
+      return;
+    }
+
+    void queryClient.invalidateQueries({ queryKey: ['applications'] });
+    router.replace(`/dashboard/applications/${updateDraftId}`);
+  }, [updateDraft?.status, updateDraftId, queryClient, router]);
   const [letterDraft, setLetterDraft] = useState('');
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -149,8 +174,31 @@ export function ApplicationWorkspace({ id }: { id: string }) {
     );
   }
 
+  const updateFailed = updateDraft?.status === 'failed';
+
   return (
     <div className="space-y-6">
+      {data.updateInProgress ? (
+        <div className="border-border space-y-2 rounded-lg border p-4">
+          <p className="text-sm font-medium">Update in progress</p>
+          <ApplicationPrepareProgressBar
+            progress={updateDraft?.progress}
+            status={updateDraft?.status ?? 'running'}
+            isUpdate
+          />
+          {updateFailed ? (
+            <p className="text-destructive text-sm">
+              {updateDraft.errors?.join('\n') ??
+                'Update failed. Your previous application is unchanged.'}
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              Your current application stays available until the update finishes.
+            </p>
+          )}
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-center gap-4">
         <div className="min-w-0 flex-1 align-middle">
           <h1 className="sr-only">
@@ -158,7 +206,11 @@ export function ApplicationWorkspace({ id }: { id: string }) {
           </h1>
           <ApplicationWorkspaceBreadcrumb jobTitle={data.jobTitle} jobCompany={data.jobCompany} />
         </div>
-        <Button variant="outline" onClick={() => setUpdateOpen(true)}>
+        <Button
+          variant="outline"
+          disabled={data.updateInProgress}
+          onClick={() => setUpdateOpen(true)}
+        >
           <Sparkles className="h-4 w-4" />
           Update
         </Button>

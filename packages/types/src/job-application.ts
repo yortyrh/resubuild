@@ -22,6 +22,10 @@ export interface JobApplicationRow {
   user_message?: string | null;
   intake_source_cv_id?: string | null;
   source_cv_snapshot?: Record<string, unknown> | null;
+  /** Set on staged update drafts; points at the active application being replaced. */
+  source_application_id?: string | null;
+  /** When false, row is hidden from GET /applications listing (staged update draft). */
+  is_list_visible?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -47,6 +51,10 @@ export interface JobApplicationDetail {
   updatedAt: string;
   progress?: string;
   errors?: string[];
+  /** True when a staged update draft is queued or running for this application. */
+  updateInProgress?: boolean;
+  /** Id of the hidden draft while an update is in progress (detail only). */
+  updateDraftId?: string;
 }
 
 function deriveSourceCvTitleFromRow(
@@ -69,7 +77,12 @@ function sanitizeOptionalAiText(value: string | null | undefined): string | null
 
 export function jobApplicationRowToDetail(
   row: JobApplicationRow,
-  extras?: { progress?: string; errors?: string[] },
+  extras?: {
+    progress?: string;
+    errors?: string[];
+    updateInProgress?: boolean;
+    updateDraftId?: string;
+  },
 ): JobApplicationDetail {
   return {
     id: row.id,
@@ -91,5 +104,7 @@ export function jobApplicationRowToDetail(
     updatedAt: row.updated_at,
     progress: extras?.progress,
     errors: extras?.errors,
+    updateInProgress: extras?.updateInProgress,
+    updateDraftId: extras?.updateDraftId,
   };
 }

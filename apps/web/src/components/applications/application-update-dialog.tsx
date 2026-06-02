@@ -53,7 +53,8 @@ export function ApplicationUpdateDialog({
       });
       onOpenChange(false);
       await queryClient.invalidateQueries({ queryKey: ['application', application.id] });
-      toast.success('Regenerating application…');
+      await queryClient.invalidateQueries({ queryKey: ['applications'] });
+      toast.success('Update started — your current application stays visible until it finishes.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Update failed');
     } finally {

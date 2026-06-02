@@ -651,6 +651,8 @@ export interface JobApplicationSummary {
   updatedAt: string;
   progress?: string;
   errors?: string[];
+  updateInProgress?: boolean;
+  updateDraftId?: string;
 }
 
 export function listApplications() {
@@ -704,7 +706,11 @@ export function updateApplicationLetter(id: string, coverLetter: string) {
 }
 
 export function updateApplication(id: string, payload: { message?: string; sourceCvId?: string }) {
-  return apiFetch<{ applicationId: string; status: 'queued' }>(`/applications/${id}/update`, {
+  return apiFetch<{
+    applicationId: string;
+    draftApplicationId?: string;
+    status: 'queued';
+  }>(`/applications/${id}/update`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });

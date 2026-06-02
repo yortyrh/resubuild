@@ -56,20 +56,21 @@ describe('ApplicationRepository', () => {
 
   it('lists applications ordered by updated_at', async () => {
     const rows = [{ id: 'app-2' }, { id: 'app-1' }];
+    const order = jest.fn().mockResolvedValue({ data: rows, error: null });
+    const eq = jest.fn().mockReturnValue({ order });
     supabase.from.mockReturnValue({
-      select: jest.fn().mockReturnValue({
-        order: jest.fn().mockResolvedValue({ data: rows, error: null }),
-      }),
+      select: jest.fn().mockReturnValue({ eq }),
     });
 
     await expect(repository.findAll(user)).resolves.toEqual(rows);
+    expect(eq).toHaveBeenCalledWith('is_list_visible', true);
   });
 
   it('returns empty list when query succeeds with null data', async () => {
+    const order = jest.fn().mockResolvedValue({ data: null, error: null });
+    const eq = jest.fn().mockReturnValue({ order });
     supabase.from.mockReturnValue({
-      select: jest.fn().mockReturnValue({
-        order: jest.fn().mockResolvedValue({ data: null, error: null }),
-      }),
+      select: jest.fn().mockReturnValue({ eq }),
     });
 
     await expect(repository.findAll(user)).resolves.toEqual([]);
@@ -160,10 +161,10 @@ describe('ApplicationRepository', () => {
   });
 
   it('throws when list query fails', async () => {
+    const order = jest.fn().mockResolvedValue({ data: null, error: { message: 'list failed' } });
+    const eq = jest.fn().mockReturnValue({ order });
     supabase.from.mockReturnValue({
-      select: jest.fn().mockReturnValue({
-        order: jest.fn().mockResolvedValue({ data: null, error: { message: 'list failed' } }),
-      }),
+      select: jest.fn().mockReturnValue({ eq }),
     });
 
     await expect(repository.findAll(user)).rejects.toThrow(BadRequestException);
@@ -215,5 +216,89 @@ describe('ApplicationRepository', () => {
     });
 
     await expect(repository.remove(user, 'app-1')).rejects.toThrow(BadRequestException);
+  });
+
+  it('finds active update draft for source application', async () => {
+    const row = { id: 'draft-1', status: 'running' };
+    const maybeSingle = jest.fn().mockResolvedValue({ data: row, error: null });
+    const limit = jest.fn().mockReturnValue({ maybeSingle });
+    const order = jest.fn().mockReturnValue({ limit });
+    const inStatus = jest.fn().mockReturnValue({ order });
+    const eqVisible = jest.fn().mockReturnValue({ in: inStatus });
+    const eqSource = jest.fn().mockReturnValue({ eq: eqVisible });
+    supabase.from.mockReturnValue({
+      select: jest.fn().mockReturnValue({ eq: eqSource }),
+    });
+
+    await expect(repository.findActiveUpdateDraft(user, 'app-1')).resolves.toEqual(row);
+    expect(eqSource).toHaveBeenCalledWith('source_application_id', 'app-1');
+    expect(eqVisible).toHaveBeenCalledWith('is_list_visible', false);
+  });
+
+  it('returns null when no active update draft exists', async () => {
+    const maybeSingle = jest.fn().mockResolvedValue({ data: null, error: null });
+    const limit = jest.fn().mockReturnValue({ maybeSingle });
+    const order = jest.fn().mockReturnValue({ limit });
+    const inStatus = jest.fn().mockReturnValue({ order });
+    const eqVisible = jest.fn().mockReturnValue({ in: inStatus });
+    const eqSource = jest.fn().mockReturnValue({ eq: eqVisible });
+    supabase.from.mockReturnValue({
+      select: jest.fn().mockReturnValue({ eq: eqSource }),
+    });
+
+    await expect(repository.findActiveUpdateDraft(user, 'app-1')).resolves.toBeNull();
+  });
+
+  it('finds dangling update drafts for source application', async () => {
+    const rows = [{ id: 'draft-1' }, { id: 'draft-2' }];
+    const eqVisible = jest.fn().mockResolvedValue({ data: rows, error: null });
+    const eqSource = jest.fn().mockReturnValue({ eq: eqVisible });
+    supabase.from.mockReturnValue({
+      select: jest.fn().mockReturnValue({ eq: eqSource }),
+    });
+
+    await expect(repository.findDanglingUpdateDrafts(user, 'app-1')).resolves.toEqual(rows);
+  });
+
+  it('returns empty list when dangling draft query succeeds with null data', async () => {
+    const eqVisible = jest.fn().mockResolvedValue({ data: null, error: null });
+    const eqSource = jest.fn().mockReturnValue({ eq: eqVisible });
+    supabase.from.mockReturnValue({
+      select: jest.fn().mockReturnValue({ eq: eqSource }),
+    });
+
+    await expect(repository.findDanglingUpdateDrafts(user, 'app-1')).resolves.toEqual([]);
+  });
+
+  it('throws when findActiveUpdateDraft query fails', async () => {
+    const maybeSingle = jest
+      .fn()
+      .mockResolvedValue({ data: null, error: { message: 'draft lookup failed' } });
+    const limit = jest.fn().mockReturnValue({ maybeSingle });
+    const order = jest.fn().mockReturnValue({ limit });
+    const inStatus = jest.fn().mockReturnValue({ order });
+    const eqVisible = jest.fn().mockReturnValue({ in: inStatus });
+    const eqSource = jest.fn().mockReturnValue({ eq: eqVisible });
+    supabase.from.mockReturnValue({
+      select: jest.fn().mockReturnValue({ eq: eqSource }),
+    });
+
+    await expect(repository.findActiveUpdateDraft(user, 'app-1')).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('throws when findDanglingUpdateDrafts query fails', async () => {
+    const eqVisible = jest
+      .fn()
+      .mockResolvedValue({ data: null, error: { message: 'dangling lookup failed' } });
+    const eqSource = jest.fn().mockReturnValue({ eq: eqVisible });
+    supabase.from.mockReturnValue({
+      select: jest.fn().mockReturnValue({ eq: eqSource }),
+    });
+
+    await expect(repository.findDanglingUpdateDrafts(user, 'app-1')).rejects.toThrow(
+      BadRequestException,
+    );
   });
 });

@@ -129,7 +129,11 @@ describe('ApplicationController', () => {
   it('delegates cancel and retry to service', async () => {
     service.cancel.mockResolvedValue({ id: 'app-1', status: 'failed' } as never);
     service.retry.mockResolvedValue({ applicationId: 'app-1', status: 'queued' });
-    service.updateApplication.mockResolvedValue({ applicationId: 'app-1', status: 'queued' });
+    service.updateApplication.mockResolvedValue({
+      applicationId: 'app-1',
+      draftApplicationId: 'draft-1',
+      status: 'queued',
+    });
     service.promoteClone.mockResolvedValue({ id: 'app-1', status: 'ready' } as never);
 
     await expect(controller.cancel(req, 'app-1')).resolves.toEqual({
@@ -142,6 +146,7 @@ describe('ApplicationController', () => {
     });
     await expect(controller.updateApplication(req, 'app-1', {})).resolves.toEqual({
       applicationId: 'app-1',
+      draftApplicationId: 'draft-1',
       status: 'queued',
     });
     await expect(controller.promoteClone(req, 'app-1')).resolves.toEqual({

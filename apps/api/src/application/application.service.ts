@@ -171,10 +171,29 @@ export class ApplicationService {
       this.prepareStore.clearCancelled(id);
       this.prepareStore.update(id, { progress: undefined, errors: [] });
 
+      const draft = await this.repository.create(user, {
+        status: 'queued',
+        job_source_type: row.job_source_type ?? 'text',
+        user_message: row.user_message,
+        intake_source_cv_id: row.intake_source_cv_id ?? null,
+        source_application_id: id,
+        is_list_visible: false,
+        job_title: row.job_title,
+        job_company: row.job_company,
+        job_raw_text: row.job_raw_text,
+        source_cv_id: row.source_cv_id,
+        source_cv_snapshot: row.source_cv_snapshot,
+        cover_letter: row.cover_letter,
+        cover_letter_email_subject: row.cover_letter_email_subject,
+        selection_rationale: row.selection_rationale,
+      });
+      this.prepareStore.init(draft.id, user.id);
+
       setImmediate(() => {
         void this.runUpdateJob(
           user,
-          id,
+          draft.id,
+          row,
           {
             message: row.user_message ?? undefined,
           },
@@ -226,12 +245,16 @@ export class ApplicationService {
     }
 
     const state = this.prepareStore.get(id, user.id);
+    const activeDraft =
+      row.is_list_visible !== false ? await this.repository.findActiveUpdateDraft(user, id) : null;
     const coverLetter = await this.enrichCoverLetter(user, row);
     const detail = jobApplicationRowToDetail(
       { ...row, cover_letter: coverLetter },
       {
         progress: state?.progress,
         errors: state?.errors,
+        updateInProgress: activeDraft != null,
+        updateDraftId: activeDraft?.id,
       },
     );
 
@@ -301,14 +324,36 @@ export class ApplicationService {
     }
 
     const llmConfig = await this.aiAgentCredentialService.getActiveCredentials(user);
-    await this.repository.update(user, id, { status: 'queued' });
-    this.prepareStore.init(id, user.id);
+    await this.removeDanglingUpdateDrafts(user, id);
 
-    setImmediate(() => {
-      void this.runUpdateJob(user, id, intake, llmConfig.modelId, llmConfig.apiKey);
+    const draft = await this.repository.create(user, {
+      status: 'queued',
+      job_source_type: row.job_source_type ?? 'text',
+      user_message: intake.message ?? row.user_message ?? null,
+      intake_source_cv_id: row.intake_source_cv_id ?? null,
+      source_application_id: id,
+      is_list_visible: false,
+      job_title: row.job_title,
+      job_company: row.job_company,
+      job_raw_text: row.job_raw_text,
+      source_cv_id: row.source_cv_id,
+      source_cv_snapshot: row.source_cv_snapshot,
+      cover_letter: row.cover_letter,
+      cover_letter_email_subject: row.cover_letter_email_subject,
+      selection_rationale: row.selection_rationale,
     });
 
-    return { applicationId: id, status: 'queued' as const };
+    this.prepareStore.init(draft.id, user.id);
+
+    setImmediate(() => {
+      void this.runUpdateJob(user, draft.id, row, intake, llmConfig.modelId, llmConfig.apiKey);
+    });
+
+    return {
+      applicationId: id,
+      draftApplicationId: draft.id,
+      status: 'queued' as const,
+    };
   }
 
   async getCoverLetterMarkdown(user: AuthenticatedRequest['user'], id: string): Promise<string> {
@@ -363,7 +408,16 @@ export class ApplicationService {
       throw new NotFoundException('Application not found');
     }
 
-    const tailoredCvId = row.tailored_cv_id;
+    if (row.is_list_visible === false && row.source_application_id) {
+      await this.removeApplicationWithClone(user, row);
+      return;
+    }
+
+    const drafts = await this.repository.findDanglingUpdateDrafts(user, id);
+    for (const draft of drafts) {
+      await this.removeApplicationWithClone(user, draft);
+    }
+
     const removed = await this.repository.remove(user, id);
     if (!removed) {
       throw new NotFoundException('Application not found');
@@ -371,9 +425,9 @@ export class ApplicationService {
 
     this.prepareStore.delete(id);
 
-    if (tailoredCvId) {
+    if (row.tailored_cv_id) {
       try {
-        await this.cvService.remove(user, tailoredCvId);
+        await this.cvService.remove(user, row.tailored_cv_id);
       } catch (error) {
         if (!(error instanceof NotFoundException)) {
           throw error;
@@ -705,53 +759,112 @@ export class ApplicationService {
     };
   }
 
+  private async removeDanglingUpdateDrafts(
+    user: AuthenticatedRequest['user'],
+    sourceApplicationId: string,
+  ): Promise<void> {
+    const drafts = await this.repository.findDanglingUpdateDrafts(user, sourceApplicationId);
+    for (const draft of drafts) {
+      await this.removeApplicationWithClone(user, draft);
+    }
+  }
+
+  private async removeApplicationWithClone(
+    user: AuthenticatedRequest['user'],
+    row: JobApplicationRow,
+  ): Promise<void> {
+    const tailoredCvId = row.tailored_cv_id;
+    await this.repository.remove(user, row.id);
+    this.prepareStore.delete(row.id);
+
+    if (tailoredCvId) {
+      try {
+        await this.cvService.remove(user, tailoredCvId);
+      } catch (error) {
+        if (!(error instanceof NotFoundException)) {
+          throw error;
+        }
+      }
+    }
+  }
+
+  private async completeUpdateSwap(
+    user: AuthenticatedRequest['user'],
+    draft: JobApplicationRow,
+    original: JobApplicationRow,
+  ): Promise<void> {
+    if (draft.source_application_id !== original.id) {
+      throw new BadRequestException('Update draft does not match the original application');
+    }
+
+    const activated = await this.repository.update(user, draft.id, {
+      is_list_visible: true,
+      source_application_id: null,
+    });
+    if (!activated) {
+      throw new NotFoundException('Update draft not found');
+    }
+
+    const originalTailoredCvId = original.tailored_cv_id;
+    const removed = await this.repository.remove(user, original.id);
+    if (!removed) {
+      throw new NotFoundException('Original application not found');
+    }
+
+    this.prepareStore.delete(original.id);
+
+    if (originalTailoredCvId) {
+      try {
+        await this.cvService.remove(user, originalTailoredCvId);
+      } catch (error) {
+        if (!(error instanceof NotFoundException)) {
+          throw error;
+        }
+      }
+    }
+  }
+
   private async runUpdateJob(
     user: AuthenticatedRequest['user'],
-    applicationId: string,
+    draftApplicationId: string,
+    originalRow: JobApplicationRow,
     intake: UpdateApplicationIntake,
     modelId: string,
     apiKey: string,
   ): Promise<void> {
-    if (this.prepareStore.isCancelled(applicationId)) {
+    if (this.prepareStore.isCancelled(draftApplicationId)) {
       return;
     }
 
-    const row = await this.repository.findOne(user, applicationId);
-    if (!row?.tailored_cv_id) {
+    const draftRow = await this.repository.findOne(user, draftApplicationId);
+    if (!draftRow) {
+      return;
+    }
+
+    const sourceTailoredCvId = originalRow.tailored_cv_id;
+    if (!sourceTailoredCvId) {
+      await this.repository.update(user, draftApplicationId, { status: 'failed' });
+      this.prepareStore.update(draftApplicationId, { errors: ['Tailored CV not found'] });
       return;
     }
 
     const supabase = this.normalizedRepo.createClientForUser(user);
     const currentResume = await this.normalizedRepo.assembleFullResume(
       supabase,
-      row.tailored_cv_id,
+      sourceTailoredCvId,
     );
     if (!currentResume) {
-      await this.repository.update(user, applicationId, { status: 'failed' });
-      this.prepareStore.update(applicationId, { errors: ['Tailored CV not found'] });
+      await this.repository.update(user, draftApplicationId, { status: 'failed' });
+      this.prepareStore.update(draftApplicationId, { errors: ['Tailored CV not found'] });
       return;
     }
 
-    const currentCoverLetter = row.cover_letter ?? '';
-    const oldCloneId = row.tailored_cv_id;
+    const currentCoverLetter = originalRow.cover_letter ?? '';
 
-    await this.repository.update(user, applicationId, {
-      status: 'running',
-      cover_letter: null,
-      cover_letter_email_subject: null,
-      tailored_cv_id: null,
-    });
+    await this.repository.update(user, draftApplicationId, { status: 'running' });
 
     try {
-      await this.cvService.remove(user, oldCloneId);
-    } catch (error) {
-      if (!(error instanceof NotFoundException)) {
-        throw error;
-      }
-    }
-
-    try {
-      const resolvedSource = await this.resolveApplicationSourceForRegeneration(user, row);
+      const resolvedSource = await this.resolveApplicationSourceForRegeneration(user, originalRow);
       if (!resolvedSource) {
         throw new BadRequestException(
           'Cannot regenerate this application because its base CV is no longer available.',
@@ -760,8 +873,8 @@ export class ApplicationService {
 
       const cvSummaries = [resolvedSource.cvSummary];
       const accountDisplayName = await this.resolveAccountDisplayName(user);
-      const jobRawText = row.job_raw_text!.trim();
-      const jobSummary = this.buildJobSummaryFromRow(row);
+      const jobRawText = originalRow.job_raw_text!.trim();
+      const jobSummary = this.buildJobSummaryFromRow(originalRow);
 
       const result = await this.withScopedApiKey(modelId, apiKey, async () =>
         runUpdateApplicationWorkflow({
@@ -776,13 +889,13 @@ export class ApplicationService {
           modelId,
           apiKey,
           onProgress: (progress: PrepareApplicationProgress) => {
-            if (this.prepareStore.isCancelled(applicationId)) return;
-            this.prepareStore.update(applicationId, { progress });
+            if (this.prepareStore.isCancelled(draftApplicationId)) return;
+            this.prepareStore.update(draftApplicationId, { progress });
           },
         }),
       );
 
-      if (this.prepareStore.isCancelled(applicationId)) {
+      if (this.prepareStore.isCancelled(draftApplicationId)) {
         return;
       }
 
@@ -790,13 +903,13 @@ export class ApplicationService {
         throw new Error(result.errors[0] ?? 'Update workflow failed');
       }
 
-      this.prepareStore.update(applicationId, { progress: 'finalizing' });
+      this.prepareStore.update(draftApplicationId, { progress: 'finalizing' });
 
       const clone = await this.createTailoredClone(user, resolvedSource, result.sourceCvId);
 
       await this.applyTailorPatch(user, clone.id, result.tailorPatch);
 
-      if (this.prepareStore.isCancelled(applicationId)) {
+      if (this.prepareStore.isCancelled(draftApplicationId)) {
         try {
           await this.cvService.remove(user, clone.id);
         } catch (error) {
@@ -813,9 +926,9 @@ export class ApplicationService {
         result.sourceCvId,
       );
 
-      await this.repository.update(user, applicationId, {
+      const draftReady = await this.repository.update(user, draftApplicationId, {
         status: 'ready',
-        source_cv_id: resolvedSource.liveSourceCvId ?? row.source_cv_id,
+        source_cv_id: resolvedSource.liveSourceCvId ?? originalRow.source_cv_id,
         source_cv_snapshot: sourceCvSnapshot as unknown as Record<string, unknown>,
         tailored_cv_id: clone.id,
         cover_letter: result.coverLetter,
@@ -823,13 +936,20 @@ export class ApplicationService {
         selection_rationale: resolvedSource.fromSnapshot
           ? sanitizeAiTypography(`${result.selectionRationale} (using saved base CV copy)`)
           : result.selectionRationale,
-        user_message: intake.message ?? null,
-        intake_source_cv_id: resolvedSource.liveSourceCvId ?? row.intake_source_cv_id ?? null,
+        user_message: intake.message ?? originalRow.user_message ?? null,
+        intake_source_cv_id:
+          resolvedSource.liveSourceCvId ?? originalRow.intake_source_cv_id ?? null,
       });
 
-      this.prepareStore.update(applicationId, { progress: 'finalizing', errors: [] });
+      if (!draftReady) {
+        throw new NotFoundException('Update draft not found');
+      }
+
+      await this.completeUpdateSwap(user, draftReady, originalRow);
+
+      this.prepareStore.update(draftApplicationId, { progress: 'finalizing', errors: [] });
     } catch (error) {
-      if (this.prepareStore.isCancelled(applicationId)) {
+      if (this.prepareStore.isCancelled(draftApplicationId)) {
         return;
       }
 
@@ -837,8 +957,8 @@ export class ApplicationService {
       const errors = /auth|api key|401|403/i.test(message)
         ? ['Update failed. Update your AI agent settings and verify the API key.']
         : [message];
-      await this.repository.update(user, applicationId, { status: 'failed' });
-      this.prepareStore.update(applicationId, { errors });
+      await this.repository.update(user, draftApplicationId, { status: 'failed' });
+      this.prepareStore.update(draftApplicationId, { errors });
     }
   }
 
