@@ -103,6 +103,7 @@ describe('SupabaseAuthGuard', () => {
       id: 'uuid-123',
       email: 'me@test.com',
       accessToken: 'good.token.part',
+      authMethod: 'jwt',
     });
   });
 });

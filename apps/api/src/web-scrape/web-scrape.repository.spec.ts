@@ -13,11 +13,11 @@ describe('WebScrapeRepository', () => {
   const encryptionKey = 'encryption-key-at-least-32-characters-long';
 
   let repository: WebScrapeRepository;
-  let normalizedRepo: { createUserClient: jest.Mock };
+  let normalizedRepo: { createClientForUser: jest.Mock };
   let configService: { get: jest.Mock };
 
   beforeEach(() => {
-    normalizedRepo = { createUserClient: jest.fn() };
+    normalizedRepo = { createClientForUser: jest.fn() };
     configService = {
       get: jest.fn().mockReturnValue(encryptionKey),
     };
@@ -25,7 +25,7 @@ describe('WebScrapeRepository', () => {
   });
 
   it('returns unconfigured status when row is missing', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -41,7 +41,7 @@ describe('WebScrapeRepository', () => {
   it('returns configured status when api key decrypts', async () => {
     const encrypted = encryptSecret('fc-test-key', encryptionKey);
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -66,7 +66,7 @@ describe('WebScrapeRepository', () => {
   });
 
   it('marks reconfiguration required when api key cannot decrypt', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -92,7 +92,7 @@ describe('WebScrapeRepository', () => {
   });
 
   it('throws when getStatus query fails', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -110,7 +110,7 @@ describe('WebScrapeRepository', () => {
   it('throws when encryption key is missing', async () => {
     configService.get.mockReturnValue(undefined);
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -131,7 +131,7 @@ describe('WebScrapeRepository', () => {
   });
 
   it('saves encrypted config', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         upsert: jest.fn().mockReturnValue({
           select: jest.fn().mockReturnValue({
@@ -152,7 +152,7 @@ describe('WebScrapeRepository', () => {
   });
 
   it('throws when save fails', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         upsert: jest.fn().mockReturnValue({
           select: jest.fn().mockReturnValue({
@@ -170,7 +170,7 @@ describe('WebScrapeRepository', () => {
   });
 
   it('clears config', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         delete: jest.fn().mockReturnValue({
           eq: jest.fn().mockResolvedValue({ error: null }),
@@ -182,7 +182,7 @@ describe('WebScrapeRepository', () => {
   });
 
   it('throws when clear fails', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         delete: jest.fn().mockReturnValue({
           eq: jest.fn().mockResolvedValue({ error: { message: 'delete failed' } }),
@@ -194,7 +194,7 @@ describe('WebScrapeRepository', () => {
   });
 
   it('returns null when decrypted config row is missing', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -210,7 +210,7 @@ describe('WebScrapeRepository', () => {
   it('returns decrypted config when row decrypts', async () => {
     const encrypted = encryptSecret('tv-test-key', encryptionKey);
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -230,7 +230,7 @@ describe('WebScrapeRepository', () => {
   });
 
   it('returns null when decrypted config cannot decrypt', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -247,7 +247,7 @@ describe('WebScrapeRepository', () => {
   });
 
   it('throws when getDecryptedConfig query fails', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({

@@ -11,11 +11,11 @@ describe('AiAgentRepository', () => {
   } as AuthenticatedRequest['user'];
 
   let repository: AiAgentRepository;
-  let normalizedRepo: { createUserClient: jest.Mock };
+  let normalizedRepo: { createClientForUser: jest.Mock };
   let configService: { get: jest.Mock };
 
   beforeEach(() => {
-    normalizedRepo = { createUserClient: jest.fn() };
+    normalizedRepo = { createClientForUser: jest.fn() };
     configService = {
       get: jest.fn().mockReturnValue('encryption-key-at-least-32-characters-long'),
     };
@@ -23,7 +23,7 @@ describe('AiAgentRepository', () => {
   });
 
   it('returns unconfigured active status when preference is missing', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -41,7 +41,7 @@ describe('AiAgentRepository', () => {
     const encrypted = encryptSecret('sk-test', encryptionKey);
     const accountId = 'acc-1';
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -92,7 +92,7 @@ describe('AiAgentRepository', () => {
   });
 
   it('throws when account is not found', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -111,7 +111,7 @@ describe('AiAgentRepository', () => {
 
   it('throws when encryption key is missing on create', async () => {
     configService.get.mockReturnValue(undefined);
-    normalizedRepo.createUserClient.mockReturnValue({ from: jest.fn() });
+    normalizedRepo.createClientForUser.mockReturnValue({ from: jest.fn() });
 
     await expect(
       repository.createAccount(user, {
@@ -126,7 +126,7 @@ describe('AiAgentRepository', () => {
     const encrypted = encryptSecret('sk-test', encryptionKey);
     const accountId = 'acc-1';
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -179,7 +179,7 @@ describe('AiAgentRepository', () => {
     const accountId = 'acc-new';
     const upsert = jest.fn().mockResolvedValue({ error: null });
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -240,7 +240,7 @@ describe('AiAgentRepository', () => {
       updated_at: '2026-01-01T00:00:00.000Z',
     };
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -307,7 +307,7 @@ describe('AiAgentRepository', () => {
       updated_at: '2026-01-01T00:00:00.000Z',
     };
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -346,7 +346,7 @@ describe('AiAgentRepository', () => {
     const encrypted = encryptSecret('sk-test', encryptionKey);
     const accountId = 'acc-1';
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -397,7 +397,7 @@ describe('AiAgentRepository', () => {
   it('returns unconfigured status when active account row is missing', async () => {
     const accountId = 'missing-active';
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -433,7 +433,7 @@ describe('AiAgentRepository', () => {
     const accountId = 'acc-1';
     const wrongKeyEncrypted = encryptSecret('sk-test', 'different-encryption-key-32-chars-min!!');
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -481,7 +481,7 @@ describe('AiAgentRepository', () => {
     const accountId = 'acc-1';
     const wrongKeyEncrypted = encryptSecret('sk-test', 'different-encryption-key-32-chars-min!!');
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -532,7 +532,7 @@ describe('AiAgentRepository', () => {
   });
 
   it('throws BadRequestException when supabase returns errors', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -550,7 +550,7 @@ describe('AiAgentRepository', () => {
     const activeId = 'acc-active';
     const newId = 'acc-new';
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -611,7 +611,7 @@ describe('AiAgentRepository', () => {
       updated_at: '2026-01-01T00:00:00.000Z',
     };
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -664,7 +664,7 @@ describe('AiAgentRepository', () => {
   });
 
   it('throws when listAccounts query fails', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -690,7 +690,7 @@ describe('AiAgentRepository', () => {
   });
 
   it('throws when account lookup query fails', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -710,7 +710,7 @@ describe('AiAgentRepository', () => {
   });
 
   it('throws when create insert fails', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -757,7 +757,7 @@ describe('AiAgentRepository', () => {
       updated_at: '2026-01-01T00:00:00.000Z',
     };
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -783,7 +783,7 @@ describe('AiAgentRepository', () => {
     const accountId = 'acc-1';
     const wrongKeyEncrypted = encryptSecret('sk-test', 'different-encryption-key-32-chars-min!!');
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -811,7 +811,7 @@ describe('AiAgentRepository', () => {
   });
 
   it('throws when updateAccount receives a database error', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn(() => ({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -853,7 +853,7 @@ describe('AiAgentRepository', () => {
   });
 
   it('throws NotFoundException when updateAccount returns no row', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn(() => ({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -893,7 +893,7 @@ describe('AiAgentRepository', () => {
 
   it('throws when setting active account preference fails', async () => {
     const accountId = 'acc-1';
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -936,7 +936,7 @@ describe('AiAgentRepository', () => {
   });
 
   it('returns null decrypted active account when active row is missing', async () => {
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
@@ -970,7 +970,7 @@ describe('AiAgentRepository', () => {
     const accountId = 'acc-1';
     const wrongKeyEncrypted = encryptSecret('sk-test', 'different-encryption-key-32-chars-min!!');
 
-    normalizedRepo.createUserClient.mockReturnValue({
+    normalizedRepo.createClientForUser.mockReturnValue({
       from: jest.fn((table: string) => {
         if (table === 'ai_agent_preference') {
           return {
