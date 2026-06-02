@@ -1,19 +1,16 @@
-export interface McpApiKeySummary {
-  id: string;
-  label: string | null;
+export interface McpApiKey {
   keyPrefix: string;
   createdAt: string;
   lastUsedAt: string | null;
-  revoked: boolean;
 }
 
 export interface McpSettingsResponse {
   mcpEnabled: boolean;
-  keys: McpApiKeySummary[];
+  key: McpApiKey | null;
 }
 
 export interface McpCreateKeyResponse {
-  key: McpApiKeySummary;
+  key: McpApiKey;
   secret: string;
 }
 
@@ -21,6 +18,4 @@ export interface McpPatchSettingsBody {
   mcpEnabled?: boolean;
 }
 
-export interface McpCreateKeyBody {
-  label?: string | null;
-}
+export type McpCreateKeyBody = {};

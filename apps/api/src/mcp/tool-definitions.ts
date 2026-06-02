@@ -17,6 +17,9 @@ export const MCP_TOOL_NAMES = [
   'get_application',
   'update_application',
   'update_application_letter',
+  'list_media',
+  'get_media_url',
+  'delete_media',
 ] as const;
 
 export type McpToolName = (typeof MCP_TOOL_NAMES)[number];
@@ -110,6 +113,22 @@ export const MCP_TOOL_DEFINITIONS: Record<
   update_application_letter: {
     description:
       'Update the cover letter markdown for a job application. Use get_application first to read the current letter. Does not trigger AI rewrites—only replaces stored markdown.',
+  },
+  list_media: {
+    description:
+      'List all media files uploaded by the user. Returns id, contentType, createdAt, and viewer URL for each file. Use to find mediaId values.',
+    readOnlyHint: true,
+  },
+  get_media_url: {
+    description:
+      'Get the viewer URL and metadata for a specific media file by its id. The URL can be used to embed the file (images, PDFs) in documents or responses.',
+    readOnlyHint: true,
+    destructiveHint: false,
+  },
+  delete_media: {
+    description:
+      'Permanently delete a media file and all its storage objects (original, cropped, thumbnail). This cannot be undone.',
+    destructiveHint: true,
   },
 };
 

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,15 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   createMcpApiKey,
   getMcpSettings,
-  type McpApiKeySummary,
+  type McpApiKey,
   type McpSettingsResponse,
   patchMcpSettings,
-  revokeMcpApiKey,
 } from '@/lib/api';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -33,11 +31,8 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
   const [settings, setSettings] = useState<McpSettingsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [newLabel, setNewLabel] = useState('');
+  const [rotateOpen, setRotateOpen] = useState(false);
   const [createdSecret, setCreatedSecret] = useState<string | null>(null);
-  const [revokeTarget, setRevokeTarget] = useState<McpApiKeySummary | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -76,7 +71,7 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
     try {
       const data = await patchMcpSettings({ mcpEnabled: enabled });
       setSettings(data);
-      setSuccess(enabled ? 'MCP access enabled.' : 'MCP access disabled.');
+      toast.success(enabled ? 'MCP access enabled.' : 'MCP access disabled.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update MCP settings');
     } finally {
@@ -84,38 +79,19 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
     }
   };
 
-  const handleCreateKey = async () => {
+  const handleRotate = async () => {
     setBusy(true);
     setError(null);
     try {
-      const result = await createMcpApiKey({ label: newLabel.trim() || undefined });
+      const result = await createMcpApiKey();
       setCreatedSecret(result.secret);
       setSettings((prev) =>
-        prev
-          ? { ...prev, keys: [result.key, ...prev.keys] }
-          : { mcpEnabled: false, keys: [result.key] },
+        prev ? { ...prev, key: result.key } : { mcpEnabled: false, key: result.key },
       );
-      setCreateOpen(false);
-      setNewLabel('');
-      setSuccess('API key created. Copy it now — it will not be shown again.');
+      setRotateOpen(false);
+      toast.success('Key rotated. Copy the new key — it will not be shown again.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create API key');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleRevoke = async () => {
-    if (!revokeTarget) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const data = await revokeMcpApiKey(revokeTarget.id);
-      setSettings(data);
-      setRevokeTarget(null);
-      setSuccess('API key revoked.');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to revoke key');
+      setError(err instanceof Error ? err.message : 'Failed to rotate API key');
     } finally {
       setBusy(false);
     }
@@ -143,8 +119,7 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
         </p>
       </div>
 
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
-      {success ? <p className="text-sm text-green-700">{success}</p> : null}
+      {error ? <p className="text-destructive min-h-[1.25rem] text-sm">{error}</p> : null}
 
       <div className="space-y-3 rounded-lg border p-4">
         <div className="flex items-center justify-between gap-4">
@@ -167,41 +142,34 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
 
       <div className="space-y-3 rounded-lg border p-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-medium">API keys</h2>
-          <Button type="button" size="sm" onClick={() => setCreateOpen(true)} disabled={busy}>
-            Create key
-          </Button>
+          <h2 className="font-medium">API key</h2>
+          {settings?.key ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setRotateOpen(true)}
+              disabled={busy}
+            >
+              Rotate key
+            </Button>
+          ) : null}
         </div>
-        <p className="text-muted-foreground text-sm">You can have up to two active keys.</p>
-        {(settings?.keys ?? []).length === 0 ? (
-          <p className="text-muted-foreground text-sm">No keys yet.</p>
+        {settings?.key ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+            <div>
+              <p className="font-medium">Your key</p>
+              <p className="text-muted-foreground font-mono text-xs">
+                {settings.key.keyPrefix}… · created{' '}
+                {new Date(settings.key.createdAt).toLocaleDateString()}
+                {settings.key.lastUsedAt
+                  ? ` · last used ${new Date(settings.key.lastUsedAt).toLocaleDateString()}`
+                  : ''}
+              </p>
+            </div>
+          </div>
         ) : (
-          <ul className="space-y-2">
-            {(settings?.keys ?? []).map((key) => (
-              <li
-                key={key.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
-              >
-                <div>
-                  <p className="font-medium">{key.label ?? 'Unlabeled key'}</p>
-                  <p className="text-muted-foreground font-mono text-xs">
-                    {key.keyPrefix}… · {key.revoked ? 'revoked' : 'active'}
-                  </p>
-                </div>
-                {!key.revoked ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setRevokeTarget(key)}
-                    disabled={busy}
-                  >
-                    Revoke
-                  </Button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <p className="text-muted-foreground text-sm">No key created yet.</p>
         )}
       </div>
 
@@ -225,59 +193,31 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
       <div className="space-y-2 rounded-lg border p-4">
         <h2 className="font-medium">Client configuration</h2>
         <p className="text-muted-foreground text-sm">
-          Add this to your MCP client config (replace the bearer token with a key you created
-          above).
+          Add this to your MCP client config (replace the bearer token with your key).
         </p>
         <pre className="bg-muted overflow-x-auto rounded-md p-3 text-xs">{clientConfigSnippet}</pre>
       </div>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={rotateOpen} onOpenChange={setRotateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create MCP API key</DialogTitle>
+            <DialogTitle>Rotate API key?</DialogTitle>
             <DialogDescription>
-              Generate a bearer token for your MCP client. You can only view the full key once.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="mcp-key-label">Label (optional)</Label>
-            <Input
-              id="mcp-key-label"
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              placeholder="Cursor laptop"
-            />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={() => void handleCreateKey()} disabled={busy}>
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={revokeTarget != null} onOpenChange={(open) => !open && setRevokeTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Revoke API key?</DialogTitle>
-            <DialogDescription>
-              Clients using this key will stop working immediately.
+              Your current key will be immediately invalidated. Clients using it will stop working.
+              Create a new key and update your MCP client config.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setRevokeTarget(null)}>
+            <Button type="button" variant="outline" onClick={() => setRotateOpen(false)}>
               Cancel
             </Button>
             <Button
               type="button"
               variant="destructive"
-              onClick={() => void handleRevoke()}
+              onClick={() => void handleRotate()}
               disabled={busy}
             >
-              Revoke
+              Rotate
             </Button>
           </DialogFooter>
         </DialogContent>

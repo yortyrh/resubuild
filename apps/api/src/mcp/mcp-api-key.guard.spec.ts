@@ -44,12 +44,11 @@ describe('McpApiKeyGuard', () => {
     repo.findActiveKeyBySecret.mockResolvedValue({
       id: 'k1',
       user_id: 'u1',
-      label: null,
       key_prefix: 'rm_abc',
       key_hash: 'h',
+      encrypted_secret: 'enc',
       created_at: '',
       last_used_at: null,
-      revoked_at: null,
     });
     repo.isMcpEnabledForUser.mockResolvedValue(false);
     await expect(guard.canActivate(contextWithAuth('Bearer rm_valid'))).rejects.toThrow(
@@ -61,12 +60,11 @@ describe('McpApiKeyGuard', () => {
     repo.findActiveKeyBySecret.mockResolvedValue({
       id: 'k1',
       user_id: 'u1',
-      label: null,
       key_prefix: 'rm_abc',
       key_hash: 'h',
+      encrypted_secret: 'enc',
       created_at: '',
       last_used_at: null,
-      revoked_at: null,
     });
     repo.isMcpEnabledForUser.mockResolvedValue(true);
 

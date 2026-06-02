@@ -81,7 +81,7 @@ export class MediaService implements OnModuleInit {
     return `http://localhost:${port}`;
   }
 
-  private viewerUrlForId(mediaId: string): string {
+  public viewerUrlForId(mediaId: string): string {
     return `${this.viewerBaseUrl()}/media/${mediaId}`;
   }
 
@@ -570,5 +570,31 @@ export class MediaService implements OnModuleInit {
       crop: row.crop ?? null,
       hasCropped: !!row.cropped_storage_path,
     };
+  }
+
+  /**
+   * List all media rows for a given user (for MCP resource listing).
+   */
+  async listMediaForUser(
+    userId: string,
+  ): Promise<Array<{ id: string; contentType: string; createdAt: string }>> {
+    const supabase = this.ensureClient();
+
+    const { data, error } = await supabase
+      .from('media')
+      .select('id, content_type, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      this.logger.error(`Media list failed: ${error.message}`);
+      throw new BadRequestException(error.message);
+    }
+
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      contentType: row.content_type ?? 'application/octet-stream',
+      createdAt: row.created_at ?? '',
+    }));
   }
 }

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { encryptSecret, tryDecryptSecret } from '../ai-agent/ai-agent-crypto.util';
 import type { AuthUser } from '../auth/auth-user.types';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
 import {
@@ -13,12 +14,11 @@ import {
 export interface McpApiKeyRow {
   id: string;
   user_id: string;
-  label: string | null;
   key_prefix: string;
   key_hash: string;
+  encrypted_secret: string;
   created_at: string;
   last_used_at: string | null;
-  revoked_at: string | null;
 }
 
 export interface McpUserSettingsRow {
@@ -43,6 +43,17 @@ export class McpKeyRepository {
       throw new Error('MCP_KEY_PEPPER or SUPABASE_SERVICE_ROLE_KEY must be configured');
     }
     return pepper;
+  }
+
+  private encryptionKey(): string {
+    const key =
+      this.configService.get<string>('MCP_ENCRYPTION_KEY') ??
+      this.configService.get<string>('AI_AGENT_ENCRYPTION_KEY') ??
+      this.configService.get<string>('IMPORT_LLM_CONFIG_ENCRYPTION_KEY');
+    if (!key) {
+      throw new Error('MCP_ENCRYPTION_KEY or AI_AGENT_ENCRYPTION_KEY must be configured');
+    }
+    return key;
   }
 
   private userClient(user: AuthUser) {
@@ -114,42 +125,38 @@ export class McpKeyRepository {
     return Boolean(data?.mcp_enabled);
   }
 
-  async listKeys(user: AuthUser): Promise<McpApiKeyRow[]> {
+  async getKey(user: AuthUser): Promise<McpApiKeyRow | null> {
     const supabase = this.userClient(user);
     const { data, error } = await supabase
       .from('mcp_api_key')
       .select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      .limit(1)
+      .maybeSingle();
 
     if (error) {
       throw new BadRequestException(error.message);
     }
 
-    return (data ?? []) as McpApiKeyRow[];
+    return (data ?? null) as McpApiKeyRow | null;
   }
 
-  async countActiveKeys(user: AuthUser): Promise<number> {
-    const keys = await this.listKeys(user);
-    return keys.filter((k) => !k.revoked_at).length;
-  }
+  async createKey(user: AuthUser): Promise<{ row: McpApiKeyRow; secret: string }> {
+    await this.userClient(user).from('mcp_api_key').delete().eq('user_id', user.id);
 
-  async createKey(
-    user: AuthUser,
-    label: string | null,
-  ): Promise<{ row: McpApiKeyRow; secret: string }> {
     const secret = generateMcpApiKeySecret();
     const keyHash = hashMcpApiKey(secret, this.pepper());
     const keyPrefix = mcpKeyDisplayPrefix(secret);
+    const encryptedSecret = encryptSecret(secret, this.encryptionKey());
 
     const supabase = this.userClient(user);
     const { data, error } = await supabase
       .from('mcp_api_key')
       .insert({
         user_id: user.id,
-        label,
         key_prefix: keyPrefix,
         key_hash: keyHash,
+        encrypted_secret: encryptedSecret,
       })
       .select('*')
       .single();
@@ -159,35 +166,6 @@ export class McpKeyRepository {
     }
 
     return { row: data as McpApiKeyRow, secret };
-  }
-
-  async revokeKey(user: AuthUser, keyId: string): Promise<void> {
-    const supabase = this.userClient(user);
-    const { data, error } = await supabase
-      .from('mcp_api_key')
-      .update({ revoked_at: new Date().toISOString() })
-      .eq('id', keyId)
-      .eq('user_id', user.id)
-      .is('revoked_at', null)
-      .select('id')
-      .maybeSingle();
-
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    if (!data) {
-      const existing = await supabase
-        .from('mcp_api_key')
-        .select('id, revoked_at')
-        .eq('id', keyId)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!existing.data) {
-        throw new BadRequestException('Key not found');
-      }
-    }
   }
 
   async findActiveKeyBySecret(secret: string): Promise<McpApiKeyRow | null> {
@@ -201,17 +179,16 @@ export class McpKeyRepository {
       .from('mcp_api_key')
       .select('*')
       .eq('key_prefix', prefix)
-      .is('revoked_at', null);
+      .limit(1)
+      .maybeSingle();
 
     if (error) {
       throw new BadRequestException(error.message);
     }
 
     const pepper = this.pepper();
-    for (const row of (data ?? []) as McpApiKeyRow[]) {
-      if (verifyMcpApiKey(secret, pepper, row.key_hash)) {
-        return row;
-      }
+    if (data && verifyMcpApiKey(secret, pepper, data.key_hash)) {
+      return data as McpApiKeyRow;
     }
 
     return null;
@@ -228,5 +205,18 @@ export class McpKeyRepository {
           // non-blocking
         }
       });
+  }
+
+  decryptKeySecret(row: McpApiKeyRow): string {
+    if (!row.encrypted_secret) {
+      throw new Error(
+        'API key secret not available — the key was created before copy support and must be re-created',
+      );
+    }
+    const decrypted = tryDecryptSecret(row.encrypted_secret, this.encryptionKey());
+    if (decrypted === null) {
+      throw new Error('Failed to decrypt API key secret — re-create the key');
+    }
+    return decrypted;
   }
 }

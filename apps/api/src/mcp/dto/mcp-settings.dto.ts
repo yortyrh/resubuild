@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsOptional } from 'class-validator';
 
 export class PatchMcpSettingsDto {
   @IsOptional()
@@ -6,9 +6,4 @@ export class PatchMcpSettingsDto {
   mcpEnabled?: boolean;
 }
 
-export class CreateMcpKeyDto {
-  @IsOptional()
-  @IsString()
-  @MaxLength(120)
-  label?: string;
-}
+export class CreateMcpKeyDto {}
