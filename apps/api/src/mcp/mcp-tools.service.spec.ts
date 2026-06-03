@@ -12,6 +12,36 @@ const MockMcpServer = McpServer as jest.MockedClass<typeof McpServer>;
 
 const user = { id: 'user-1', accessToken: 'tok', authMethod: 'jwt' as const } as AuthUser;
 
+const sampleEnvelope = {
+  exportId: 'exp-1',
+  url: 'https://signed.example/exp-1',
+  expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+  expiresInSeconds: 3600,
+  filename: 'resume.pdf',
+  contentType: 'application/pdf',
+  sizeBytes: 10,
+  kind: 'pdf' as const,
+  templateId: 'classic',
+};
+
+const sampleScreenshotEnvelope = {
+  ...sampleEnvelope,
+  kind: 'screenshot' as const,
+  contentType: 'image/png',
+  mode: 'full_document' as const,
+};
+const sampleHtmlEnvelope = {
+  ...sampleEnvelope,
+  kind: 'html' as const,
+  contentType: 'text/html; charset=utf-8',
+};
+const sampleJsonEnvelope = {
+  ...sampleEnvelope,
+  kind: 'jsonresume' as const,
+  contentType: 'application/json; charset=utf-8',
+};
+const sampleRefreshEnvelope = { ...sampleEnvelope, url: 'https://signed.example/exp-1?refresh=1' };
+
 describe('McpToolsService', () => {
   let cvService: { findAll: jest.Mock; findOne: jest.Mock; remove: jest.Mock; create: jest.Mock };
   let cvExportService: {
@@ -36,6 +66,13 @@ describe('McpToolsService', () => {
     getMediaMeta: jest.Mock;
     viewerUrlForId: jest.Mock;
     deleteMedia: jest.Mock;
+  };
+  let mcpExportService: {
+    publishHtml: jest.Mock;
+    publishPdf: jest.Mock;
+    publishScreenshot: jest.Mock;
+    publishJsonResume: jest.Mock;
+    refreshSignedUrl: jest.Mock;
   };
   let service: McpToolsService;
   let mockServer: { registerTool: jest.Mock; registerResource: jest.Mock };
@@ -70,6 +107,13 @@ describe('McpToolsService', () => {
       viewerUrlForId: jest.fn(),
       deleteMedia: jest.fn(),
     } as never;
+    mcpExportService = {
+      publishHtml: jest.fn(),
+      publishPdf: jest.fn(),
+      publishScreenshot: jest.fn(),
+      publishJsonResume: jest.fn(),
+      refreshSignedUrl: jest.fn(),
+    } as never;
 
     mockServer = { registerTool: jest.fn(), registerResource: jest.fn() };
     MockMcpServer.mockImplementation(() => mockServer as unknown as McpServer);
@@ -81,6 +125,7 @@ describe('McpToolsService', () => {
       applicationService as never,
       jsonResumeSwapService as never,
       mediaService as never,
+      mcpExportService as never,
     );
   });
 
@@ -125,6 +170,59 @@ describe('McpToolsService', () => {
           }),
           expect.any(Function),
         );
+      }
+    });
+
+    it('passes an inputSchema to registerTool for get_cv, including the required cvId argument', () => {
+      const calls = mockServer.registerTool.mock.calls.filter(([n]) => n === 'get_cv');
+      expect(calls.length).toBeGreaterThan(0);
+      const config = calls[0][1] as { inputSchema?: { shape?: Record<string, unknown> } };
+      expect(config.inputSchema).toBeDefined();
+      expect(config.inputSchema?.shape).toHaveProperty('cvId');
+    });
+
+    it('passes an inputSchema to registerTool for export_cv_pdf, including the required cvId argument', () => {
+      const calls = mockServer.registerTool.mock.calls.filter(([n]) => n === 'export_cv_pdf');
+      expect(calls.length).toBeGreaterThan(0);
+      const config = calls[0][1] as { inputSchema?: { shape?: Record<string, unknown> } };
+      expect(config.inputSchema).toBeDefined();
+      expect(config.inputSchema?.shape).toHaveProperty('cvId');
+    });
+
+    it('passes an inputSchema to registerTool for all tools that require arguments', () => {
+      const toolsWithArgs = [
+        'get_cv',
+        'delete_cv',
+        'create_cv_from_jsonresume',
+        'replace_cv_from_jsonresume',
+        'export_cv_jsonresume',
+        'export_cv_html',
+        'export_cv_screenshot',
+        'export_cv_pdf',
+        'fetch_export_url',
+        'get_cv_template_presentation',
+        'update_cv_template_presentation',
+        'get_application',
+        'update_application',
+        'update_application_letter',
+        'get_media_url',
+        'delete_media',
+      ];
+      for (const name of toolsWithArgs) {
+        const calls = mockServer.registerTool.mock.calls.filter(([n]) => n === name);
+        expect(calls.length).toBeGreaterThan(0);
+        const config = calls[0][1] as { inputSchema?: unknown };
+        expect(config.inputSchema).toBeDefined();
+      }
+    });
+
+    it('omits inputSchema for tools that take no arguments', () => {
+      const toolsWithoutArgs = ['list_cvs', 'list_cv_designs', 'list_applications', 'list_media'];
+      for (const name of toolsWithoutArgs) {
+        const calls = mockServer.registerTool.mock.calls.filter(([n]) => n === name);
+        expect(calls.length).toBeGreaterThan(0);
+        const config = calls[0][1] as { inputSchema?: unknown };
+        expect(config.inputSchema).toBeUndefined();
       }
     });
 
@@ -366,27 +464,28 @@ describe('McpToolsService', () => {
       });
     });
 
-    it('registers export_cv_jsonresume handler', async () => {
+    it('registers export_cv_jsonresume handler that calls mcpExportService.publishJsonResume', async () => {
       const calls = mockServer.registerTool.mock.calls.filter(
         ([n]) => n === 'export_cv_jsonresume',
       );
       expect(calls.length).toBeGreaterThan(0);
       const handler = calls[0][2] as (args: { cvId: string }) => Promise<unknown>;
 
-      cvExportService.renderJson.mockResolvedValue({
-        body: '{"basics":{"name":"John"}}',
-        filename: 'resume.json',
+      mcpExportService.publishJsonResume.mockResolvedValue({
+        ...sampleJsonEnvelope,
+        document: { basics: { name: 'Jane' } },
       });
+
       const result = await handler({ cvId: '11111111-1111-1111-1111-111111111111' });
 
-      expect(cvExportService.renderJson).toHaveBeenCalledWith(
+      expect(mcpExportService.publishJsonResume).toHaveBeenCalledWith(
         user,
         '11111111-1111-1111-1111-111111111111',
       );
       expect(result).toMatchObject({ structuredContent: expect.any(Object) });
     });
 
-    it('registers export_cv_html handler', async () => {
+    it('registers export_cv_html handler that calls mcpExportService.publishHtml', async () => {
       const calls = mockServer.registerTool.mock.calls.filter(([n]) => n === 'export_cv_html');
       expect(calls.length).toBeGreaterThan(0);
       const handler = calls[0][2] as (args: {
@@ -394,16 +493,14 @@ describe('McpToolsService', () => {
         template?: string;
       }) => Promise<unknown>;
 
-      cvExportService.renderHtml.mockResolvedValue('<html>...</html>');
-      cvService.findOne.mockResolvedValue({ id: 'cv-1', templateId: 'classic' } as never);
-      cvExportService.resolveTemplateId.mockReturnValue('classic');
+      mcpExportService.publishHtml.mockResolvedValue(sampleHtmlEnvelope);
 
       const result = await handler({
         cvId: '11111111-1111-1111-1111-111111111111',
         template: 'modern',
       });
 
-      expect(cvExportService.renderHtml).toHaveBeenCalledWith(
+      expect(mcpExportService.publishHtml).toHaveBeenCalledWith(
         user,
         '11111111-1111-1111-1111-111111111111',
         'modern',
@@ -411,7 +508,7 @@ describe('McpToolsService', () => {
       expect(result).toMatchObject({ structuredContent: expect.any(Object) });
     });
 
-    it('registers export_cv_screenshot handler', async () => {
+    it('registers export_cv_screenshot handler that calls mcpExportService.publishScreenshot', async () => {
       const calls = mockServer.registerTool.mock.calls.filter(
         ([n]) => n === 'export_cv_screenshot',
       );
@@ -422,49 +519,14 @@ describe('McpToolsService', () => {
         mode?: string;
       }) => Promise<unknown>;
 
-      cvExportService.renderScreenshot.mockResolvedValue({
-        buffer: Buffer.from('fake-png'),
-        filename: 'screenshot.png',
-        mode: 'full_document' as const,
-        templateId: 'classic',
-      });
-      cvExportService.toMcpBase64Payload.mockReturnValue({ data: 'base64encoded' });
-
-      const result = await handler({ cvId: '11111111-1111-1111-1111-111111111111' });
-
-      expect(cvExportService.renderScreenshot).toHaveBeenCalledWith(
-        user,
-        '11111111-1111-1111-1111-111111111111',
-        { template: undefined, mode: undefined },
-      );
-      expect(result).toMatchObject({ structuredContent: expect.any(Object) });
-    });
-
-    it('registers export_cv_screenshot handler with mode parameter', async () => {
-      const calls = mockServer.registerTool.mock.calls.filter(
-        ([n]) => n === 'export_cv_screenshot',
-      );
-      expect(calls.length).toBeGreaterThan(0);
-      const handler = calls[0][2] as (args: {
-        cvId: string;
-        template?: string;
-        mode?: string;
-      }) => Promise<unknown>;
-
-      cvExportService.renderScreenshot.mockResolvedValue({
-        buffer: Buffer.from('fake-png'),
-        filename: 'screenshot.png',
-        mode: 'full_document' as const,
-        templateId: 'classic',
-      });
-      cvExportService.toMcpBase64Payload.mockReturnValue({ data: 'base64encoded' });
+      mcpExportService.publishScreenshot.mockResolvedValue(sampleScreenshotEnvelope);
 
       const result = await handler({
         cvId: '11111111-1111-1111-1111-111111111111',
         mode: 'full_document',
       });
 
-      expect(cvExportService.renderScreenshot).toHaveBeenCalledWith(
+      expect(mcpExportService.publishScreenshot).toHaveBeenCalledWith(
         user,
         '11111111-1111-1111-1111-111111111111',
         { template: undefined, mode: 'full_document' },
@@ -472,7 +534,7 @@ describe('McpToolsService', () => {
       expect(result).toMatchObject({ structuredContent: expect.any(Object) });
     });
 
-    it('registers export_cv_pdf handler', async () => {
+    it('registers export_cv_pdf handler that calls mcpExportService.publishPdf', async () => {
       const calls = mockServer.registerTool.mock.calls.filter(([n]) => n === 'export_cv_pdf');
       expect(calls.length).toBeGreaterThan(0);
       const handler = calls[0][2] as (args: {
@@ -480,23 +542,37 @@ describe('McpToolsService', () => {
         template?: string;
       }) => Promise<unknown>;
 
-      cvExportService.renderPdf.mockResolvedValue({
-        buffer: Buffer.from('fake-pdf'),
-        filename: 'resume.pdf',
-      });
-      cvExportService.toMcpBase64Payload.mockReturnValue({ data: 'base64encoded' });
+      mcpExportService.publishPdf.mockResolvedValue(sampleEnvelope);
 
       const result = await handler({ cvId: '11111111-1111-1111-1111-111111111111' });
 
-      expect(cvExportService.renderPdf).toHaveBeenCalledWith(
+      expect(mcpExportService.publishPdf).toHaveBeenCalledWith(
         user,
         '11111111-1111-1111-1111-111111111111',
         undefined,
       );
-      expect(cvExportService.toMcpBase64Payload).toHaveBeenCalledWith(
-        Buffer.from('fake-pdf'),
-        'application/pdf',
-        'resume.pdf',
+      expect(result).toMatchObject({ structuredContent: expect.any(Object) });
+    });
+
+    it('registers fetch_export_url handler that calls mcpExportService.refreshSignedUrl', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(([n]) => n === 'fetch_export_url');
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: {
+        exportId: string;
+        ttlSeconds?: number;
+      }) => Promise<unknown>;
+
+      mcpExportService.refreshSignedUrl.mockResolvedValue(sampleRefreshEnvelope);
+
+      const result = await handler({
+        exportId: '11111111-1111-1111-1111-111111111111',
+        ttlSeconds: 120,
+      });
+
+      expect(mcpExportService.refreshSignedUrl).toHaveBeenCalledWith(
+        user,
+        '11111111-1111-1111-1111-111111111111',
+        120,
       );
       expect(result).toMatchObject({ structuredContent: expect.any(Object) });
     });
@@ -574,6 +650,23 @@ describe('McpToolsService', () => {
       for (const name of MCP_TOOL_NAMES) {
         expect(MCP_TOOL_DEFINITIONS[name].description.length).toBeGreaterThan(0);
       }
+    });
+
+    it('export_cv_* descriptions reference the signed-URL envelope', () => {
+      for (const name of [
+        'export_cv_html',
+        'export_cv_pdf',
+        'export_cv_screenshot',
+        'export_cv_jsonresume',
+      ]) {
+        expect(MCP_TOOL_DEFINITIONS[name as keyof typeof MCP_TOOL_DEFINITIONS].description).toMatch(
+          /signed-URL envelope|url/,
+        );
+      }
+    });
+
+    it('fetch_export_url is documented', () => {
+      expect(MCP_TOOL_DEFINITIONS.fetch_export_url.description).toMatch(/exportId/);
     });
   });
 });

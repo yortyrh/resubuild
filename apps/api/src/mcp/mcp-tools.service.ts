@@ -14,7 +14,7 @@
  *   └── McpToolsService
  *         ├── createServer()  → McpServer (connected to StreamableHTTP transport)
  *         │
- *         ├── registerTools()   → 19 MCP tools (list_cvs, get_cv, export_cv_pdf, ...)
+ *         ├── registerTools()   → 20 MCP tools (list_cvs, get_cv, export_cv_pdf, fetch_export_url, ...)
  *         │     └── each tool: handler + Zod schema + annotations (readOnlyHint, destructiveHint)
  *         │
  *         └── registerResources() → 3 resource templates
@@ -70,7 +70,6 @@
  */
 
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { Request } from '@modelcontextprotocol/sdk/types.js';
 import { Injectable } from '@nestjs/common';
 import type { CvTemplatePresentationConfig } from '@resumind/resume-template';
 import { z } from 'zod';
@@ -83,6 +82,7 @@ import { MediaService } from '../media/media.service';
 
 import { CvJsonResumeSwapService } from './cv-json-resume-swap.service';
 import { getMcpAuthUser } from './mcp-auth.context';
+import { McpExportService } from './mcp-export.service';
 import type { McpResourceHandler } from './mcp-resource-handler';
 import { ApplicationResourceHandler, CvResourceHandler, MediaResourceHandler } from './resources';
 import { MCP_TOOL_DEFINITIONS, MCP_TOOL_NAMES, type McpToolName } from './tool-definitions';
@@ -149,6 +149,11 @@ const mediaIdSchema = z.object({
   mediaId: z.string().uuid(),
 });
 
+const fetchExportUrlSchema = z.object({
+  exportId: z.string().uuid(),
+  ttlSeconds: z.number().int().min(60).max(86400).optional(),
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -184,6 +189,7 @@ export class McpToolsService {
     private readonly applicationService: ApplicationService,
     private readonly jsonResumeSwapService: CvJsonResumeSwapService,
     private readonly mediaService: MediaService,
+    private readonly mcpExportService: McpExportService,
   ) {
     // Instantiate all resource handlers — each handles one MCP resource template.
     // They depend only on their respective service classes, not on each other.
@@ -251,47 +257,58 @@ export class McpToolsService {
      */
     const register = (
       name: McpToolName,
+      inputSchema: z.ZodTypeAny | undefined,
       handler: (args: Record<string, unknown>) => Promise<unknown>,
     ) => {
       const meta = MCP_TOOL_DEFINITIONS[name];
-      server.registerTool(
-        name,
-        {
-          description: meta.description,
-          annotations: {
-            readOnlyHint: meta.readOnlyHint,
-            destructiveHint: meta.destructiveHint,
-          },
-        },
-        async (args) => {
-          const result = await handler((args ?? {}) as Record<string, unknown>);
-          return {
-            content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-            structuredContent: toStructuredContent(result),
-          };
-        },
-      );
+      const annotations: { readOnlyHint?: boolean; destructiveHint?: boolean } = {
+        readOnlyHint: meta.readOnlyHint,
+        destructiveHint: meta.destructiveHint,
+      };
+      // The callback and the call to `server.registerTool` use `as any` to bypass
+      // the SDK's deep generic instantiation (AnySchema = z3.ZodTypeAny | z4.$ZodType)
+      // without sacrificing runtime behaviour — the handler is unchanged.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const run = (async (args: any) => {
+        const result = await handler((args ?? {}) as Record<string, unknown>);
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+          structuredContent: toStructuredContent(result),
+        };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any;
+      if (inputSchema) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (server.registerTool as any)(
+          name,
+          { description: meta.description, inputSchema, annotations },
+          run,
+        );
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (server.registerTool as any)(name, { description: meta.description, annotations }, run);
+      }
     };
 
     // ── CV CRUD ──────────────────────────────────────────────────────────────
 
-    register('list_cvs', async () => {
+    register('list_cvs', undefined, async () => {
       const user = getMcpAuthUser();
       return this.cvService.findAll(user);
     });
 
-    register('get_cv', async (args) => {
+    register('get_cv', cvIdSchema, async (args) => {
       const { cvId } = cvIdSchema.parse(args);
       return this.cvService.findOne(getMcpAuthUser(), cvId);
     });
 
-    register('delete_cv', async (args) => {
+    register('delete_cv', cvIdSchema, async (args) => {
       const { cvId } = cvIdSchema.parse(args);
       await this.cvService.remove(getMcpAuthUser(), cvId);
       return { ok: true, cvId };
     });
 
-    register('create_cv_from_jsonresume', async (args) => {
+    register('create_cv_from_jsonresume', jsonResumeCreateSchema, async (args) => {
       const { document } = jsonResumeCreateSchema.parse(args);
       const created = await this.jsonResumeSwapService.createFromJsonResume(
         getMcpAuthUser(),
@@ -300,7 +317,7 @@ export class McpToolsService {
       return { cvId: created.id, cv: created };
     });
 
-    register('replace_cv_from_jsonresume', async (args) => {
+    register('replace_cv_from_jsonresume', jsonResumeReplaceSchema, async (args) => {
       const { cvId, document } = jsonResumeReplaceSchema.parse(args);
       const replaced = await this.jsonResumeSwapService.replaceFromJsonResume(
         getMcpAuthUser(),
@@ -312,71 +329,49 @@ export class McpToolsService {
 
     // ── CV Export ───────────────────────────────────────────────────────────
 
-    register('export_cv_jsonresume', async (args) => {
+    register('export_cv_jsonresume', cvIdSchema, async (args) => {
       const { cvId } = cvIdSchema.parse(args);
       const user = getMcpAuthUser();
-      const { body, filename } = await this.cvExportService.renderJson(user, cvId);
-      return { filename, document: JSON.parse(body) as unknown };
+      return this.mcpExportService.publishJsonResume(user, cvId);
     });
 
-    register('export_cv_html', async (args) => {
+    register('export_cv_html', templateOptionalSchema, async (args) => {
       const { cvId, template } = templateOptionalSchema.parse(args);
       const user = getMcpAuthUser();
-      const html = await this.cvExportService.renderHtml(user, cvId, template);
-      const record = await this.cvService.findOne(user, cvId);
-      const templateId = template
-        ? this.cvExportService.resolveTemplateId(record.templateId, template)
-        : record.templateId;
-      return { html, templateId };
+      return this.mcpExportService.publishHtml(user, cvId, template);
     });
 
-    register('export_cv_screenshot', async (args) => {
+    register('export_cv_screenshot', screenshotSchema, async (args) => {
       const { cvId, template, mode } = screenshotSchema.parse(args);
       const user = getMcpAuthUser();
-      const shot = await this.cvExportService.renderScreenshot(user, cvId, { template, mode });
-      const payload = this.cvExportService.toMcpBase64Payload(
-        shot.buffer,
-        'image/png',
-        shot.filename,
-      );
-      return { ...payload, mode: shot.mode, templateId: shot.templateId };
+      return this.mcpExportService.publishScreenshot(user, cvId, { template, mode });
     });
 
-    // export_cv_pdf is registered manually due to non-standard callback signature
-    const exportPdfMeta = MCP_TOOL_DEFINITIONS.export_cv_pdf;
-    const exportCvPdfHandler = async (args: { cvId: string; template?: string }) => {
+    register('export_cv_pdf', templateOptionalSchema, async (args) => {
       const { cvId, template } = templateOptionalSchema.parse(args);
       const user = getMcpAuthUser();
-      const { buffer, filename } = await this.cvExportService.renderPdf(user, cvId, template);
-      const result = this.cvExportService.toMcpBase64Payload(buffer, 'application/pdf', filename);
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-        structuredContent: toStructuredContent(result),
-      };
-    };
-    server.registerTool(
-      'export_cv_pdf',
-      {
-        description: exportPdfMeta.description,
-        annotations: { readOnlyHint: exportPdfMeta.readOnlyHint },
-        inputSchema: templateOptionalSchema,
-      } as any,
-      exportCvPdfHandler as any,
-    );
+      return this.mcpExportService.publishPdf(user, cvId, template);
+    });
 
-    register('list_cv_designs', async () => {
+    register('fetch_export_url', fetchExportUrlSchema, async (args) => {
+      const { exportId, ttlSeconds } = fetchExportUrlSchema.parse(args);
+      const user = getMcpAuthUser();
+      return this.mcpExportService.refreshSignedUrl(user, exportId, ttlSeconds);
+    });
+
+    register('list_cv_designs', undefined, async () => {
       return this.cvExportService.listTemplateCatalog();
     });
 
     // ── CV Presentation ────────────────────────────────────────────────────
 
-    register('get_cv_template_presentation', async (args) => {
+    register('get_cv_template_presentation', presentationSchema, async (args) => {
       const { cvId, template } = presentationSchema.parse(args);
       const user = getMcpAuthUser();
       return this.presentationService.getPresentation(user, cvId, template);
     });
 
-    register('update_cv_template_presentation', async (args) => {
+    register('update_cv_template_presentation', presentationPatchSchema, async (args) => {
       const { cvId, template, config } = presentationPatchSchema.parse(args);
       const user = getMcpAuthUser();
       return this.presentationService.upsertPresentation(
@@ -389,16 +384,16 @@ export class McpToolsService {
 
     // ── Applications ─────────────────────────────────────────────────────────
 
-    register('list_applications', async () => {
+    register('list_applications', undefined, async () => {
       return this.applicationService.findAll(getMcpAuthUser());
     });
 
-    register('get_application', async (args) => {
+    register('get_application', applicationIdSchema, async (args) => {
       const { applicationId } = applicationIdSchema.parse(args);
       return this.applicationService.findOne(getMcpAuthUser(), applicationId);
     });
 
-    register('update_application', async (args) => {
+    register('update_application', updateApplicationSchema, async (args) => {
       const parsed = updateApplicationSchema.parse(args);
       const { applicationId, ...patch } = parsed;
       return this.applicationService.patchApplicationMetadata(getMcpAuthUser(), applicationId, {
@@ -411,7 +406,7 @@ export class McpToolsService {
       });
     });
 
-    register('update_application_letter', async (args) => {
+    register('update_application_letter', updateLetterSchema, async (args) => {
       const { applicationId, coverLetter } = updateLetterSchema.parse(args);
       return this.applicationService.updateCoverLetter(
         getMcpAuthUser(),
@@ -422,7 +417,7 @@ export class McpToolsService {
 
     // ── Media ────────────────────────────────────────────────────────────────
 
-    register('list_media', async () => {
+    register('list_media', undefined, async () => {
       const user = getMcpAuthUser();
       const mediaItems = await this.mediaService.listMediaForUser(user.id);
       return mediaItems.map((item) => ({
@@ -431,7 +426,7 @@ export class McpToolsService {
       }));
     });
 
-    register('get_media_url', async (args) => {
+    register('get_media_url', mediaIdSchema, async (args) => {
       const { mediaId } = mediaIdSchema.parse(args);
       const user = getMcpAuthUser();
       const meta = await this.mediaService.getMediaMeta(user.id, mediaId);
@@ -444,7 +439,7 @@ export class McpToolsService {
       };
     });
 
-    register('delete_media', async (args) => {
+    register('delete_media', mediaIdSchema, async (args) => {
       const { mediaId } = mediaIdSchema.parse(args);
       const user = getMcpAuthUser();
       await this.mediaService.deleteMedia(user.id, mediaId);

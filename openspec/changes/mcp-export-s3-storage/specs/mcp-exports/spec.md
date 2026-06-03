@@ -23,12 +23,16 @@ When an MCP `export_cv_*` tool succeeds, the system SHALL upload the rendered ar
 
 ### Requirement: The system SHALL issue short-lived signed URLs for MCP exports
 
-For every successful `export_cv_*` MCP tool call, the system SHALL return an envelope `{ exportId, url, expiresAt, expiresInSeconds, filename, contentType, sizeBytes, kind, templateId, mode? }`. The `url` SHALL be a Supabase Storage signed URL created via `createSignedUrl(storage_path, ttlSeconds)` with `ttlSeconds = MCP_EXPORT_TTL_SECONDS` (default 3600). The signed URL SHALL be usable from any HTTP client (browser, curl, MCP client) to download or display the artifact. `expiresAt` is the absolute ISO timestamp; `expiresInSeconds` is the relative value for clients that prefer not to parse timestamps.
+For every successful `export_cv_*` MCP tool call, the system SHALL return an envelope `{ exportId, url, expiresAt, expiresInSeconds, filename, contentType, sizeBytes, kind, templateId, mode? }`. The `url` SHALL be a Supabase Storage signed URL created via `createSignedUrl(storage_path, ttlSeconds)` with `ttlSeconds = MCP_EXPORT_TTL_SECONDS` (default 3600), and SHALL carry a `?token=…` query parameter that authenticates the request at the storage layer. The signed URL SHALL be usable from any HTTP client (browser, curl, MCP client) to download or display the artifact without any API-host auth header. `expiresAt` is the absolute ISO timestamp; `expiresInSeconds` is the relative value for clients that prefer not to parse timestamps.
+
+The signed URL is the **entire transport**: there is no API-host download surface. The url is the canonical handoff for both the MCP tool envelope and the underlying HTTP resource; agents that need a browser-friendly or curl-friendly link paste this URL directly.
 
 #### Scenario: Envelope includes a usable signed URL
 
 - **WHEN** an MCP client invokes `export_cv_pdf` for an owned `cvId`
-- **THEN** the result includes a `url` that, when fetched with `GET`, returns the PDF with `Content-Type: application/pdf`
+- **THEN** the result includes a `url` whose host is the Supabase Storage host
+- **AND** the `url` includes a `?token=…` query parameter
+- **AND** the `url`, when fetched with `GET` and no other headers, returns the PDF with `Content-Type: application/pdf`
 - **AND** the envelope's `kind = 'pdf'`, `contentType = 'application/pdf'`, `filename` ends in `.pdf`, and `expiresAt` is in the future
 
 #### Scenario: HTML URL is openable in a browser
@@ -42,6 +46,12 @@ For every successful `export_cv_*` MCP tool call, the system SHALL return an env
 - **WHEN** an MCP client invokes `export_cv_jsonresume` and fetches the returned `url` with `Accept: application/json`
 - **THEN** the response body is a JSON object conforming to the JSON Resume schema (includes `$schema` and `meta`)
 - **AND** the response `Content-Type` is `application/json; charset=utf-8`
+
+#### Scenario: Signed URL works with no additional headers
+
+- **WHEN** an MCP client invokes any `export_cv_*` tool and pastes the returned `url` into a browser address bar
+- **THEN** the browser loads the artifact (HTML renders inline, PDF/PNG/JSON downloads or renders) without prompting for credentials
+- **AND** no API-host auth header (`Authorization: Bearer …`) is required
 
 #### Scenario: Default TTL is one hour
 
@@ -81,31 +91,6 @@ The system SHALL register an MCP tool `fetch_export_url` with arguments `{ expor
 
 - **WHEN** an MCP client calls `fetch_export_url` with a `exportId` that does not exist or has been swept
 - **THEN** the tool fails with 404
-
-### Requirement: The system SHALL expose a REST download endpoint for MCP exports
-
-The system SHALL expose `GET /cv-export/downloads/:exportId` that streams the storage object back with the correct `Content-Type` and `Content-Disposition: attachment; filename="..."`. Authentication SHALL accept either a Supabase Bearer JWT or an MCP API key (any user that resolves to the row's `user_id` may download). The endpoint SHALL refuse requests where `req.user.id !== row.user_id` with 404 (not 403, to avoid leaking the existence of the row). Expired rows return 404.
-
-#### Scenario: Download via JWT
-
-- **WHEN** an authenticated web client calls `GET /cv-export/downloads/:exportId` with a valid Bearer JWT and the row is owned by the caller
-- **THEN** the response has `Content-Type: application/pdf` (or the appropriate `content_type` for the row's `kind`) and `Content-Disposition: attachment; filename="<row.filename>"`
-- **AND** the body bytes equal the stored object
-
-#### Scenario: Download via MCP API key
-
-- **WHEN** an MCP client calls `GET /cv-export/downloads/:exportId` with a valid `Authorization: Bearer <mcp_api_key>` header and the row is owned by the API key's user
-- **THEN** the response is identical to the JWT case
-
-#### Scenario: Cross-user download denied
-
-- **WHEN** a user calls `GET /cv-export/downloads/:exportId` for a row owned by another user
-- **THEN** the endpoint returns 404 (the row is not visible to the caller)
-
-#### Scenario: Expired export returns 404
-
-- **WHEN** a user calls `GET /cv-export/downloads/:exportId` for a row whose `expires_at` is in the past
-- **THEN** the endpoint returns 404
 
 ### Requirement: The system SHALL enforce per-user ownership on `mcp_export` rows
 

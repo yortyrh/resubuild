@@ -94,11 +94,13 @@ Routes under `/applications/*` reuse the active AI agent account (`AiAgentCreden
 
 Users enable MCP in the dashboard, create up to **two** API keys, and connect external agents (Cursor, Claude Desktop, etc.). MCP requests use `Authorization: Bearer <mcp_api_key>` — not the Supabase JWT used by the web app.
 
-| Variable               | Purpose                                                                                                              |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `MCP_SERVER_ENABLED`   | Set to `false` to return `503` on `/mcp` while keeping key management routes available. Default: enabled when unset. |
-| `MCP_KEY_PEPPER`       | Optional HMAC pepper for API key hashing (defaults to `SUPABASE_SERVICE_ROLE_KEY`).                                  |
-| `MCP_EXPORT_MAX_BYTES` | Max decoded size for PDF/PNG base64 MCP exports (default 10 MiB).                                                    |
+| Variable                 | Purpose                                                                                                                                                                                                               |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MCP_SERVER_ENABLED`     | Set to `false` to return `503` on `/mcp` while keeping key management routes available. Default: enabled when unset.                                                                                                  |
+| `MCP_KEY_PEPPER`         | Optional HMAC pepper for API key hashing (defaults to `SUPABASE_SERVICE_ROLE_KEY`).                                                                                                                                   |
+| `MCP_EXPORT_BUCKET`      | **Required** for the four `export_cv_*` MCP tools. Name of the Supabase Storage bucket that holds short-lived rendered artifacts. Create with `supabase storage create mcp-exports --public false` (see setup below). |
+| `MCP_EXPORT_TTL_SECONDS` | Default signed-URL TTL in seconds (default `3600` = 1h). Agents can override per-call via `fetch_export_url` (`[60, 86400]`).                                                                                         |
+| `MCP_EXPORT_MAX_BYTES`   | Max decoded size for MCP exports (default 10 MiB). Enforced at upload time inside `ExportStorageService`; oversize returns 413.                                                                                       |
 
 | Method         | Path                     | Auth                                                             |
 | -------------- | ------------------------ | ---------------------------------------------------------------- |
@@ -124,6 +126,39 @@ Users enable MCP in the dashboard, create up to **two** API keys, and connect ex
 ```
 
 Tools include CV list/read/delete, JSON Resume create/replace, HTML/PDF/PNG export, template presentation, and job application read/update. They intentionally exclude web search, import, and AI agent configuration — use your client’s own tools for those.
+
+#### MCP export transport (signed-URL envelopes)
+
+The four `export_cv_*` tools (HTML / PDF / PNG / JSON Resume) no longer return inline content. Each successful call uploads the rendered artifact to a dedicated `MCP_EXPORT_BUCKET` and returns a small envelope whose `url` is a **Supabase Storage signed URL** — a self-contained URL with a `?token=…` query parameter that authenticates the request at the storage host. There is no API-host download endpoint: paste the `url` into a browser tab, `curl`, `wget`, `fetch`, `Read`/open in editors, etc., and the Supabase Storage host serves the artifact directly. No `Authorization: Bearer` header is required.
+
+```json
+{
+  "exportId": "9f1b…",
+  "url": "https://<project>.supabase.co/storage/v1/object/sign/mcp-exports/<user>/<cv>/pdf/9f1b….pdf?token=…",
+  "expiresAt": "2026-06-02T23:00:00Z",
+  "expiresInSeconds": 3600,
+  "filename": "jane-doe-classic.pdf",
+  "contentType": "application/pdf",
+  "sizeBytes": 12345,
+  "kind": "pdf",
+  "templateId": "classic"
+}
+```
+
+- **HTML (`export_cv_html`)** — the URL is openable in a browser tab (renders the full CV) **or** saveable with `curl <url> -o cv.html`; served as `text/html; charset=utf-8`.
+- **PDF (`export_cv_pdf`)** — download with `curl <url> -o cv.pdf` (or open in a browser/PDF viewer); served as `application/pdf`. Large exports return 413 if over `MCP_EXPORT_MAX_BYTES`.
+- **Screenshot / PNG (`export_cv_screenshot`)** — `mode=first_page` (default, one Letter-sized page) or `mode=full_document` (entire document height); download with `curl <url> -o cv.png`; served as `image/png`.
+- **JSON Resume (`export_cv_jsonresume`)** — `curl <url> | jq .` or `fetch(url).then(r => r.json())`; served as `application/json; charset=utf-8`. The envelope also includes a `document` field with the parsed JSON Resume object (includes `$schema` and `meta`, strips Resumind-internal row ids) so agents can reason about it inline without a follow-up `fetch`.
+
+> **BREAKING**: clients that previously consumed `html`, `contentBase64`, or `document` directly from the tool result must switch to `fetch(url)` (or the new `document` field for JSON Resume). Tool descriptions are updated to reflect the new shape.
+
+The default TTL is **1h** (`MCP_EXPORT_TTL_SECONDS`). If a URL is about to expire, agents can re-fetch it via the `fetch_export_url` tool (passing the prior `exportId`, optionally with a `ttlSeconds` between 60 and 86400). The same `mcp_export` row is reused, its `expires_at` is extended, and a fresh `?token=…` query string is issued. Unknown / swept exports return 404. A scheduled sweep (`@nestjs/schedule` cron every 5 minutes) deletes expired rows and removes their storage objects best-effort.
+
+##### Bucket setup (one-off, per environment)
+
+The bucket is declared in `supabase/config.toml` (private, 10 MiB, MIME-allowlisted for `application/pdf`, `text/html`, `image/png`, `application/json`) and is created automatically on the next `supabase start`. For local Supabase stacks started before the declaration was added, re-running `pnpm setup:env` (or `bash scripts/setup-local-env.sh`) provisions it via the storage management API on demand, so you do not need to run `supabase storage create` manually.
+
+Add `MCP_EXPORT_BUCKET=mcp-exports` to your `.env` (or the equivalent env file your platform reads); `pnpm setup:env` writes this for you. The other env vars (`MCP_EXPORT_TTL_SECONDS`, `MCP_EXPORT_MAX_BYTES`) are optional and default to 3600 / 10 MiB.
 
 ## Scripts
 

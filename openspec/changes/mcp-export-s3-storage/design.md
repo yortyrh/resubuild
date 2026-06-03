@@ -10,11 +10,10 @@ This change moves the **delivery transport** for the four MCP export tools from 
 
 **Goals:**
 
-- Replace inline `html` / `contentBase64` / `document` payloads in the four `export_cv_*` MCP tools with a small envelope (`{ exportId, url, expiresAt, filename, contentType, ... }`) where `url` is a signed URL usable from any HTTP client (browser, curl, MCP client).
+- Replace inline `html` / `contentBase64` / `document` payloads in the four `export_cv_*` MCP tools with a small envelope (`{ exportId, url, expiresAt, filename, contentType, ... }`) where `url` is a Supabase Storage signed URL (with a `?token=…` query parameter) usable from any HTTP client (browser, curl, MCP client) without any API-host auth header.
 - Make the HTML export openable directly in a browser tab (so an agent can `window.open(url)` for human review).
 - Make the PDF / PNG / JSON Resume exports downloadable via plain HTTP (`curl url > cv.pdf`) without an MCP round-trip.
 - Add `fetch_export_url` MCP tool so agents can re-fetch a signed URL for a previously generated export until the underlying row expires, instead of re-rendering the CV.
-- Add a public REST endpoint `GET /cv-export/downloads/:exportId` (Bearer JWT or MCP API key) that streams the object back with the right `Content-Type` and `Content-Disposition` for direct download. This is the HTTP fallback when the MCP client cannot consume signed URLs directly.
 - Keep the existing REST `GET /cv/:id/export/{html,pdf,json}` endpoints unchanged (web preview iframe + download buttons stay on inline responses).
 - Reuse `CvExportService` rendering pipeline (`renderHtml`, `renderPdf`, `renderScreenshot`, `renderJson`) — only the **delivery transport** for MCP changes.
 - Owner-scoped access (RLS on `mcp_export` rows, namespaced storage paths) so exports never leak across users.
@@ -177,12 +176,9 @@ const refreshSchema = z.object({
 
 Returns the same envelope, with `url` regenerated for the requested TTL. If the underlying row has been swept, the tool returns an error equivalent to 404 (not 410 — the row is gone, not the bucket).
 
-### 8) `GET /cv-export/downloads/:exportId` REST endpoint
+### 8) No API-host download endpoint
 
-- Authenticated by `SupabaseAuthGuard` (Bearer JWT) **or** `McpApiKeyGuard` (MCP API key). Both paths set `req.user` so the controller can validate `user.id === row.user_id`.
-- Streams the object back as `application/pdf` / `image/png` / `text/html; charset=utf-8` / `application/json; charset=utf-8` with `Content-Disposition: attachment; filename="..."`.
-- `404` for missing or expired rows (we do not distinguish — the row is gone).
-- New `CvExportDownloadsController` in `apps/api/src/cv-export/` alongside `CvExportController`. The module is renamed mentally to "CV export & downloads" but keeps the file/class names that exist today.
+The signed URL returned by the four `export_cv_*` tools (and by `fetch_export_url`) is the entire transport. There is no separate API-host download endpoint — agents paste the signed URL into a browser, `curl`, or `fetch` and the Supabase Storage host serves the artifact directly. This keeps the API host out of the byte path, avoids a redundant auth hop, and means the signed URL is the only thing clients need to round-trip.
 
 ### 9) Scheduled sweep via `@nestjs/schedule`
 

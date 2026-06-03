@@ -2,6 +2,7 @@ export * from './cv-title';
 export * from './image-url-host';
 export * from './job-application';
 export * from './mcp';
+export * from './mcp-export';
 export * from './prepare-exported-resume';
 export * from './prepare-imported-resume';
 export * from './resume';

@@ -35,6 +35,11 @@ public = false
 file_size_limit = "10MiB"
 allowed_mime_types = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 
+[storage.buckets.mcp-exports]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["application/pdf", "text/html", "image/png", "application/json"]
+
 [inbucket]
 enabled = false
 

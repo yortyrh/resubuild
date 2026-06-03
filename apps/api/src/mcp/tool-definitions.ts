@@ -10,6 +10,7 @@ export const MCP_TOOL_NAMES = [
   'export_cv_html',
   'export_cv_screenshot',
   'export_cv_pdf',
+  'fetch_export_url',
   'list_cv_designs',
   'get_cv_template_presentation',
   'update_cv_template_presentation',
@@ -66,22 +67,27 @@ export const MCP_TOOL_DEFINITIONS: Record<
   },
   export_cv_jsonresume: {
     description:
-      'Export canonical JSON Resume for LLMs and external tools: includes $schema and meta, strips Resumind-internal row ids. Prefer this over get_cv when reasoning about career content. Does not include rendered layout.',
+      'Export canonical JSON Resume for LLMs and external tools. Returns a URL envelope { exportId, url, expiresAt, expiresInSeconds, filename, contentType, sizeBytes, kind: "jsonresume" } (default TTL: 1h). The `url` is a Supabase Storage signed URL with a `?token=…` query parameter that authenticates the request at the storage layer; open it in a browser tab, `curl <url> -o cv.json`, or `fetch(url).then(r => r.json())` — the response carries `Content-Type: application/json; charset=utf-8`. The envelope also includes a `document` field with the parsed JSON Resume (includes $schema and meta, strips Resumind-internal row ids) so you can reason about it inline without an extra fetch. Use `fetch_export_url` to refresh the URL before it expires. Treat the URL as a secret until it expires.',
     readOnlyHint: true,
   },
   export_cv_html: {
     description:
-      'Export the full HTML document shown in the Resumind web preview (iframe srcDoc) for a template. Use for visual review or vision models. Differs from export_cv_jsonresume (rendered layout vs structured data). Respects saved template presentation.',
+      'Export the full HTML document shown in the Resumind web preview for a template. Returns a URL envelope { exportId, url, expiresAt, expiresInSeconds, filename, contentType: "text/html; charset=utf-8", sizeBytes, kind: "html", templateId } (default TTL: 1h). The `url` is a Supabase Storage signed URL with a `?token=…` query parameter that authenticates the request at the storage layer; open it in a browser tab to render the complete CV, or `curl <url> -o cv.html` to save it locally. The HTML body is NOT returned inline. Use `fetch_export_url` to refresh the URL before it expires. Treat the URL as a secret until it expires.',
     readOnlyHint: true,
   },
   export_cv_screenshot: {
     description:
-      'Export a PNG screenshot of the rendered CV. mode=first_page (default) captures one Letter-sized page; mode=full_document captures the entire document height. Use export_cv_pdf for print-ready PDF. Respects template presentation.',
+      'Export a PNG screenshot of the rendered CV. mode=first_page (default) captures one Letter-sized page; mode=full_document captures the entire document height. Returns a URL envelope { exportId, url, expiresAt, expiresInSeconds, filename, contentType: "image/png", sizeBytes, kind: "screenshot", templateId, mode } (default TTL: 1h). The `url` is a Supabase Storage signed URL with a `?token=…` query parameter that authenticates the request at the storage layer; open it in a browser to preview, or `curl <url> -o cv.png` to save the PNG locally. Use export_cv_pdf for print-ready PDF. Use `fetch_export_url` to refresh the URL. Treat the URL as a secret until it expires.',
     readOnlyHint: true,
   },
   export_cv_pdf: {
     description:
-      'Export a PDF for the chosen template id (classic, modern, tabular, left) using saved presentation config. Returns base64-encoded PDF. Large exports may return 413 if over 10 MiB.',
+      'Export a PDF for the chosen template id (classic, modern, tabular, left) using saved presentation config. Returns a URL envelope { exportId, url, expiresAt, expiresInSeconds, filename, contentType: "application/pdf", sizeBytes, kind: "pdf", templateId } (default TTL: 1h). The `url` is a Supabase Storage signed URL with a `?token=…` query parameter that authenticates the request at the storage layer; open it in a browser/PDF viewer to preview, or `curl <url> -o cv.pdf` to save the PDF locally. Large exports return 413 if over 10 MiB. Use `fetch_export_url` to refresh the URL. Treat the URL as a secret until it expires.',
+    readOnlyHint: true,
+  },
+  fetch_export_url: {
+    description:
+      'Re-issue a signed URL for a previously generated MCP export without re-rendering the CV. Accepts { exportId, ttlSeconds? } where ttlSeconds is clamped to [60, 86400] (default: MCP_EXPORT_TTL_SECONDS, typically 3600 = 1h). Returns the same envelope shape as the export_cv_* tools, with a fresh `url` (a new Supabase Storage signed URL with `?token=…`) and updated `expiresAt`. Returns 404 if the exportId is unknown or has already been swept. The fresh URL behaves identically to the original — browsers, curl, fetch, etc. can all consume it directly without any extra API-host auth header.',
     readOnlyHint: true,
   },
   list_cv_designs: {
