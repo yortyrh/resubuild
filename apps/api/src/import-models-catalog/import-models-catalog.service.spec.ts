@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   buildImportModelCatalog,
   loadFallbackImportModelCatalog,
+  type MastraModelGateway,
   type ModelsDevRegistry,
 } from '@resumind/import-models';
 import { ImportModelsCatalogService } from './import-models-catalog.service';
@@ -23,6 +24,19 @@ const miniRegistry: ModelsDevRegistry = {
   },
 };
 
+const stubGateway: MastraModelGateway = {
+  name: 'stub',
+  fetchProviders: async () => ({
+    openai: {
+      name: 'OpenAI',
+      apiKeyEnvVar: 'OPENAI_API_KEY',
+      models: ['gpt-4o-mini'],
+      docUrl: 'https://platform.openai.com',
+      gateway: 'stub',
+    },
+  }),
+};
+
 describe('ImportModelsCatalogService', () => {
   const fetchMock = jest.fn();
 
@@ -31,22 +45,21 @@ describe('ImportModelsCatalogService', () => {
     global.fetch = fetchMock as typeof fetch;
   });
 
-  function createService(catalogSource?: string, modelsDevUrl?: string) {
+  function createService(catalogSource?: string) {
     const configService = {
       get: jest.fn((key: string) => {
         if (key === 'IMPORT_MODELS_CATALOG_SOURCE') {
           return catalogSource;
         }
-        if (key === 'MODELS_DEV_API_URL') {
-          return modelsDevUrl;
-        }
         return undefined;
       }),
     };
-    return new ImportModelsCatalogService(configService as unknown as ConfigService);
+    const service = new ImportModelsCatalogService(configService as unknown as ConfigService);
+    service.setGateway(stubGateway);
+    return service;
   }
 
-  it('loads catalog from models.dev on refresh', async () => {
+  it('loads catalog via the Mastra gateway on refresh', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => miniRegistry,
@@ -57,7 +70,7 @@ describe('ImportModelsCatalogService', () => {
 
     const catalog = service.getCatalog();
     expect(catalog.providers[0].id).toBe('openai');
-    expect(service.getStatus().source).toBe('models.dev');
+    expect(service.getStatus().source).toBe('mastra-gateway');
   });
 
   it('uses static fallback when IMPORT_MODELS_CATALOG_SOURCE=static', async () => {
@@ -69,7 +82,7 @@ describe('ImportModelsCatalogService', () => {
     expect(service.getCatalog().providers.length).toBeGreaterThan(0);
   });
 
-  it('falls back to bundled catalog when models.dev fails on first load', async () => {
+  it('falls back to bundled catalog when the gateway fetch fails on first load', async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 503, statusText: 'Unavailable' });
 
     const service = createService();
@@ -79,7 +92,7 @@ describe('ImportModelsCatalogService', () => {
     expect(service.getCatalog()).toEqual(loadFallbackImportModelCatalog());
   });
 
-  it('keeps previous catalog when scheduled refresh fails', async () => {
+  it('keeps previous catalog when a scheduled refresh fails', async () => {
     fetchMock
       .mockResolvedValueOnce({
         ok: true,
@@ -94,7 +107,7 @@ describe('ImportModelsCatalogService', () => {
     await service.refreshCatalog('scheduled');
 
     expect(service.getCatalog()).toBe(before);
-    expect(service.getStatus().lastRefreshError).toContain('models.dev API failed');
+    expect(service.getStatus().lastRefreshError).toContain('Failed to fetch model metadata');
   });
 
   it('buildImportModelCatalog matches service expectations', () => {
@@ -119,18 +132,6 @@ describe('ImportModelsCatalogService', () => {
     expect(service.getCatalog().providers[0].id).toBe('openai');
   });
 
-  it('uses configured models.dev API URL', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => miniRegistry,
-    });
-
-    const service = createService(undefined, 'https://custom.example/registry.json');
-    await service.refreshCatalog('manual');
-
-    expect(fetchMock).toHaveBeenCalledWith('https://custom.example/registry.json');
-  });
-
   it('skips scheduled refresh when static catalog is configured', async () => {
     const service = createService('static');
     await service.refreshCatalog('startup');
@@ -142,7 +143,7 @@ describe('ImportModelsCatalogService', () => {
     expect(service.getStatus().source).toBe('fallback');
   });
 
-  it('records non-Error failures from models.dev', async () => {
+  it('records non-Error failures from the gateway fetch', async () => {
     fetchMock.mockRejectedValue('network down');
 
     const service = createService();

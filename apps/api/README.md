@@ -66,13 +66,16 @@ Per-user LLM credentials for PDF import and other Mastra workflows live in `ai_a
 
 Deprecated aliases under `/import/llm/*` delegate to the same services for one release cycle.
 
-### Import model catalog (models.dev)
+### Import model catalog (Mastra gateway + models.dev)
 
-Provider/model lists are loaded from [models.dev](https://models.dev/api.json) (Mastra’s registry) into memory on **API startup**, then refreshed **daily at midnight UTC**. No per-request fetch.
+Provider/model lists are discovered via Mastra's `MastraModelGateway`
+(`PROVIDER_REGISTRY` from `@mastra/core`) and enriched with model metadata
+fetched from [models.dev](https://models.dev/api.json). The catalog is loaded
+into memory on **API startup**, then refreshed **daily at midnight UTC**. No
+per-request fetch.
 
 | Variable                       | Purpose                                                              |
 | ------------------------------ | -------------------------------------------------------------------- |
-| `MODELS_DEV_API_URL`           | Optional override (default `https://models.dev/api.json`).           |
 | `IMPORT_MODELS_CATALOG_SOURCE` | Set to `static` to use bundled `catalog.json` only (tests, offline). |
 
 If the first startup fetch fails, the API falls back to bundled `packages/import-models/catalog.json`. Failed daily refreshes keep the last good snapshot.

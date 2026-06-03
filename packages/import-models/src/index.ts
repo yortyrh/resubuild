@@ -6,7 +6,14 @@ export {
   pickApiKeyEnvVar,
 } from './build-catalog';
 export { loadFallbackImportModelCatalog } from './fallback-catalog';
-export { type FetchFn, fetchModelsDevRegistry } from './fetch-models-dev';
+export { fetchModelsDevRegistry } from './fetch-models-dev';
+export {
+  type FetchFn,
+  type FetchImportModelRegistryOptions,
+  fetchImportModelRegistryViaGateway,
+  type MastraModelGateway,
+  modelsDevGateway,
+} from './fetch-via-gateway';
 export {
   MODELS_DEV_API_URL,
   type ModelsDevModel,

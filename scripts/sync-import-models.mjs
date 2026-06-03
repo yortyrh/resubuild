@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 /**
- * Optional: write packages/import-models/catalog.json from models.dev (offline fallback bundle).
- * Runtime catalog is loaded from models.dev by ImportModelsCatalogService on API startup.
+ * Optional: write packages/import-models/catalog.json from the Mastra model
+ * gateway + models.dev metadata (offline fallback bundle).
+ *
+ * Runtime catalog is loaded on API startup by ImportModelsCatalogService via
+ * the same gateway-backed discovery path.
  * @see https://models.dev/api.json
  */
 
@@ -11,7 +14,8 @@ import { fileURLToPath } from 'node:url';
 import {
   assertImportModelCatalog,
   buildImportModelCatalog,
-  fetchModelsDevRegistry,
+  fetchImportModelRegistryViaGateway,
+  modelsDevGateway,
 } from '../packages/import-models/dist/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -21,13 +25,13 @@ async function main() {
   const args = new Set(process.argv.slice(2));
   const write = args.has('--write') || args.size === 0;
 
-  const registry = await fetchModelsDevRegistry();
+  const registry = await fetchImportModelRegistryViaGateway({ gateway: modelsDevGateway });
   const catalog = buildImportModelCatalog(registry);
   assertImportModelCatalog(catalog);
 
   const modelCount = catalog.providers.reduce((n, provider) => n + provider.models.length, 0);
   console.log(
-    `Built catalog: ${catalog.providers.length} providers, ${modelCount} chat-capable models.`,
+    `Built catalog via ${modelsDevGateway.name}: ${catalog.providers.length} providers, ${modelCount} chat-capable models.`,
   );
 
   if (write) {

@@ -4,14 +4,15 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import {
   assertImportModelCatalog,
   buildImportModelCatalog,
-  fetchModelsDevRegistry,
+  fetchImportModelRegistryViaGateway,
   type ImportModelCatalog,
   loadFallbackImportModelCatalog,
-  MODELS_DEV_API_URL,
+  type MastraModelGateway,
+  modelsDevGateway,
 } from '@resumind/import-models';
 
 export interface ImportModelsCatalogStatus {
-  source: 'models.dev' | 'fallback';
+  source: 'mastra-gateway' | 'fallback';
   providerCount: number;
   modelCount: number;
   lastRefreshedAt: string | null;
@@ -26,13 +27,25 @@ export class ImportModelsCatalogService implements OnModuleInit {
   private lastRefreshedAt: Date | null = null;
   private lastRefreshError: string | null = null;
 
+  /**
+   * Optional override of the `MastraModelGateway` used to discover supported
+   * providers. Defaults to the bundled `modelsDevGateway` (proxies
+   * `PROVIDER_REGISTRY` from `@mastra/core`). Tests can swap this for a stub.
+   */
+  private gateway: MastraModelGateway = modelsDevGateway;
+
   constructor(private readonly configService: ConfigService) {}
+
+  /** Inject a custom `MastraModelGateway` (used by tests). */
+  setGateway(gateway: MastraModelGateway): void {
+    this.gateway = gateway;
+  }
 
   async onModuleInit(): Promise<void> {
     await this.refreshCatalog('startup');
   }
 
-  /** Daily refresh from models.dev (Mastra provider registry). */
+  /** Daily refresh from the Mastra gateway + models.dev metadata. */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async scheduledRefresh(): Promise<void> {
     if (this.useStaticCatalogOnly()) {
@@ -64,10 +77,6 @@ export class ImportModelsCatalogService implements OnModuleInit {
     return this.configService.get<string>('IMPORT_MODELS_CATALOG_SOURCE') === 'static';
   }
 
-  private modelsDevApiUrl(): string {
-    return this.configService.get<string>('MODELS_DEV_API_URL') ?? MODELS_DEV_API_URL;
-  }
-
   async refreshCatalog(trigger: 'startup' | 'scheduled' | 'manual' = 'manual'): Promise<void> {
     if (this.useStaticCatalogOnly()) {
       this.applyCatalog(loadFallbackImportModelCatalog(), 'fallback');
@@ -77,15 +86,15 @@ export class ImportModelsCatalogService implements OnModuleInit {
     }
 
     try {
-      const registry = await fetchModelsDevRegistry(this.modelsDevApiUrl());
+      const registry = await fetchImportModelRegistryViaGateway({ gateway: this.gateway });
       const built = buildImportModelCatalog(registry);
       assertImportModelCatalog(built);
-      this.applyCatalog(built, 'models.dev');
+      this.applyCatalog(built, 'mastra-gateway');
       this.lastRefreshedAt = new Date();
       this.lastRefreshError = null;
       const modelCount = built.providers.reduce((n, p) => n + p.models.length, 0);
       this.logger.log(
-        `Import model catalog refreshed (${trigger}): ${built.providers.length} providers, ${modelCount} models`,
+        `Import model catalog refreshed via ${this.gateway.name} (${trigger}): ${built.providers.length} providers, ${modelCount} models`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -95,7 +104,7 @@ export class ImportModelsCatalogService implements OnModuleInit {
         const fallback = loadFallbackImportModelCatalog();
         this.applyCatalog(fallback, 'fallback');
         this.logger.warn(
-          `Import model catalog: models.dev unavailable (${trigger}); using bundled fallback (${fallback.providers.length} providers)`,
+          `Import model catalog: Mastra gateway unavailable (${trigger}); using bundled fallback (${fallback.providers.length} providers)`,
         );
         return;
       }

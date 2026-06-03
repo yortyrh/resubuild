@@ -1,6 +1,13 @@
+/**
+ * @deprecated Use `fetchImportModelRegistryViaGateway` from `./fetch-via-gateway`
+ * so the catalog is filtered through Mastra's own provider registry instead of
+ * the raw models.dev payload.
+ */
+
+import type { FetchFn } from './fetch-via-gateway';
 import { MODELS_DEV_API_URL, type ModelsDevRegistry } from './models-dev';
 
-export type FetchFn = typeof fetch;
+export type { FetchFn };
 
 export async function fetchModelsDevRegistry(
   apiUrl: string = MODELS_DEV_API_URL,
