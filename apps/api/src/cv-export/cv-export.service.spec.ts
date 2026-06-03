@@ -410,4 +410,38 @@ describe('CvExportService', () => {
     });
     expect(result.filename).toBe('acme-corp-jane-doe-engineer.pdf');
   });
+
+  describe('assertMcpBinarySize', () => {
+    it('does not throw when buffer is within limit', () => {
+      configService.get.mockReturnValue('10485760'); // 10MB
+      expect(() =>
+        (
+          service as unknown as { assertMcpBinarySize: (b: Buffer, s: string) => void }
+        ).assertMcpBinarySize(Buffer.from('test'), 'Export'),
+      ).not.toThrow();
+    });
+
+    it('throws PayloadTooLargeException when buffer exceeds limit', () => {
+      configService.get.mockReturnValue('100'); // 100 bytes
+      expect(() =>
+        (
+          service as unknown as { assertMcpBinarySize: (b: Buffer, s: string) => void }
+        ).assertMcpBinarySize(Buffer.alloc(200), 'Export'),
+      ).toThrow();
+    });
+  });
+
+  describe('toMcpBase64Payload', () => {
+    it('returns base64 encoded payload', () => {
+      const buffer = Buffer.from('test content');
+      const result = (
+        service as unknown as { toMcpBase64Payload: (b: Buffer, c: string, f: string) => unknown }
+      ).toMcpBase64Payload(buffer, 'application/pdf', 'test.pdf');
+      expect(result).toMatchObject({
+        filename: 'test.pdf',
+        contentType: 'application/pdf',
+        contentBase64: 'dGVzdCBjb250ZW50', // base64 of 'test content'
+      });
+    });
+  });
 });

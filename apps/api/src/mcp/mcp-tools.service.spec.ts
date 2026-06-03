@@ -1,14 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { ApplicationService } from '../application/application.service';
 import type { AuthUser } from '../auth/auth-user.types';
-import type { CvService } from '../cv/cv.service';
-import type { CvTemplatePresentationService } from '../cv/cv-template-presentation.service';
-import type { CvExportService } from '../cv-export/cv-export.service';
-import type { MediaService } from '../media/media.service';
-import { CvJsonResumeSwapService } from './cv-json-resume-swap.service';
 import { getMcpAuthUser } from './mcp-auth.context';
 import { McpToolsService } from './mcp-tools.service';
-import { MCP_TOOL_DEFINITIONS, MCP_TOOL_NAMES, type McpToolName } from './tool-definitions';
+import { MCP_TOOL_DEFINITIONS, MCP_TOOL_NAMES } from './tool-definitions';
 
 jest.mock('./mcp-auth.context');
 jest.mock('@modelcontextprotocol/sdk/server/mcp.js');
@@ -23,11 +17,19 @@ describe('McpToolsService', () => {
   let cvExportService: {
     renderJson: jest.Mock;
     renderHtml: jest.Mock;
+    renderPdf: jest.Mock;
+    renderScreenshot: jest.Mock;
     listTemplateCatalog: jest.Mock;
     resolveTemplateId: jest.Mock;
+    toMcpBase64Payload: jest.Mock;
   };
   let presentationService: { getPresentation: jest.Mock; upsertPresentation: jest.Mock };
-  let applicationService: { findAll: jest.Mock; findOne: jest.Mock };
+  let applicationService: {
+    findAll: jest.Mock;
+    findOne: jest.Mock;
+    patchApplicationMetadata: jest.Mock;
+    updateCoverLetter: jest.Mock;
+  };
   let jsonResumeSwapService: { createFromJsonResume: jest.Mock; replaceFromJsonResume: jest.Mock };
   let mediaService: {
     listMediaForUser: jest.Mock;
@@ -45,11 +47,19 @@ describe('McpToolsService', () => {
     cvExportService = {
       renderJson: jest.fn(),
       renderHtml: jest.fn(),
+      renderPdf: jest.fn(),
+      renderScreenshot: jest.fn(),
       listTemplateCatalog: jest.fn(),
       resolveTemplateId: jest.fn(),
+      toMcpBase64Payload: jest.fn(),
     } as never;
     presentationService = { getPresentation: jest.fn(), upsertPresentation: jest.fn() };
-    applicationService = { findAll: jest.fn(), findOne: jest.fn() } as never;
+    applicationService = {
+      findAll: jest.fn(),
+      findOne: jest.fn(),
+      patchApplicationMetadata: jest.fn(),
+      updateCoverLetter: jest.fn(),
+    } as never;
     jsonResumeSwapService = {
       createFromJsonResume: jest.fn(),
       replaceFromJsonResume: jest.fn(),
@@ -189,6 +199,355 @@ describe('McpToolsService', () => {
       const result = await handler();
 
       expect(mediaService.listMediaForUser).toHaveBeenCalledWith(user.id);
+      expect(result).toMatchObject({ structuredContent: expect.any(Object) });
+    });
+
+    it('registers get_media_url handler that calls mediaService.getMediaMeta and viewerUrlForId', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(([n]) => n === 'get_media_url');
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: { mediaId: string }) => Promise<unknown>;
+
+      mediaService.getMediaMeta.mockResolvedValue({
+        contentType: 'image/png',
+        crop: null,
+        hasCropped: false,
+      } as never);
+      mediaService.viewerUrlForId.mockReturnValue('http://localhost/media/1');
+
+      const result = await handler({ mediaId: '11111111-1111-1111-1111-111111111111' });
+
+      expect(mediaService.getMediaMeta).toHaveBeenCalledWith(
+        user.id,
+        '11111111-1111-1111-1111-111111111111',
+      );
+      expect(mediaService.viewerUrlForId).toHaveBeenCalledWith(
+        '11111111-1111-1111-1111-111111111111',
+      );
+      expect(result).toMatchObject({ structuredContent: expect.any(Object) });
+    });
+
+    it('registers delete_media handler that calls mediaService.deleteMedia', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(([n]) => n === 'delete_media');
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: { mediaId: string }) => Promise<unknown>;
+
+      mediaService.deleteMedia.mockResolvedValue(undefined as never);
+
+      const result = await handler({ mediaId: '11111111-1111-1111-1111-111111111111' });
+
+      expect(mediaService.deleteMedia).toHaveBeenCalledWith(
+        user.id,
+        '11111111-1111-1111-1111-111111111111',
+      );
+      expect(result).toMatchObject({
+        structuredContent: { ok: true, mediaId: '11111111-1111-1111-1111-111111111111' },
+      });
+    });
+
+    it('registers get_application handler that calls applicationService.findOne', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(([n]) => n === 'get_application');
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: { applicationId: string }) => Promise<unknown>;
+
+      applicationService.findOne.mockResolvedValue({ id: 'app-1' } as never);
+
+      const result = await handler({ applicationId: '11111111-1111-1111-1111-111111111111' });
+
+      expect(applicationService.findOne).toHaveBeenCalledWith(
+        user,
+        '11111111-1111-1111-1111-111111111111',
+      );
+      expect(result).toMatchObject({ structuredContent: expect.any(Object) });
+    });
+
+    it('registers update_application handler that calls applicationService.patchApplicationMetadata', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(([n]) => n === 'update_application');
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: {
+        applicationId: string;
+        jobTitle: string;
+      }) => Promise<unknown>;
+
+      applicationService.patchApplicationMetadata = jest
+        .fn()
+        .mockResolvedValue({ id: 'app-1', jobTitle: 'Senior Engineer' } as never);
+
+      const result = await handler({
+        applicationId: '11111111-1111-1111-1111-111111111111',
+        jobTitle: 'Senior Engineer',
+      });
+
+      expect(applicationService.patchApplicationMetadata).toHaveBeenCalledWith(
+        user,
+        '11111111-1111-1111-1111-111111111111',
+        expect.objectContaining({ jobTitle: 'Senior Engineer' }),
+      );
+      expect(result).toMatchObject({ structuredContent: expect.any(Object) });
+    });
+
+    it('registers update_application_letter handler that calls applicationService.updateCoverLetter', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(
+        ([n]) => n === 'update_application_letter',
+      );
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: {
+        applicationId: string;
+        coverLetter: string;
+      }) => Promise<unknown>;
+
+      applicationService.updateCoverLetter = jest
+        .fn()
+        .mockResolvedValue({ id: 'app-1', coverLetter: 'Dear...' } as never);
+
+      const result = await handler({
+        applicationId: '11111111-1111-1111-1111-111111111111',
+        coverLetter: 'Dear Hiring Manager',
+      });
+
+      expect(applicationService.updateCoverLetter).toHaveBeenCalledWith(
+        user,
+        '11111111-1111-1111-1111-111111111111',
+        'Dear Hiring Manager',
+      );
+      expect(result).toMatchObject({ structuredContent: expect.any(Object) });
+    });
+
+    it('registers create_cv_from_jsonresume handler', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(
+        ([n]) => n === 'create_cv_from_jsonresume',
+      );
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: {
+        document: Record<string, unknown>;
+      }) => Promise<unknown>;
+
+      jsonResumeSwapService.createFromJsonResume.mockResolvedValue({
+        id: 'cv-new',
+        title: 'New CV',
+      } as never);
+
+      const result = await handler({ document: { basics: { name: 'John' } } });
+
+      expect(jsonResumeSwapService.createFromJsonResume).toHaveBeenCalledWith(user, {
+        basics: { name: 'John' },
+      });
+      expect(result).toMatchObject({
+        structuredContent: expect.objectContaining({ cvId: 'cv-new' }),
+      });
+    });
+
+    it('registers replace_cv_from_jsonresume handler', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(
+        ([n]) => n === 'replace_cv_from_jsonresume',
+      );
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: {
+        cvId: string;
+        document: Record<string, unknown>;
+      }) => Promise<unknown>;
+
+      jsonResumeSwapService.replaceFromJsonResume.mockResolvedValue({
+        id: 'cv-replaced',
+        title: 'Replaced',
+      } as never);
+
+      const result = await handler({
+        cvId: '11111111-1111-1111-1111-111111111111',
+        document: { basics: { name: 'Jane' } },
+      });
+
+      expect(jsonResumeSwapService.replaceFromJsonResume).toHaveBeenCalledWith(
+        user,
+        '11111111-1111-1111-1111-111111111111',
+        { basics: { name: 'Jane' } },
+      );
+      expect(result).toMatchObject({
+        structuredContent: expect.objectContaining({ cvId: 'cv-replaced' }),
+      });
+    });
+
+    it('registers export_cv_jsonresume handler', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(
+        ([n]) => n === 'export_cv_jsonresume',
+      );
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: { cvId: string }) => Promise<unknown>;
+
+      cvExportService.renderJson.mockResolvedValue({
+        body: '{"basics":{"name":"John"}}',
+        filename: 'resume.json',
+      });
+      const result = await handler({ cvId: '11111111-1111-1111-1111-111111111111' });
+
+      expect(cvExportService.renderJson).toHaveBeenCalledWith(
+        user,
+        '11111111-1111-1111-1111-111111111111',
+      );
+      expect(result).toMatchObject({ structuredContent: expect.any(Object) });
+    });
+
+    it('registers export_cv_html handler', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(([n]) => n === 'export_cv_html');
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: {
+        cvId: string;
+        template?: string;
+      }) => Promise<unknown>;
+
+      cvExportService.renderHtml.mockResolvedValue('<html>...</html>');
+      cvService.findOne.mockResolvedValue({ id: 'cv-1', templateId: 'classic' } as never);
+      cvExportService.resolveTemplateId.mockReturnValue('classic');
+
+      const result = await handler({
+        cvId: '11111111-1111-1111-1111-111111111111',
+        template: 'modern',
+      });
+
+      expect(cvExportService.renderHtml).toHaveBeenCalledWith(
+        user,
+        '11111111-1111-1111-1111-111111111111',
+        'modern',
+      );
+      expect(result).toMatchObject({ structuredContent: expect.any(Object) });
+    });
+
+    it('registers export_cv_screenshot handler', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(
+        ([n]) => n === 'export_cv_screenshot',
+      );
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: {
+        cvId: string;
+        template?: string;
+        mode?: string;
+      }) => Promise<unknown>;
+
+      cvExportService.renderScreenshot.mockResolvedValue({
+        buffer: Buffer.from('fake-png'),
+        filename: 'screenshot.png',
+        mode: 'full_document' as const,
+        templateId: 'classic',
+      });
+      cvExportService.toMcpBase64Payload.mockReturnValue({ data: 'base64encoded' });
+
+      const result = await handler({ cvId: '11111111-1111-1111-1111-111111111111' });
+
+      expect(cvExportService.renderScreenshot).toHaveBeenCalledWith(
+        user,
+        '11111111-1111-1111-1111-111111111111',
+        { template: undefined, mode: undefined },
+      );
+      expect(result).toMatchObject({ structuredContent: expect.any(Object) });
+    });
+
+    it('registers export_cv_screenshot handler with mode parameter', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(
+        ([n]) => n === 'export_cv_screenshot',
+      );
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: {
+        cvId: string;
+        template?: string;
+        mode?: string;
+      }) => Promise<unknown>;
+
+      cvExportService.renderScreenshot.mockResolvedValue({
+        buffer: Buffer.from('fake-png'),
+        filename: 'screenshot.png',
+        mode: 'full_document' as const,
+        templateId: 'classic',
+      });
+      cvExportService.toMcpBase64Payload.mockReturnValue({ data: 'base64encoded' });
+
+      const result = await handler({
+        cvId: '11111111-1111-1111-1111-111111111111',
+        mode: 'full_document',
+      });
+
+      expect(cvExportService.renderScreenshot).toHaveBeenCalledWith(
+        user,
+        '11111111-1111-1111-1111-111111111111',
+        { template: undefined, mode: 'full_document' },
+      );
+      expect(result).toMatchObject({ structuredContent: expect.any(Object) });
+    });
+
+    it('registers export_cv_pdf handler', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(([n]) => n === 'export_cv_pdf');
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: {
+        cvId: string;
+        template?: string;
+      }) => Promise<unknown>;
+
+      cvExportService.renderPdf.mockResolvedValue({
+        buffer: Buffer.from('fake-pdf'),
+        filename: 'resume.pdf',
+      });
+      cvExportService.toMcpBase64Payload.mockReturnValue({ data: 'base64encoded' });
+
+      const result = await handler({ cvId: '11111111-1111-1111-1111-111111111111' });
+
+      expect(cvExportService.renderPdf).toHaveBeenCalledWith(
+        user,
+        '11111111-1111-1111-1111-111111111111',
+        undefined,
+      );
+      expect(cvExportService.toMcpBase64Payload).toHaveBeenCalledWith(
+        Buffer.from('fake-pdf'),
+        'application/pdf',
+        'resume.pdf',
+      );
+      expect(result).toMatchObject({ structuredContent: expect.any(Object) });
+    });
+
+    it('registers get_cv_template_presentation handler', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(
+        ([n]) => n === 'get_cv_template_presentation',
+      );
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: { cvId: string; template: string }) => Promise<unknown>;
+
+      presentationService.getPresentation.mockResolvedValue({ config: {} });
+
+      const result = await handler({
+        cvId: '11111111-1111-1111-1111-111111111111',
+        template: 'classic',
+      });
+
+      expect(presentationService.getPresentation).toHaveBeenCalledWith(
+        user,
+        '11111111-1111-1111-1111-111111111111',
+        'classic',
+      );
+      expect(result).toMatchObject({ structuredContent: expect.any(Object) });
+    });
+
+    it('registers update_cv_template_presentation handler', async () => {
+      const calls = mockServer.registerTool.mock.calls.filter(
+        ([n]) => n === 'update_cv_template_presentation',
+      );
+      expect(calls.length).toBeGreaterThan(0);
+      const handler = calls[0][2] as (args: {
+        cvId: string;
+        template: string;
+        config: Record<string, unknown>;
+      }) => Promise<unknown>;
+
+      presentationService.upsertPresentation.mockResolvedValue({ config: { fontSize: 12 } });
+
+      const result = await handler({
+        cvId: '11111111-1111-1111-1111-111111111111',
+        template: 'classic',
+        config: { fontSize: 12 },
+      });
+
+      expect(presentationService.upsertPresentation).toHaveBeenCalledWith(
+        user,
+        '11111111-1111-1111-1111-111111111111',
+        'classic',
+        { fontSize: 12 },
+      );
       expect(result).toMatchObject({ structuredContent: expect.any(Object) });
     });
   });
