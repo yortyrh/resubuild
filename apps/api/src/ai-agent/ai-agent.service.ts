@@ -229,9 +229,11 @@ export class AiAgentService {
       await this.withScopedApiKey(modelId, apiKey, async () => {
         const { Agent } = await import('@mastra/core/agent');
         const agent = new Agent({
+          id: 'ai-agent-probe',
           name: 'ai-agent-probe',
           instructions: 'Reply with OK.',
-          model: modelId,
+          // `model` is a `provider/model` string routed by the v1 model router.
+          model: modelId as `${string}/${string}`,
         });
         await agent.generate('ping');
       });

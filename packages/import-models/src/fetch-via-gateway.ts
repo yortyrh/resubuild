@@ -7,13 +7,13 @@
  * `@mastra/core` ships a `MastraModelGateway` abstraction. Its built-in
  * `ModelsDevGateway` knows which providers/models Mastra considers runnable
  * (OpenAI-compatible, has an installed package, or has a configured `api` + `env`).
- * In `@mastra/core@0.20.2` that gateway class is not part of the package's public
- * exports, but the same curated set is published as `PROVIDER_REGISTRY` — a static
- * `Record<string, ProviderConfig>` re-exported from `@mastra/core`. We treat
- * `PROVIDER_REGISTRY` as the gateway's view of "what Mastra supports today" and
- * wrap it in a small `MastraModelGateway`-shaped object so callers can swap in a
- * different provider source (e.g. a Netlify gateway, a custom registry) without
- * touching the catalog builder.
+ * In `@mastra/core@1.38.0` that gateway class is part of the package's public
+ * exports from `@mastra/core/llm` (see `MastraModelGateway` and `ModelsDevGateway`).
+ * We wrap the v1 built-in `ModelsDevGateway` in a small structural sub-view so
+ * callers can swap in a different provider source (e.g. a Netlify gateway, a
+ * custom registry) without touching the catalog builder. The local interface
+ * only declares `fetchProviders()` so test stubs do not need to implement the
+ * full v1 gateway surface (`buildUrl`, `getApiKey`, `resolveLanguageModel`).
  *
  * The `ProviderConfig` entries only carry model IDs as strings — they do not expose
  * the model metadata (modalities, `tool_call`, `reasoning`) our catalog builder
@@ -21,16 +21,21 @@
  * therefore do a single `fetch()` of the upstream models.dev JSON and intersect
  * it with the gateway-accepted provider IDs.
  */
-import { PROVIDER_REGISTRY, type ProviderConfig } from '@mastra/core';
+import { MastraModelGateway as MastraModelGatewayClass, ModelsDevGateway, type ProviderConfig } from '@mastra/core/llm';
 import { MODELS_DEV_API_URL, type ModelsDevProvider, type ModelsDevRegistry } from './models-dev';
 
 export type FetchFn = typeof fetch;
 
 /**
- * Minimal contract that mirrors the public surface of `MastraModelGateway`
- * (`@mastra/core/llm/model/gateways`). The real gateway is not publicly exported
- * in the version pinned by this monorepo, so we keep our own typed view and
- * re-use the public `PROVIDER_REGISTRY` as the default implementation.
+ * Minimal structural sub-view of the v1 `MastraModelGateway` class. We only
+ * declare the `fetchProviders()` method the workspace actually uses so test
+ * stubs that return a hand-rolled `Record<string, ProviderConfig>` keep
+ * satisfying it without implementing the full v1 class surface
+ * (`buildUrl`, `getApiKey`, `resolveLanguageModel`).
+ *
+ * The local name `MastraModelGateway` is kept for backward compatibility with
+ * the workspace's existing call sites and tests, which import it as a
+ * structural type. The v1 public class is exposed as `MastraModelGatewayClass`.
  */
 export interface MastraModelGateway {
   readonly name: string;
@@ -38,15 +43,21 @@ export interface MastraModelGateway {
   fetchProviders(): Promise<Record<string, ProviderConfig>>;
 }
 
+/** Re-export of the v1 `MastraModelGateway` public class. */
+export { MastraModelGatewayClass };
+
 /**
- * The default gateway implementation: the curated `PROVIDER_REGISTRY` shipped by
- * `@mastra/core`, which is the static snapshot `ModelsDevGateway.fetchProviders()`
- * produces at module load.
+ * The default gateway implementation: a thin wrapper around the v1
+ * `ModelsDevGateway` shipped by `@mastra/core/llm`, which returns the same
+ * curated provider/model set `PROVIDER_REGISTRY` exposed in v0.20. The wrapper
+ * exists so the import-models package keeps a stable local injection contract
+ * (the `MastraModelGateway` type above) while the underlying implementation is
+ * now the v1 public class.
  */
 export const modelsDevGateway: MastraModelGateway = {
   name: 'models.dev',
   fetchProviders: async (): Promise<Record<string, ProviderConfig>> => {
-    return PROVIDER_REGISTRY;
+    return new ModelsDevGateway().fetchProviders();
   },
 };
 

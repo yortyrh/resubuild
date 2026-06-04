@@ -13,6 +13,7 @@ import type {
   TextImportWorkflowInput,
   TextImportWorkflowResult,
 } from '../types';
+import { toAgentModelConfig } from './agent-model-config';
 import { applySocialProfileDiscovery } from './social-profile-discovery';
 
 const MAX_REPAIR_ATTEMPTS = 3;
@@ -28,12 +29,10 @@ Return only valid JSON. Preserve factual content from the draft unless fixing sh
 
 function createAgent(modelId: string, apiKey: string, instructions: string) {
   return new Agent({
+    id: 'pdf-import-agent',
     name: 'pdf-import-agent',
     instructions,
-    model: {
-      id: modelId,
-      apiKey,
-    },
+    model: toAgentModelConfig(modelId, apiKey),
   });
 }
 

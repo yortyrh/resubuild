@@ -8,6 +8,7 @@ import {
   type WebsiteImportToolsConfig,
 } from '../tools/website-import-tools';
 import type { ImportJobProgress, TextImportWorkflowResult } from '../types';
+import { toAgentModelConfig } from './agent-model-config';
 import { applySocialProfileDiscovery } from './social-profile-discovery';
 
 const MAX_REPAIR_ATTEMPTS = 3;
@@ -56,12 +57,10 @@ async function generateWebsiteDraft(
 
   const tools = buildWebsiteImportTools(input.toolsConfig);
   const agent = new Agent({
+    id: 'website-import-agent',
     name: 'website-import-agent',
     instructions: WEBSITE_DRAFT_INSTRUCTIONS,
-    model: {
-      id: input.modelId,
-      apiKey: input.apiKey,
-    },
+    model: toAgentModelConfig(input.modelId, input.apiKey),
     tools,
   });
 
@@ -95,9 +94,10 @@ async function generateRepair(
   }
 
   const agent = new Agent({
+    id: 'website-import-repair',
     name: 'website-import-repair',
     instructions: REPAIR_INSTRUCTIONS,
-    model: { id: modelId, apiKey },
+    model: toAgentModelConfig(modelId, apiKey),
   });
 
   const response = await agent.generate(prompt, {

@@ -1,5 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { sanitizeAiTypography } from '@resumind/types';
+import { toAgentModelConfig } from '../workflows/agent-model-config';
 import { renderPdfPagesToPng } from './render-pdf-pages';
 
 const TRANSCRIBE_INSTRUCTIONS = `Transcribe all visible resume text from the provided page images.
@@ -25,9 +26,10 @@ export async function transcribePdfWithVisionTool(
   }
 
   const agent = new Agent({
+    id: 'pdf-ocr-transcriber',
     name: 'pdf-ocr-transcriber',
     instructions: TRANSCRIBE_INSTRUCTIONS,
-    model: { id: modelId, apiKey },
+    model: toAgentModelConfig(modelId, apiKey),
   });
 
   const response = await agent.generate([

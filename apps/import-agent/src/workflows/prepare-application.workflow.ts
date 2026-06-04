@@ -11,6 +11,7 @@ import type {
 } from '../prepare-application.types';
 import { extractPdfTextTool } from '../tools/extract-pdf-text.tool';
 import { fetchHtmlTool } from '../tools/fetch-html.tool';
+import { toAgentModelConfig } from './agent-model-config';
 
 function sanitizeJobSummary(summary: JobSummary): JobSummary {
   return {
@@ -64,9 +65,10 @@ async function generateJsonFromPrompt(
   }
 
   const agent = new Agent({
+    id: 'prepare-application-agent',
     name: 'prepare-application-agent',
     instructions,
-    model: { id: modelId, apiKey },
+    model: toAgentModelConfig(modelId, apiKey),
   });
 
   const response = await agent.generate(prompt, {
@@ -137,10 +139,11 @@ export async function normalizeJobPostingText(
     }
 
     const agent = new Agent({
+      id: 'job-image-transcriber',
       name: 'job-image-transcriber',
       instructions:
         'Transcribe all visible job posting text from the image. Return plain text only, preserving paragraphs.',
-      model: { id: input.modelId, apiKey: input.apiKey },
+      model: toAgentModelConfig(input.modelId, input.apiKey),
     });
 
     const response = await agent.generate([
