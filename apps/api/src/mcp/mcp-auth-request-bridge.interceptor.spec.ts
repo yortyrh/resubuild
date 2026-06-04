@@ -5,10 +5,7 @@ import { McpAuthRequestBridge } from './mcp-auth-request-bridge.interceptor';
 
 const mockUser = { id: 'user-1', accessToken: 'tok', authMethod: 'jwt' as const };
 
-function makeContext(
-  url: string | undefined,
-  user: unknown,
-): ExecutionContext {
+function makeContext(url: string | undefined, user: unknown): ExecutionContext {
   return {
     switchToHttp: () => ({
       getRequest: () => ({ url, user }),

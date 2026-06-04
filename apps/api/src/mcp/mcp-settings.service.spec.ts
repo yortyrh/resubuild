@@ -175,10 +175,9 @@ describe('McpSettingsService', () => {
     it('returns the registry-discovered names when the wrapper registry is injected', () => {
       const mockRegistry = {
         getMcpModuleIds: jest.fn().mockReturnValue(['mcp-1']),
-        getTools: jest.fn().mockReturnValue([
-          { metadata: { name: 'list_cvs' } },
-          { metadata: { name: 'get_cv' } },
-        ]),
+        getTools: jest
+          .fn()
+          .mockReturnValue([{ metadata: { name: 'list_cvs' } }, { metadata: { name: 'get_cv' } }]),
       };
 
       const serviceWithRegistry = new McpSettingsService(
@@ -197,10 +196,12 @@ describe('McpSettingsService', () => {
     it('appends a registry-only tool when the wrapper picks up a new @Tool', () => {
       const mockRegistry = {
         getMcpModuleIds: jest.fn().mockReturnValue(['mcp-1']),
-        getTools: jest.fn().mockReturnValue([
-          { metadata: { name: 'list_cvs' } },
-          { metadata: { name: 'experimental_tool' } },
-        ]),
+        getTools: jest
+          .fn()
+          .mockReturnValue([
+            { metadata: { name: 'list_cvs' } },
+            { metadata: { name: 'experimental_tool' } },
+          ]),
       };
 
       const serviceWithRegistry = new McpSettingsService(

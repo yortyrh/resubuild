@@ -16,10 +16,6 @@ export class FetchExportUrlTool {
     annotations: { readOnlyHint: true },
   })
   async run(args: { exportId: string; ttlSeconds?: number }) {
-    return this.mcpExportService.refreshSignedUrl(
-      getMcpAuthUser(),
-      args.exportId,
-      args.ttlSeconds,
-    );
+    return this.mcpExportService.refreshSignedUrl(getMcpAuthUser(), args.exportId, args.ttlSeconds);
   }
 }

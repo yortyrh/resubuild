@@ -13,14 +13,17 @@
  * the wrapper lives in `apps/api/test/e2e/local-supabase.e2e-spec.ts`.
  */
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { ApplicationModule } from '../application/application.module';
 import { AuthModule } from '../auth/auth.module';
 import { CvModule } from '../cv/cv.module';
 import { CvExportModule } from '../cv-export/cv-export.module';
 import { ExportStorageModule } from '../export-storage/export-storage.module';
+import { ImportModelsCatalogModule } from '../import-models-catalog/import-models-catalog.module';
 import { MediaModule } from '../media/media.module';
 import { McpModule } from './mcp.module';
+import { McpAuthModule } from './mcp-auth.module';
 
 @Module({})
 class NoopModule {}
@@ -31,6 +34,7 @@ describe('McpModule', () => {
 
     const moduleRef = await Test.createTestingModule({
       imports: [
+        ConfigModule.forRoot({ isGlobal: true }),
         NoopModule,
         AuthModule,
         CvModule,
@@ -38,6 +42,8 @@ describe('McpModule', () => {
         ApplicationModule,
         MediaModule,
         ExportStorageModule,
+        ImportModelsCatalogModule,
+        McpAuthModule,
         McpModule,
       ],
     }).compile();
@@ -51,6 +57,7 @@ describe('McpModule', () => {
 
     const moduleRef = await Test.createTestingModule({
       imports: [
+        ConfigModule.forRoot({ isGlobal: true }),
         NoopModule,
         AuthModule,
         CvModule,
@@ -58,6 +65,8 @@ describe('McpModule', () => {
         ApplicationModule,
         MediaModule,
         ExportStorageModule,
+        ImportModelsCatalogModule,
+        McpAuthModule,
         McpModule,
       ],
     }).compile();

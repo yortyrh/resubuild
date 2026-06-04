@@ -1,4 +1,10 @@
-import { type CallHandler, type ExecutionContext, Injectable, type NestInterceptor, type Request } from '@nestjs/common';
+import {
+  type CallHandler,
+  type ExecutionContext,
+  Injectable,
+  type NestInterceptor,
+  type Request,
+} from '@nestjs/common';
 import { from, Observable } from 'rxjs';
 import { mcpAuthStorage } from './mcp-auth.context';
 

@@ -124,7 +124,6 @@ const resourceProviders = [CvResource, ApplicationResource, MediaResource];
     McpSettingsService,
     CvJsonResumeSwapService,
     McpExportService,
-    McpApiKeyGuard,
     { provide: APP_INTERCEPTOR, useClass: McpAuthRequestBridge },
     ...toolProviders,
     ...resourceProviders,
