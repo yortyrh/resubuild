@@ -68,9 +68,10 @@ Deprecated aliases under `/import/llm/*` delegate to the same services for one r
 
 ### Import model catalog (Mastra gateway + models.dev)
 
-Provider/model lists are discovered via Mastra's `MastraModelGateway`
-(`PROVIDER_REGISTRY` from `@mastra/core`) and enriched with model metadata
-fetched from [models.dev](https://models.dev/api.json). The catalog is loaded
+Provider/model lists are discovered via the `MastraModelGateway` public class
+shipped in `@mastra/core/llm` (v1; the legacy v0.20 `PROVIDER_REGISTRY`
+re-export was removed) and enriched with model metadata fetched from
+[models.dev](https://models.dev/api.json). The catalog is loaded
 into memory on **API startup**, then refreshed **daily at midnight UTC**. No
 per-request fetch.
 

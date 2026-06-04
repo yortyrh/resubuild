@@ -19,7 +19,12 @@
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
+    "allowJs": true,
     "types": ["node", "jest"]
+  },
+  "ts-jest": {
+    "isolatedModules": true,
+    "diagnostics": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

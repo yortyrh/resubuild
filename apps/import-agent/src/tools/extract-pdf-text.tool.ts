@@ -1,4 +1,4 @@
-import pdfParse from 'pdf-parse';
+import { PDFParse } from 'pdf-parse';
 import { transcribePdfWithVisionTool } from './transcribe-pdf-with-vision.tool';
 
 export interface ExtractPdfTextResult {
@@ -25,12 +25,20 @@ export async function extractPdfTextTool(
   let pageCount = 0;
   let text = '';
 
+  let parser: PDFParse | null = null;
   try {
-    const parsed = await pdfParse(pdfBuffer);
-    pageCount = parsed.numpages;
+    parser = new PDFParse({ data: pdfBuffer });
+    const parsed = await parser.getText();
+    pageCount = parsed.total;
     text = parsed.text.trim();
   } catch {
     pageCount = 0;
+  } finally {
+    if (parser) {
+      await parser.destroy().catch(() => {
+        // Best-effort cleanup; ignore failures so the main flow can continue.
+      });
+    }
   }
 
   let usedVisionOcr = false;

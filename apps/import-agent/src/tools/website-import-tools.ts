@@ -26,9 +26,9 @@ export function buildWebsiteImportTools(config: WebsiteImportToolsConfig) {
       inputSchema: z.object({
         url: z.string().url().describe('HTTPS URL of the page to scrape'),
       }),
-      execute: async ({ context }) => {
+      execute: async (inputData) => {
         const result = await firecrawlScrapeTool({
-          url: context.url,
+          url: inputData.url,
           apiKey: config.scrapeApiKey!,
         });
         return {
@@ -46,9 +46,9 @@ export function buildWebsiteImportTools(config: WebsiteImportToolsConfig) {
       inputSchema: z.object({
         url: z.string().url().describe('HTTPS URL of the page to extract'),
       }),
-      execute: async ({ context }) => {
+      execute: async (inputData) => {
         const result = await tavilyExtractTool({
-          url: context.url,
+          url: inputData.url,
           apiKey: config.scrapeApiKey!,
         });
         return {
@@ -66,8 +66,8 @@ export function buildWebsiteImportTools(config: WebsiteImportToolsConfig) {
       inputSchema: z.object({
         url: z.string().url().describe('HTTPS URL of the page to fetch'),
       }),
-      execute: async ({ context }) => {
-        const result = await fetchHtmlTool({ url: context.url });
+      execute: async (inputData) => {
+        const result = await fetchHtmlTool({ url: inputData.url });
         return {
           url: result.url,
           format: result.format,
@@ -86,9 +86,9 @@ export function buildWebsiteImportTools(config: WebsiteImportToolsConfig) {
       inputSchema: z.object({
         query: z.string().min(1).describe('Search query'),
       }),
-      execute: async ({ context }) => {
+      execute: async (inputData) => {
         const result = await webLookupTool({
-          query: context.query,
+          query: inputData.query,
           searchApiKey: config.searchApiKey,
         });
         return result;

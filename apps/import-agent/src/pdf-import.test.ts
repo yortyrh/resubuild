@@ -2,12 +2,22 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const { getTextMock, destroyMock } = vi.hoisted(() => ({
+  getTextMock: vi.fn(),
+  destroyMock: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('pdf-parse', () => ({
-  default: vi.fn(),
+  // biome-ignore lint/complexity/useArrowFunction: required by vitest 4
+  PDFParse: vi.fn(function () {
+    return {
+      getText: getTextMock,
+      destroy: destroyMock,
+    };
+  }),
 }));
 
 import { createEmptyResume } from '@resumind/types';
-import pdfParse from 'pdf-parse';
 import { discoverSocialProfilesTool } from './tools/discover-social-profiles.tool';
 import { extractPdfTextTool } from './tools/extract-pdf-text.tool';
 import { normalizeDatesTool } from './tools/normalize-dates.tool';
@@ -26,10 +36,13 @@ vi.mock('./tools/discover-social-profiles.tool', () => ({
 const fixturePath = path.join(__dirname, '../test-fixtures/minimal.pdf');
 
 beforeEach(() => {
-  vi.mocked(pdfParse).mockResolvedValue({
+  getTextMock.mockReset();
+  destroyMock.mockClear();
+  getTextMock.mockResolvedValue({
     text: 'Jane Doe\nSoftware Engineer',
-    numpages: 1,
-  } as never);
+    total: 1,
+    pages: [{ num: 1, text: 'Jane Doe\nSoftware Engineer' }],
+  });
 });
 
 describe('extractPdfTextTool', () => {
@@ -42,10 +55,14 @@ describe('extractPdfTextTool', () => {
   });
 
   it('falls back to vision OCR when pdf-parse returns no text', async () => {
-    vi.mocked(pdfParse).mockResolvedValue({
+    getTextMock.mockResolvedValueOnce({
       text: '   ',
-      numpages: 2,
-    } as never);
+      total: 2,
+      pages: [
+        { num: 1, text: '   ' },
+        { num: 2, text: '   ' },
+      ],
+    });
 
     const buffer = readFileSync(fixturePath);
     const transcribePdfPages = vi.fn().mockResolvedValue('Mariela Romero\nProduct Designer');
