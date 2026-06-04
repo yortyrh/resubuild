@@ -677,3 +677,91 @@ describe('E2E — markdown import (local Supabase)', () => {
       .expect(422);
   });
 });
+
+describe('E2E — MCP transport gate (local Supabase)', () => {
+  let app: INestApplication;
+  let accessToken: string;
+  const fixture = loadFixture();
+
+  beforeAll(async () => {
+    app = await createE2eApp();
+    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
+    accessToken = login.body.access_token;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('POST /mcp without an API key returns 401 (wrapper guard rejects first)', async () => {
+    await request(app.getHttpServer())
+      .post('/mcp')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-03-26',
+          capabilities: {},
+          clientInfo: { name: 'e2e', version: '0.0.0' },
+        },
+      })
+      .expect(401);
+  });
+
+  it('GET /settings/mcp still resolves when MCP transport is enabled', async () => {
+    await request(app.getHttpServer())
+      .get('/settings/mcp')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+  });
+});
+
+describe('E2E — MCP transport disabled (local Supabase)', () => {
+  let app: INestApplication;
+  let accessToken: string;
+  const fixture = loadFixture();
+  const previousEnabled = process.env.MCP_SERVER_ENABLED;
+
+  beforeAll(async () => {
+    process.env.MCP_SERVER_ENABLED = 'false';
+    jest.resetModules();
+    app = await createE2eApp();
+    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
+    accessToken = login.body.access_token;
+  });
+
+  afterAll(async () => {
+    await app.close();
+    if (previousEnabled === undefined) {
+      delete process.env.MCP_SERVER_ENABLED;
+    } else {
+      process.env.MCP_SERVER_ENABLED = previousEnabled;
+    }
+    jest.resetModules();
+  });
+
+  it('POST /mcp returns 404 when MCP_SERVER_ENABLED=false (no controller is mounted)', async () => {
+    await request(app.getHttpServer())
+      .post('/mcp')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ jsonrpc: '2.0', id: 1, method: 'ping' })
+      .expect(404);
+  });
+
+  it('POST /mcp/ also returns 404 when MCP_SERVER_ENABLED=false', async () => {
+    await request(app.getHttpServer())
+      .post('/mcp/')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ jsonrpc: '2.0', id: 1, method: 'ping' })
+      .expect(404);
+  });
+
+  it('GET /settings/mcp remains live when MCP_SERVER_ENABLED=false (REST key management is decoupled)', async () => {
+    await request(app.getHttpServer())
+      .get('/settings/mcp')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+  });
+});

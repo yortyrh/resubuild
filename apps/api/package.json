@@ -19,6 +19,7 @@
     "@nestjs/core": "^11.1.24",
     "@nestjs/platform-express": "^11.1.24",
     "@nestjs/schedule": "^6.1.3",
+    "@rekog/mcp-nest": "^1.9.10",
     "@resumind/import-agent": "workspace:*",
     "@resumind/import-models": "workspace:*",
     "@resumind/resume-template": "workspace:*",
@@ -34,7 +35,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "sharp": "^0.34.5",
-    "zod": "^3.25.76"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.7",

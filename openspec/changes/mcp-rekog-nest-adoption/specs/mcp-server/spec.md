@@ -1,5 +1,13 @@
 ## ADDED Requirements
 
+> **Implementation note:** all `Requirement` blocks in this spec are implemented
+> using the [`@rekog/mcp-nest`](https://github.com/rekog-labs/MCP-Nest)
+> NestJS module. Tools are declared as `@Tool({...})`-decorated methods on
+> `@Injectable()` providers under `apps/api/src/mcp/tools/`; resources as
+> `@ResourceTemplate({...})`-decorated methods under
+> `apps/api/src/mcp/resources/`. The prior hand-rolled `McpController`,
+> `McpToolsService`, and per-resource handlers are deleted.
+
 ### Requirement: The MCP server SHALL be implemented with the `@rekog/mcp-nest` NestJS module
 
 The MCP server in `apps/api` SHALL be implemented using the [`@rekog/mcp-nest`](https://github.com/rekog-labs/MCP-Nest) NestJS module in place of direct usage of `@modelcontextprotocol/sdk`. `McpModule.forRoot(...)` SHALL be configured with `name = 'resumind'`, `version = '1.0.0'`, `transport = [McpTransportType.STREAMABLE_HTTP]`, `streamableHttp.statelessMode = false`, `streamableHttp.sessionIdGenerator = () => randomUUID()`, and `capabilities = { tools: { listChanged: false }, resources: { listChanged: false } }`. Each MCP tool SHALL be implemented as a single `@Tool({ name, description, parameters, annotations })`-decorated method on an `@Injectable()` provider, discovered automatically through NestJS dependency injection. Each MCP resource SHALL be implemented as a single `@Resource({ uri, name, description, mimeType })`-decorated method on an `@Injectable()` provider. The `McpApiKeyGuard`, `McpKeyRepository`, `McpSettingsService`, `McpSettingsController`, `McpExportService`, `ExportStorageService`, `CvService`, `CvExportService`, `CvTemplatePresentationService`, `ApplicationService`, `CvJsonResumeSwapService`, and `MediaService` SHALL remain unchanged.
