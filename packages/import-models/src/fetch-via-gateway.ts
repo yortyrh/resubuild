@@ -21,7 +21,11 @@
  * therefore do a single `fetch()` of the upstream models.dev JSON and intersect
  * it with the gateway-accepted provider IDs.
  */
-import { MastraModelGateway as MastraModelGatewayClass, ModelsDevGateway, type ProviderConfig } from '@mastra/core/llm';
+import {
+  MastraModelGateway as MastraModelGatewayClass,
+  ModelsDevGateway,
+  type ProviderConfig,
+} from '@mastra/core/llm';
 import { MODELS_DEV_API_URL, type ModelsDevProvider, type ModelsDevRegistry } from './models-dev';
 
 export type FetchFn = typeof fetch;
