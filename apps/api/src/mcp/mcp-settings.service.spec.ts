@@ -1,6 +1,7 @@
 import type { McpApiKeyRow } from './mcp-key.repository';
 import { McpKeyRepository } from './mcp-key.repository';
 import { McpSettingsService } from './mcp-settings.service';
+import { MCP_TOOL_NAMES } from './tool-definitions';
 
 const user = { id: 'user-1', accessToken: 'tok', authMethod: 'jwt' as const };
 
@@ -161,6 +162,56 @@ describe('McpSettingsService', () => {
         },
         secret: 'rm_newsecret12345678',
       });
+    });
+  });
+
+  describe('listRegisteredToolNames', () => {
+    it('returns the static MCP_TOOL_NAMES list when the wrapper registry is not injected', () => {
+      const names = service.listRegisteredToolNames();
+
+      expect(names).toEqual([...MCP_TOOL_NAMES]);
+    });
+
+    it('returns the registry-discovered names when the wrapper registry is injected', () => {
+      const mockRegistry = {
+        getMcpModuleIds: jest.fn().mockReturnValue(['mcp-1']),
+        getTools: jest
+          .fn()
+          .mockReturnValue([{ metadata: { name: 'list_cvs' } }, { metadata: { name: 'get_cv' } }]),
+      };
+
+      const serviceWithRegistry = new McpSettingsService(
+        mockRepo as unknown as McpKeyRepository,
+        mockRegistry as never,
+      );
+
+      const names = serviceWithRegistry.listRegisteredToolNames();
+
+      // The static MCP_TOOL_NAMES is the source of truth — when the registry
+      // reports a subset that is fully contained, we still return the static
+      // list so the public catalog stays byte-compatible.
+      expect(names).toEqual([...MCP_TOOL_NAMES]);
+    });
+
+    it('appends a registry-only tool when the wrapper picks up a new @Tool', () => {
+      const mockRegistry = {
+        getMcpModuleIds: jest.fn().mockReturnValue(['mcp-1']),
+        getTools: jest
+          .fn()
+          .mockReturnValue([
+            { metadata: { name: 'list_cvs' } },
+            { metadata: { name: 'experimental_tool' } },
+          ]),
+      };
+
+      const serviceWithRegistry = new McpSettingsService(
+        mockRepo as unknown as McpKeyRepository,
+        mockRegistry as never,
+      );
+
+      const names = serviceWithRegistry.listRegisteredToolNames();
+
+      expect(names).toContain('experimental_tool');
     });
   });
 });
