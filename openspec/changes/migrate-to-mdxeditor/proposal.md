@@ -1,0 +1,40 @@
+## Why
+
+The dashboard CV editor wraps `@wysimark/react@3.0.20` for its rich-text fields (Basics summary, Work / Volunteer / Project descriptions and highlights, References, Awards, Publications, cover letter, etc.). Wysimark depends on a Slate/Emotion stack that emits deprecation/runtime warnings in the dev console (`[DEPRECATED] Default export is deprecated. Instead use 'import { create } from 'zustand'`. and the lingering Emotion `:first-child` SSR warnings), and the only way to make the editor usable today is a hand-maintained `pnpm` patch (`patches/@wysimark__react@3.0.20.patch`) plus a `next/dynamic({ ssr: false })` shim in `markdown-editor.tsx`. The patch is a fork of the upstream dist (toolbar presets, `:first-child` → `:first-of-type`, `scrollSelectionIntoView: () => {}`, `image-inline` segment support) and survives only as long as the lockfile pins `@wysimark/react@3.0.20`; upgrading Wysimark in the future means re-deriving every hunk against the new dist. We want a maintained, actively-released markdown editor that does not need a dist patch and does not push a third-party runtime into the client bundle just to keep SSR happy.
+
+## What Changes
+
+- Replace the `@wysimark/react` editor in `apps/web/src/components/cv/markdown-editor-impl.tsx` with **`@mdxeditor/editor`** (the Mantine-free, `lexical`-based, actively maintained markdown editor). The public wrapper `MarkdownEditor` (`apps/web/src/components/cv/markdown-editor.tsx`) keeps the same `value` / `onChange` / `variant` / `placeholder` / `className` contract so every existing call site (`form-fields.tsx`, `application-workspace.tsx`, the basics form, etc.) keeps working without code changes.
+- Remove the **pnpm patch** (`patches/@wysimark__react@3.0.20.patch`) and the `patchedDependencies` entry in both `pnpm-workspace.yaml` and the root `package.json`. Delete the `patches/` directory once it is empty.
+- Drop the `next/dynamic({ ssr: false })` indirection in `markdown-editor.tsx`; render MDXEditor's `<MDXEditor …>` directly from the client component (MDXEditor is published as ESM and supports SSR via its `'use client'` directive, so no chunk-splitting shim is required).
+- Configure the MDXEditor plugins to match the current Wysimark toolbar scope so form behavior is preserved: **inline** variant exposes Bold / Italic / Strikethrough / Link only; **block** variant additionally exposes Heading (H1–H3), Bulleted/Ordered list, Block quote, Code block, Table, and Link. **No in-editor image upload** in either variant — profile photos still go through the existing Nest media API path. **Diff source plugin disabled** by default; can be flipped on in a follow-up if we want a WYSIWYG-vs-Markdown toggle.
+- Update `apps/web/src/app/globals.css`: rewrite the `.rich-text-editor` and `.rich-text-editor--inline` selectors to target MDXEditor's class names (`.mdxeditor [contenteditable]`, `.mdxeditor .toolbar`, `[data-toolbar-item]`, etc.), preserve the existing square-corner and toolbar-height rules, and keep the inline `padding-right` reservation for the overlaid remove icon on `StringListField` rows.
+- Delete the now-unused `apps/web/src/components/cv/markdown-editor-skeleton.tsx` (only used by the dynamic-import shim) **iff** no other consumer takes a dependency on it; otherwise leave it in place for now and skip the dynamic shim anyway.
+- Update the existing test mocks (`apps/web/src/components/cv/form-fields.test.tsx`, `create-cv-form.test.tsx`) to mock the new module path; the mocks already replace the editor with a textarea / contentEditable div and do not depend on the Wysimark-specific surface, so the change is limited to the import path of the mocked module.
+- **BREAKING** (consumer-internal): remove the `@wysimark/react` dependency entirely; bump nothing in `apps/api` or other packages because they never consumed Wysimark. The Markdown-on-disk format is unchanged (both Wysimark and MDXEditor persist GitHub-Flavored Markdown), so no data migration is needed and every saved `basics.summary`, `work[].summary`, `highlights[]` value continues to round-trip through the API as today.
+
+## Capabilities
+
+### New Capabilities
+
+_None._ This is a dependency swap inside the existing `cv-editor-ui` capability; no new spec-level capability is introduced.
+
+### Modified Capabilities
+
+- `cv-editor-ui`: The "Markdown-first MDEditor usages SHALL migrate to `@wysimark/react`" requirement (and the four downstream requirements that depend on it — toolbar scope, padding, shell corners, string-list overlay) is renamed to reference the new `@mdxeditor/editor` plugin stack, and the editorial contract (no in-editor image upload, trimmed toolbars, square shell, client-only render, `next/dynamic` for SSR) is preserved in the new wording. The "Wysimark editor content padding SHALL be compact" and "Wysimark editor shell SHALL use square corners and stable toolbar height" requirements are re-scoped to "Markdown editor" without changing the visual contract. Requirements about the `StringListField` overlay and `noscript` fallback remain unchanged.
+
+## Impact
+
+- `apps/web/package.json` — remove `@wysimark/react@^3.0.20`, add `@mdxeditor/editor@^3.x` (latest stable on the v3 line). The transitive `zustand@3` (only used by Wysimark's toolbar) is no longer pulled into the web bundle.
+- `apps/web/src/components/cv/markdown-editor-impl.tsx` — full rewrite to use `@mdxeditor/editor` (`MDXEditor`, `headingsPlugin`, `listsPlugin`, `quotePlugin`, `thematicBreakPlugin`, `linkPlugin`, `linkDialogPlugin`, `tablePlugin`, `codeBlockPlugin`, `toolbarPlugin`, `UndoRedo`, `BoldItalicUnderlineToggles`, `BlockTypeSelect`, `CreateLink`, `ListsToggle`, etc.). Same `MarkdownEditorImpl` export name and same `MarkdownEditorProps` contract.
+- `apps/web/src/components/cv/markdown-editor.tsx` — drop the `next/dynamic({ ssr: false })` wrappers; render `MarkdownEditorImpl` directly. Keep the `<noscript>` textarea fallback for non-JS clients.
+- `apps/web/src/app/globals.css` — rewrite the `.rich-text-editor` selectors that target Wysimark's `[data-slate-editor='true']`, `[data-item-type='button']`, `[data-item-type='divider']`, and `> .border > div > div:first-child` rules. Replace with the equivalent MDXEditor-targeted rules (`.mdxeditor [contenteditable='true']` for the content area, `.mdxeditor [role='toolbar']` for the toolbar, `[data-toolbar-item]` for buttons). Preserve square corners, 30px block-toolbar height, 2.25em inline-toolbar height, compact typography, and the inline `padding-right: 1.75rem` reservation for the remove icon overlay.
+- `apps/web/src/components/cv/markdown-editor-skeleton.tsx` — likely deletable once `markdown-editor.tsx` no longer `dynamic()`-imports the impl. Confirm with grep before deleting.
+- `apps/web/src/components/cv/form-fields.test.tsx`, `apps/web/src/components/cv/create-cv-form.test.tsx` — update the `vi.mock('@/components/cv/markdown-editor', …)` factory if the export surface changes. (The public wrapper still exports `MarkdownEditor`, so this should be a no-op on the test contract; only the inner impl file changes.)
+- `patches/@wysimark__react@3.0.20.patch` — deleted; the four-hunk patch (`:first-child` → `:first-of-type`, `scrollSelectionIntoView: () => {}`, `image-inline` segment handling, toolbar preset list with `minimalInlineToolbarItems` and `compactBlockToolbarItems`) is no longer needed because the new editor does not emit those Emotion warnings and ships a plugin-based toolbar that we configure via props.
+- `pnpm-workspace.yaml` — drop the `patchedDependencies` block.
+- `package.json` (root) — drop the `pnpm.patchedDependencies` map.
+- `patches/` directory — delete once the Wysimark patch is removed (no other patches exist).
+- **No backend changes**: the CV REST API (`apps/api`) and the import agent (`apps/import-agent`) do not consume Wysimark; the saved Markdown format is unchanged.
+- **No database / Supabase changes**.
+- **No spec-level behavior changes for end users** other than: the editor library name moves from Wysimark to MDXEditor, the patch is gone, and the deprecation/warning noise in the dev console disappears.
