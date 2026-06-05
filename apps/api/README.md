@@ -164,6 +164,67 @@ The bucket is declared in `supabase/config.toml` (private, 10 MiB, MIME-allowlis
 
 Add `MCP_EXPORT_BUCKET=mcp-exports` to your `.env` (or the equivalent env file your platform reads); `pnpm setup:env` writes this for you. The other env vars (`MCP_EXPORT_TTL_SECONDS`, `MCP_EXPORT_MAX_BYTES`) are optional and default to 3600 / 10 MiB.
 
+## Debugging the API
+
+The API ships with NestJS Devtools and a Node inspector for step-through debugging.
+
+### Debug mode (watch + inspector)
+
+```bash
+pnpm dev:api:debug
+```
+
+This starts the Nest dev server with `--inspect=0.0.0.0:9229`, exposing the Node inspector at `ws://localhost:9229`.
+
+### Attach from VS Code / Cursor
+
+1. Run `pnpm dev:api:debug` in a terminal.
+2. In the editor, select the **"Attach to @resumind/api"** launch configuration and press Run/Debug.
+
+Breakpoints set in `apps/api/src/*.ts` will resolve via the source maps emitted under `apps/api/dist/`.
+
+### Devtools UI
+
+Once the API is running in debug mode, open the Devtools dashboard:
+
+```bash
+pnpm local:devtools
+```
+
+Or navigate directly to `http://localhost:3001/_devtools/`.
+
+The Devtools module graph, route table, and request inspector are available at `/_devtools/*`. This endpoint is **never mounted in production** (`NODE_ENV=production`).
+
+### Agent debugging (inspector-mcp)
+
+Agents (including Cursor's built-in agent) can attach to the Node inspector via the [inspector-mcp](https://github.com/amine7511/inspector-mcp) MCP server. Add to your Cursor MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "inspector-nest": {
+      "command": "npx",
+      "args": ["-y", "inspector-mcp", "--port", "9229"]
+    }
+  }
+}
+```
+
+This lets the agent introspect the module graph, list providers, and step through TypeScript source.
+
+### Debugging without Devtools (inspector only)
+
+The `start:debug` script enables only the Node inspector (no Devtools HTTP routes):
+
+```bash
+pnpm --filter @resumind/api start:debug
+```
+
+### Notes
+
+- The inspector port (`9229`) binds to all interfaces (`0.0.0.0`). Do not expose port 9229 publicly.
+- `DevtoolsModule` is gated on `NODE_ENV !== 'production'` — running `pnpm start:prod` or `NODE_ENV=production node dist/main` will **not** mount `/_devtools/`.
+
 ## Scripts
 
 See `package.json`: `pnpm dev`, `pnpm build`, `pnpm test`.

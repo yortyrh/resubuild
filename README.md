@@ -145,6 +145,10 @@ Git hooks (Lefthook): **pre-commit** (Biome + Prettier on staged files), **pre-p
 | Forgot local dev password                                  | Run `pnpm local:credentials`.                                                                         |
 | `pnpm verify` fails on Node version                        | Use Node **22** (see `.nvmrc`). CI uses 22; newer Node can hide test failures that break in CI.       |
 
+## Debugging the API
+
+See [`apps/api/README.md`](apps/api/README.md#debugging-the-api) for the full guide covering `pnpm dev:api:debug`, the VS Code / Cursor launch configuration, `pnpm local:devtools`, and the `inspector-mcp` option for agent debugging.
+
 ## API (`apps/api`)
 
 Authenticate with Bearer tokens from **`POST /auth/login`** / **`POST /auth/register`**. The UI stores tokens in **`sessionStorage`**.

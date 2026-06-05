@@ -14,6 +14,8 @@
     "prepare": "lefthook install",
     "dev:web": "pnpm --filter @resumind/web dev",
     "dev:api": "pnpm --filter @resumind/api dev",
+    "dev:api:debug": "pnpm --filter @resumind/api start:debug",
+    "local:devtools": "open http://localhost:3001/_devtools/",
     "dev:types": "pnpm --filter @resumind/types dev",
     "setup:env": "bash scripts/setup-local-env.sh",
     "samples:pdf": "pnpm --filter @resumind/resume-template build && node scripts/generate-sample-pdfs.mjs",
