@@ -75,7 +75,7 @@ The **Unit tests (coverage)** job MUST run `pnpm test`, which includes `apps/api
 - **THEN** the test command exits non-zero
 - **AND** CI **Unit tests (coverage)** job fails
 
-### Requirement: Root scripts SHALL support local Supabase setup and E2E execution
+### Requirement: Root scripts SHALL support local Supabase setup, E2E execution, and local API debug helpers
 
 The repository root `package.json` MUST expose:
 
@@ -83,6 +83,8 @@ The repository root `package.json` MUST expose:
 - **`pnpm samples:seed`** — populates local Supabase with fixture accounts, CVs, and media (via `scripts/seed-e2e-fixture.mjs`).
 - **`pnpm local:credentials`** — prints developer and E2E login credentials for the current machine.
 - **`pnpm test:e2e`** — runs Nest integration tests in `apps/api/test/e2e/` against local Supabase.
+- **`pnpm dev:api:debug`** — runs `apps/api` with the Node Inspector enabled on `0.0.0.0:9229` under watch mode, delegating to the workspace `start:debug` script.
+- **`pnpm local:devtools`** — opens the `@nestjs/devtools-integration` UI in the developer's default browser once the API is running locally.
 
 Optional: **`pnpm samples:pdf`** generates HTML/PDF previews from sample resumes.
 
@@ -97,6 +99,18 @@ Optional: **`pnpm samples:pdf`** generates HTML/PDF previews from sample resumes
 - **WHEN** a developer runs `pnpm test:e2e` from the repo root
 - **THEN** Jest executes `apps/api` E2E config with `--runInBand`
 - **AND** the command is NOT included in default `pnpm test` / `pnpm verify`
+
+#### Scenario: Developer attaches a debugger to the API from the root
+
+- **WHEN** a developer (or an agent) runs `pnpm dev:api:debug` from the repo root
+- **THEN** the API starts in watch mode with the Node Inspector listening on `0.0.0.0:9229`
+- **AND** the existing `pnpm dev:api` script is unchanged and does not open the Inspector port
+
+#### Scenario: Developer opens the Nest Devtools UI from the root
+
+- **WHEN** a developer has the API running locally and runs `pnpm local:devtools`
+- **THEN** the documented Devtools URL opens in the developer's default browser
+- **AND** the module graph and route table are visible there
 
 ### Requirement: Generated local artifacts SHALL be gitignored
 

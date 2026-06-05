@@ -22,6 +22,8 @@ The MCP server in `apps/api` SHALL be implemented using the [`@rekog/mcp-nest`](
 
 The public MCP contract — tool names, Zod input schemas, `structuredContent` response envelopes, `annotations` (`readOnlyHint` / `destructiveHint`), resource URIs, the `MCP_SERVER_ENABLED` env gate, and the `McpApiKeyGuard` Bearer-key authentication — SHALL be unchanged from the prior implementation.
 
+In addition, the `@rekog/mcp-nest` MCP server at `/mcp` SHALL remain a valid agent debug surface: agents and developers may call its tools and read its resources to inspect API behavior even when the Node Inspector and `@nestjs/devtools-integration` are not running. The MCP server is the only agent-readable surface that is available in production (gated by `MCP_SERVER_ENABLED`); the Node Inspector and Devtools are dev-only by design (see `openspec/specs/api-dev-debug-surface/spec.md`).
+
 #### Scenario: Wrapper is the transport
 
 - **WHEN** the API starts and `MCP_SERVER_ENABLED` is not `"false"` or `"0"`
@@ -54,6 +56,13 @@ The public MCP contract — tool names, Zod input schemas, `structuredContent` r
 - **WHEN** an MCP client invokes any tool or resource after the migration
 - **THEN** the response shape matches the prior implementation (tool names, Zod input schemas, `structuredContent` envelopes, `annotations`, resource URIs, and signed-URL response shapes for the four `export_cv_*` tools and `fetch_export_url`)
 - **AND** no MCP client configuration change is required (the client config snippet in `apps/api/README.md` — Bearer key on the API host — remains valid)
+
+#### Scenario: MCP server is the prod-safe agent debug surface
+
+- **WHEN** an agent operates against the API in a production-like environment where the Node Inspector and Nest Devtools are disabled
+- **AND** `MCP_SERVER_ENABLED` is not `"false"` or `"0"`
+- **THEN** the agent can call MCP tools and read MCP resources at `/mcp` to inspect and operate on the API
+- **AND** no other agent-readable debug surface is exposed in that environment
 
 ### Requirement: The MCP server SHALL preserve user-scoped auth context for `@Tool` and `@Resource` handlers
 
