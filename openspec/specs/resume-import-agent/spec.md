@@ -10,16 +10,20 @@ Define the Mastra-based agent infrastructure for PDF (and future) resume import:
 
 The repository SHALL include `apps/import-agent` exporting a PDF import workflow invoked by `apps/api`. The workflow SHALL compose discrete steps (extract, draft, verify/repair loop, finalize) rather than a single monolithic prompt. Workflow code SHALL be unit-testable with mocked LLM and search dependencies. The text import draft step (shared by PDF, Markdown, DOCX, and image after transcription) SHALL instruct the LLM to place unpaid, volunteer, community-service, and pro-bono roles in `volunteer[]` and paid employment in `work[]`, using ISO-8601 partial dates for date fields. The PDF, website, and prepare-application workflow agents SHALL invoke `agent.generate(prompt)` and parse the JSON Resume object from `response.text` using the existing `parseJsonFromAgentText` / `indexOf('{') … lastIndexOf('}')` helper. The workflows SHALL NOT pass a `structuredOutput` option to `agent.generate(...)`; under `@mastra/core@1.38.0` the public `Agent#generate` overload used by these workflows does not expose a `structuredOutput` key, and any `structuredOutput` argument is silently ignored. The JSON-in-text parse path is the source of truth for the workflow output. The website import workflow's draft agent MAY still pass `{ maxSteps: MAX_AGENT_STEPS }` to `agent.generate`; the `maxSteps` option is on the supported v1 surface. The `agent.id` field requirement added by the `upgrade-mastra-v1-and-deps` change is preserved.
 
+`apps/import-agent` SHALL consume `@mastra/core@^1.38.0` (or any v1 release). All `Agent` instances constructed by the package SHALL be imported from the v1 subpath `@mastra/core/agent` (the v1 top-level `@mastra/core` entry exports only `Mastra` and `Config`; `Agent` is no longer available at the top-level). All `Agent` constructors SHALL provide the v1-required `id` field in addition to the existing `name`, `instructions`, and `model` fields. The `model` field SHALL continue to accept `{ id: string, apiKey: string }` for the model-router use case; no change to the public `runTextImportWorkflow` / `runPdfImportWorkflow` / `runImageImportWorkflow` / `runWebsiteImportWorkflow` / `runPrepareApplicationWorkflow` / `runUpdateApplicationWorkflow` signatures or return types.
+
 #### Scenario: Workflow invoked from API
 
 - **WHEN** the API starts a PDF import job
 - **THEN** it SHALL call the exported workflow runner with the PDF buffer, user context, and the user's saved Mastra `model_id` plus API key passed as Mastra `model: { id, apiKey }`
 - **AND** the runner SHALL update job progress labels through the job store
+- **AND** the underlying `Agent` instance SHALL be constructed with the v1-required `id` field
 
 #### Scenario: Unit tests without live LLM
 
 - **WHEN** developers run `apps/import-agent` tests in CI
 - **THEN** tests SHALL use fixture PDF text and mocked model responses without requiring API keys
+- **AND** test imports SHALL use the v1 subpath `@mastra/core/agent` (or, if the package re-exports a re-typed wrapper, that wrapper SHALL itself re-export from `@mastra/core/agent`)
 
 #### Scenario: Draft instructions separate volunteer from work
 
@@ -56,6 +60,8 @@ The import agent package SHALL register tools usable by the PDF workflow and fut
 - **Discover social profiles** (optional) — when the user has configured a Tavily API key, search for the candidate's public social network profiles from draft identity signals and return validated `{ network, username, url }` entries for merge into `basics.profiles`; when not configured, the tool SHALL skip without failing the job.
 - **Fetch HTML / scrape page** — load public HTTPS page content for website import (`fetch-html`, optional Firecrawl or Tavily extract when configured).
 
+All `Agent` instances constructed inside these tool modules (e.g. `transcribeImageResumeTool`, `transcribePdfWithVisionTool`, the OCR fallback) SHALL be imported from the v1 subpath `@mastra/core/agent` and SHALL provide the v1-required `id` field. The `createTool` migration to the v1 `(inputData, context)` signature is **not** required by this change (the package does not use `createTool` today; it composes `Agent` + plain async functions); it becomes required only if a future change introduces `createTool`-based tools.
+
 #### Scenario: Schema validation tool rejects invalid draft
 
 - **WHEN** the draft step produces JSON missing required shape
@@ -71,6 +77,13 @@ The import agent package SHALL register tools usable by the PDF workflow and fut
 - **WHEN** the user has not configured a Tavily key in web scrape settings
 - **THEN** social profile discovery SHALL be skipped
 - **AND** the workflow SHALL continue without failing the job
+
+#### Scenario: Agent construction in image and PDF OCR tools uses v1 contract
+
+- **WHEN** `transcribeImageResumeTool` or `transcribePdfWithVisionTool` constructs a Mastra `Agent`
+- **THEN** the import SHALL come from `@mastra/core/agent`
+- **AND** the constructor SHALL include the `id` field
+- **AND** the call to `agent.generate([...])` SHALL continue to work with the v1 message-content shape
 
 ### Requirement: Verify step SHALL retry repair up to a bounded limit
 

@@ -93,7 +93,7 @@ Import LLM settings UI SHALL follow provider → model → API key order (not AP
 
 The API SHALL maintain an in-memory import model catalog built from the Mastra `MastraModelGateway`-accepted provider/model set, enriched with model metadata fetched from `https://models.dev/api.json` so the chat-capable filter and PDF-import score can be applied, and intersected with the gateway so the active catalog contains only providers and models the gateway accepts. A pinned fallback catalog loaded at startup SHALL be used if the metadata fetch fails. A scheduled job SHALL refresh the catalog daily. `GET /import/llm/providers/:providerId/models` SHALL return models from the active catalog. Configuration save (`PUT /import/llm/config`) SHALL validate model ids against the active catalog.
 
-The `MastraModelGateway` SHALL be injectable (a `setGateway()` method or constructor argument) so tests and alternative backends (e.g. a Netlify gateway) can substitute the default `modelsDevGateway` without code changes. The default gateway implementation SHALL source its accepted provider/model list from `@mastra/core`'s public `PROVIDER_REGISTRY`.
+The `MastraModelGateway` SHALL be injectable (a `setGateway()` method or constructor argument) so tests and alternative backends (e.g. a Netlify gateway) can substitute the default `modelsDevGateway` without code changes. The default gateway implementation SHALL source its accepted provider/model list from the v1 public `MastraModelGateway` class re-exported by `@mastra/core/llm` (in `@mastra/core@^1.38.0`); the v0.20 public re-export `PROVIDER_REGISTRY` is no longer available and SHALL NOT be imported. The local `MastraModelGateway` interface in `packages/import-models` SHALL continue to be a structural sub-view (only the `fetchProviders()` method the workspace actually uses) so existing test stubs that return a hand-rolled `Record<string, ProviderConfig>` keep working without implementing the full v1 class surface.
 
 Each provider entry in the active catalog SHALL use the gateway's `apiKeyEnvVar` (normalized to a string array) for its `env` field when present, falling back to the raw `models.dev` provider `env` array when the gateway exposes no value.
 
@@ -109,6 +109,7 @@ The `MODELS_DEV_API_URL` environment variable SHALL NOT be read by the API; the 
 - **AND** each provider's `env` array SHALL equal the gateway's `apiKeyEnvVar` when present
 - **AND** the status `source` SHALL be `'mastra-gateway'`
 - **AND** `GET /import/llm/providers/:providerId/models` SHALL list models from that catalog
+- **AND** the default `modelsDevGateway` implementation SHALL source its accepted provider/model set from the v1 `MastraModelGateway` / `ModelsDevGateway` public surface exposed by `@mastra/core/llm`
 
 #### Scenario: Startup when metadata fetch fails
 
@@ -133,3 +134,15 @@ The `MODELS_DEV_API_URL` environment variable SHALL NOT be read by the API; the 
 
 - **WHEN** a client saves config with a model id not in the active catalog
 - **THEN** the API SHALL return 400
+
+#### Scenario: Test substitutes the gateway
+
+- **WHEN** a test calls `ImportModelsCatalogService.setGateway(stub)` with a stub that returns a hand-rolled `Record<string, ProviderConfig>`
+- **THEN** the catalog refresh SHALL use the stub's provider/model set
+- **AND** the stub SHALL NOT be required to implement the full v1 `MastraModelGateway` class (no `buildUrl`, no `getApiKey`, no `resolveLanguageModel`)
+
+#### Scenario: `ProviderConfig` shape is preserved from v0.20
+
+- **WHEN** the v1 `MastraModelGateway.fetchProviders()` returns its accepted provider/model map
+- **THEN** the consumer (`fetchImportModelRegistryViaGateway` in `packages/import-models`) SHALL be able to read each entry's `name`, `models`, `apiKeyEnvVar`, and optional `gateway` fields without a type cast
+- **AND** `ProviderConfig` SHALL be imported from `@mastra/core/llm`
