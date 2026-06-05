@@ -71,11 +71,7 @@ async function generateJsonFromPrompt(
     model: toAgentModelConfig(modelId, apiKey),
   });
 
-  const response = await agent.generate(prompt, {
-    structuredOutput: {
-      schema: { type: 'object', additionalProperties: true },
-    },
-  });
+  const response = await agent.generate(prompt);
 
   const text = response.text.trim();
   const jsonStart = text.indexOf('{');

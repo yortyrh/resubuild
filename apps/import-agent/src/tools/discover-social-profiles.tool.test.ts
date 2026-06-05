@@ -94,4 +94,58 @@ describe('discoverSocialProfilesTool', () => {
 
     expect(result.discoveredProfilesCount).toBe(0);
   });
+
+  it('rejects candidates whose username does not appear in the source text', async () => {
+    const searchFn = vi.fn().mockImplementation(async (query: string) => {
+      if (query.includes('LinkedIn')) {
+        return [{ url: 'https://www.linkedin.com/in/jane-doe' }];
+      }
+      if (query.includes('GitHub')) {
+        return [{ url: 'https://github.com/someone-else' }];
+      }
+      if (query.includes('Dribbble')) {
+        return [{ url: 'https://dribbble.com/unrelated' }];
+      }
+      return [];
+    });
+
+    const result = await discoverSocialProfilesTool(
+      {
+        draft: baseDraft,
+        searchApiKey: 'test-key',
+        sourceText: 'Jane Doe — yorty — yortyrh',
+      },
+      searchFn,
+    );
+
+    const profiles = (
+      result.draft.basics as { profiles?: Array<{ network: string; username?: string }> }
+    ).profiles;
+    expect(profiles ?? []).toEqual([]);
+    expect(result.discoveredProfilesCount).toBe(0);
+  });
+
+  it('accepts candidates whose username does appear in the source text', async () => {
+    const searchFn = vi.fn().mockImplementation(async (query: string) => {
+      if (query.includes('GitHub')) {
+        return [{ url: 'https://github.com/yorty' }];
+      }
+      return [];
+    });
+
+    const result = await discoverSocialProfilesTool(
+      {
+        draft: baseDraft,
+        searchApiKey: 'test-key',
+        sourceText: 'Yorty — yortyrh — yorty',
+      },
+      searchFn,
+    );
+
+    const profiles = (
+      result.draft.basics as { profiles?: Array<{ network: string; username?: string }> }
+    ).profiles;
+    expect(result.discoveredProfilesCount).toBe(1);
+    expect(profiles).toEqual([expect.objectContaining({ network: 'GitHub', username: 'yorty' })]);
+  });
 });

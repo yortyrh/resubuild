@@ -28,7 +28,11 @@ export async function extractPdfTextTool(
   let parser: PDFParse | null = null;
   try {
     parser = new PDFParse({ data: pdfBuffer });
-    const parsed = await parser.getText();
+    // `parseHyperlinks: true` returns hyperlink annotations as Markdown
+    // inline links (e.g. `[yorty](https://linkedin.com/in/yorty)`), which
+    // preserves the icon-to-URL mapping that the LLM otherwise loses when
+    // icons are stripped to plain text by default.
+    const parsed = await parser.getText({ parseHyperlinks: true });
     pageCount = parsed.total;
     text = parsed.text.trim();
   } catch {

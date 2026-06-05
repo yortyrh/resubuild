@@ -54,6 +54,17 @@ describe('extractPdfTextTool', () => {
     expect(result.usedVisionOcr).toBe(false);
   });
 
+  it('passes parseHyperlinks: true to preserve icon-to-URL mapping', async () => {
+    getTextMock.mockResolvedValueOnce({
+      text: '[yorty](https://linkedin.com/in/yorty)',
+      total: 1,
+      pages: [{ num: 1, text: '[yorty](https://linkedin.com/in/yorty)' }],
+    });
+    const buffer = readFileSync(fixturePath);
+    await extractPdfTextTool(buffer);
+    expect(getTextMock).toHaveBeenCalledWith({ parseHyperlinks: true });
+  });
+
   it('falls back to vision OCR when pdf-parse returns no text', async () => {
     getTextMock.mockResolvedValueOnce({
       text: '   ',

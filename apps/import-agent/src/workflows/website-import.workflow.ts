@@ -69,12 +69,6 @@ async function generateWebsiteDraft(
       'Start by loading the page with your page tool, then build complete JSON Resume data.',
     {
       maxSteps: MAX_AGENT_STEPS,
-      structuredOutput: {
-        schema: {
-          type: 'object',
-          additionalProperties: true,
-        },
-      },
     },
   );
 
@@ -100,11 +94,7 @@ async function generateRepair(
     model: toAgentModelConfig(modelId, apiKey),
   });
 
-  const response = await agent.generate(prompt, {
-    structuredOutput: {
-      schema: { type: 'object', additionalProperties: true },
-    },
-  });
+  const response = await agent.generate(prompt);
 
   return parseJsonFromAgentText(response.text);
 }
@@ -139,11 +129,11 @@ export async function runWebsiteImportWorkflow(
 
     const validation = validateResumeSchemaTool(draft);
     if (validation.valid) {
-      const discovery = await applySocialProfileDiscovery(
+      const discovery = await applySocialProfileDiscovery({
         draft,
-        input.toolsConfig.searchApiKey,
-        input.onProgress,
-      );
+        searchApiKey: input.toolsConfig.searchApiKey,
+        onProgress: input.onProgress,
+      });
       draft = discovery.draft;
 
       input.onProgress?.('finalizing');

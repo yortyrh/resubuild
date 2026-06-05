@@ -48,14 +48,7 @@ async function generateJsonFromPrompt(
   }
 
   const agent = createAgent(modelId, apiKey, instructions);
-  const response = await agent.generate(prompt, {
-    structuredOutput: {
-      schema: {
-        type: 'object',
-        additionalProperties: true,
-      },
-    },
-  });
+  const response = await agent.generate(prompt);
 
   const text = response.text.trim();
   const jsonStart = text.indexOf('{');
@@ -70,8 +63,13 @@ async function generateJsonFromPrompt(
 export async function runTextImportWorkflow(
   input: TextImportWorkflowInput,
 ): Promise<TextImportWorkflowResult> {
-  const errors: string[] = [];
+  return runTextImportWorkflowInner(input, []);
+}
 
+async function runTextImportWorkflowInner(
+  input: TextImportWorkflowInput,
+  errors: string[],
+): Promise<TextImportWorkflowResult> {
   input.onProgress?.('drafting');
   let draft = await generateJsonFromPrompt(
     input.modelId,
@@ -104,11 +102,12 @@ export async function runTextImportWorkflow(
 
     const validation = validateResumeSchemaTool(draft);
     if (validation.valid) {
-      const discovery = await applySocialProfileDiscovery(
+      const discovery = await applySocialProfileDiscovery({
         draft,
-        input.searchApiKey,
-        input.onProgress,
-      );
+        searchApiKey: input.searchApiKey,
+        onProgress: input.onProgress,
+        sourceText: input.sourceText,
+      });
       draft = discovery.draft;
 
       input.onProgress?.('finalizing');
