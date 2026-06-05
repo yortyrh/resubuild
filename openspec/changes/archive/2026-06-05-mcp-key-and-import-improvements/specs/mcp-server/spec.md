@@ -9,6 +9,53 @@ settings UI copy are all part of the same retroactive change set.
 
 ## ADDED Requirements
 
+### Requirement: The MCP server SHALL enforce "one active key per user" at the schema level
+
+The table `public.mcp_api_key` SHALL enforce "at most one row per user" via
+its primary key on `user_id` (a primary key is implicitly UNIQUE and NOT
+NULL). The previous surrogate `id` UUID column and the previous `UNIQUE`
+constraint on `user_id` are removed by the
+`supabase/migrations/20260604190000_mcp_api_key_pk_user_id.sql` migration.
+The MCP server's key-rotation flow SHALL issue a single atomic
+`INSERT ... ON CONFLICT (user_id) DO UPDATE` (Supabase `upsert` with
+`onConflict: 'user_id'`) and SHALL NOT perform a separate `DELETE` before
+the insert. The `McpApiKeyRow` shape returned by the repository SHALL NOT
+include a surrogate `id` field; the row's identifier is its `user_id`.
+
+#### Scenario: A user rotates their MCP API key
+
+- **WHEN** an authenticated user calls `POST /settings/mcp/keys` while a key already exists for their `user_id`
+- **THEN** the repository SHALL call `supabase.from('mcp_api_key').upsert({ user_id, key_prefix, key_hash, encrypted_secret }, { onConflict: 'user_id' })` exactly once
+- **AND** SHALL NOT call `delete` or `insert` on `mcp_api_key` before the upsert
+- **AND** the returned row SHALL have `user_id` equal to the authenticated user's id and SHALL NOT have a surrogate `id` field
+- **AND** the previous key's `key_hash` is replaced atomically (no row with the old `key_hash` survives the upsert)
+
+#### Scenario: A user creates their first MCP API key
+
+- **WHEN** an authenticated user calls `POST /settings/mcp/keys` while no key exists for their `user_id`
+- **THEN** the repository SHALL call `upsert(...)` and the result SHALL be a single row keyed on `user_id`
+
+#### Scenario: Concurrent rotate from a stale tab does not collide
+
+- **WHEN** two tabs call `POST /settings/mcp/keys` for the same user within the same instant
+- **THEN** both calls succeed; the final row reflects the second caller's values; no `BadRequestException` is surfaced for a unique-violation
+
+### Requirement: The MCP server SHALL look up active keys and refresh `last_used_at` by `user_id`
+
+`McpKeyRepository.findActiveKeyBySecret` SHALL return a row shaped as
+`McpApiKeyRow` keyed by `user_id` (no surrogate `id`). `McpKeyRepository.touchLastUsedAt`
+SHALL take a `userId: string` argument and SHALL update `mcp_api_key` rows
+where `user_id = userId`. `McpApiKeyGuard` SHALL call
+`touchLastUsedAt(row.user_id)` (not `touchLastUsedAt(row.id)`) after a
+successful authentication.
+
+#### Scenario: Guard refreshes `last_used_at` for the authenticated user
+
+- **WHEN** `McpApiKeyGuard` authenticates a request and `findActiveKeyBySecret` returns a row
+- **THEN** `touchLastUsedAt(row.user_id)` is called
+- **AND** the `mcp_api_key` row for that user has its `last_used_at` column updated to the current timestamp
+- **AND** the surrogate `id` field is not consulted (the table no longer has one)
+
 ### Requirement: The MCP server SHALL expose `get_jsonresume_schema` as a read-only MCP tool
 
 The MCP server SHALL register a tool named `get_jsonresume_schema` implemented
@@ -96,52 +143,3 @@ the inline error message SHALL also vary based on the same condition.
 - **AND** the dialog description SHALL explain that the current key will be immediately invalidated
 - **AND** the dialog's confirm button SHALL use the destructive variant and be labeled "Rotate"
 - **AND** on success, the toast SHALL say "Key rotated. Copy the new key — it will not be shown again."
-
-## MODIFIED Requirements
-
-### Requirement: The MCP server SHALL enforce "one active key per user" at the schema level
-
-The table `public.mcp_api_key` SHALL enforce "at most one row per user" via
-its primary key on `user_id` (a primary key is implicitly UNIQUE and NOT
-NULL). The previous surrogate `id` UUID column and the previous `UNIQUE`
-constraint on `user_id` are removed by the
-`supabase/migrations/20260604190000_mcp_api_key_pk_user_id.sql` migration.
-The MCP server's key-rotation flow SHALL issue a single atomic
-`INSERT ... ON CONFLICT (user_id) DO UPDATE` (Supabase `upsert` with
-`onConflict: 'user_id'`) and SHALL NOT perform a separate `DELETE` before
-the insert. The `McpApiKeyRow` shape returned by the repository SHALL NOT
-include a surrogate `id` field; the row's identifier is its `user_id`.
-
-#### Scenario: A user rotates their MCP API key
-
-- **WHEN** an authenticated user calls `POST /settings/mcp/keys` while a key already exists for their `user_id`
-- **THEN** the repository SHALL call `supabase.from('mcp_api_key').upsert({ user_id, key_prefix, key_hash, encrypted_secret }, { onConflict: 'user_id' })` exactly once
-- **AND** SHALL NOT call `delete` or `insert` on `mcp_api_key` before the upsert
-- **AND** the returned row SHALL have `user_id` equal to the authenticated user's id and SHALL NOT have a surrogate `id` field
-- **AND** the previous key's `key_hash` is replaced atomically (no row with the old `key_hash` survives the upsert)
-
-#### Scenario: A user creates their first MCP API key
-
-- **WHEN** an authenticated user calls `POST /settings/mcp/keys` while no key exists for their `user_id`
-- **THEN** the repository SHALL call `upsert(...)` and the result SHALL be a single row keyed on `user_id`
-
-#### Scenario: Concurrent rotate from a stale tab does not collide
-
-- **WHEN** two tabs call `POST /settings/mcp/keys` for the same user within the same instant
-- **THEN** both calls succeed; the final row reflects the second caller's values; no `BadRequestException` is surfaced for a unique-violation
-
-### Requirement: The MCP server SHALL look up active keys and refresh `last_used_at` by `user_id`
-
-`McpKeyRepository.findActiveKeyBySecret` SHALL return a row shaped as
-`McpApiKeyRow` keyed by `user_id` (no surrogate `id`). `McpKeyRepository.touchLastUsedAt`
-SHALL take a `userId: string` argument and SHALL update `mcp_api_key` rows
-where `user_id = userId`. `McpApiKeyGuard` SHALL call
-`touchLastUsedAt(row.user_id)` (not `touchLastUsedAt(row.id)`) after a
-successful authentication.
-
-#### Scenario: Guard refreshes `last_used_at` for the authenticated user
-
-- **WHEN** `McpApiKeyGuard` authenticates a request and `findActiveKeyBySecret` returns a row
-- **THEN** `touchLastUsedAt(row.user_id)` is called
-- **AND** the `mcp_api_key` row for that user has its `last_used_at` column updated to the current timestamp
-- **AND** the surrogate `id` field is not consulted (the table no longer has one)

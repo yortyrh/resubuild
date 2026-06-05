@@ -8,7 +8,7 @@ two dev-time toolchain tweaks in `apps/api`: `nest-cli.json`
 `compilerOptions.rootDir = "./src"`. The change is additive; existing
 CI/Lefthook rules are unchanged.
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: The `apps/api` watch-mode build SHALL preserve its incremental cache
 
