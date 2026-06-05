@@ -139,6 +139,7 @@ Changes that only affect `cv-editor-ui` or `web-application` MUST NOT modify API
 - AI agent: `GET /ai/agents/providers`; `GET /ai/agents/active` unconfigured for fixture user
 - Import LLM: `GET /import/llm/providers`; `GET /import/llm/config` unconfigured for fixture user
 - Import URL: `POST /cv/import/from-url` rejects invalid URLs with 400
+- MCP: `POST /mcp` initialize round-trip returns `mcp-session-id`; `tools/list` returns exactly the 20 names in `MCP_TOOL_NAMES`; `resources/templates/list` returns exactly the 3 `resumind://` URI templates (`resumind://{cvId}/cv`, `resumind://{applicationId}/application`, `resumind://{mediaId}/media`); the 20 tools and 3 resources retain the prior public contract (signed-URL envelope, `structuredContent` shape, `annotations`); `MCP_SERVER_ENABLED=false` causes `POST /mcp` to return 404 while `GET /settings/mcp` (REST) keeps serving; per-tool invocation scenarios (initialize + `list_cvs`, `export_cv_jsonresume` `$schema`, `list_cv_designs`, `export_cv_html` doctype, `export_cv_screenshot` PNG, `export_cv_pdf` PDF, `replace_cv_from_jsonresume`), key limits, tool catalog exclusions, revoked-key 401, and JWT 401 on `/mcp` all continue to pass
 
 ### Requirement: E2E catalog SHALL include JSON export
 
