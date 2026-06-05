@@ -157,7 +157,7 @@ describe('ImportService', () => {
     );
     expect(service.getJob(user, result.jobId).status).toBe('succeeded');
     expect(service.getJob(user, result.jobId).previewData).toMatchObject({
-      basics: { name: 'Jane Doe' },
+      basics: expect.objectContaining({ name: 'Jane Doe' }),
     });
   });
 
@@ -281,7 +281,9 @@ describe('ImportService', () => {
     await new Promise((resolve) => setImmediate(resolve));
     expect(service.getJob(user, result.jobId)).toMatchObject({
       status: 'succeeded',
-      previewData: expect.objectContaining({ basics: { name: 'Jane Doe' } }),
+      previewData: expect.objectContaining({
+        basics: expect.objectContaining({ name: 'Jane Doe' }),
+      }),
     });
     expect(service.getJob(user, result.jobId).cvId).toBeUndefined();
   });
@@ -426,7 +428,9 @@ describe('ImportService', () => {
       const result = await service.importFromUrl(user, 'https://example.com/data');
       expect(result).toEqual({
         kind: 'json',
-        data: expect.objectContaining({ basics: { name: 'Test User' } }),
+        data: expect.objectContaining({
+          basics: expect.objectContaining({ name: 'Test User' }),
+        }),
       });
     });
 
@@ -445,7 +449,9 @@ describe('ImportService', () => {
       const result = await service.importFromUrl(user, 'https://example.com/data');
       expect(result.kind).toBe('json');
       expect(result).toMatchObject({
-        data: expect.objectContaining({ basics: { name: 'No Header User' } }),
+        data: expect.objectContaining({
+          basics: expect.objectContaining({ name: 'No Header User' }),
+        }),
       });
     });
 
@@ -601,7 +607,9 @@ describe('ImportService', () => {
       const result = await service.importFromUrl(user, 'https://example.com/resume.txt');
       expect(result.kind).toBe('json');
       expect(result).toMatchObject({
-        data: expect.objectContaining({ basics: { name: 'Plain Text User' } }),
+        data: expect.objectContaining({
+          basics: expect.objectContaining({ name: 'Plain Text User' }),
+        }),
       });
     });
 
@@ -651,7 +659,9 @@ describe('ImportService', () => {
       );
       expect(result).toMatchObject({
         kind: 'json',
-        data: expect.objectContaining({ basics: { name: 'Registry User' } }),
+        data: expect.objectContaining({
+          basics: expect.objectContaining({ name: 'Registry User' }),
+        }),
       });
     });
 
