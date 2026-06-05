@@ -238,7 +238,6 @@ describe('McpKeyRepository', () => {
   describe('getKey', () => {
     it('returns key row when found', async () => {
       const row: McpApiKeyRow = {
-        id: 'key-1',
         user_id: 'user-1',
         key_prefix: 'rm_abc',
         key_hash: 'hash',
@@ -304,35 +303,34 @@ describe('McpKeyRepository', () => {
   });
 
   describe('createKey', () => {
-    it('deletes existing key, creates new one, returns row and secret', async () => {
+    it('upserts the single key row for the user and returns the resulting row + secret', async () => {
       mockGenerateSecret.mockReturnValue('rm_newsecret1234');
       mockHashKey.mockReturnValue('hashed');
       mockDisplayPrefix.mockReturnValue('rm_newsec');
+      (
+        require('../ai-agent/ai-agent-crypto.util') as typeof import('../ai-agent/ai-agent-crypto.util')
+      ).encryptSecret = jest.fn().mockReturnValue('encrypted');
+
+      const upsertSingle = jest.fn().mockResolvedValue({
+        data: {
+          user_id: 'user-1',
+          key_prefix: 'rm_newsec',
+          key_hash: 'hashed',
+          encrypted_secret: 'encrypted',
+          created_at: '2024',
+          last_used_at: null,
+        },
+        error: null,
+      });
+      const upsertSelect = jest.fn().mockReturnValue({ single: upsertSingle });
+      const upsertFn = jest.fn().mockReturnValue({ select: upsertSelect });
+      const deleteFn = jest.fn();
+      const insertFn = jest.fn();
 
       const mockClient = {
         from: jest.fn().mockImplementation((table: string) => {
           if (table === 'mcp_api_key') {
-            return {
-              delete: jest.fn().mockReturnValue({
-                eq: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({}) }),
-              }),
-              insert: jest.fn().mockReturnValue({
-                select: jest.fn().mockReturnValue({
-                  single: jest.fn().mockResolvedValue({
-                    data: {
-                      id: 'new-key',
-                      user_id: 'user-1',
-                      key_prefix: 'rm_newsec',
-                      key_hash: 'hashed',
-                      encrypted_secret: 'encrypted',
-                      created_at: '2024',
-                      last_used_at: null,
-                    },
-                    error: null,
-                  }),
-                }),
-              }),
-            };
+            return { upsert: upsertFn, delete: deleteFn, insert: insertFn };
           }
           return {};
         }),
@@ -347,8 +345,59 @@ describe('McpKeyRepository', () => {
 
       const result = await repo.createKey(user);
 
+      expect(upsertFn).toHaveBeenCalledTimes(1);
+      expect(upsertFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: 'user-1',
+          key_prefix: 'rm_newsec',
+          key_hash: 'hashed',
+          encrypted_secret: 'encrypted',
+        }),
+        expect.objectContaining({ onConflict: 'user_id' }),
+      );
+      expect(upsertSelect).toHaveBeenCalledWith('*');
+      expect(upsertSingle).toHaveBeenCalledTimes(1);
+      expect(deleteFn).not.toHaveBeenCalled();
+      expect(insertFn).not.toHaveBeenCalled();
       expect(result.secret).toBe('rm_newsecret1234');
-      expect(result.row.id).toBe('new-key');
+      expect(result.row.user_id).toBe('user-1');
+      expect(result.row.key_prefix).toBe('rm_newsec');
+    });
+
+    it('surfaces upsert errors as BadRequestException', async () => {
+      mockGenerateSecret.mockReturnValue('rm_newsecret1234');
+      mockHashKey.mockReturnValue('hashed');
+      mockDisplayPrefix.mockReturnValue('rm_newsec');
+      (
+        require('../ai-agent/ai-agent-crypto.util') as typeof import('../ai-agent/ai-agent-crypto.util')
+      ).encryptSecret = jest.fn().mockReturnValue('encrypted');
+
+      const upsertFn = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: null,
+            error: { message: 'permission denied for table mcp_api_key' },
+          }),
+        }),
+      });
+
+      const mockClient = {
+        from: jest.fn().mockImplementation((table: string) => {
+          if (table === 'mcp_api_key') {
+            return { upsert: upsertFn };
+          }
+          return {};
+        }),
+      };
+      mockNormalizedRepo.createClientForUser.mockReturnValue(mockClient as never);
+
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'MCP_KEY_PEPPER') return 'pepper';
+        if (key === 'MCP_ENCRYPTION_KEY') return 'enc-key';
+        return undefined;
+      });
+
+      await expect(repo.createKey(user)).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -361,7 +410,6 @@ describe('McpKeyRepository', () => {
     it('finds key by prefix and verifies', async () => {
       mockDisplayPrefix.mockReturnValue('rm_abc123');
       const row: McpApiKeyRow = {
-        id: 'key-1',
         user_id: 'user-1',
         key_prefix: 'rm_abc123',
         key_hash: 'stored-hash',
@@ -419,7 +467,6 @@ describe('McpKeyRepository', () => {
     it('returns null when key found but verification fails', async () => {
       mockDisplayPrefix.mockReturnValue('rm_valid');
       const row: McpApiKeyRow = {
-        id: 'key-1',
         user_id: 'user-1',
         key_prefix: 'rm_valid',
         key_hash: 'wrong-hash',
@@ -463,7 +510,7 @@ describe('McpKeyRepository', () => {
       };
       mockNormalizedRepo.createServiceRoleClient.mockReturnValue(mockClient as never);
 
-      repo.touchLastUsedAt('key-1');
+      repo.touchLastUsedAt('user-1');
 
       expect(mockNormalizedRepo.createServiceRoleClient).toHaveBeenCalled();
     });
@@ -471,14 +518,14 @@ describe('McpKeyRepository', () => {
 
   describe('decryptKeySecret', () => {
     it('throws when encrypted_secret is missing', () => {
-      const row = { id: 'key-1', encrypted_secret: '' } as McpApiKeyRow;
+      const row = { user_id: 'user-1', encrypted_secret: '' } as McpApiKeyRow;
       mockConfigService.get.mockReturnValue('enc-key');
 
       expect(() => repo.decryptKeySecret(row)).toThrow('API key secret not available');
     });
 
     it('throws when decryption fails', () => {
-      const row = { id: 'key-1', encrypted_secret: 'encrypted' } as McpApiKeyRow;
+      const row = { user_id: 'user-1', encrypted_secret: 'encrypted' } as McpApiKeyRow;
       mockConfigService.get.mockImplementation((key: string) => {
         if (key === 'MCP_ENCRYPTION_KEY') return 'enc-key';
         return undefined;
@@ -491,7 +538,7 @@ describe('McpKeyRepository', () => {
     });
 
     it('returns decrypted secret when successful', () => {
-      const row = { id: 'key-1', encrypted_secret: 'encrypted' } as McpApiKeyRow;
+      const row = { user_id: 'user-1', encrypted_secret: 'encrypted' } as McpApiKeyRow;
       mockConfigService.get.mockImplementation((key: string) => {
         if (key === 'MCP_ENCRYPTION_KEY') return 'enc-key';
         return undefined;

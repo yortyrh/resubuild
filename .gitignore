@@ -9,6 +9,10 @@ coverage
 *.log
 .DS_Store
 
+# TypeScript incremental build cache (preserved between nest start --watch
+# restarts so incremental rebuilds are fast; see openspec/specs/monorepo-and-toolchain).
+*.tsbuildinfo
+
 # Supabase CLI local state (branch selection, link refs, temp files)
 supabase/.temp/
 supabase/.branches/

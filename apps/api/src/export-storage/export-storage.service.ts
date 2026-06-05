@@ -133,6 +133,21 @@ export class ExportStorageService {
   }
 
   /**
+   * Reduce a Content-Type value to its bare type/subtype, dropping any
+   * parameters (e.g. `; charset=utf-8`, `; boundary=…`). Used for the
+   * Supabase Storage upload so the bucket's `allowed_mime_types` allowlist
+   * (which only stores bare types) accepts the call. The full descriptive
+   * value is preserved on the `mcp_export` row and the response envelope.
+   */
+  private stripMimeParameters(contentType: string): string {
+    const semicolonIndex = contentType.indexOf(';');
+    if (semicolonIndex === -1) {
+      return contentType.trim();
+    }
+    return contentType.slice(0, semicolonIndex).trim();
+  }
+
+  /**
    * Upload a rendered artifact to Storage, register a matching `mcp_export` row,
    * and issue a short-lived Supabase signed URL for the new object in a single
    * call. The signed URL is the canonical handoff for MCP clients — it points
@@ -174,10 +189,19 @@ export class ExportStorageService {
     const ttlSeconds = this.defaultTtlSeconds;
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
 
+    // Supabase Storage's bucket MIME allowlist does an exact string match
+    // against `allowed_mime_types` (see `supabase/config.toml`). Callers can
+    // pass a more descriptive value (e.g. `application/json; charset=utf-8`)
+    // for the `mcp_export` row and the MCP envelope, but the storage upload
+    // itself must use the bare MIME type — strip any `;…` parameters here so
+    // the upload passes the allowlist while the descriptive value still flows
+    // back to clients through the row and the response envelope.
+    const uploadContentType = this.stripMimeParameters(input.contentType);
+
     const { error: uploadError } = await supabase.storage
       .from(bucket)
       .upload(storagePath, NodeBuffer.from(input.buffer), {
-        contentType: input.contentType,
+        contentType: uploadContentType,
         upsert: false,
       });
 

@@ -79,6 +79,8 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
     }
   };
 
+  const hasKey = Boolean(settings?.key);
+
   const handleRotate = async () => {
     setBusy(true);
     setError(null);
@@ -89,9 +91,19 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
         prev ? { ...prev, key: result.key } : { mcpEnabled: false, key: result.key },
       );
       setRotateOpen(false);
-      toast.success('Key rotated. Copy the new key — it will not be shown again.');
+      toast.success(
+        hasKey
+          ? 'Key rotated. Copy the new key — it will not be shown again.'
+          : 'API key created. Copy the key — it will not be shown again.',
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to rotate API key');
+      setError(
+        err instanceof Error
+          ? err.message
+          : hasKey
+            ? 'Failed to rotate API key'
+            : 'Failed to create API key',
+      );
     } finally {
       setBusy(false);
     }
@@ -121,7 +133,7 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
 
       {error ? <p className="text-destructive min-h-[1.25rem] text-sm">{error}</p> : null}
 
-      <div className="space-y-3 rounded-lg border p-4">
+      <section className="surface-soft text-card-foreground space-y-3 p-4">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="font-medium">Enable MCP</h2>
@@ -138,25 +150,23 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
             {settings?.mcpEnabled ? 'Disable' : 'Enable'}
           </Button>
         </div>
-      </div>
+      </section>
 
-      <div className="space-y-3 rounded-lg border p-4">
+      <section className="surface-soft text-card-foreground space-y-3 p-4">
         <div className="flex items-center justify-between">
           <h2 className="font-medium">API key</h2>
-          {settings?.key ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => setRotateOpen(true)}
-              disabled={busy}
-            >
-              Rotate key
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            size="sm"
+            variant={settings?.key ? 'outline' : 'default'}
+            onClick={() => setRotateOpen(true)}
+            disabled={busy}
+          >
+            {settings?.key ? 'Rotate key' : 'Create API key'}
+          </Button>
         </div>
         {settings?.key ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+          <div className="surface-soft text-card-foreground flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
             <div>
               <p className="font-medium">Your key</p>
               <p className="text-muted-foreground font-mono text-xs">
@@ -169,9 +179,11 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
             </div>
           </div>
         ) : (
-          <p className="text-muted-foreground text-sm">No key created yet.</p>
+          <p className="text-muted-foreground text-sm">
+            No key created yet. Create one to connect an MCP client.
+          </p>
         )}
-      </div>
+      </section>
 
       {createdSecret ? (
         <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
@@ -190,21 +202,22 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
         </div>
       ) : null}
 
-      <div className="space-y-2 rounded-lg border p-4">
+      <section className="surface-soft text-card-foreground space-y-2 p-4">
         <h2 className="font-medium">Client configuration</h2>
         <p className="text-muted-foreground text-sm">
           Add this to your MCP client config (replace the bearer token with your key).
         </p>
         <pre className="bg-muted overflow-x-auto rounded-md p-3 text-xs">{clientConfigSnippet}</pre>
-      </div>
+      </section>
 
       <Dialog open={rotateOpen} onOpenChange={setRotateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rotate API key?</DialogTitle>
+            <DialogTitle>{hasKey ? 'Rotate API key?' : 'Create API key?'}</DialogTitle>
             <DialogDescription>
-              Your current key will be immediately invalidated. Clients using it will stop working.
-              Create a new key and update your MCP client config.
+              {hasKey
+                ? 'Your current key will be immediately invalidated. Clients using it will stop working. Create a new key and update your MCP client config.'
+                : 'A new API key will be generated. Copy it immediately — it will not be shown again, and you will need to rotate to see it again.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -213,11 +226,11 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
             </Button>
             <Button
               type="button"
-              variant="destructive"
+              variant={hasKey ? 'destructive' : 'default'}
               onClick={() => void handleRotate()}
               disabled={busy}
             >
-              Rotate
+              {hasKey ? 'Rotate' : 'Create key'}
             </Button>
           </DialogFooter>
         </DialogContent>

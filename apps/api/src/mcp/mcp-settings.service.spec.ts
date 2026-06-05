@@ -36,7 +36,6 @@ describe('McpSettingsService', () => {
     it('returns key info when row is provided', () => {
       const toKey = (service as unknown as { toKey: (row: McpApiKeyRow | null) => never }).toKey;
       const row: McpApiKeyRow = {
-        id: 'key-1',
         user_id: 'user-1',
         key_prefix: 'rm_abc123',
         key_hash: 'hash',
@@ -57,7 +56,6 @@ describe('McpSettingsService', () => {
     it('handles null last_used_at', () => {
       const toKey = (service as unknown as { toKey: (row: McpApiKeyRow | null) => never }).toKey;
       const row: McpApiKeyRow = {
-        id: 'key-1',
         user_id: 'user-1',
         key_prefix: 'rm_abc123',
         key_hash: 'hash',
@@ -80,7 +78,6 @@ describe('McpSettingsService', () => {
     it('returns settings and key info', async () => {
       mockRepo.getOrCreateSettings.mockResolvedValue({ mcp_enabled: true });
       mockRepo.getKey.mockResolvedValue({
-        id: 'key-1',
         user_id: 'user-1',
         key_prefix: 'rm_abc',
         key_hash: 'hash',
@@ -141,7 +138,6 @@ describe('McpSettingsService', () => {
     it('creates key and returns response with secret', async () => {
       mockRepo.createKey.mockResolvedValue({
         row: {
-          id: 'key-new',
           user_id: 'user-1',
           key_prefix: 'rm_newkey',
           key_hash: 'hash',

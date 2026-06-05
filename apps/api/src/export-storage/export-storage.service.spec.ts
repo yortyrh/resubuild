@@ -26,6 +26,7 @@ const BUCKET = 'mcp-exports';
 function createMockSupabase(initialRows: Row[] = []) {
   const rows: Row[] = [...initialRows];
   const storage = new Map<string, Buffer>();
+  const uploadCalls: Array<{ path: string; contentType?: string }> = [];
 
   let storageRemoveError: { message: string } | null = null;
   let storageRemoveThrows: Error | null = null;
@@ -48,7 +49,8 @@ function createMockSupabase(initialRows: Row[] = []) {
   let uploadError: { message: string } | null = null;
   let signedUrlError: { message: string } | null = null;
   const storageBucket = () => ({
-    upload: jest.fn(async (path: string, buf: Buffer) => {
+    upload: jest.fn(async (path: string, buf: Buffer, options?: { contentType?: string }) => {
+      uploadCalls.push({ path, contentType: options?.contentType });
       if (uploadError) {
         return { data: null, error: uploadError };
       }
@@ -242,6 +244,7 @@ function createMockSupabase(initialRows: Row[] = []) {
     rows,
     storage,
     storageRemove,
+    uploadCalls,
     setUploadError: (e: { message: string } | null) => {
       uploadError = e;
     },
@@ -340,6 +343,54 @@ describe('ExportStorageService', () => {
       expect(html.record.storagePath.endsWith('.html')).toBe(true);
       expect(shot.record.storagePath.endsWith('.png')).toBe(true);
       expect(json.record.storagePath.endsWith('.json')).toBe(true);
+    });
+
+    it('strips MIME parameters from contentType before calling storage.upload, while keeping the original on the row', async () => {
+      const result = await service.uploadAndRegister({
+        userId: 'u-1',
+        cvId: 'c-1',
+        kind: 'jsonresume',
+        buffer: Buffer.from('{"basics":{}}'),
+        contentType: 'application/json; charset=utf-8',
+        filename: 'cv.json',
+      });
+
+      // Storage layer receives the bare MIME so the bucket allowlist accepts it.
+      const lastUpload = mock.uploadCalls[mock.uploadCalls.length - 1];
+      expect(lastUpload.contentType).toBe('application/json');
+      // The descriptive value is preserved on the DB row and the response envelope.
+      expect(result.record.contentType).toBe('application/json; charset=utf-8');
+      expect(mock.rows[0].content_type).toBe('application/json; charset=utf-8');
+    });
+
+    it('strips MIME parameters on the HTML export too (text/html; charset=utf-8 → text/html)', async () => {
+      await service.uploadAndRegister({
+        userId: 'u-1',
+        cvId: 'c-1',
+        kind: 'html',
+        buffer: Buffer.from('<html></html>'),
+        contentType: 'text/html; charset=utf-8',
+        filename: 'cv.html',
+      });
+
+      const lastUpload = mock.uploadCalls[mock.uploadCalls.length - 1];
+      expect(lastUpload.contentType).toBe('text/html');
+      expect(mock.rows[0].content_type).toBe('text/html; charset=utf-8');
+    });
+
+    it('leaves a parameter-less contentType unchanged for the storage upload', async () => {
+      await service.uploadAndRegister({
+        userId: 'u-1',
+        cvId: 'c-1',
+        kind: 'pdf',
+        buffer: Buffer.from('%PDF-1.4'),
+        contentType: 'application/pdf',
+        filename: 'cv.pdf',
+      });
+
+      const lastUpload = mock.uploadCalls[mock.uploadCalls.length - 1];
+      expect(lastUpload.contentType).toBe('application/pdf');
+      expect(mock.rows[0].content_type).toBe('application/pdf');
     });
 
     it('throws 503 when the post-insert signed-URL issuance fails', async () => {

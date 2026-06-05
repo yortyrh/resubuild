@@ -6,6 +6,7 @@ export const MCP_TOOL_NAMES = [
   'delete_cv',
   'create_cv_from_jsonresume',
   'replace_cv_from_jsonresume',
+  'get_jsonresume_schema',
   'export_cv_jsonresume',
   'export_cv_html',
   'export_cv_screenshot',
@@ -64,6 +65,11 @@ export const MCP_TOOL_DEFINITIONS: Record<
     description:
       'Replace an existing primary CV with a new JSON Resume document using an atomic staging swap (old id is removed; a new id is promoted). There is no per-section merge in MCP v1—provide the full document. Target must be kind=primary.',
     destructiveHint: true,
+  },
+  get_jsonresume_schema: {
+    description:
+      'Return the full JSON Resume schema (https://jsonresume.org/schema/) as a JSON Schema document. Call this BEFORE constructing a JSON Resume document from non-JSON Resume source material (PDF text, DOCX text, image OCR, scraped website, free-form notes, etc.) so the target shape is known. Then feed the resulting JSON Resume document into create_cv_from_jsonresume or replace_cv_from_jsonresume. The response wraps the schema in { schema, $id, version } and is bundled into the build so it does not require any network access. The schema is draft-07 JSON Schema with $ref to #/definitions/iso8601 for date fields (accepts YYYY, YYYY-MM, or YYYY-MM-DD); section keys are summary, work, volunteer, education, awards, certificates, publications, skills, languages, interests, references, projects; top-level keys are basics and meta alongside those sections.',
+    readOnlyHint: true,
   },
   export_cv_jsonresume: {
     description:

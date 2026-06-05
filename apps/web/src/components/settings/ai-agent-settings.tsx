@@ -197,7 +197,7 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
         </p>
       ) : null}
 
-      <div className="space-y-3 rounded-lg border p-4">
+      <section className="surface-soft text-card-foreground space-y-3 p-4">
         <div className="flex items-center justify-between">
           <h2 className="font-medium">Accounts</h2>
           <Button type="button" size="sm" onClick={openCreateDialog}>
@@ -214,7 +214,7 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
             {accounts.map((account) => (
               <li
                 key={account.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2"
+                className="surface-soft text-card-foreground flex flex-wrap items-center justify-between gap-3 px-3 py-2"
               >
                 <div>
                   <p className="font-medium">
@@ -261,7 +261,7 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
             ))}
           </ul>
         )}
-      </div>
+      </section>
 
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
       {success ? <p className="text-sm text-green-700">{success}</p> : null}

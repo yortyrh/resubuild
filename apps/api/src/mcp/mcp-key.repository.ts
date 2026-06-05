@@ -12,7 +12,6 @@ import {
 } from './mcp-key-crypto.util';
 
 export interface McpApiKeyRow {
-  id: string;
   user_id: string;
   key_prefix: string;
   key_hash: string;
@@ -142,22 +141,28 @@ export class McpKeyRepository {
   }
 
   async createKey(user: AuthUser): Promise<{ row: McpApiKeyRow; secret: string }> {
-    await this.userClient(user).from('mcp_api_key').delete().eq('user_id', user.id);
+    const supabase = this.userClient(user);
 
     const secret = generateMcpApiKeySecret();
     const keyHash = hashMcpApiKey(secret, this.pepper());
     const keyPrefix = mcpKeyDisplayPrefix(secret);
     const encryptedSecret = encryptSecret(secret, this.encryptionKey());
 
-    const supabase = this.userClient(user);
+    // The mcp_api_key.user_id primary key guarantees at most one row per
+    // user, so rotating is a single atomic upsert keyed on user_id — no
+    // application-layer delete-then-insert, no RLS gap to leak a
+    // unique-violation to the caller.
     const { data, error } = await supabase
       .from('mcp_api_key')
-      .insert({
-        user_id: user.id,
-        key_prefix: keyPrefix,
-        key_hash: keyHash,
-        encrypted_secret: encryptedSecret,
-      })
+      .upsert(
+        {
+          user_id: user.id,
+          key_prefix: keyPrefix,
+          key_hash: keyHash,
+          encrypted_secret: encryptedSecret,
+        },
+        { onConflict: 'user_id' },
+      )
       .select('*')
       .single();
 
@@ -194,12 +199,12 @@ export class McpKeyRepository {
     return null;
   }
 
-  touchLastUsedAt(keyId: string): void {
+  touchLastUsedAt(userId: string): void {
     const supabase = this.serviceClient();
     void supabase
       .from('mcp_api_key')
       .update({ last_used_at: new Date().toISOString() })
-      .eq('id', keyId)
+      .eq('user_id', userId)
       .then(({ error }) => {
         if (error) {
           // non-blocking

@@ -25,6 +25,7 @@ import { UpdateApplicationLetterTool } from './tools/applications/update-applica
 import { CreateCvFromJsonresumeTool } from './tools/cv/create-cv-from-jsonresume.tool';
 import { DeleteCvTool } from './tools/cv/delete-cv.tool';
 import { GetCvTool } from './tools/cv/get-cv.tool';
+import { GetJsonresumeSchemaTool } from './tools/cv/get-jsonresume-schema.tool';
 import { ListCvsTool } from './tools/cv/list-cvs.tool';
 import { ReplaceCvFromJsonresumeTool } from './tools/cv/replace-cv-from-jsonresume.tool';
 import { ExportCvHtmlTool } from './tools/export/export-cv-html.tool';
@@ -58,6 +59,7 @@ const toolProviders = [
   DeleteCvTool,
   CreateCvFromJsonresumeTool,
   ReplaceCvFromJsonresumeTool,
+  GetJsonresumeSchemaTool,
   // CV export
   ListCvDesignsTool,
   ExportCvJsonresumeTool,

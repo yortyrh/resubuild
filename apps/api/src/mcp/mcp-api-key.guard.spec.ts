@@ -42,7 +42,6 @@ describe('McpApiKeyGuard', () => {
 
   it('rejects when MCP disabled', async () => {
     repo.findActiveKeyBySecret.mockResolvedValue({
-      id: 'k1',
       user_id: 'u1',
       key_prefix: 'rm_abc',
       key_hash: 'h',
@@ -58,7 +57,6 @@ describe('McpApiKeyGuard', () => {
 
   it('attaches user when valid', async () => {
     repo.findActiveKeyBySecret.mockResolvedValue({
-      id: 'k1',
       user_id: 'u1',
       key_prefix: 'rm_abc',
       key_hash: 'h',
@@ -74,6 +72,6 @@ describe('McpApiKeyGuard', () => {
     };
     await expect(guard.canActivate(ctx)).resolves.toBe(true);
     expect(request.user).toEqual({ id: 'u1', authMethod: 'mcp' });
-    expect(repo.touchLastUsedAt).toHaveBeenCalledWith('k1');
+    expect(repo.touchLastUsedAt).toHaveBeenCalledWith('u1');
   });
 });

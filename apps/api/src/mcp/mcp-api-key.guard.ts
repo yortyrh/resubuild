@@ -36,7 +36,7 @@ export class McpApiKeyGuard implements CanActivate {
       authMethod: 'mcp',
     };
 
-    this.mcpKeyRepository.touchLastUsedAt(row.id);
+    this.mcpKeyRepository.touchLastUsedAt(row.user_id);
     return true;
   }
 }

@@ -54,7 +54,7 @@ export function WebScrapeSettings() {
   }
 
   return (
-    <div className="space-y-4 rounded-lg border p-4">
+    <section className="surface-soft text-card-foreground space-y-4 p-4">
       <div>
         <h2 className="font-medium">Website import (page extraction)</h2>
         <p className="text-muted-foreground mt-1 text-sm">
@@ -126,6 +126,6 @@ export function WebScrapeSettings() {
           </Button>
         ) : null}
       </div>
-    </div>
+    </section>
   );
 }
