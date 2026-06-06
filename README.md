@@ -136,6 +136,29 @@ From the repo root:
 
 Git hooks (Lefthook): **pre-commit** (Biome + Prettier on staged files), **pre-push** (`pnpm verify`).
 
+### Toolchain memory budget
+
+The verify pipeline caps parallelism to keep peak memory under ~4 GB per process
+on constrained environments (CI runners, laptops). Defaults:
+
+| Tool                                     | Default cap                                   |
+| ---------------------------------------- | --------------------------------------------- |
+| Jest (`apps/api` unit tests)             | `--maxWorkers=2`                              |
+| Vitest (all workspaces)                  | `singleFork: true` (one fork)                 |
+| Turborepo (`test`, `build`, `typecheck`) | `concurrency: 2`                              |
+| Prettier (`pnpm format`, `format:check`) | `--concurrency=2`                             |
+| Biome                                    | unchanged (~250 MB peak)                      |
+| GitHub Actions CI                        | 2 parallel jobs (`quality`, `test-and-build`) |
+
+To raise the cap on a larger machine, set the `RESUME_PARALLELISM` env var:
+
+```bash
+RESUME_PARALLELISM=8 pnpm verify   # 8 workers/forks for Jest, Vitest, Turborepo, Prettier
+```
+
+`RESUME_PARALLELISM` is not honored by Biome or GitHub Actions CI (those always
+use the conservative defaults).
+
 ## Troubleshooting
 
 | Error                                                      | Fix                                                                                                   |

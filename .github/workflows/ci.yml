@@ -19,8 +19,11 @@ env:
   NEXT_PUBLIC_API_URL: http://localhost:3001
 
 jobs:
-  prettier:
-    name: Prettier check
+  # Collapsed from 5 parallel jobs to 2 to keep peak per-job RAM under ~3 GB
+  # on a standard ubuntu-latest runner (~7 GB). See
+  # openspec/specs/toolchain-parallelism-budget/spec.md
+  quality:
+    name: Quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -29,46 +32,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
         if: steps.setup-monorepo.outputs.node-modules-cache-hit != 'true'
       - run: pnpm format:check
-
-  biome:
-    name: Biome lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-monorepo
-        id: setup-monorepo
-      - run: pnpm install --frozen-lockfile
-        if: steps.setup-monorepo.outputs.node-modules-cache-hit != 'true'
       - run: pnpm lint
-
-  typecheck:
-    name: Typecheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-monorepo
-        id: setup-monorepo
-      - run: pnpm install --frozen-lockfile
-        if: steps.setup-monorepo.outputs.node-modules-cache-hit != 'true'
       - name: Cache for Turbo
         uses: rharkor/caching-for-turbo@v2.3.12
       - run: pnpm typecheck
 
-  test:
-    name: Unit tests (coverage)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-monorepo
-        id: setup-monorepo
-      - run: pnpm install --frozen-lockfile
-        if: steps.setup-monorepo.outputs.node-modules-cache-hit != 'true'
-      - name: Cache for Turbo
-        uses: rharkor/caching-for-turbo@v2.3.12
-      - run: pnpm test
-
-  build:
-    name: Build
+  test-and-build:
+    name: Test + Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -80,4 +50,5 @@ jobs:
         if: steps.setup-monorepo.outputs.node-modules-cache-hit != 'true'
       - name: Cache for Turbo
         uses: rharkor/caching-for-turbo@v2.3.12
+      - run: pnpm test
       - run: pnpm build

@@ -14,6 +14,10 @@ export default defineConfig({
     testTimeout: 10_000,
     retry: 1,
     pool: 'forks',
+    // memory-budget: singleFork=true keeps all files in one fork to avoid RAM exhaustion
+    // see openspec/specs/toolchain-parallelism-budget/spec.md
+    // @ts-expect-error -- singleFork requires Vitest 5+; present in apps/web as a future upgrade
+    poolOptions: { forks: { singleFork: true } },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
