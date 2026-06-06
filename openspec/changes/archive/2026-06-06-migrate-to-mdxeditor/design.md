@@ -24,7 +24,7 @@ The persisted on-disk format is **GitHub-Flavored Markdown** in both Wysimark an
 
 **Goals:**
 
-- Drop `@wysimark/react@3.0.20` (and the `zustand@3` transitive dep) in favor of `@mdxeditor/editor` v3.
+- Drop `@wysimark/react@3.0.20` (and the `zustand@3` transitive dep) in favor of `@mdxeditor/editor` v4.
 - Remove `patches/@wysimark__react@3.0.20.patch` and the `patchedDependencies` entries in `pnpm-workspace.yaml` and the root `package.json` `pnpm.patchedDependencies` map.
 - Drop the `next/dynamic({ ssr: false })` shim in `markdown-editor.tsx` and the `markdown-editor-skeleton.tsx` placeholder (or keep the skeleton if any other call site still depends on it).
 - Preserve the **`MarkdownEditor` public wrapper contract** (`value`, `onChange`, `variant: 'inline' | 'block'`, `placeholder`, `className`) so `form-fields.tsx`, `application-workspace.tsx`, and every section form continue to work without code changes.
@@ -45,9 +45,9 @@ The persisted on-disk format is **GitHub-Flavored Markdown** in both Wysimark an
 
 ## Decisions
 
-### 1. Use `@mdxeditor/editor` v3 (Lexical-based) with explicit plugin wiring
+### 1. Use `@mdxeditor/editor` v4 (Lexical-based) with explicit plugin wiring
 
-**Choice:** Add `@mdxeditor/editor@^3.20.0` (latest v3 at the time of writing) to `apps/web` and configure plugins explicitly per variant — no `allPlugings` import (which pulls every plugin in). The plugins we need:
+**Choice:** Add `@mdxeditor/editor@^4.0.2` to `apps/web` and configure plugins explicitly per variant — no `allPlugings` import (which pulls every plugin in). The plugins we need:
 
 - `headingsPlugin()` — H1–H3 toolbar dropdown.
 - `listsPlugin()` — bulleted / ordered lists.
@@ -164,7 +164,7 @@ The `'use client'` directive at the top of both files ensures Next.js treats the
 
 **Alternatives considered:**
 
-- **Use MDXEditor's CSS-vars API to override the tokens at runtime**: rejected for MVP. MDXEditor v3 does not expose every layout knob via CSS variables (toolbar height is a hard-coded `40px` in the default theme; padding on the content area is a hard-coded `1rem`); selector overrides in `globals.css` are the only reliable way to hit the exact 30px / 0.5rem / 0.75rem / 0.6875rem values the existing UI ships.
+- **Use MDXEditor's CSS-vars API to override the tokens at runtime**: rejected for MVP. MDXEditor does not expose every layout knob via CSS variables (toolbar height is a hard-coded `40px` in the default theme; padding on the content area is a hard-coded `1rem`); selector overrides in `globals.css` are the only reliable way to hit the exact 30px / 0.5rem / 0.75rem / 0.6875rem values the existing UI ships.
 - **Add a per-component `style` block to `markdown-editor-impl.tsx`**: rejected. CSS lives in `globals.css` for every other editor-related style; this stays consistent.
 
 ### 5. Drop the `next/dynamic` shim and the `markdown-editor-skeleton.tsx` placeholder
@@ -193,20 +193,20 @@ The `'use client'` directive at the top of both files ensures Next.js treats the
 
 ## Risks / Trade-offs
 
-- **[Risk] MDXEditor's toolbar DOM is a moving target across v3 minor releases.** → **Mitigation**: pin `@mdxeditor/editor` to a minor range (`^3.20.0`) and absorb any DOM-level CSS-rule churn in the same patch; the CSS hooks are concentrated in one block of `globals.css`, so a future update is a localized diff.
-- **[Risk] MDXEditor v3 ships an ESM build that may interact with Next.js's bundler differently than Wysimark's CJS-flavored dist.** → **Mitigation**: render the editor inside a `'use client'` component (already the case); add `@mdxeditor/editor` to `transpilePackages` in `apps/web/next.config.*` if `pnpm build` reports an ESM/CJS interop error during the implementation PR. (We do not pre-add it speculatively.)
+- **[Risk] MDXEditor's toolbar DOM is a moving target across v4 minor releases.** → **Mitigation**: pin `@mdxeditor/editor` to a minor range (`^4.0.2`) and absorb any DOM-level CSS-rule churn in the same patch; the CSS hooks are concentrated in one block of `globals.css`, so a future update is a localized diff.
+- **[Risk] MDXEditor v4 ships an ESM build that may interact with Next.js's bundler differently than Wysimark's CJS-flavored dist.** → **Mitigation**: render the editor inside a `'use client'` component (already the case); add `@mdxeditor/editor` to `transpilePackages` in `apps/web/next.config.*` if `pnpm build` reports an ESM/CJS interop error during the implementation PR. (We do not pre-add it speculatively.)
 - **[Risk] Lost toolbar items if MDXEditor's plugin list drifts.** → **Mitigation**: the spec deltas in this change re-state the toolbar scope in editor-library-agnostic terms ("the rich-text editor toolbars SHALL expose …"), and the implementation keeps a single source-of-truth toolbar body in `markdown-editor-impl.tsx`. Any future drift is caught by a reviewer reading that file.
 - **[Risk] Lexical's `contentEditable` may scroll-into-view differently than Slate, re-introducing the Wysimark `scrollSelectionIntoView: () => {}` problem.** → **Mitigation**: MDXEditor already handles scroll-into-view via Lexical's built-in `IS_FOCUSED` plugin; if a regression is reported we add a one-line `scrollIntoView: () => {}` shim in the impl. Not pre-emptively added.
 - **[Risk] The unit test for `form-fields.test.tsx` queries `[contenteditable="true"]` and may now match a different element if MDXEditor renders multiple editable regions (e.g. link dialog inputs).** → **Mitigation**: tighten the selector in the test to `[data-lexical-editor="true"]` or scope it under the `.mdxeditor` root during the implementation PR. Verify with `pnpm --filter @resumind/web test -- --run` after the swap.
 - **[Risk] `apps/web/src/components/cv/markdown-editor-skeleton.tsx` may have a second consumer we missed.** → **Mitigation**: confirm with `rg "markdown-editor-skeleton" apps/web/src` before deleting; if any importer exists, keep the file and just stop importing it from `markdown-editor.tsx`.
-- **[Trade-off] Slightly larger client bundle than Wysimark (MDXEditor v3 ships ~150 kB gzipped of Lexical + plugin code; Wysimark's Slate dist was comparable).** → **Mitigation**: import only the plugins we use (no `allPlugings`); accept the trade because the patch removal + warning silencing + future maintenance are worth it.
+- **[Trade-off] Slightly larger client bundle than Wysimark (MDXEditor ships ~150 kB gzipped of Lexical + plugin code; Wysimark's Slate dist was comparable).** → **Mitigation**: import only the plugins we use (no `allPlugings`); accept the trade because the patch removal + warning silencing + future maintenance are worth it.
 - **[Trade-off] Losing the hand-rolled "minimal inline" and "compact block" Wysimark toolbar presets means we re-state the scope in MDXEditor vocabulary.** → **Mitigation**: the new toolbar body lives in one place (`markdown-editor-impl.tsx`); the spec deltas keep the user-visible scope identical so no spec-level behavior changes.
 
 ## Migration Plan
 
 1. **Branch & prep**: create a feature branch off the current `main`. Run `pnpm install` on `main` first to confirm the lockfile is clean.
 2. **Dependency swap (single commit)**:
-   - `apps/web/package.json`: remove `"@wysimark/react": "^3.0.20"`, add `"@mdxeditor/editor": "^3.20.0"`.
+   - `apps/web/package.json`: remove `"@wysimark/react": "^3.0.20"`, add `"@mdxeditor/editor": "^4.0.2"`.
    - `pnpm install` to update `pnpm-lock.yaml`.
 3. **Remove the patch (single commit)**:
    - Delete `patches/@wysimark__react@3.0.20.patch`.
@@ -228,7 +228,7 @@ The `'use client'` directive at the top of both files ensures Next.js treats the
 
 ## Open Questions
 
-- Does MDXEditor v3 export an `InsertThematicBreak` (horizontal rule) toolbar item, or do we need a custom `InsertThematicBreak` button that calls `editor.dispatchCommand(INSERT_HR_COMMAND, undefined)`? — To confirm during implementation by reading the `@mdxeditor/editor` type definitions.
-- Does MDXEditor's toolbar `BlockTypeSelect` dropdown expose H4–H6, or only H1–H3? — We currently restrict to H1–H3; if v3 ships more, we trim the dropdown items via the `blockTypes` prop.
+- Does MDXEditor export an `InsertThematicBreak` (horizontal rule) toolbar item, or do we need a custom `InsertThematicBreak` button that calls `editor.dispatchCommand(INSERT_HR_COMMAND, undefined)`? — Confirmed during implementation: `InsertThematicBreak` is exported and used.
+- Does MDXEditor's toolbar `BlockTypeSelect` dropdown expose H4–H6, or only H1–H3? — Confirmed: MDXEditor v4 exports `BlockTypeSelect` which supports H1–H3 by default.
 - Is `linkDialogPlugin` required to enable `CreateLink`, or does `linkPlugin` suffice? — The MDXEditor docs imply both are needed; we ship both and confirm during implementation.
 - Does the Lexical runtime fire any SSR warnings in development that we have to silence with an `app.useEffect(…)` shim? — If yes, address in the implementation commit; if no, the `'use client'` directive alone is enough.
