@@ -40,10 +40,11 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "esbuild",
       "lefthook",
       "sharp",
-      "esbuild",
-      "@nestjs/core"
+      "unrs-resolver"
     ]
   }
 }
