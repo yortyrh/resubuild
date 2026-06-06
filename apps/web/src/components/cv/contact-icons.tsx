@@ -1,6 +1,6 @@
 'use client';
 
-import { normalizeSocialNetworkKey, type SocialNetworkKey } from '@resumind/resume-template';
+import { normalizeSocialNetworkKey, type SocialNetworkKey } from '@resubuild/resume-template';
 import { Link, type LucideIcon, Mail, MapPin, Phone, Share2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { IconType } from 'react-icons';

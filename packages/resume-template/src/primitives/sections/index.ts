@@ -14,7 +14,7 @@ import type {
   ResumeSkill,
   ResumeVolunteer,
   ResumeWork,
-} from '@resumind/types';
+} from '@resubuild/types';
 import { isProfileVisible, resolveProfileUrl } from '../../social-networks';
 import type { CvTemplatePresentationConfig } from '../../template-config';
 import type { HeaderStyle, HeadingStyle, SectionKey } from '../../types';

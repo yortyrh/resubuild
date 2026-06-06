@@ -1,7 +1,7 @@
 'use client';
 
-import { isProfileVisible, resolveProfileUrl } from '@resumind/resume-template';
-import type { Resume, ResumeProfile } from '@resumind/types';
+import { isProfileVisible, resolveProfileUrl } from '@resubuild/resume-template';
+import type { Resume, ResumeProfile } from '@resubuild/types';
 import { ContactLineSegment, SocialNetworkIcon } from '@/components/cv/contact-icons';
 import { ExternalLink } from '@/components/cv/external-link';
 import { MarkdownView } from '@/components/cv/markdown-view';

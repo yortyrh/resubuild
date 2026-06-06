@@ -1,6 +1,6 @@
 'use client';
 
-import type { ResumePublication } from '@resumind/types';
+import type { ResumePublication } from '@resubuild/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { validateRequiredReleaseDateOnCreate } from '@/components/cv/cv-section-helpers';
 import { linkedEntityLabel } from '@/components/cv/external-link';

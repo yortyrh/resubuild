@@ -1,6 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { getDefaultPresentationConfig } from '@resumind/resume-template';
+import { getDefaultPresentationConfig } from '@resubuild/resume-template';
 import { CvNormalizedRepository } from './cv-normalized.repository';
 import { CvTemplatePresentationRepository } from './cv-template-presentation.repository';
 import { CvTemplatePresentationService } from './cv-template-presentation.service';

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Tool } from '@rekog/mcp-nest';
-import type { CvTemplatePresentationConfig } from '@resumind/resume-template';
+import type { CvTemplatePresentationConfig } from '@resubuild/resume-template';
 import { CvTemplatePresentationService } from '../../../cv/cv-template-presentation.service';
 import { getMcpAuthUser } from '../../mcp-auth.context';
 import { MCP_TOOL_DEFINITIONS } from '../../tool-definitions';

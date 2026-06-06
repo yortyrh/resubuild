@@ -1,6 +1,6 @@
 'use client';
 
-import type { CvTemplatePresentationConfig } from '@resumind/resume-template';
+import type { CvTemplatePresentationConfig } from '@resubuild/resume-template';
 import { getValidAccessToken } from '@/lib/auth-session';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -324,21 +324,21 @@ export function getImportLlmConfig() {
   return getAiAgentActive();
 }
 
-export type { McpApiKey, McpCreateKeyResponse, McpSettingsResponse } from '@resumind/types';
+export type { McpApiKey, McpCreateKeyResponse, McpSettingsResponse } from '@resubuild/types';
 
 export function getMcpSettings() {
-  return apiFetch<import('@resumind/types').McpSettingsResponse>('/settings/mcp');
+  return apiFetch<import('@resubuild/types').McpSettingsResponse>('/settings/mcp');
 }
 
 export function patchMcpSettings(payload: { mcpEnabled?: boolean }) {
-  return apiFetch<import('@resumind/types').McpSettingsResponse>('/settings/mcp', {
+  return apiFetch<import('@resubuild/types').McpSettingsResponse>('/settings/mcp', {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
 }
 
 export function createMcpApiKey() {
-  return apiFetch<import('@resumind/types').McpCreateKeyResponse>('/settings/mcp/key', {
+  return apiFetch<import('@resubuild/types').McpCreateKeyResponse>('/settings/mcp/key', {
     method: 'POST',
   });
 }

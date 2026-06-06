@@ -79,7 +79,7 @@ function toIso8601(updatedAt: string | Date): string {
 }
 
 /**
- * Normalizes an assembled Resumind resume for JSON download.
+ * Normalizes an assembled Resubuild resume for JSON download.
  * Strips internal row ids, omits empty sections, and adds export metadata.
  */
 export function prepareExportedResume(

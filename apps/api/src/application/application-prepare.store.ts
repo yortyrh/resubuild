@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import type { PrepareApplicationProgress } from '@resumind/import-agent';
-import type { JobSourceType } from '@resumind/types';
+import type { PrepareApplicationProgress } from '@resubuild/import-agent';
+import type { JobSourceType } from '@resubuild/types';
 
 /** In-memory intake so a stuck prepare can be retried without re-uploading. */
 export interface PrepareIntakeSnapshot {

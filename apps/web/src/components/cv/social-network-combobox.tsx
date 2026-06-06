@@ -1,6 +1,6 @@
 'use client';
 
-import { allSocialNetworkOptions, SOCIAL_NETWORK_SUGGESTIONS } from '@resumind/resume-template';
+import { allSocialNetworkOptions, SOCIAL_NETWORK_SUGGESTIONS } from '@resubuild/resume-template';
 import { Check, ChevronDown } from 'lucide-react';
 import {
   type KeyboardEvent as ReactKeyboardEvent,

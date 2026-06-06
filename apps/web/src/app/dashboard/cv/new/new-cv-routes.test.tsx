@@ -50,8 +50,8 @@ vi.mock('@/components/cv/json-resume-editor', () => ({
   ),
 }));
 
-vi.mock('@resumind/types', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@resumind/types')>();
+vi.mock('@resubuild/types', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@resubuild/types')>();
   return {
     ...actual,
     createEmptyResume: () => ({

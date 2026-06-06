@@ -26,7 +26,7 @@ describe('ApplicationResource', () => {
     expect(await observable).toEqual({
       contents: [
         {
-          uri: 'resumind://app-1/application',
+          uri: 'resubuild://app-1/application',
           text: JSON.stringify(application, null, 2),
           mimeType: 'application/json',
         },

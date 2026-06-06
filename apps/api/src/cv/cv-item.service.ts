@@ -5,7 +5,7 @@ import {
   headerToSlimCvData,
   isSortBackedSection,
   sanitizeResumeItemPayload,
-} from '@resumind/types';
+} from '@resubuild/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { MediaService } from '../media/media.service';
 import { parseMediaIdFromViewerUrl } from '../media/media-url.util';

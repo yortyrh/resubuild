@@ -1,5 +1,5 @@
-import type { ResumeWork } from '@resumind/types';
-import { sanitizeResumeItemPayload } from '@resumind/types';
+import type { ResumeWork } from '@resubuild/types';
+import { sanitizeResumeItemPayload } from '@resubuild/types';
 import type { QueryClient } from '@tanstack/react-query';
 import { cvVolunteerApi, cvWorkApi } from '@/lib/cv-item-api';
 import { invalidateCvSection } from '@/lib/queries/cv-mutations';

@@ -1,6 +1,6 @@
 'use client';
 
-import type { ResumeProject } from '@resumind/types';
+import type { ResumeProject } from '@resubuild/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import {
   formatDateRange,

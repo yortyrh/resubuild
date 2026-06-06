@@ -11,7 +11,7 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { listTemplates, PDF_EXPORT_OPTIONS, renderResumeHtml } from '@resumind/resume-template';
+import { listTemplates, PDF_EXPORT_OPTIONS, renderResumeHtml } from '@resubuild/resume-template';
 import puppeteer from 'puppeteer';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

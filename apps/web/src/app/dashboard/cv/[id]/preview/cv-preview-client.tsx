@@ -1,7 +1,7 @@
 'use client';
 
-import { type CvTemplatePresentationConfig, renderResumeHtml } from '@resumind/resume-template';
-import type { CvTitleBasics, Resume } from '@resumind/types';
+import { type CvTemplatePresentationConfig, renderResumeHtml } from '@resubuild/resume-template';
+import type { CvTitleBasics, Resume } from '@resubuild/types';
 import { ArrowLeft, Braces, FileDown, PanelLeftClose, PanelLeftOpen, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';

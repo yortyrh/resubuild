@@ -226,5 +226,5 @@ git checkout main && git pull
 ## Customizing
 
 - Edit the subagent markdown files in this folder. Frontmatter knobs: `model`, `readonly`, `is_background`. See the [Cursor subagents docs](https://cursor.com/docs/subagents).
-- To change worktree location (e.g. `../resumind-worktrees/`), update subagents AND the launch/cleanup/integrate commands; the planner emits paths relative to the main repo root.
+- To change worktree location (e.g. `../resubuild-worktrees/`), update subagents AND the launch/cleanup/integrate commands; the planner emits paths relative to the main repo root.
 - PR template and mermaid guidance: `.cursor/skills/openspec-parallel-integrate/SKILL.md`.

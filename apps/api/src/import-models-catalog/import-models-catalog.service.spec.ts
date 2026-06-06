@@ -5,7 +5,7 @@ import {
   loadFallbackImportModelCatalog,
   type MastraModelGateway,
   type ModelsDevRegistry,
-} from '@resumind/import-models';
+} from '@resubuild/import-models';
 import { ImportModelsCatalogService } from './import-models-catalog.service';
 
 const miniRegistry: ModelsDevRegistry = {

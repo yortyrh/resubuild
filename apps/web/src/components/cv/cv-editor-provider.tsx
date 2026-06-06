@@ -1,7 +1,7 @@
 'use client';
 
-import type { Resume } from '@resumind/types';
-import { createEmptyResume } from '@resumind/types';
+import type { Resume } from '@resubuild/types';
+import { createEmptyResume } from '@resubuild/types';
 import {
   createContext,
   type ReactNode,

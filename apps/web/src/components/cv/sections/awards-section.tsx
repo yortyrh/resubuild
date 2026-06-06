@@ -1,6 +1,6 @@
 'use client';
 
-import type { ResumeAward } from '@resumind/types';
+import type { ResumeAward } from '@resubuild/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { validateRequiredDateOnCreate } from '@/components/cv/cv-section-helpers';
 import { TextField } from '@/components/cv/form-fields';

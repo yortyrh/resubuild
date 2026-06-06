@@ -1,5 +1,5 @@
 import { Agent } from '@mastra/core/agent';
-import { createEmptyResume, sanitizeAiTypographyDeep } from '@resumind/types';
+import { createEmptyResume, sanitizeAiTypographyDeep } from '@resubuild/types';
 import { extractPdfTextTool } from '../tools/extract-pdf-text.tool';
 import { normalizeDatesTool } from '../tools/normalize-dates.tool';
 import { transcribeImageResumeTool } from '../tools/transcribe-image-resume.tool';

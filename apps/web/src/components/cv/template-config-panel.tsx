@@ -17,8 +17,8 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { CvTemplatePresentationConfig } from '@resumind/resume-template';
-import { ALL_SECTION_KEYS, type SectionKey } from '@resumind/resume-template';
+import type { CvTemplatePresentationConfig } from '@resubuild/resume-template';
+import { ALL_SECTION_KEYS, type SectionKey } from '@resubuild/resume-template';
 import { GripVertical } from 'lucide-react';
 import { type ButtonHTMLAttributes, memo, useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';

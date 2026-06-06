@@ -1,6 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import type { Resume } from '@resumind/types';
+import type { Resume } from '@resubuild/types';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 import { CvCloneService, CvSourceLoaderService } from './cv-clone.service';
 import { CvNormalizedRepository } from './cv-normalized.repository';

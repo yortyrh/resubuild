@@ -1,6 +1,6 @@
 'use client';
 
-import type { ResumeCertificate } from '@resumind/types';
+import type { ResumeCertificate } from '@resubuild/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { validateRequiredDateOnCreate } from '@/components/cv/cv-section-helpers';
 import { linkedEntityLabel } from '@/components/cv/external-link';

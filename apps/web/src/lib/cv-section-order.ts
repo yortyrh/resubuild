@@ -1,4 +1,4 @@
-import { sortAwardRows, sortPublicationRows, sortWorkRows } from '@resumind/types';
+import { sortAwardRows, sortPublicationRows, sortWorkRows } from '@resubuild/types';
 
 export type WithItemId = { id?: string };
 

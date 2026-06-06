@@ -1,6 +1,6 @@
 'use client';
 
-import type { ResumeLanguage } from '@resumind/types';
+import type { ResumeLanguage } from '@resubuild/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { TextField } from '@/components/cv/form-fields';
 import { LanguageField } from '@/components/cv/language-field';

@@ -1,4 +1,4 @@
-# Resumind
+# Resubuild
 
 Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authentication + schema validation), and **Supabase Postgres** (RLS-protected storage). Auth is **API-issued Bearer tokens** (JSON over CORS)—the web bundle does **not** embed Supabase client libraries.
 
@@ -42,7 +42,7 @@ pnpm local:credentials
 
 **Developer sign-in** (use this in the browser):
 
-- Email: `developer@resumind.local`
+- Email: `developer@resubuild.local`
 - Password: run `pnpm local:credentials` (not committed to git)
 
 ### Run the app
@@ -59,7 +59,7 @@ From any CV editor, use **Preview** to open `/dashboard/cv/[id]/preview` — a p
 
 PDF generation uses headless Chromium (Puppeteer) in `apps/api`. For local dev, Puppeteer downloads its own browser. In production Docker, set `CHROMIUM_EXECUTABLE_PATH` to a system Chromium binary if the bundled browser is unavailable. HTML preview works without Chromium; PDF returns `503` when launch fails.
 
-Regenerate sample PDFs from JSON fixtures: `pnpm samples:pdf` (builds `@resumind/resume-template` first).
+Regenerate sample PDFs from JSON fixtures: `pnpm samples:pdf` (builds `@resubuild/resume-template` first).
 
 ### PDF import smoke (optional)
 

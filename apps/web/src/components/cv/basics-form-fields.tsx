@@ -1,6 +1,6 @@
 'use client';
 
-import type { Resume } from '@resumind/types';
+import type { Resume } from '@resubuild/types';
 import { CountryCodeField } from '@/components/cv/country-code-field';
 import { TextField } from '@/components/cv/form-fields';
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { resolveProfileUrl } from '@resumind/resume-template';
-import type { ResumeProfile } from '@resumind/types';
+import { resolveProfileUrl } from '@resubuild/resume-template';
+import type { ResumeProfile } from '@resubuild/types';
 import { SocialNetworkTitle } from '@/components/cv/contact-icons';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { ExternalLink } from '@/components/cv/external-link';

@@ -1,4 +1,4 @@
-import resumeSchema from '@resumind/schemas/resume.schema.json';
+import resumeSchema from '@resubuild/schemas/resume.schema.json';
 import Ajv, { type ErrorObject } from 'ajv';
 import addFormats from 'ajv-formats';
 

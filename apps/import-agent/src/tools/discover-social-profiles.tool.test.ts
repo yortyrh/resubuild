@@ -1,4 +1,4 @@
-import { createEmptyResume } from '@resumind/types';
+import { createEmptyResume } from '@resubuild/types';
 import { describe, expect, it, vi } from 'vitest';
 import { discoverSocialProfilesTool } from './discover-social-profiles.tool';
 

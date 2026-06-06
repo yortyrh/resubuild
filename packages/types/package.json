@@ -1,5 +1,5 @@
 {
-  "name": "@resumind/types",
+  "name": "@resubuild/types",
   "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",
@@ -17,7 +17,7 @@
     "test": "vitest run --coverage"
   },
   "dependencies": {
-    "@resumind/schemas": "workspace:*",
+    "@resubuild/schemas": "workspace:*",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1"
   },

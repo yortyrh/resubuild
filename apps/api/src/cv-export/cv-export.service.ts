@@ -16,9 +16,9 @@ import {
   renderMarkdownField,
   renderResumeHtml,
   resolveCanonicalTemplateId,
-} from '@resumind/resume-template';
-import type { Resume } from '@resumind/types';
-import { assembleResume, deriveCvTitleFromBasics, prepareExportedResume } from '@resumind/types';
+} from '@resubuild/resume-template';
+import type { Resume } from '@resubuild/types';
+import { assembleResume, deriveCvTitleFromBasics, prepareExportedResume } from '@resubuild/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
 import { CvTemplatePresentationService } from '../cv/cv-template-presentation.service';

@@ -1,6 +1,6 @@
 import { lookup } from 'node:dns/promises';
 import { BadRequestException } from '@nestjs/common';
-import { isBlockedImageHostname, isPrivateIpv4, isPrivateIpv6 } from '@resumind/types';
+import { isBlockedImageHostname, isPrivateIpv4, isPrivateIpv6 } from '@resubuild/types';
 import sharp from 'sharp';
 import { RESUME_UPLOAD_MIME_EXTENSIONS } from './media-upload.types';
 

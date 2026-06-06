@@ -1,6 +1,6 @@
 'use client';
 
-import type { ResumeSkill } from '@resumind/types';
+import type { ResumeSkill } from '@resubuild/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { TextField } from '@/components/cv/form-fields';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';

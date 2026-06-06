@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Resume } from '@resumind/types';
-import { prepareImportedResume } from '@resumind/types';
+import type { Resume } from '@resubuild/types';
+import { prepareImportedResume } from '@resubuild/types';
 import type { AuthUser } from '../auth/auth-user.types';
 import { CvService } from '../cv/cv.service';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';

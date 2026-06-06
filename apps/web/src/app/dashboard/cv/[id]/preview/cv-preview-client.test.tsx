@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { CvTemplatePresentationConfig } from '@resumind/resume-template';
+import type { CvTemplatePresentationConfig } from '@resubuild/resume-template';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CvPreviewClient } from './cv-preview-client';
@@ -27,15 +27,15 @@ vi.mock('@/lib/cv-preview-resume', () => ({
   fetchCvResumeForPreview: vi.fn(),
 }));
 
-vi.mock('@resumind/resume-template', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@resumind/resume-template')>();
+vi.mock('@resubuild/resume-template', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@resubuild/resume-template')>();
   return {
     ...actual,
     renderResumeHtml: vi.fn(() => '<html><body>Jane Doe</body></html>'),
   };
 });
 
-import { renderResumeHtml } from '@resumind/resume-template';
+import { renderResumeHtml } from '@resubuild/resume-template';
 import { useApplicationForCv } from '@/components/cv/use-application-for-cv';
 import {
   downloadCvJson,

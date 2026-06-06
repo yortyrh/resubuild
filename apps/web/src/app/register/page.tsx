@@ -8,7 +8,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Create account</CardTitle>
-          <CardDescription>Start managing your Resumind CVs</CardDescription>
+          <CardDescription>Start managing your Resubuild CVs</CardDescription>
         </CardHeader>
         <CardContent>
           <RegisterForm />

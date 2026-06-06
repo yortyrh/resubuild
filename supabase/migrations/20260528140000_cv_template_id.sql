@@ -2,4 +2,4 @@
 ALTER TABLE cv
   ADD COLUMN IF NOT EXISTS template_id text NOT NULL DEFAULT 'classic';
 
-COMMENT ON COLUMN cv.template_id IS 'Resume export template id from @resumind/resume-template registry';
+COMMENT ON COLUMN cv.template_id IS 'Resume export template id from @resubuild/resume-template registry';

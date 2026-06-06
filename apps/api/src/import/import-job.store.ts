@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { ImportJobProgress, ImportJobStatus } from '@resumind/import-agent';
+import type { ImportJobProgress, ImportJobStatus } from '@resubuild/import-agent';
 
 export interface ImportJobRecord {
   id: string;

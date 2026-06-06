@@ -1,4 +1,4 @@
-import type { ResumeVolunteer, ResumeWork } from '@resumind/types';
+import type { ResumeVolunteer, ResumeWork } from '@resubuild/types';
 
 /** Volunteer item shape from the editor API, including hidden storage fields. */
 export type VolunteerMoveSource = ResumeVolunteer & {

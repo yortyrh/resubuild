@@ -1,6 +1,6 @@
 'use client';
 
-import type { Resume, ResumeProfile } from '@resumind/types';
+import type { Resume, ResumeProfile } from '@resubuild/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, Eye, FileDown, PenLine, Printer, Sparkles } from 'lucide-react';
 import Link from 'next/link';

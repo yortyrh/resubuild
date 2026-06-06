@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import type { Resume } from '@resumind/types';
+import type { Resume } from '@resubuild/types';
 import { createClient } from '@supabase/supabase-js';
 import { CvNormalizedRepository } from './cv-normalized.repository';
 import { mockCvHeader } from './cv-test.helpers';

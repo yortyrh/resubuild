@@ -49,7 +49,7 @@ export const MCP_TOOL_DEFINITIONS: Record<
   },
   get_cv: {
     description:
-      'Load one CV in Resumind editor shape (basics + normalized sections with internal row ids). Use before tailoring content or to compare with export_cv_jsonresume. Does not return canonical JSON Resume.',
+      'Load one CV in Resubuild editor shape (basics + normalized sections with internal row ids). Use before tailoring content or to compare with export_cv_jsonresume. Does not return canonical JSON Resume.',
     readOnlyHint: true,
   },
   delete_cv: {
@@ -73,12 +73,12 @@ export const MCP_TOOL_DEFINITIONS: Record<
   },
   export_cv_jsonresume: {
     description:
-      'Export canonical JSON Resume for LLMs and external tools. Returns a URL envelope { exportId, url, expiresAt, expiresInSeconds, filename, contentType, sizeBytes, kind: "jsonresume" } (default TTL: 1h). The `url` is a Supabase Storage signed URL with a `?token=…` query parameter that authenticates the request at the storage layer; open it in a browser tab, `curl <url> -o cv.json`, or `fetch(url).then(r => r.json())` — the response carries `Content-Type: application/json; charset=utf-8`. The envelope also includes a `document` field with the parsed JSON Resume (includes $schema and meta, strips Resumind-internal row ids) so you can reason about it inline without an extra fetch. Use `fetch_export_url` to refresh the URL before it expires. Treat the URL as a secret until it expires.',
+      'Export canonical JSON Resume for LLMs and external tools. Returns a URL envelope { exportId, url, expiresAt, expiresInSeconds, filename, contentType, sizeBytes, kind: "jsonresume" } (default TTL: 1h). The `url` is a Supabase Storage signed URL with a `?token=…` query parameter that authenticates the request at the storage layer; open it in a browser tab, `curl <url> -o cv.json`, or `fetch(url).then(r => r.json())` — the response carries `Content-Type: application/json; charset=utf-8`. The envelope also includes a `document` field with the parsed JSON Resume (includes $schema and meta, strips Resubuild-internal row ids) so you can reason about it inline without an extra fetch. Use `fetch_export_url` to refresh the URL before it expires. Treat the URL as a secret until it expires.',
     readOnlyHint: true,
   },
   export_cv_html: {
     description:
-      'Export the full HTML document shown in the Resumind web preview for a template. Returns a URL envelope { exportId, url, expiresAt, expiresInSeconds, filename, contentType: "text/html; charset=utf-8", sizeBytes, kind: "html", templateId } (default TTL: 1h). The `url` is a Supabase Storage signed URL with a `?token=…` query parameter that authenticates the request at the storage layer; open it in a browser tab to render the complete CV, or `curl <url> -o cv.html` to save it locally. The HTML body is NOT returned inline. Use `fetch_export_url` to refresh the URL before it expires. Treat the URL as a secret until it expires.',
+      'Export the full HTML document shown in the Resubuild web preview for a template. Returns a URL envelope { exportId, url, expiresAt, expiresInSeconds, filename, contentType: "text/html; charset=utf-8", sizeBytes, kind: "html", templateId } (default TTL: 1h). The `url` is a Supabase Storage signed URL with a `?token=…` query parameter that authenticates the request at the storage layer; open it in a browser tab to render the complete CV, or `curl <url> -o cv.html` to save it locally. The HTML body is NOT returned inline. Use `fetch_export_url` to refresh the URL before it expires. Treat the URL as a secret until it expires.',
     readOnlyHint: true,
   },
   export_cv_screenshot: {

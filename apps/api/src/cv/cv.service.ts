@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { isValidTemplateId, resolveCanonicalTemplateId } from '@resumind/resume-template';
-import type { Resume } from '@resumind/types';
-import { type CvHeaderRow, deriveCvTitleFromBasics, headerToSlimCvData } from '@resumind/types';
+import { isValidTemplateId, resolveCanonicalTemplateId } from '@resubuild/resume-template';
+import type { Resume } from '@resubuild/types';
+import { type CvHeaderRow, deriveCvTitleFromBasics, headerToSlimCvData } from '@resubuild/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 import { CvNormalizedRepository } from './cv-normalized.repository';

@@ -1,6 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { McpRegistryDiscoveryService } from '@rekog/mcp-nest';
-import type { McpCreateKeyResponse, McpSettingsResponse } from '@resumind/types';
+import type { McpCreateKeyResponse, McpSettingsResponse } from '@resubuild/types';
 import type { AuthUser } from '../auth/auth-user.types';
 import type { McpApiKeyRow } from './mcp-key.repository';
 import { McpKeyRepository } from './mcp-key.repository';

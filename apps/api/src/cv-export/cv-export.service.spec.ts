@@ -8,8 +8,8 @@ import { ConfigService } from '@nestjs/config';
 import {
   createDefaultPresentationConfig,
   getDefaultPresentationConfig,
-} from '@resumind/resume-template';
-import type { Resume } from '@resumind/types';
+} from '@resubuild/resume-template';
+import type { Resume } from '@resubuild/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
 import { CvTemplatePresentationService } from '../cv/cv-template-presentation.service';

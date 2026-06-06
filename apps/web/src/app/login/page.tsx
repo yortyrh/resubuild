@@ -8,7 +8,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
-          <CardDescription>Access your Resumind dashboard</CardDescription>
+          <CardDescription>Access your Resubuild dashboard</CardDescription>
         </CardHeader>
         <CardContent>
           <LoginForm />

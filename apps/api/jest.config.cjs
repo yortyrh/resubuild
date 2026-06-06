@@ -1,6 +1,6 @@
 const path = require('node:path');
 // `marked@18` ships only an ESM build. The compiled CJS in
-// `@resumind/resume-template/dist/render-markdown-field.js` does
+// `@resubuild/resume-template/dist/render-markdown-field.js` does
 // `require("marked")`, which under Jest 30 raises
 // `SyntaxError: Unexpected token 'export'`. Resolve the UMD file directly
 // (it isn't exposed via `exports`) and redirect `marked` to it.

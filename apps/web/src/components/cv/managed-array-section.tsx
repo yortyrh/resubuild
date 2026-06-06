@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { sanitizeResumeItemPayload } from '@resumind/types';
+import { sanitizeResumeItemPayload } from '@resubuild/types';
 import {
   type ButtonHTMLAttributes,
   type ReactNode,

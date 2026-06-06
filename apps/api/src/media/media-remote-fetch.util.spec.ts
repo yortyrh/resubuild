@@ -1,6 +1,6 @@
 import { lookup } from 'node:dns/promises';
 import { BadRequestException } from '@nestjs/common';
-import { isPrivateIpv4 } from '@resumind/types';
+import { isPrivateIpv4 } from '@resubuild/types';
 import {
   assertResolvablePublicHost,
   defaultRemoteImageFetch,

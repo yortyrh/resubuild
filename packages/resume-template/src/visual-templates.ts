@@ -1,4 +1,4 @@
-import type { Resume } from '@resumind/types';
+import type { Resume } from '@resubuild/types';
 import { wrapDocument } from './primitives/document';
 import { renderSections } from './primitives/sections';
 import {

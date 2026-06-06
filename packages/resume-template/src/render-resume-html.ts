@@ -1,4 +1,4 @@
-import type { Resume } from '@resumind/types';
+import type { Resume } from '@resubuild/types';
 import { DEFAULT_TEMPLATE_ID, getTemplate } from './registry';
 import {
   getDefaultPresentationConfig,

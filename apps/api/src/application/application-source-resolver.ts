@@ -1,6 +1,6 @@
-import type { CvSummaryForRanking } from '@resumind/import-agent';
-import type { JobApplicationRow, Resume } from '@resumind/types';
-import { assembleResume, deriveCvTitleFromBasics } from '@resumind/types';
+import type { CvSummaryForRanking } from '@resubuild/import-agent';
+import type { JobApplicationRow, Resume } from '@resubuild/types';
+import { assembleResume, deriveCvTitleFromBasics } from '@resubuild/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
 

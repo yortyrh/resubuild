@@ -59,19 +59,19 @@ importers:
       '@rekog/mcp-nest':
         specifier: ^1.9.10
         version: 1.9.10(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(@nestjs/common@11.1.24(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.24)(@nestjs/jwt@11.0.2(@nestjs/common@11.1.24(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)))(@nestjs/passport@11.0.5(@nestjs/common@11.1.24(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(passport@0.7.0))(express@5.2.1)(reflect-metadata@0.2.2)(zod@4.4.3)
-      '@resumind/import-agent':
+      '@resubuild/import-agent':
         specifier: workspace:*
         version: link:../import-agent
-      '@resumind/import-models':
+      '@resubuild/import-models':
         specifier: workspace:*
         version: link:../../packages/import-models
-      '@resumind/resume-template':
+      '@resubuild/resume-template':
         specifier: workspace:*
         version: link:../../packages/resume-template
-      '@resumind/schemas':
+      '@resubuild/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas
-      '@resumind/types':
+      '@resubuild/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@supabase/supabase-js':
@@ -159,13 +159,13 @@ importers:
       '@napi-rs/canvas':
         specifier: ^1.0.0
         version: 1.0.0
-      '@resumind/import-models':
+      '@resubuild/import-models':
         specifier: workspace:*
         version: link:../../packages/import-models
-      '@resumind/schemas':
+      '@resubuild/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas
-      '@resumind/types':
+      '@resubuild/types':
         specifier: workspace:*
         version: link:../../packages/types
       ajv:
@@ -235,13 +235,13 @@ importers:
       '@radix-ui/react-tabs':
         specifier: ^1.1.12
         version: 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@resumind/resume-template':
+      '@resubuild/resume-template':
         specifier: workspace:*
         version: link:../../packages/resume-template
-      '@resumind/schemas':
+      '@resubuild/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas
-      '@resumind/types':
+      '@resubuild/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@tanstack/react-query':
@@ -360,7 +360,7 @@ importers:
 
   packages/resume-template:
     dependencies:
-      '@resumind/types':
+      '@resubuild/types':
         specifier: workspace:*
         version: link:../types
       marked:
@@ -387,7 +387,7 @@ importers:
 
   packages/types:
     dependencies:
-      '@resumind/schemas':
+      '@resubuild/schemas':
         specifier: workspace:*
         version: link:../schemas
       ajv:

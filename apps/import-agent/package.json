@@ -1,5 +1,5 @@
 {
-  "name": "@resumind/import-agent",
+  "name": "@resubuild/import-agent",
   "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",
@@ -19,9 +19,9 @@
   "dependencies": {
     "@mastra/core": "^1.38.0",
     "@napi-rs/canvas": "^1.0.0",
-    "@resumind/import-models": "workspace:*",
-    "@resumind/schemas": "workspace:*",
-    "@resumind/types": "workspace:*",
+    "@resubuild/import-models": "workspace:*",
+    "@resubuild/schemas": "workspace:*",
+    "@resubuild/types": "workspace:*",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "mammoth": "^1.12.0",

@@ -1,4 +1,4 @@
-# Resumind API (NestJS)
+# Resubuild API (NestJS)
 
 REST API for authenticated CV persistence and **auth issuance** consumed by `apps/web` over HTTPS (possibly on a **different hostname** than the Next.js UI).
 
@@ -92,7 +92,7 @@ Requires **`cv-html-view-pdf-export`** (Puppeteer HTML/PDF pipeline) for cover l
 | `APPLICATION_PREPARE_ENABLED` | Set to `false` to disable `POST /applications/prepare` (default on). |
 | `PDF_IMPORT_MAX_BYTES`        | Shared 5 MB limit for PDF/image job posting uploads.                 |
 
-Routes under `/applications/*` reuse the active AI agent account (`AiAgentCredentialService`) and the prepare workflow in `@resumind/import-agent`.
+Routes under `/applications/*` reuse the active AI agent account (`AiAgentCredentialService`) and the prepare workflow in `@resubuild/import-agent`.
 
 ## MCP server (Streamable HTTP)
 
@@ -119,7 +119,7 @@ Users enable MCP in the dashboard, create up to **two** API keys, and connect ex
 ```json
 {
   "mcpServers": {
-    "resumind": {
+    "resubuild": {
       "url": "http://localhost:3001/mcp",
       "headers": {
         "Authorization": "Bearer rm_YOUR_KEY_FROM_SETTINGS"
@@ -152,7 +152,7 @@ The four `export_cv_*` tools (HTML / PDF / PNG / JSON Resume) no longer return i
 - **HTML (`export_cv_html`)** — the URL is openable in a browser tab (renders the full CV) **or** saveable with `curl <url> -o cv.html`; served as `text/html; charset=utf-8`.
 - **PDF (`export_cv_pdf`)** — download with `curl <url> -o cv.pdf` (or open in a browser/PDF viewer); served as `application/pdf`. Large exports return 413 if over `MCP_EXPORT_MAX_BYTES`.
 - **Screenshot / PNG (`export_cv_screenshot`)** — `mode=first_page` (default, one Letter-sized page) or `mode=full_document` (entire document height); download with `curl <url> -o cv.png`; served as `image/png`.
-- **JSON Resume (`export_cv_jsonresume`)** — `curl <url> | jq .` or `fetch(url).then(r => r.json())`; served as `application/json; charset=utf-8`. The envelope also includes a `document` field with the parsed JSON Resume object (includes `$schema` and `meta`, strips Resumind-internal row ids) so agents can reason about it inline without a follow-up `fetch`.
+- **JSON Resume (`export_cv_jsonresume`)** — `curl <url> | jq .` or `fetch(url).then(r => r.json())`; served as `application/json; charset=utf-8`. The envelope also includes a `document` field with the parsed JSON Resume object (includes `$schema` and `meta`, strips Resubuild-internal row ids) so agents can reason about it inline without a follow-up `fetch`.
 
 > **BREAKING**: clients that previously consumed `html`, `contentBase64`, or `document` directly from the tool result must switch to `fetch(url)` (or the new `document` field for JSON Resume). Tool descriptions are updated to reflect the new shape.
 
@@ -179,7 +179,7 @@ This starts the Nest dev server with `--inspect=0.0.0.0:9229`, exposing the Node
 ### Attach from VS Code / Cursor
 
 1. Run `pnpm dev:api:debug` in a terminal.
-2. In the editor, select the **"Attach to @resumind/api"** launch configuration and press Run/Debug.
+2. In the editor, select the **"Attach to @resubuild/api"** launch configuration and press Run/Debug.
 
 Breakpoints set in `apps/api/src/*.ts` will resolve via the source maps emitted under `apps/api/dist/`.
 
@@ -217,7 +217,7 @@ This lets the agent introspect the module graph, list providers, and step throug
 The `start:debug` script enables only the Node inspector (no Devtools HTTP routes):
 
 ```bash
-pnpm --filter @resumind/api start:debug
+pnpm --filter @resubuild/api start:debug
 ```
 
 ### Notes

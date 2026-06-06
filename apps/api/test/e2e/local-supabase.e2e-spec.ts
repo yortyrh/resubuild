@@ -601,6 +601,7 @@ describe('E2E — import LLM config (local Supabase)', () => {
 describe('E2E — import URL validation (local Supabase)', () => {
   let app: INestApplication;
   let accessToken: string;
+  const originalFetch = global.fetch;
   const fixture = loadFixture();
 
   beforeAll(async () => {
@@ -610,6 +611,7 @@ describe('E2E — import URL validation (local Supabase)', () => {
   });
 
   afterAll(async () => {
+    global.fetch = originalFetch;
     await app.close();
   });
 
@@ -622,12 +624,14 @@ describe('E2E — import URL validation (local Supabase)', () => {
   });
 
   it('POST /cv/import/from-url resolves registry profile URLs', async () => {
+    const responseBody = { basics: { name: 'Registry User' } };
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
       statusText: 'OK',
       headers: { get: () => 'application/json' },
-      json: jest.fn().mockResolvedValue({ basics: { name: 'Registry User' } }),
+      json: jest.fn().mockResolvedValue(responseBody),
+      text: jest.fn().mockResolvedValue(JSON.stringify(responseBody)),
     }) as never;
 
     const response = await request(app.getHttpServer())

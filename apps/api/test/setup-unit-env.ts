@@ -1,5 +1,5 @@
 /**
- * Jest setup for `@resumind/api` unit tests.
+ * Jest setup for `@resubuild/api` unit tests.
  *
  * 1. Pin the import-models catalog to the bundled `catalog.json` so
  *    `modelsDevGateway` does not try to reach the network in tests.

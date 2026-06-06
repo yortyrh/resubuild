@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { Resume, ResumeProfile } from '@resumind/types';
+import type { Resume, ResumeProfile } from '@resubuild/types';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BasicsSectionView } from './basics-section-view';

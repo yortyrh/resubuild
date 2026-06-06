@@ -1,4 +1,4 @@
-import type { Resume } from '@resumind/types';
+import type { Resume } from '@resubuild/types';
 import { escapeHtml } from '../primitives/html';
 import { getTemplate } from '../registry';
 import type { ResumeTemplate } from '../types';

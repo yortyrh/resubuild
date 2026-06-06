@@ -1,7 +1,7 @@
 'use client';
 
-import { renderResumeHtml } from '@resumind/resume-template';
-import type { Resume } from '@resumind/types';
+import { renderResumeHtml } from '@resubuild/resume-template';
+import type { Resume } from '@resubuild/types';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CvPreviewIframe } from '@/components/cv/cv-preview-iframe';
 import { Button } from '@/components/ui/button';

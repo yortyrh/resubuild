@@ -1,4 +1,4 @@
-import type { JobApplicationRow } from '@resumind/types';
+import type { JobApplicationRow } from '@resubuild/types';
 import {
   APPLICATION_SNAPSHOT_CV_ID,
   buildCvSummaryFromId,

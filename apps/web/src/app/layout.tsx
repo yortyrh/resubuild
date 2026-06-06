@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Resumind',
-  description: 'Manage your Resumind CVs',
+  title: 'Resubuild',
+  description: 'Manage your Resubuild CVs',
 };
 
 export default function RootLayout({

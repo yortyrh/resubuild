@@ -4,7 +4,7 @@ import {
   type CvTitleBasics,
   deriveCvShortTitleFromBasics,
   deriveCvTitleFromBasics,
-} from '@resumind/types';
+} from '@resubuild/types';
 import Link from 'next/link';
 import { CV_SECTIONS, type CvSectionSlug } from '@/components/cv/cv-section-nav';
 import {

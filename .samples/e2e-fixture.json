@@ -2,10 +2,10 @@
   "version": 2,
   "description": "Local seed fixture. Run `pnpm samples:seed` after `supabase start` and `pnpm setup:env` (no API required).",
   "developerUser": {
-    "email": "developer@resumind.local"
+    "email": "developer@resubuild.local"
   },
   "e2eUser": {
-    "email": "e2e-fixture@resumind.local"
+    "email": "e2e-fixture@resubuild.local"
   },
   "resumesDir": "resumes/jsonresume",
   "mediaDir": "media",

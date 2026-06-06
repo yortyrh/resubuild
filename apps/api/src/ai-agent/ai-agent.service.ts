@@ -11,7 +11,7 @@ import {
   listCatalogModelsForProvider,
   listCatalogProviders,
   validateImportModelId,
-} from '@resumind/import-models';
+} from '@resubuild/import-models';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import type { AiAgentAccountSummary, AiAgentActiveStatus } from './ai-agent.repository';

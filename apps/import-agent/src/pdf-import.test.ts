@@ -17,7 +17,7 @@ vi.mock('pdf-parse', () => ({
   }),
 }));
 
-import { createEmptyResume } from '@resumind/types';
+import { createEmptyResume } from '@resubuild/types';
 import { discoverSocialProfilesTool } from './tools/discover-social-profiles.tool';
 import { extractPdfTextTool } from './tools/extract-pdf-text.tool';
 import { normalizeDatesTool } from './tools/normalize-dates.tool';

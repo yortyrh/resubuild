@@ -1,5 +1,5 @@
 import { Agent } from '@mastra/core/agent';
-import { sanitizeAiTypography } from '@resumind/types';
+import { sanitizeAiTypography } from '@resubuild/types';
 import type {
   CvSummaryForRanking,
   JobSummary,

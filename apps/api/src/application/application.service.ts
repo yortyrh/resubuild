@@ -13,15 +13,15 @@ import {
   runPrepareApplicationWorkflow,
   runUpdateApplicationWorkflow,
   type TailorCvPatch,
-} from '@resumind/import-agent';
-import type { JobApplicationRow, JobSourceType, Resume } from '@resumind/types';
+} from '@resubuild/import-agent';
+import type { JobApplicationRow, JobSourceType, Resume } from '@resubuild/types';
 import {
   assembleResume,
   deriveCvTitleFromBasics,
   jobApplicationRowToDetail,
   sanitizeAiTypography,
   sanitizeAiTypographyDeep,
-} from '@resumind/types';
+} from '@resubuild/types';
 import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvService } from '../cv/cv.service';

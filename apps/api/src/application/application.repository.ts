@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import type { JobApplicationRow, JobApplicationStatus, JobSourceType } from '@resumind/types';
+import type { JobApplicationRow, JobApplicationStatus, JobSourceType } from '@resubuild/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
 

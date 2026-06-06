@@ -1,6 +1,6 @@
 'use client';
 
-import type { Resume } from '@resumind/types';
+import type { Resume } from '@resubuild/types';
 import { useState } from 'react';
 import { BasicsFormFields } from '@/components/cv/basics-form-fields';
 import { Button } from '@/components/ui/button';

@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import type { CvTemplatePresentationConfig } from '@resumind/resume-template';
+import type { CvTemplatePresentationConfig } from '@resubuild/resume-template';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export interface CvTemplatePresentationRow {

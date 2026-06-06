@@ -12,7 +12,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
               <div className="flex items-center gap-6">
                 <Link href="/dashboard" className="text-lg font-semibold">
-                  Resumind
+                  Resubuild
                 </Link>
                 <nav className="text-muted-foreground flex gap-4 text-sm">
                   <Link href="/dashboard" className="hover:text-foreground">

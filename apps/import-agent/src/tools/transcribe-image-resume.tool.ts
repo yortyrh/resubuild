@@ -1,5 +1,5 @@
 import { Agent } from '@mastra/core/agent';
-import { sanitizeAiTypography } from '@resumind/types';
+import { sanitizeAiTypography } from '@resubuild/types';
 import { toAgentModelConfig } from '../workflows/agent-model-config';
 
 const TRANSCRIBE_INSTRUCTIONS = `Transcribe all visible resume text from the image.

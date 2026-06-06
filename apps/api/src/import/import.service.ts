@@ -13,8 +13,8 @@ import {
   runTextImportWorkflow,
   runWebsiteImportWorkflow,
   type WebsiteImportToolsConfig,
-} from '@resumind/import-agent';
-import { InvalidImportedResumeError, prepareImportedResume } from '@resumind/types';
+} from '@resubuild/import-agent';
+import { InvalidImportedResumeError, prepareImportedResume } from '@resubuild/types';
 import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';

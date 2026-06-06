@@ -4,7 +4,7 @@ import { MediaService } from '../../media/media.service';
 import { getMcpAuthUser } from '../mcp-auth.context';
 
 /**
- * `resumind://{mediaId}/media` — read one media item's metadata as JSON.
+ * `resubuild://{mediaId}/media` — read one media item's metadata as JSON.
  * Replaces the prior `MediaResourceHandler` interface implementation.
  * Note: this returns metadata only, not the raw bytes — clients use
  * `GET /media/:id` to fetch the actual file.
@@ -14,7 +14,7 @@ export class MediaResource {
   constructor(private readonly mediaService: MediaService) {}
 
   @ResourceTemplate({
-    uriTemplate: 'resumind://{mediaId}/media',
+    uriTemplate: 'resubuild://{mediaId}/media',
     name: 'Media',
     description:
       'User uploaded media (images and documents) — returns metadata only, not raw bytes',
@@ -26,7 +26,7 @@ export class MediaResource {
     return {
       contents: [
         {
-          uri: `resumind://${params.mediaId}/media`,
+          uri: `resubuild://${params.mediaId}/media`,
           text: JSON.stringify(meta, null, 2),
           mimeType: meta.contentType,
         },

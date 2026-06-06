@@ -3,7 +3,7 @@ import {
   isBlockedImageUrl,
   prepareImportedResume,
   validateResumeSchema,
-} from '@resumind/types';
+} from '@resubuild/types';
 import { parseMediaIdFromImageUrl } from '@/lib/api';
 
 export type ImportImagePreviewStatus =

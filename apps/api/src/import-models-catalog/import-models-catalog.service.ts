@@ -9,7 +9,7 @@ import {
   loadFallbackImportModelCatalog,
   type MastraModelGateway,
   modelsDevGateway,
-} from '@resumind/import-models';
+} from '@resubuild/import-models';
 
 export interface ImportModelsCatalogStatus {
   source: 'mastra-gateway' | 'fallback';

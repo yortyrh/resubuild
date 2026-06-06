@@ -4,9 +4,9 @@ import { Test } from '@nestjs/testing';
 import {
   runPrepareApplicationWorkflow,
   runUpdateApplicationWorkflow,
-} from '@resumind/import-agent';
-import type { ImportModelCatalog } from '@resumind/import-models';
-import catalog from '@resumind/import-models/catalog.json';
+} from '@resubuild/import-agent';
+import type { ImportModelCatalog } from '@resubuild/import-models';
+import catalog from '@resubuild/import-models/catalog.json';
 import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
 import { CvService } from '../cv/cv.service';
 import { CvCloneService } from '../cv/cv-clone.service';
@@ -42,9 +42,9 @@ function mockLiveBaseCv(
   );
 }
 
-jest.mock('@resumind/import-agent', () => {
+jest.mock('@resubuild/import-agent', () => {
   const actual =
-    jest.requireActual<typeof import('@resumind/import-agent')>('@resumind/import-agent');
+    jest.requireActual<typeof import('@resubuild/import-agent')>('@resubuild/import-agent');
   return {
     ...actual,
     runPrepareApplicationWorkflow: jest.fn(),

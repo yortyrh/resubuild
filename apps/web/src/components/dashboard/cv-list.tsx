@@ -47,7 +47,7 @@ export function CvList() {
         <div className="min-w-0 flex-1">
           <div className="font-semibold">No CVs yet</div>
           <div className="text-muted-foreground mt-0 text-sm font-normal leading-snug">
-            Create your first Resumind CV.
+            Create your first Resubuild CV.
           </div>
         </div>
         <div className="divider-soft mt-4 flex gap-2 border-t pt-4">

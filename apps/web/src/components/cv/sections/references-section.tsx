@@ -1,6 +1,6 @@
 'use client';
 
-import type { ResumeReference } from '@resumind/types';
+import type { ResumeReference } from '@resubuild/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { TextField } from '@/components/cv/form-fields';
 import { MarkdownView } from '@/components/cv/markdown-view';

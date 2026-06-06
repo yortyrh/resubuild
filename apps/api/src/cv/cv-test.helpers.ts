@@ -1,4 +1,4 @@
-import type { CvHeaderRow } from '@resumind/types';
+import type { CvHeaderRow } from '@resubuild/types';
 import type { CvNormalizedRepository } from './cv-normalized.repository';
 
 export function createMockNormalizedRepo(): jest.Mocked<

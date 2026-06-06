@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import type { McpExportEnvelope, McpExportRecord, McpExportScreenshotMode } from '@resumind/types';
+import type { McpExportEnvelope, McpExportRecord, McpExportScreenshotMode } from '@resubuild/types';
 import type { AuthUser } from '../auth/auth-user.types';
 import { CvService } from '../cv/cv.service';
 import { CvExportService } from '../cv-export/cv-export.service';

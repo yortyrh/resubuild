@@ -3,8 +3,8 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import type { ImportModelCatalog } from '@resumind/import-models';
-import catalog from '@resumind/import-models/catalog.json';
+import type { ImportModelCatalog } from '@resubuild/import-models';
+import catalog from '@resubuild/import-models/catalog.json';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import type { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import type { AiAgentRepository } from './ai-agent.repository';

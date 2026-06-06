@@ -1,4 +1,4 @@
-import type { Resume } from '@resumind/types';
+import type { Resume } from '@resubuild/types';
 
 export type TemplateCategory = 'default' | 'design' | 'tabular' | 'compact';
 

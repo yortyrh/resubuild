@@ -43,9 +43,16 @@ import { UpdateCvTemplatePresentationTool } from './tools/presentation/update-cv
 /**
  * Returns true when the `MCP_SERVER_ENABLED` env gate is in its "disabled"
  * state. Mirrors the prior controller's `assertEnabled` check so the same env
- * values disable the new wrapper. When disabled, `McpModule.forRoot(...)` is
- * NOT registered at all and the `/mcp` route returns 404 (the wrapper is the
- * only controller mounted there).
+ * values disable the new wrapper. When disabled, the `@rekog/mcp-nest` root
+ * module is NOT registered and the `/mcp` route returns 404 (the wrapper is
+ * the only controller mounted there).
+ *
+ * Read at module-construction time (not at module-load time) so a test can
+ * mutate `process.env.MCP_SERVER_ENABLED` between two `createE2eApp()` calls
+ * without having to bust the entire Jest module cache — which would also
+ * re-evaluate `@nestjs/core` and surface "Nest can't resolve dependencies
+ * of the DiscoveryService" because the test harness has its own
+ * `ModulesContainer` instance.
  */
 function isMcpServerDisabled(): boolean {
   const flag = process.env.MCP_SERVER_ENABLED;
@@ -105,7 +112,7 @@ const resourceProviders = [CvResource, ApplicationResource, MediaResource];
       ? []
       : [
           RekogMcpModule.forRoot({
-            name: 'resumind',
+            name: 'resubuild',
             version: '1.0.0',
             capabilities: {
               tools: { listChanged: false },

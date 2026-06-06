@@ -1,4 +1,4 @@
-import type { JobSourceType } from '@resumind/types';
+import type { JobSourceType } from '@resubuild/types';
 
 export type PrepareApplicationProgress =
   | 'normalizing'

@@ -56,7 +56,7 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
 
   const clientConfigSnippet = `{
   "mcpServers": {
-    "resumind": {
+    "resubuild": {
       "url": "${mcpEndpoint}",
       "headers": {
         "Authorization": "Bearer YOUR_MCP_API_KEY"

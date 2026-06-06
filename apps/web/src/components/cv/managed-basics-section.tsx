@@ -1,6 +1,6 @@
 'use client';
 
-import type { Resume } from '@resumind/types';
+import type { Resume } from '@resubuild/types';
 import { type ChangeEvent, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { BasicsFormFields } from '@/components/cv/basics-form-fields';

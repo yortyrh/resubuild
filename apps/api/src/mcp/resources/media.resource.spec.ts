@@ -26,7 +26,7 @@ describe('MediaResource', () => {
     expect(await observable).toEqual({
       contents: [
         {
-          uri: 'resumind://m-1/media',
+          uri: 'resubuild://m-1/media',
           text: JSON.stringify(meta, null, 2),
           mimeType: 'image/png',
         },

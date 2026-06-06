@@ -1,6 +1,6 @@
 'use client';
 
-import { createEmptyResume } from '@resumind/types';
+import { createEmptyResume } from '@resubuild/types';
 import { useRouter } from 'next/navigation';
 import { resolveImportedResumeData } from '@/lib/import-cv-media';
 import { useCreateCv } from '@/lib/queries/cv-mutations';

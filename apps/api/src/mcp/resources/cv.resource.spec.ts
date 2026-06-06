@@ -26,7 +26,7 @@ describe('CvResource', () => {
     expect(await observable).toEqual({
       contents: [
         {
-          uri: 'resumind://cv-1/cv',
+          uri: 'resubuild://cv-1/cv',
           text: JSON.stringify(cv, null, 2),
           mimeType: 'application/json',
         },

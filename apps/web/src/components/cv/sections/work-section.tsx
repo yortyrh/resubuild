@@ -1,6 +1,6 @@
 'use client';
 
-import type { ResumeWork } from '@resumind/types';
+import type { ResumeWork } from '@resubuild/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';

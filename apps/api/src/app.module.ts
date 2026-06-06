@@ -18,9 +18,15 @@ import { WebScrapeModule } from './web-scrape/web-scrape.module';
 
 @Module({
   imports: [
-    // DevtoolsModule is gated on non-production environments per @nestjs/devtools-integration docs.
-    // The snapshot (which records the bootstrap graph) is written to node_modules/.cache/nestjs-devtools/.
-    DevtoolsModule.register({ http: process.env.NODE_ENV !== 'production' }),
+    // DevtoolsModule is gated on the `development` environment per
+    // @nestjs/devtools-integration docs. It is intentionally NOT registered under
+    // `test`/`production`: its `onApplicationBootstrap` hook schedules an
+    // unconditional `setTimeout(..., 1000)` that prints the sandbox session
+    // token via `chalk`, which fails with
+    // `ReferenceError: You are trying to 'require' a file after the Jest environment
+    // has been torn down.` once Jest has closed the test module registry.
+    // The snapshot (graph dump) is only useful for local dev debugging anyway.
+    ...(process.env.NODE_ENV === 'development' ? [DevtoolsModule.register({ http: true })] : []),
     ConfigModule.forRoot({
       isGlobal: true,
     }),

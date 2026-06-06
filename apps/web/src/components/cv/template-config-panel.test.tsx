@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { CvTemplatePresentationConfig } from '@resumind/resume-template';
+import type { CvTemplatePresentationConfig } from '@resubuild/resume-template';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TemplateConfigPanel } from './template-config-panel';

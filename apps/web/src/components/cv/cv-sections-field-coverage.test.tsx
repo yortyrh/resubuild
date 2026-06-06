@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { Resume } from '@resumind/types';
+import type { Resume } from '@resubuild/types';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QueryProvider } from '@/components/providers/query-provider';

@@ -14,7 +14,7 @@ import type {
   McpExportRecord,
   McpExportScreenshotMode,
   McpExportUploadInput,
-} from '@resumind/types';
+} from '@resubuild/types';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 /**

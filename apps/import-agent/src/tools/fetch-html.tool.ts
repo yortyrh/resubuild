@@ -20,7 +20,7 @@ export async function fetchHtmlTool(input: FetchHtmlInput): Promise<FetchHtmlRes
     signal: AbortSignal.timeout(15_000),
     headers: {
       Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
-      'User-Agent': 'ResumindWebsiteImport/1.0',
+      'User-Agent': 'ResubuildWebsiteImport/1.0',
     },
   });
 

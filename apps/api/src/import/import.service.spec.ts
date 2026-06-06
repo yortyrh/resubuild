@@ -10,17 +10,17 @@ import {
   runPdfImportWorkflow,
   runTextImportWorkflow,
   runWebsiteImportWorkflow,
-} from '@resumind/import-agent';
-import type { ImportModelCatalog } from '@resumind/import-models';
-import catalog from '@resumind/import-models/catalog.json';
-import { InvalidImportedResumeError, prepareImportedResume } from '@resumind/types';
+} from '@resubuild/import-agent';
+import type { ImportModelCatalog } from '@resubuild/import-models';
+import catalog from '@resubuild/import-models/catalog.json';
+import { InvalidImportedResumeError, prepareImportedResume } from '@resubuild/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
 import type { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import { ImportService } from './import.service';
 
 const testCatalog = catalog as ImportModelCatalog;
 
-jest.mock('@resumind/import-agent', () => ({
+jest.mock('@resubuild/import-agent', () => ({
   runPdfImportWorkflow: jest.fn(),
   runTextImportWorkflow: jest.fn(),
   runWebsiteImportWorkflow: jest.fn(),
@@ -48,8 +48,8 @@ function mockFetchHtml(html: string) {
   }) as never;
 }
 
-jest.mock('@resumind/types', () => {
-  const actual = jest.requireActual<typeof import('@resumind/types')>('@resumind/types');
+jest.mock('@resubuild/types', () => {
+  const actual = jest.requireActual<typeof import('@resubuild/types')>('@resubuild/types');
   return {
     ...actual,
     prepareImportedResume: jest.fn(actual.prepareImportedResume),
@@ -73,7 +73,7 @@ describe('ImportService', () => {
     jest
       .mocked(prepareImportedResume)
       .mockImplementation(
-        jest.requireActual<typeof import('@resumind/types')>('@resumind/types')
+        jest.requireActual<typeof import('@resubuild/types')>('@resubuild/types')
           .prepareImportedResume,
       );
     aiAgentCredentialService = { getActiveCredentials: jest.fn() };

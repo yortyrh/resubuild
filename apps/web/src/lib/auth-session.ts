@@ -1,6 +1,6 @@
 'use client';
 
-const PREFIX = 'resumind.';
+const PREFIX = 'resubuild.';
 export const STORAGE_KEYS = {
   access_token: `${PREFIX}access_token`,
   refresh_token: `${PREFIX}refresh_token`,

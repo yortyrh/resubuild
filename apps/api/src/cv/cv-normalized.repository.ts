@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Resume } from '@resumind/types';
+import type { Resume } from '@resubuild/types';
 import {
   assembleResume,
   type CvHeaderRow,
@@ -11,7 +11,7 @@ import {
   resumeItemToDbPayload,
   SECTION_TABLE_MAP,
   sortSectionRows,
-} from '@resumind/types';
+} from '@resubuild/types';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { AuthUser } from '../auth/auth-user.types';
 

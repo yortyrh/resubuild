@@ -10,15 +10,15 @@ vi.mock('@/lib/api', () => ({
   listCvTemplates: (...args: unknown[]) => mockListCvTemplates(...args),
 }));
 
-vi.mock('@resumind/resume-template', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@resumind/resume-template')>();
+vi.mock('@resubuild/resume-template', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@resubuild/resume-template')>();
   return {
     ...actual,
     renderResumeHtml: vi.fn(() => '<html><body><article>Preview</article></body></html>'),
   };
 });
 
-import { renderResumeHtml } from '@resumind/resume-template';
+import { renderResumeHtml } from '@resubuild/resume-template';
 
 const mockRenderResumeHtml = vi.mocked(renderResumeHtml);
 
