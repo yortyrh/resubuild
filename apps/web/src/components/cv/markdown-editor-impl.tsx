@@ -1,7 +1,26 @@
 'use client';
 
-import { Editable, useEditor } from '@wysimark/react';
-import { useMemo } from 'react';
+import '@mdxeditor/editor/style.css';
+
+import {
+  BlockTypeSelect,
+  BoldItalicUnderlineToggles,
+  CodeToggle,
+  CreateLink,
+  ListsToggle,
+  linkDialogPlugin,
+  linkPlugin,
+  listsPlugin,
+  MDXEditor,
+  markdownShortcutPlugin,
+  quotePlugin,
+  StrikeThroughSupSubToggles,
+  tablePlugin,
+  thematicBreakPlugin,
+  toolbarPlugin,
+  UndoRedo,
+} from '@mdxeditor/editor';
+import type { FC } from 'react';
 import { cn } from '@/lib/utils';
 
 export interface MarkdownEditorProps {
@@ -12,6 +31,33 @@ export interface MarkdownEditorProps {
   className?: string;
 }
 
+type ToolbarContentsProps = Pick<MarkdownEditorProps, 'variant'>;
+
+const ToolbarContents: FC<ToolbarContentsProps> = ({ variant }) => {
+  if (variant === 'inline') {
+    return (
+      <>
+        <UndoRedo />
+        <BoldItalicUnderlineToggles options={['Bold', 'Italic']} />
+        <StrikeThroughSupSubToggles options={['Strikethrough']} />
+        <CodeToggle />
+        <CreateLink />
+      </>
+    );
+  }
+  return (
+    <>
+      <UndoRedo />
+      <BlockTypeSelect />
+      <BoldItalicUnderlineToggles options={['Bold', 'Italic']} />
+      <StrikeThroughSupSubToggles options={['Strikethrough']} />
+      <CodeToggle />
+      <CreateLink />
+      <ListsToggle options={['bullet', 'number']} />
+    </>
+  );
+};
+
 export function MarkdownEditorImpl({
   value = '',
   onChange,
@@ -19,16 +65,6 @@ export function MarkdownEditorImpl({
   placeholder,
   className,
 }: MarkdownEditorProps) {
-  const editorOptions = useMemo(
-    () =>
-      variant === 'inline'
-        ? { minHeight: 56, maxHeight: 120, minimalToolbar: true }
-        : { minHeight: 200, maxHeight: 480, compactBlockToolbar: true },
-    [variant],
-  );
-
-  const editor = useEditor(editorOptions);
-
   return (
     <div
       className={cn(
@@ -37,15 +73,22 @@ export function MarkdownEditorImpl({
         className,
       )}
     >
-      <div className="border-input bg-background rounded-none border">
-        <Editable
-          editor={editor}
-          value={value}
-          onChange={onChange}
-          throttleInMs={variant === 'inline' ? 300 : 500}
-          placeholder={placeholder}
-        />
-      </div>
+      <MDXEditor
+        markdown={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        contentEditableClassName={cn(variant === 'inline' && 'mdxeditor-content--inline')}
+        plugins={[
+          listsPlugin(),
+          quotePlugin(),
+          thematicBreakPlugin(),
+          linkPlugin(),
+          linkDialogPlugin(),
+          tablePlugin(),
+          toolbarPlugin({ toolbarContents: () => <ToolbarContents variant={variant} /> }),
+          markdownShortcutPlugin(),
+        ]}
+      />
     </div>
   );
 }

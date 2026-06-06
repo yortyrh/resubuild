@@ -2,7 +2,7 @@
 
 import type { ComponentPropsWithoutRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import rehypeSanitize from 'rehype-sanitize';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 
 interface MarkdownViewProps {
@@ -14,6 +14,17 @@ interface MarkdownViewProps {
 function SafeLink(props: ComponentPropsWithoutRef<'a'>) {
   return <a {...props} target="_blank" rel="noopener noreferrer" />;
 }
+
+/** Sanitize schema that preserves GFM strikethrough (<del>) and underline (<u>). */
+const markdownSanitizeSchema: Parameters<typeof rehypeSanitize>[0] = {
+  ...defaultSchema,
+  tagNames: [
+    ...(defaultSchema.tagNames ?? []),
+    'del', // GFM strikethrough
+    'u', // underline
+  ],
+  strip: [],
+};
 
 export function MarkdownView({ value, variant = 'block', className = '' }: MarkdownViewProps) {
   if (!value?.trim()) {
@@ -27,7 +38,7 @@ export function MarkdownView({ value, variant = 'block', className = '' }: Markd
     <div className={classes}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeSanitize]}
+        rehypePlugins={[[rehypeSanitize, markdownSanitizeSchema]]}
         components={{ a: SafeLink }}
       >
         {value}
