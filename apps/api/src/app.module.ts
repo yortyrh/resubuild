@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { CvModule } from './cv/cv.module';
 import { CvExportModule } from './cv-export/cv-export.module';
 import { ExportStorageModule } from './export-storage/export-storage.module';
+import { HealthController } from './health/health.controller';
 import { ImportModule } from './import/import.module';
 import { ImportLlmConfigModule } from './import-llm-config/import-llm-config.module';
 import { ImportModelsCatalogModule } from './import-models-catalog/import-models-catalog.module';
@@ -45,5 +46,6 @@ import { WebScrapeModule } from './web-scrape/web-scrape.module';
     McpAuthModule,
     McpModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}

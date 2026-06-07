@@ -287,6 +287,7 @@ export class CvExportService {
       const browser = await puppeteer.launch({
         headless: true,
         executablePath: executablePath || undefined,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
       });
 
       try {

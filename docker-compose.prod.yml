@@ -1,0 +1,68 @@
+# docker-compose.prod.yml
+#
+# Release 1: cloud Supabase + docker compose target.
+#
+# Intentionally minimal scope — no TLS, no reverse proxy, no registry push.
+# See openspec/specs/prod-env-bootstrap-helper/spec.md for the full spec and
+# the follow-on release-1 changes that address TLS, reverse proxy, and
+# registry push concerns.
+#
+# Prerequisites:
+#   1. Run `pnpm setup:env:prod` (or use /opsx:setup-prod-env) to generate
+#      .env.prod with real Supabase credentials.
+#   2. Bring up the stack:
+#      docker compose -f docker-compose.prod.yml --env-file .env.prod up
+#
+# The .env.prod file is gitignored — it is NOT committed to version control.
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env.prod
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - resubuild-net
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - '3001:3000'
+    env_file:
+      - .env.prod
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/_health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    volumes:
+      # Named volume so Chromium (Puppeteer) is not re-downloaded on every restart.
+      # Puppeteer's default cache dir is $HOME/.cache/puppeteer; the container
+      # HOME is /root, so we mount at /root/.cache/puppeteer.
+      - resubuild-puppeteer-cache:/root/.cache/puppeteer
+    networks:
+      - resubuild-net
+
+volumes:
+  # Persists Puppeteer browser binaries across container restarts.
+  resubuild-puppeteer-cache:
+
+networks:
+  # Minimal bridge network — no external exposure in this release.
+  resubuild-net:
+    driver: bridge

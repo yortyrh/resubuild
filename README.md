@@ -110,6 +110,69 @@ supabase db push
 
 Paste and run migrations from `supabase/migrations/` in Supabase → **SQL Editor**.
 
+---
+
+## Release 1: cloud Supabase + docker compose
+
+Deploy the system to a production docker compose stack connected to a non-self-hosted (cloud) Supabase project.
+
+> **Minimum viable target.** This release ships without TLS, a reverse proxy, or a container registry push. Those concerns are addressed by follow-on release-1 changes. See [openspec/specs/prod-env-bootstrap-helper/spec.md](openspec/specs/prod-env-bootstrap-helper/spec.md) for the full scope.
+
+### Prerequisites
+
+Before starting, you need from your Supabase dashboard:
+
+- **Supabase project URL** → Project Settings → API → "Project URL"
+- **Supabase anon key** → Project Settings → API → "anon / public" key
+- **Supabase service role key** → Project Settings → API → "service_role" key (**treat as server-only**)
+- **Two Storage buckets** named `media` and `mcp-exports` (create them under Storage in the Supabase dashboard)
+- **Public URL** for this deployment (e.g., `https://app.example.com`)
+
+The `supabase link` / `supabase db push` step from the **Cloud Supabase setup** section above is also required to apply migrations to your cloud project.
+
+### Step 1 — Generate `.env.prod`
+
+From the repo root:
+
+```bash
+pnpm setup:env:prod
+```
+
+The script prompts for all required variables and auto-generates an `AI_AGENT_ENCRYPTION_KEY` if you don't supply one.
+
+**LLM agent flow:** Use the `/opsx:setup-prod-env` command or load the [`.cursor/skills/setup-prod-env/SKILL.md`](.cursor/skills/setup-prod-env/SKILL.md) to drive the generator as an agent. Both write a `prod-secrets.json` manifest to disk (gitignored) and invoke the script via `--from` so secret values never appear in chat.
+
+**Dry-run preview:**
+
+```bash
+pnpm setup:env:prod:dry-run --from prod-secrets.json
+```
+
+### Step 2 — Verify docker compose
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod config
+```
+
+### Step 3 — Bring up the stack
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod up
+```
+
+Both services (`web`, `api`) read from `.env.prod`. The `api` service mounts a named volume (`resubuild-puppeteer-cache`) so Chromium is not re-downloaded on every container restart.
+
+### Files
+
+| File                                                                                                   | Purpose                                                 |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| [`scripts/setup-prod-env.mjs`](scripts/setup-prod-env.mjs)                                             | Script engine                                           |
+| [`scripts/lib/env-prod-schema.mjs`](scripts/lib/env-prod-schema.mjs)                                   | Schema module (shared by script, SKILL, cursor command) |
+| [`docker-compose.prod.yml`](docker-compose.prod.yml)                                                   | Compose definition                                      |
+| [`.cursor/skills/setup-prod-env/SKILL.md`](.cursor/skills/setup-prod-env/SKILL.md)                     | LLM agent workflow                                      |
+| [`.cursor/commands/setup-prod-env.md`](.cursor/commands/setup-prod-env.md)                             | Cursor command (`/opsx:setup-prod-env`)                 |
+| [`openspec/specs/prod-env-bootstrap-helper/spec.md`](openspec/specs/prod-env-bootstrap-helper/spec.md) | Full spec                                               |
+
 Collect from **Project Settings → API**:
 
 - Project URL → **`SUPABASE_URL`**
