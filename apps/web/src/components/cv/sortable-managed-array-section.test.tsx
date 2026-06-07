@@ -169,7 +169,8 @@ describe('SortableManagedArraySection', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add skill' }));
 
-    expect(await screen.findByRole('textbox', { name: 'Name' })).toHaveFocus();
+    const nameInput = await screen.findByRole('textbox', { name: 'Name' });
+    await waitFor(() => expect(nameInput).toHaveFocus());
     expect(screen.queryByRole('button', { name: 'Move skill up' })).toBeNull();
     expect(screen.queryByLabelText('Reorder skill')).toBeNull();
   });
