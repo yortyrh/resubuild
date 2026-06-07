@@ -11,6 +11,7 @@
  *   node scripts/setup-prod-env.mjs --from manifest.json
  *   node scripts/setup-prod-env.mjs --from manifest.json --force
  *   node scripts/setup-prod-env.mjs --output /path/to/.env
+ *   node scripts/setup-prod-env.mjs --target railway --from manifest.json
  *
  * Guards:
  *   - Refuses to overwrite a git-tracked file
@@ -26,9 +27,11 @@ import { isAbsolute, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import {
+  ALLOWED_DEPLOY_TARGETS,
   applyDefaults,
   MANIFEST_SCHEMA,
   parseManifest,
+  resolveTarget,
   serializeToDotenv,
   validateManifest,
 } from './lib/env-prod-schema.mjs';
@@ -40,15 +43,30 @@ const REPO_ROOT = resolve(SCRIPT_DIR, '..');
 // CLI argument parsing
 // ---------------------------------------------------------------------------
 
-/** @returns {{ from: string|null, output: string, dryRun: boolean, force: boolean }} */
+/** @returns {{ from: string|null, output: string, dryRun: boolean, force: boolean, target: "docker-compose"|"railway" }} */
 function parseArgs(argv) {
-  const args = { from: null, output: '.env.prod', dryRun: false, force: false };
+  const args = {
+    from: null,
+    output: '.env.prod',
+    dryRun: false,
+    force: false,
+    target: 'docker-compose',
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--from' && i + 1 < argv.length) {
       args.from = argv[++i];
     } else if (arg === '--output' && i + 1 < argv.length) {
       args.output = argv[++i];
+    } else if (arg === '--target' && i + 1 < argv.length) {
+      const value = argv[++i];
+      if (!ALLOWED_DEPLOY_TARGETS.includes(/** @type {any} */ (value))) {
+        console.error(
+          `error: --target value "${value}" is not supported. Supported targets: ${ALLOWED_DEPLOY_TARGETS.join(', ')}.`,
+        );
+        process.exit(1);
+      }
+      args.target = /** @type {any} */ (value);
     } else if (arg === '--dry-run') {
       args.dryRun = true;
     } else if (arg === '--force') {
@@ -68,8 +86,16 @@ function printHelp() {
     'Write a .env.prod file for the release-1 docker compose target.',
     '',
     'Options:',
-    '  --from <path>      Read manifest JSON instead of prompting',
+    '  --from <path>      Read manifest JSON instead of prompting. Run with a',
+    '                     non-existent path for a one-shot template (printed to',
+    '                     stderr) and exit 1.',
     '  --output <path>     Output file (default: .env.prod next to this script)',
+    '  --target <name>    Deploy target that switches the public-URL default',
+    '                     values. Allowed: docker-compose (default), railway.',
+    '                     For railway, the four public-URL keys default to the',
+    '                     production custom domains (app.resubuild.dev,',
+    '                     api.resubuild.dev). The manifest DEPLOY_TARGET key',
+    '                     (if set) wins over this flag.',
     '  --dry-run           Print to stdout instead of writing',
     '  --force             Override placeholder check (for re-deploys)',
     '  -h, --help          Show this help',
@@ -78,6 +104,7 @@ function printHelp() {
     '  node scripts/setup-prod-env.mjs                    # interactive',
     '  node scripts/setup-prod-env.mjs --dry-run          # preview',
     '  node scripts/setup-prod-env.mjs --from manifest.json',
+    '  node scripts/setup-prod-env.mjs --target railway --from manifest.json',
   ];
   console.log(lines.join('\n'));
 }
@@ -263,10 +290,30 @@ function atomicWrite(filePath, content) {
 // ---------------------------------------------------------------------------
 
 /** @param {Record<string,string>} manifest */
-/** @param {{ from: string|null, output: string, dryRun: boolean, force: boolean }} options */
+/** @param {{ from: string|null, output: string, dryRun: boolean, force: boolean, target: "docker-compose"|"railway" }} options */
 async function run(manifest, options) {
-  const { output: outputPath, dryRun, force } = options;
+  const { output: outputPath, dryRun, force, target: cliTarget } = options;
   const absOutput = isAbsolute(outputPath) ? resolve(outputPath) : resolve(REPO_ROOT, outputPath);
+
+  // 0. Resolve the effective target. The manifest's DEPLOY_TARGET
+  //    (when set and valid) wins over the --target CLI flag.
+  //    resolveTarget falls back to the CLI flag when the manifest is
+  //    silent, and falls back to the CLI flag even when the manifest
+  //    declares an unknown value (validateManifest will reject the
+  //    unknown value below so no bogus file is written).
+  const target = resolveTarget(manifest, cliTarget);
+  if (
+    manifest.DEPLOY_TARGET !== undefined &&
+    manifest.DEPLOY_TARGET !== '' &&
+    manifest.DEPLOY_TARGET !== cliTarget
+  ) {
+    // Surface the discrepancy once. The manifest wins, but the
+    // operator should know they typed --target foo and the manifest
+    // overrode it.
+    console.warn(
+      `⚠ Manifest DEPLOY_TARGET="${manifest.DEPLOY_TARGET}" overrides --target="${cliTarget}". Using "${target}".`,
+    );
+  }
 
   // 1. Apply defaults for optional keys
   const { appliedDefaults } = applyDefaults(manifest);
@@ -309,7 +356,11 @@ async function run(manifest, options) {
   }
 
   // 5. Serialize
-  const content = serializeToDotenv(manifest, { generatedKeys, placeholderKeys });
+  const content = serializeToDotenv(manifest, {
+    generatedKeys,
+    placeholderKeys,
+    target,
+  });
 
   if (dryRun) {
     process.stdout.write(content);
@@ -348,9 +399,19 @@ async function run(manifest, options) {
     );
   }
 
-  console.log(
-    '\nNext: run `docker compose -f docker-compose.prod.yml --env-file .env.prod config` to verify.',
-  );
+  if (target === 'railway') {
+    console.log(
+      '\nNext: confirm the four public-URL values in .env.prod match the production',
+      'custom domains (app.resubuild.dev for the web app, api.resubuild.dev for',
+      'the API). If your Railway-printed public domain differs, update the values',
+      'before deploying. Then run pnpm deploy:railway to print the next two',
+      '`railway up --service <name>` commands.',
+    );
+  } else {
+    console.log(
+      '\nNext: run `docker compose -f docker-compose.prod.yml --env-file .env.prod config` to verify.',
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -378,6 +439,34 @@ if (options.from) {
   } catch (err) {
     if (err.code === 'ENOENT') {
       console.error(`error: manifest not found: ${absFrom}`);
+      console.error('');
+      console.error('  The manifest file is gitignored (it contains secrets). Create it at the');
+      console.error('  repo root with at minimum the required Supabase credentials, then re-run');
+      console.error('  this command. Template:');
+      console.error('');
+      console.error('    {');
+      console.error('      "SUPABASE_URL": "https://xxxx.supabase.co",');
+      console.error('      "SUPABASE_ANON_KEY": "eyJ...",');
+      console.error('      "SUPABASE_SERVICE_ROLE_KEY": "eyJ...",');
+      console.error('      "MEDIA_BUCKET": "media",');
+      console.error('      "MCP_EXPORT_BUCKET": "mcp-exports",');
+      console.error('      "CORS_ORIGIN": "https://app.example.com",');
+      console.error('      "APP_URL": "https://app.example.com",');
+      console.error('      "PUBLIC_API_URL": "https://api.example.com",');
+      console.error('      "NEXT_PUBLIC_API_URL": "https://api.example.com",');
+      console.error(
+        '      "AI_AGENT_ENCRYPTION_KEY": "REPLACE_WITH_REAL_KEY_OR_LEAVE_BLANK_FOR_AUTO_GENERATION"',
+      );
+      console.error('    }');
+      console.error('');
+      console.error('  For the Railway target, the four public-URL keys default to the');
+      console.error('  production custom domains (app.resubuild.dev, api.resubuild.dev) so');
+      console.error('  you can omit them from the manifest if your services already have');
+      console.error('  those domains attached.');
+      console.error('');
+      console.error('  See .cursor/skills/railway-deploy/SKILL.md (Railway) or');
+      console.error('  .cursor/skills/setup-prod-env/SKILL.md (docker compose) for the full');
+      console.error('  workflow.');
       process.exit(1);
     }
     throw err;

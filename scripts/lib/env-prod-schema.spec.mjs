@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MANIFEST_SCHEMA,
   parseManifest,
+  resolveTarget,
   serializeToDotenv,
   validateManifest,
 } from './env-prod-schema.mjs';
@@ -188,6 +189,127 @@ describe('serializeToDotenv', () => {
     const output = serializeToDotenv(manifest);
     expect(output).not.toContain('AI_AGENT_ENCRYPTION_KEY');
     expect(output).not.toContain('MEDIA_BUCKET');
+  });
+
+  // Railway target support — the new --target flag and the
+  // serializeToDotenv `target` option (see task 3.2). The four
+  // public-URL keys are CORS_ORIGIN, APP_URL, PUBLIC_API_URL, and
+  // NEXT_PUBLIC_API_URL. When target=railway and the manifest
+  // leaves them empty, the generator bakes in the production
+  // custom domains (app.resubuild.dev for the web app,
+  // api.resubuild.dev for the API) so the file is immediately
+  // deployable.
+  it('writes the four public-URL keys with the production custom domains when target=railway', () => {
+    const manifest = {
+      SUPABASE_URL: 'https://x.supabase.co',
+      SUPABASE_ANON_KEY: 'anon',
+      SUPABASE_SERVICE_ROLE_KEY: 'srv',
+      AI_AGENT_ENCRYPTION_KEY: 'gen',
+    };
+    const output = serializeToDotenv(manifest, { target: 'railway' });
+    expect(output).toMatch(/^CORS_ORIGIN=https:\/\/app\.resubuild\.dev$/m);
+    expect(output).toMatch(/^APP_URL=https:\/\/app\.resubuild\.dev$/m);
+    expect(output).toMatch(/^PUBLIC_API_URL=https:\/\/api\.resubuild\.dev$/m);
+    expect(output).toMatch(/^NEXT_PUBLIC_API_URL=https:\/\/api\.resubuild\.dev$/m);
+    // No docker compose placeholders leak through.
+    expect(output).not.toMatch(/^CORS_ORIGIN=http:\/\/localhost/m);
+    expect(output).not.toMatch(/^APP_URL=http:\/\/localhost/m);
+    expect(output).not.toMatch(/^PUBLIC_API_URL=http:\/\/localhost/m);
+    expect(output).not.toMatch(/^NEXT_PUBLIC_API_URL=http:\/\/localhost/m);
+    // The reminder block is included.
+    expect(output).toContain('Railway target');
+  });
+
+  it('preserves the docker compose placeholders verbatim when target=docker-compose (regression guard)', () => {
+    const manifest = {
+      SUPABASE_URL: 'https://x.supabase.co',
+      SUPABASE_ANON_KEY: 'anon',
+      SUPABASE_SERVICE_ROLE_KEY: 'srv',
+      AI_AGENT_ENCRYPTION_KEY: 'gen',
+    };
+    const outputDefault = serializeToDotenv(manifest);
+    const outputExplicit = serializeToDotenv(manifest, { target: 'docker-compose' });
+    expect(outputDefault).toBe(outputExplicit);
+    // The docker compose placeholders (or empty values the manifest
+    // provided) are preserved; no Railway domains leak in.
+    expect(outputDefault).not.toContain('resubuild.dev');
+    expect(outputDefault).not.toContain('Railway target');
+  });
+
+  it('manifest values for the four public-URL keys win over target defaults', () => {
+    const manifest = {
+      SUPABASE_URL: 'https://x.supabase.co',
+      SUPABASE_ANON_KEY: 'anon',
+      SUPABASE_SERVICE_ROLE_KEY: 'srv',
+      AI_AGENT_ENCRYPTION_KEY: 'gen',
+      CORS_ORIGIN: 'https://my.example.com',
+    };
+    const output = serializeToDotenv(manifest, { target: 'railway' });
+    expect(output).toMatch(/^CORS_ORIGIN=https:\/\/my\.example\.com$/m);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DEPLOY_TARGET validation — closed set of "docker-compose" | "railway"
+// ---------------------------------------------------------------------------
+describe('validateManifest DEPLOY_TARGET', () => {
+  const FULL_VALID_MANIFEST = {
+    SUPABASE_URL: 'https://x.supabase.co',
+    SUPABASE_ANON_KEY:
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IngiLCJyYW5rIjoiOSIsImlhdCI6MTYyMzQwNDAwMCwiZXhwIjoxOTM4OTgwMDAwfQ.123',
+    SUPABASE_SERVICE_ROLE_KEY:
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IngiLCJyYW5rIjoiOSIsImlhdCI6MTYyMzQwNDAwMCwiZXhwIjoxOTM4OTgwMDAwfQ.srv',
+    MEDIA_BUCKET: 'media',
+    MCP_EXPORT_BUCKET: 'mcp-exports',
+    CORS_ORIGIN: 'https://app.example.com',
+    APP_URL: 'https://app.example.com',
+    PUBLIC_API_URL: 'https://api.example.com',
+    NEXT_PUBLIC_API_URL: 'https://api.example.com',
+    AI_AGENT_ENCRYPTION_KEY: 'YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=',
+  };
+
+  it('accepts DEPLOY_TARGET=railway', () => {
+    const manifest = { ...FULL_VALID_MANIFEST, DEPLOY_TARGET: 'railway' };
+    const { valid, errors } = validateManifest(manifest);
+    expect(valid).toBe(true);
+    expect(errors).toHaveLength(0);
+  });
+
+  it('accepts DEPLOY_TARGET=docker-compose', () => {
+    const manifest = { ...FULL_VALID_MANIFEST, DEPLOY_TARGET: 'docker-compose' };
+    const { valid, errors } = validateManifest(manifest);
+    expect(valid).toBe(true);
+    expect(errors).toHaveLength(0);
+  });
+
+  it('rejects an unknown DEPLOY_TARGET with the supported-targets list in the error', () => {
+    const manifest = { ...FULL_VALID_MANIFEST, DEPLOY_TARGET: 'vercel' };
+    const { valid, errors } = validateManifest(manifest);
+    expect(valid).toBe(false);
+    const targetError = errors.find((e) => e.includes('DEPLOY_TARGET'));
+    expect(targetError).toBeDefined();
+    expect(targetError).toMatch(/docker-compose/);
+    expect(targetError).toMatch(/railway/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveTarget — manifest DEPLOY_TARGET wins over the CLI flag
+// ---------------------------------------------------------------------------
+describe('resolveTarget', () => {
+  it('returns the CLI default when the manifest is silent', () => {
+    expect(resolveTarget({}, 'docker-compose')).toBe('docker-compose');
+    expect(resolveTarget({ DEPLOY_TARGET: '' }, 'docker-compose')).toBe('docker-compose');
+    expect(resolveTarget({ DEPLOY_TARGET: undefined }, 'railway')).toBe('railway');
+  });
+
+  it('returns the manifest value when it is a known target', () => {
+    expect(resolveTarget({ DEPLOY_TARGET: 'railway' }, 'docker-compose')).toBe('railway');
+    expect(resolveTarget({ DEPLOY_TARGET: 'docker-compose' }, 'railway')).toBe('docker-compose');
+  });
+
+  it('falls back to the CLI flag when the manifest value is unknown', () => {
+    expect(resolveTarget({ DEPLOY_TARGET: 'vercel' }, 'docker-compose')).toBe('docker-compose');
   });
 });
 

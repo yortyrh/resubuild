@@ -173,6 +173,41 @@ Both services (`web`, `api`) read from `.env.prod`. The `api` service mounts a n
 | [`.cursor/commands/setup-prod-env.md`](.cursor/commands/setup-prod-env.md)                             | Cursor command (`/opsx:setup-prod-env`)                 |
 | [`openspec/specs/prod-env-bootstrap-helper/spec.md`](openspec/specs/prod-env-bootstrap-helper/spec.md) | Full spec                                               |
 
+### Deploy to Railway (parallel managed target)
+
+The same env-var surface can deploy to a managed Railway project. The Railway target reuses `apps/api/Dockerfile` and `apps/web/Dockerfile` verbatim — no `Dockerfile.railway` fork. The env generator is the same; pass `--target railway` so the four public-URL keys (`CORS_ORIGIN`, `APP_URL`, `PUBLIC_API_URL`, `NEXT_PUBLIC_API_URL`) default to the production custom domains (`https://app.resubuild.dev` for the web app, `https://api.resubuild.dev` for the API). No find-and-replace step is required as long as the operator attaches the matching custom domains to the corresponding services in the Railway dashboard.
+
+The pre-gathered env vars are the same list documented under **Prerequisites** above (Project URL, anon key, service role key, two storage bucket names). The same `pnpm setup:env:prod` flow writes the manifest to `prod-secrets.json`; only the `--target` flag changes:
+
+```bash
+pnpm setup:env:prod --target railway --from prod-secrets.json
+```
+
+| File                                                                                                                                           | Purpose                                                          |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| [`apps/api/railway.json`](apps/api/railway.json)                                                                                               | Service config for the api service (build + start)               |
+| [`apps/web/railway.json`](apps/web/railway.json)                                                                                               | Service config for the web service (build + start)               |
+| [`.railwayignore`](.railwayignore)                                                                                                             | Build context exclusions                                         |
+| [`scripts/deploy-railway.mjs`](scripts/deploy-railway.mjs)                                                                                     | Preflight wrapper (`pnpm deploy:railway`)                        |
+| [`.cursor/skills/railway-deploy/SKILL.md`](.cursor/skills/railway-deploy/SKILL.md)                                                             | LLM agent workflow (includes custom-domain + App Sleeping steps) |
+| [`.cursor/commands/railway-deploy.md`](.cursor/commands/railway-deploy.md)                                                                     | Cursor command (`/opsx:railway-deploy`)                          |
+| [`openspec/changes/railway-deployment/specs/railway-deployment/spec.md`](openspec/changes/railway-deployment/specs/railway-deployment/spec.md) | Full spec                                                        |
+
+**Service topology and scale-to-zero.** The release-1 Railway target deploys two services (one `api`, one `web`) into a single Railway project. Each service has `apps/{api,web}/railway.json` at its service root directory so Railway's monorepo auto-detect locates the build config next to its `Dockerfile`. Both services should run on their existing `apps/{api,web}/Dockerfile` and scale to zero when idle. The scale-to-zero toggle (Railway's "App Sleeping") is a per-service dashboard setting in **Settings → App Sleeping** — enable it after each service is created and trigger a new deployment for the change to take effect. App Sleeping is not a `railway.json` field and cannot be enforced by config-as-code; the SKILL and command document the toggle explicitly.
+
+**Known limitations (scope statements, not TODOs):**
+
+- No persistent Puppeteer cache volume on the Railway free tier — the api service re-downloads Chromium (~181 MiB) on every cold start from App Sleeping (and on every fresh deploy).
+- No preview / ephemeral environments per pull request.
+- The two services communicate over the public internet (or, on paid plans, over a Railway private network), not over a docker compose bridge network. CORS must be configured for the public origin.
+
+**Verify:**
+
+```bash
+curl -f https://api.resubuild.dev/_health
+curl -f https://app.resubuild.dev/
+```
+
 Collect from **Project Settings → API**:
 
 - Project URL → **`SUPABASE_URL`**

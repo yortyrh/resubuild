@@ -21,6 +21,7 @@
     "setup:env": "bash scripts/setup-local-env.sh",
     "setup:env:prod": "node scripts/setup-prod-env.mjs",
     "setup:env:prod:dry-run": "node scripts/setup-prod-env.mjs --dry-run",
+    "deploy:railway": "node scripts/deploy-railway.mjs",
     "samples:pdf": "pnpm --filter @resubuild/resume-template build && node scripts/generate-sample-pdfs.mjs",
     "import-models:sync": "pnpm --filter @resubuild/import-models build && node scripts/sync-import-models.mjs",
     "samples:seed": "node scripts/seed-e2e-fixture.mjs",

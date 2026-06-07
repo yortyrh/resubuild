@@ -8,9 +8,17 @@
  *
  * Manifest format: JSON object, keys = env var names, values = strings.
  * Optional keys may be absent.  Required keys must be present.
+ *
+ * DEPLOY_TARGET is a generator-internal key — it switches the public-URL
+ * placeholder template that `serializeToDotenv` writes. It is NOT an
+ * api/web runtime key, so it MUST NOT appear in `apps/api/.env.example`
+ * or `apps/web/.env.example` (the drift test enforces this). Allowed
+ * values are the closed set in `ALLOWED_DEPLOY_TARGETS`.
  */
 
 const PLACEHOLDER = 'change-me-to-a-long-random-secret';
+
+export const ALLOWED_DEPLOY_TARGETS = /** @type {const} */ (['docker-compose', 'railway']);
 
 /** @type {Record<string, { required: boolean, secret?: boolean, description: string, group: string, default?: string }>} */
 export const MANIFEST_SCHEMA = {
@@ -152,6 +160,16 @@ export const MANIFEST_SCHEMA = {
     description: 'Node environment (default production in Docker)',
     group: 'Runtime',
   },
+
+  // Generator-internal target selector. Switches the public-URL
+  // placeholder template that serializeToDotenv writes. Not a runtime
+  // key — never appears in apps/{api,web}/.env.example.
+  DEPLOY_TARGET: {
+    required: false,
+    description:
+      'Generator-internal target selector. Allowed values: "docker-compose" (default) or "railway". Switches the public-URL placeholder template.',
+    group: 'Generator',
+  },
 };
 
 const REQUIRED_KEYS = Object.entries(MANIFEST_SCHEMA)
@@ -264,6 +282,15 @@ export function validateManifest(manifest, opts = {}) {
     }
   }
 
+  // 5. Validate DEPLOY_TARGET against the closed set
+  if (manifest.DEPLOY_TARGET !== undefined && manifest.DEPLOY_TARGET !== '') {
+    if (!ALLOWED_DEPLOY_TARGETS.includes(manifest.DEPLOY_TARGET)) {
+      errors.push(
+        `DEPLOY_TARGET value "${manifest.DEPLOY_TARGET}" is not supported. Supported targets: ${ALLOWED_DEPLOY_TARGETS.join(', ')}.`,
+      );
+    }
+  }
+
   return { valid: errors.length === 0, errors, warnings };
 }
 
@@ -289,14 +316,99 @@ export function applyDefaults(manifest) {
 }
 
 /**
+ * The four public-URL keys whose placeholder template depends on
+ * the deploy target. The docker compose target uses
+ * `http://localhost:...` placeholders (the operator provides real
+ * values via the manifest); the Railway target bakes in the
+ * production custom domains (`app.resubuild.dev` for the web
+ * app, `api.resubuild.com` for the API) so the generated
+ * `.env.prod` is immediately deployable without a find-and-replace
+ * step. The operator may still override these values via the
+ * manifest — the manifest always wins.
+ */
+const TARGETED_PUBLIC_URL_KEYS = [
+  'CORS_ORIGIN',
+  'APP_URL',
+  'PUBLIC_API_URL',
+  'NEXT_PUBLIC_API_URL',
+];
+
+/**
+ * @param {"docker-compose"|"railway"} target
+ * @returns {Record<string,string>}
+ */
+function defaultsForTarget(target) {
+  if (target === 'railway') {
+    return {
+      CORS_ORIGIN: 'https://app.resubuild.dev',
+      APP_URL: 'https://app.resubuild.dev',
+      PUBLIC_API_URL: 'https://api.resubuild.dev',
+      NEXT_PUBLIC_API_URL: 'https://api.resubuild.dev',
+    };
+  }
+  // docker-compose (default) — leave the operator's manifest values
+  // untouched, but apply the historical localhost defaults for empty
+  // values so the generated file is at least usable for a smoke check.
+  return {
+    CORS_ORIGIN: 'http://localhost:3000',
+    APP_URL: 'http://localhost:3000',
+    PUBLIC_API_URL: 'http://localhost:3001',
+    NEXT_PUBLIC_API_URL: 'http://localhost:3001',
+  };
+}
+
+/**
+ * Resolve the target to use. The manifest's DEPLOY_TARGET wins over
+ * the CLI-supplied default. An empty or missing DEPLOY_TARGET falls
+ * back to the CLI default. An unknown DEPLOY_TARGET is left for
+ * validateManifest to reject; resolveTarget returns the CLI default
+ * in that case so the caller can decide how to report it.
+ *
+ * @param {Record<string,string>} manifest
+ * @param {"docker-compose"|"railway"} [cliTarget="docker-compose"]
+ * @returns {"docker-compose"|"railway"}
+ */
+export function resolveTarget(manifest, cliTarget = 'docker-compose') {
+  const fromManifest = manifest?.DEPLOY_TARGET;
+  if (fromManifest !== undefined && fromManifest !== '') {
+    if (ALLOWED_DEPLOY_TARGETS.includes(/** @type {any} */ (fromManifest))) {
+      return /** @type {any} */ (fromManifest);
+    }
+  }
+  return cliTarget;
+}
+
+/**
  * Serialize a manifest to dotenv format with grouping and description comments.
  *
  * @param {Record<string,string>} manifest  Manifest after validation
- * @param {{ generatedKeys?: Set<string>, placeholderKeys?: Set<string> }} [extras]
+ * @param {{
+ *   generatedKeys?: Set<string>,
+ *   placeholderKeys?: Set<string>,
+ *   target?: "docker-compose"|"railway",
+ *   emitTargetReminder?: boolean,
+ * }} [extras]
  * @returns {string}
  */
 export function serializeToDotenv(manifest, extras = {}) {
-  const { generatedKeys = new Set(), placeholderKeys = new Set() } = extras;
+  const {
+    generatedKeys = new Set(),
+    placeholderKeys = new Set(),
+    target = 'docker-compose',
+    emitTargetReminder = true,
+  } = extras;
+
+  // Apply target-aware defaults for the four public-URL keys ONLY if
+  // the manifest does not supply a real value. The manifest always
+  // wins — defaults are just placeholders for the operator to
+  // find-and-replace.
+  const targetDefaults = defaultsForTarget(target);
+  const resolved = { ...manifest };
+  for (const key of TARGETED_PUBLIC_URL_KEYS) {
+    if (resolved[key] === undefined || resolved[key] === '') {
+      resolved[key] = targetDefaults[key];
+    }
+  }
 
   const groups = [
     {
@@ -357,7 +469,7 @@ export function serializeToDotenv(manifest, extras = {}) {
   ];
 
   for (const group of groups) {
-    const groupKeys = group.keys.filter((k) => manifest[k] !== undefined && manifest[k] !== '');
+    const groupKeys = group.keys.filter((k) => resolved[k] !== undefined && resolved[k] !== '');
     if (groupKeys.length === 0) continue;
 
     lines.push(`# ── ${group.title} ──`);
@@ -367,7 +479,7 @@ export function serializeToDotenv(manifest, extras = {}) {
       if (schema) {
         lines.push(`# ${schema.description}`);
       }
-      const value = manifest[key];
+      const value = resolved[key];
 
       if (placeholderKeys.has(key)) {
         lines.push(`${key}=${value}  # ⚠ placeholder — replace with a real value`);
@@ -379,6 +491,18 @@ export function serializeToDotenv(manifest, extras = {}) {
     }
 
     lines.push('');
+  }
+
+  if (emitTargetReminder && target === 'railway') {
+    lines.push(
+      '# Railway target: the four public-URL keys above (CORS_ORIGIN, APP_URL,',
+      '# PUBLIC_API_URL, NEXT_PUBLIC_API_URL) default to the production',
+      '# custom domains (app.resubuild.dev for the web app,',
+      '# api.resubuild.dev for the API). If your Railway-printed public',
+      '# domain differs, update these values to match the actual',
+      '# deployed URL for each service before re-running pnpm setup:env:prod.',
+      '',
+    );
   }
 
   return lines.join('\n');

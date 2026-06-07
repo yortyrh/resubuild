@@ -1,0 +1,23 @@
+# Release-1 Railway build context exclusions.
+# Mirrors the spirit of .gitignore + .dockerignore for the
+# monorepo root context that both apps/{api,web}/Dockerfile
+# expect. Patterns are applied by the Railway CLI before the
+# build context is uploaded to the build environment.
+# See https://docs.railway.com/reference/config-as-code
+
+# Local node + monorepo caches
+node_modules
+**/node_modules
+.turbo
+**/.turbo
+.next
+**/.next
+
+# VCS + OS
+.git
+.DS_Store
+
+# Coverage + build artifacts (Dockerfiles rebuild what they need)
+coverage
+**/coverage
+**/dist
