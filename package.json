@@ -25,7 +25,8 @@
     "samples:seed": "node scripts/seed-e2e-fixture.mjs",
     "local:credentials": "node scripts/show-local-credentials.mjs",
     "test:e2e": "pnpm --filter @resubuild/api test:e2e",
-    "test:scripts": "vitest run --config vitest.config.mjs"
+    "test:scripts": "vitest run --config vitest.config.mjs",
+    "env-schema:check": "vitest run --config vitest.config.mjs scripts/lib/env-prod-schema.spec.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",

@@ -13,6 +13,15 @@ pre-commit:
 
 pre-push:
   commands:
+    env-schema:check:
+      # Fast drift gate: catches new KEY=value lines in
+      # apps/{api,web}/.env.example that are not registered in
+      # scripts/lib/env-prod-schema.mjs. Runs in <1s; fails fast before
+      # the full verify pipeline (~5min) so the named error points at
+      # the offending key. See openspec/specs/prod-env-bootstrap-helper.
+      # {all_files} opts out of lefthook's "no matching push files" skip
+      # so the check always runs.
+      run: ': {all_files}; pnpm env-schema:check'
     verify:
       # Lefthook skips pre-push commands when it finds no push-scoped files.
       # {all_files} opts out of that skip so the full verify suite always runs.
