@@ -53,6 +53,29 @@ Nest MAY use `@supabase/supabase-js` with server-only secrets (for example Supab
 - **WHEN** a client submits valid signup fields to `POST /auth/register`
 - **THEN** Nest SHALL persist the user identity through Supabase Auth server-side validation and MUST NOT echo secrets (passwords or service keys) back in responses or logs beyond structured redacted diagnostics
 
+### Requirement: The API MUST expose GitHub OAuth authentication backed by Supabase Auth
+
+`apps/api` SHALL expose HTTP endpoints for GitHub OAuth flow. `GET /auth/github` returns a Supabase-generated OAuth URL. `POST /auth/github/callback` exchanges the authorization code for a session and returns standard token material. Clients redirect to the URL, then POST the code to the callback endpoint to obtain tokens.
+
+The web SPA at `apps/web` SHALL implement the callback handler at `/auth/callback` to exchange the code and store the resulting session.
+
+Supabase SHALL be configured with GitHub as an external OAuth provider in `supabase/config.toml` with `[auth.external.github]` enabled.
+
+#### Scenario: Initiate GitHub OAuth flow
+
+- **WHEN** a client calls `GET /auth/github`
+- **THEN** Nest SHALL call `supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: '<APP_URL>/auth/callback' } })` and return the URL
+
+#### Scenario: Handle GitHub OAuth callback
+
+- **WHEN** the web SPA POSTs the authorization code to `POST /auth/github/callback`
+- **THEN** Nest SHALL call `supabase.auth.exchangeCodeForSession(code)` and respond with standard token material
+
+#### Scenario: GitHub OAuth callback error
+
+- **WHEN** Supabase returns an error during code exchange
+- **THEN** the API MUST respond `401 Unauthorized` with a generic GitHub sign-in failure message
+
 ### Requirement: Confidential Supabase administrative credentials MUST remain confined to server processes
 
 Neither `NEXT_PUBLIC_*` anon keys nor service-role-equivalent secrets required for signup/login delegation SHALL ship in `'use client'` bundles. Only Nest (and transitional Next.js purely server bundles if present during migration windows) MAY read values such as Supabase URLs, anon keys for server-only validation guards, or service-role keys guarded by infra secret stores.

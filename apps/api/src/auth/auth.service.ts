@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Session } from '@supabase/supabase-js';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { LoginDto, RefreshDto, RegisterDto } from './dto/auth.dto';
+import type { GithubCallbackDto, LoginDto, RefreshDto, RegisterDto } from './dto/auth.dto';
 import type { AuthTokenResponse } from './session.types';
 
 @Injectable()
@@ -78,6 +78,29 @@ export class AuthService {
     });
     if (error || !data.session) {
       throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+    return this.toTokenResponse(data.session);
+  }
+
+  async getGithubAuthUrl(): Promise<{ url: string }> {
+    const supabase = this.getBrowserClient();
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: `${this.configService.get<string>('APP_URL')}/auth/callback`,
+      },
+    });
+    if (error || !data.url) {
+      throw new UnauthorizedException('Failed to initiate GitHub sign-in');
+    }
+    return { url: data.url };
+  }
+
+  async handleGithubCallback(dto: GithubCallbackDto): Promise<AuthTokenResponse> {
+    const supabase = this.getBrowserClient();
+    const { data, error } = await supabase.auth.exchangeCodeForSession(dto.code);
+    if (error || !data.session) {
+      throw new UnauthorizedException('GitHub sign-in failed');
     }
     return this.toTokenResponse(data.session);
   }

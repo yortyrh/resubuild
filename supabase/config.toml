@@ -20,6 +20,10 @@ additional_redirect_urls = ["http://localhost:3000"]
 enable_signup = true
 enable_confirmations = false
 
+[auth.external.github]
+enabled = true
+
+
 [realtime]
 enabled = false
 
