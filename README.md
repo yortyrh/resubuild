@@ -2,6 +2,12 @@
 
 Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authentication + schema validation), and **Supabase Postgres** (RLS-protected storage). Auth is **API-issued Bearer tokens** (JSON over CORS)—the web bundle does **not** embed Supabase client libraries.
 
+![Resubuild banner — AI Resume Builder & Tailoring](./apps/web/public/resubuild-banner.jpg)
+
+**Try it live → [app.resubuild.dev](https://app.resubuild.dev)**
+
+[![GitHub stars](https://img.shields.io/github/stars/yortyrh/resubuild)](https://github.com/yortyrh/resubuild)
+
 ![Resubuild showcase — sign-in, dashboard, editor, and PDF export](./showcase.gif)
 
 ## Stack
