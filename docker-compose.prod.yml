@@ -20,6 +20,11 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        # Required: Next.js inlines NEXT_PUBLIC_* at build time, so it must be
+        # passed as a build arg (not just a runtime env var) for the production
+        # bundle to call the correct API URL.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     ports:
       - '3000:3000'
     env_file:

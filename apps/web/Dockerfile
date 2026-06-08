@@ -3,6 +3,13 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# NEXT_PUBLIC_* vars are inlined into the client bundle at build time, so they
+# must be present during `next build` — passing them as runtime env vars only
+# is too late. Pass via `docker build --build-arg NEXT_PUBLIC_API_URL=...` or
+# Compose `args:` so the value is baked into the production bundle.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 # Install git (needed by some postinstall scripts)
 RUN apk add --no-cache git
 
