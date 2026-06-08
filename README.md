@@ -2,6 +2,8 @@
 
 Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authentication + schema validation), and **Supabase Postgres** (RLS-protected storage). Auth is **API-issued Bearer tokens** (JSON over CORS)—the web bundle does **not** embed Supabase client libraries.
 
+![Resubuild showcase — sign-in, dashboard, editor, and PDF export](./showcase.gif)
+
 ## Stack
 
 - **apps/web** — Next.js App Router, shadcn-style UI, token session in `sessionStorage`, calls Nest at `NEXT_PUBLIC_API_URL`
