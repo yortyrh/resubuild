@@ -12,6 +12,31 @@ function AuthCallbackInner() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Handle PKCE flow: access_token comes in URL hash fragment
+    const hash = window.location.hash;
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1)); // strip '#'
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const expiresIn = params.get('expires_in');
+
+      if (accessToken && refreshToken && expiresIn) {
+        saveSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          expires_in: Number.parseInt(expiresIn, 10),
+          token_type: 'bearer',
+          user: { id: '' }, // PKCE flow doesn't return user; will refetch via /auth/me
+        });
+        // Clean URL hash before navigating
+        window.history.replaceState(null, '', window.location.pathname);
+        router.push('/dashboard');
+        router.refresh();
+        return;
+      }
+    }
+
+    // Standard flow: exchange code for session
     const code = searchParams.get('code');
     if (!code) {
       setError('No authorization code received');
