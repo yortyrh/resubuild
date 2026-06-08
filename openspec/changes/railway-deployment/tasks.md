@@ -4,21 +4,26 @@
       (Railway discovers the config file at the service root
       directory, so it sits next to `apps/api/Dockerfile`):
       `{ "build": { "builder": "DOCKERFILE", "dockerfilePath":
-"Dockerfile" }, "deploy": { "startCommand": "node
+"apps/api/Dockerfile" }, "deploy": { "startCommand": "node
 apps/api/dist/main", "healthcheckPath": "/_health" } }`.
-      The `dockerfilePath` is relative to the service root
-      directory (`apps/api/`), so the value is `Dockerfile`,
-      not `apps/api/Dockerfile`. The healthcheck path is
-      `/_health` to match the endpoint declared by
+      The `dockerfilePath` is resolved relative to the **repo
+      root** by Railway (the Root Directory service setting
+      does not apply to paths inside `railway.json` — see
+      https://docs.railway.com/builds/build-configuration), so
+      the value MUST be the repo-root-relative path
+      `apps/api/Dockerfile`, not just `Dockerfile`. The
+      healthcheck path is `/_health` to match the endpoint
+      declared by
       `apps/api/src/health/health.controller.ts`
       (`@Get('_health')`) and the existing
       `docker-compose.prod.yml` curl healthcheck.
 - [x] 1.2 Add `apps/web/railway.json` for the web service:
       `{ "build": { "builder": "DOCKERFILE", "dockerfilePath":
-"Dockerfile" }, "deploy": { "startCommand": "pnpm
---filter @resubuild/web start", "healthcheckPath": "/" } }`.
-      Same `dockerfilePath` rule as 1.1 — relative to the
-      service root directory (`apps/web/`).
+"apps/web/Dockerfile" }, "deploy": { "startCommand":
+"pnpm --filter @resubuild/web start", "healthcheckPath":
+"/" } }`. Same `dockerfilePath` rule as 1.1 — repo-root-
+      relative, not relative to the `apps/web/` service
+      directory.
 - [x] 1.3 Add `.railwayignore` at the repo root excluding
       `node_modules` (and `**/node_modules`), `.turbo`
       (and `**/.turbo`), `.next` (and `**/.next`), `.git`,
@@ -35,17 +40,23 @@ apps/api/dist/main", "healthcheckPath": "/_health" } }`.
       rule that unit tests sit beside the tested file). The
       test MUST `JSON.parse` both `railway.json` files, assert
       both have `build.builder === "DOCKERFILE"`, assert both
-      have a non-empty `build.dockerfilePath` pointing inside
-      `apps/`, assert both have a non-empty `deploy.startCommand`,
-      and assert both have a non-empty `deploy.healthcheckPath`
-      that starts with `/`. Each assertion failure MUST name the
-      file and the missing field.
+      have a non-empty `build.dockerfilePath` equal to the
+      repo-root-relative path `apps/{service}/Dockerfile`
+      (because Railway resolves `dockerfilePath` from the
+      repo root — a bare `Dockerfile` would point at a
+      non-existent repo-root file), assert both have a non-
+      empty `deploy.startCommand`, and assert both have a
+      non-empty `deploy.healthcheckPath` that starts with `/`.
+      Each assertion failure MUST name the file and the
+      missing field.
 - [x] 2.2 Add a `path` smoke check: assert the
       `build.dockerfilePath` in each `railway.json` resolves to
       a real file in the repo (using
       `fs.existsSync(path.join(repoRoot,
-config.build.dockerfilePath))`). The check prevents
-      silent drift if the Dockerfile is renamed.
+config.build.dockerfilePath))`, which matches Railway's
+      repo-root resolution of `dockerfilePath`). The check
+      prevents silent drift if the Dockerfile is renamed or
+      moved.
 - [x] 2.3 Confirm `pnpm test -- --run` from the repo root picks
       the new spec file up (the root `pnpm test` script already
       delegates to `vitest run --config vitest.config.mjs` per

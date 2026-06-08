@@ -24,16 +24,19 @@ The repository MUST provide:
 - **`railway.json` at the api service root
   (`apps/api/railway.json`)** — JSON with
   `build.builder: "DOCKERFILE"`, `build.dockerfilePath:
-"Dockerfile"` (resolved relative to the service root directory),
-  and `deploy.startCommand: "node apps/api/dist/main"`. The
-  `healthcheckPath` field MUST point at the existing `/_health`
-  HTTP endpoint declared by the api service (see
+"apps/api/Dockerfile"` (resolved relative to the **repo
+  root**, not the service root — Railway's Root Directory
+  setting does not affect paths inside `railway.json`), and
+  `deploy.startCommand: "node apps/api/dist/main"`. The
+  `healthcheckPath` field MUST point at the existing
+  `/_health` HTTP endpoint declared by the api service (see
   `apps/api/src/health/health.controller.ts`).
 - **`railway.json` at the web service root
   (`apps/web/railway.json`)** — JSON with
   `build.builder: "DOCKERFILE"`, `build.dockerfilePath:
-"Dockerfile"` (resolved relative to the service root directory),
-  and `deploy.startCommand: "pnpm --filter @resubuild/web
+"apps/web/Dockerfile"` (resolved relative to the **repo
+  root**, not the service root), and
+  `deploy.startCommand: "pnpm --filter @resubuild/web
 start"`. The `healthcheckPath` field MUST point at `/`.
 - **`.railwayignore` at the repo root** — excludes `node_modules`,
   `.turbo`, `.next`, `.git`, `coverage`, and `**/dist` from the

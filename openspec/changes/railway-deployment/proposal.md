@@ -19,8 +19,10 @@ through wiring the two services and pointing them at the same
 - Add a `railway.json` (Railway's config-as-code file) at each
   service's root directory: `apps/api/railway.json` and
   `apps/web/railway.json`. Each `railway.json` declares the
-  build (`builder: "DOCKERFILE"` + service-local
-  `dockerfilePath: "Dockerfile"`) and the deploy
+  build (`builder: "DOCKERFILE"` + `dockerfilePath:
+"apps/{service}/Dockerfile"`, resolved from the repo
+  root — Railway's Root Directory setting does not affect
+  paths inside `railway.json`) and the deploy
   (`startCommand` + `healthcheckPath`). The api's
   `startCommand` is `node apps/api/dist/main`; the web's is
   `pnpm --filter @resubuild/web start`. Both reuse the existing

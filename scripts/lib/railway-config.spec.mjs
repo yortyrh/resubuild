@@ -56,19 +56,19 @@ describe('railway.json service config files', () => {
         expect(config.build.builder, msg2).toBe('DOCKERFILE');
       });
 
-      it('build.dockerfilePath is non-empty and points inside apps/', () => {
+      it('build.dockerfilePath is non-empty and points to an apps/.../Dockerfile', () => {
         const value = config.build?.dockerfilePath;
         const msg1 = `${relPath}: missing or empty build.dockerfilePath`;
-        const msg2 = `${relPath}: build.dockerfilePath="${value}" must be "Dockerfile" or start with "apps/"`;
+        const msg2 = `${relPath}: build.dockerfilePath="${value}" must be an "apps/.../Dockerfile" path resolved from the repo root`;
         expect(typeof value === 'string' && value.length > 0, msg1).toBe(true);
-        // For monorepo services the path is resolved relative to the
-        // service root directory (apps/{service}/). Both "Dockerfile"
-        // and an "apps/..."-style path are accepted.
-        const ok =
-          value === 'Dockerfile' ||
-          value.startsWith(`apps/${service}/`) ||
-          value.startsWith('apps/');
-        expect(ok, msg2).toBe(true);
+        // Railway resolves `dockerfilePath` from the repo root for files
+        // declared in `railway.json` (the Root Directory setting does not
+        // affect railway.json paths — see
+        // https://docs.railway.com/builds/build-configuration). So a bare
+        // "Dockerfile" would be looked for at <repoRoot>/Dockerfile, which
+        // does not exist in this monorepo. The path MUST be repo-root-
+        // relative and MUST point at apps/{service}/Dockerfile.
+        expect(value, msg2).toBe(`apps/${service}/Dockerfile`);
       });
 
       it('deploy.startCommand is non-empty', () => {
@@ -100,12 +100,10 @@ describe('railway.json dockerfilePath smoke check', () => {
       const msg2 = `${relPath}: build.dockerfilePath="${dockerfilePath}" does not resolve to an existing file`;
       expect(typeof dockerfilePath === 'string' && dockerfilePath.length > 0, msg1).toBe(true);
 
-      // Service root directory is apps/{service}/
-      // For dockerfilePath="Dockerfile" we resolve it inside apps/{service}.
-      // For an "apps/..." value we resolve it from the repo root.
-      const abs = dockerfilePath.startsWith('apps/')
-        ? resolve(REPO_ROOT, dockerfilePath)
-        : resolve(REPO_ROOT, 'apps', service, dockerfilePath);
+      // Railway resolves `dockerfilePath` from the repo root for files
+      // declared in `railway.json` (the Root Directory setting does not
+      // affect railway.json paths). We resolve from the repo root only.
+      const abs = resolve(REPO_ROOT, dockerfilePath);
 
       expect(existsSync(abs), `${msg2} (tried ${abs})`).toBe(true);
     });

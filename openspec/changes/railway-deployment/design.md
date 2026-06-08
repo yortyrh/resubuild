@@ -109,9 +109,11 @@ configuring each service entirely in the Railway dashboard,
 which is non-reproducible). Railway discovers the two services
 from the two `railway.json` files in the same project link.
 The build step uses `builder: "DOCKERFILE"` and
-`dockerfilePath: "Dockerfile"` (resolved relative to the
-service root directory); the deploy step pins `startCommand`
-to the same command the existing Dockerfiles declare as `CMD`.
+`dockerfilePath: "apps/{service}/Dockerfile"` (resolved
+relative to the **repo root** — Railway's Root Directory
+service setting does not apply to paths inside
+`railway.json`); the deploy step pins `startCommand` to the
+same command the existing Dockerfiles declare as `CMD`.
 
 **Alternatives considered.**
 
@@ -366,10 +368,12 @@ prod-secrets.json` to generate `.env.prod` with the
    service: `railway add --service api`. Point the service at
    `apps/api/railway.json` (Railway's config-as-code
    auto-detect locates this file at the service root
-   directory; the `dockerfilePath` it contains resolves to
-   the service-local `Dockerfile`).
+   directory; the `dockerfilePath` it contains is resolved
+   from the repo root, so the value is the repo-root-relative
+   `apps/api/Dockerfile`).
 6. `railway add --service web`. Point the service at
-   `apps/web/railway.json`.
+   `apps/web/railway.json` (the `dockerfilePath` is the
+   repo-root-relative `apps/web/Dockerfile`).
 7. **Attach the custom domains**: in the api service's
    **Settings → Networking → Custom Domain**, attach
    `api.resubuild.dev` (Railway provisions a Let's Encrypt

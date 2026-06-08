@@ -71,16 +71,18 @@ The repository MUST contain:
 
 The deployable shape (Dockerfile + co-located
 `railway.json` + repo-root `.railwayignore`) MUST stay in
-lockstep with the docker compose target. A rename of
-`apps/api/Dockerfile` to anything other than `Dockerfile` MUST
-require an update to `apps/api/railway.json`'s
-`build.dockerfilePath` (the path is resolved relative to the
-service root directory `apps/api/`). The same applies to the
-web service and `apps/web/`. The unit test
+lockstep with the docker compose target. A rename or move of
+`apps/api/Dockerfile` MUST require an update to
+`apps/api/railway.json`'s `build.dockerfilePath` (the path
+is resolved relative to the **repo root** by Railway — the
+Root Directory service setting does not apply to paths
+inside `railway.json`). The same applies to the web service
+and `apps/web/`. The unit test
 `scripts/lib/railway-config.spec.mjs` (a new colocated
 test under `scripts/lib/`) MUST verify the shape of both
-`railway.json` files and MUST be wired into the root
-`pnpm test` pipeline.
+`railway.json` files (including that `dockerfilePath`
+resolves to a real file via repo-root resolution) and MUST
+be wired into the root `pnpm test` pipeline.
 
 #### Scenario: CI catches a `railway.json` shape regression
 
