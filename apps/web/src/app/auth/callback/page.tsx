@@ -31,7 +31,6 @@ function AuthCallbackInner() {
         // Clean URL hash before navigating
         window.history.replaceState(null, '', window.location.pathname);
         router.push('/dashboard');
-        router.refresh();
         return;
       }
     }
@@ -61,7 +60,6 @@ function AuthCallbackInner() {
 
         saveSession(body as AuthTokenPayload);
         router.push('/dashboard');
-        router.refresh();
       } catch {
         setError('An unexpected error occurred');
         clearSession();

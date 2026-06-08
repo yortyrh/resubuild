@@ -22,6 +22,9 @@ enable_confirmations = false
 
 [auth.external.github]
 enabled = true
+client_id = "Ov23lia4p7SgTimOeAex"
+secret = "9858df0d80efb20133f699a347ec937f78a62464"
+
 
 
 [realtime]
