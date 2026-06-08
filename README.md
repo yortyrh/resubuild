@@ -1,16 +1,36 @@
 # Resubuild
 
-Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authentication + schema validation), and **Supabase Postgres** (RLS-protected storage). Auth is **API-issued Bearer tokens** (JSON over CORS)—the web bundle does **not** embed Supabase client libraries.
+> **Drop in a PDF. Get a clean, beautifully formatted CV in seconds.**
+
+[![GitHub stars](https://img.shields.io/github/stars/yortyrh/resubuild)](https://github.com/yortyrh/resubuild)
+[![License](https://img.shields.io/github/license/yortyrh/resubuild)](./LICENSE)
+
+<p align="center">
+  <a href="https://app.resubuild.dev"><img src="https://img.shields.io/badge/▶_Try_Live_Demo-app.resubuild.dev-7C3AED?style=for-the-badge" alt="Try Live Demo" /></a>
+</p>
+
+<p align="center">
+  <a href="https://app.resubuild.dev">app.resubuild.dev</a> · <a href="#local-development-supabase-cli">Run it locally</a> · <a href="https://github.com/yortyrh/resubuild">GitHub</a>
+</p>
 
 ![Resubuild banner — AI Resume Builder & Tailoring](./apps/web/public/resubuild-banner.jpg)
 
-**Try it live → [app.resubuild.dev](https://app.resubuild.dev)**
+## What it does
 
-[![GitHub stars](https://img.shields.io/github/stars/yortyrh/resubuild)](https://github.com/yortyrh/resubuild)
+- **AI PDF import** — upload any existing CV as a PDF, and Resubuild extracts the structured resume data for you.
+- **Clean MIT-format editor** — tweak every section in a focused, keyboard-friendly editor. No formatting fight, no broken layouts.
+- **One-click PDF export** — what you see in the preview is what you get in the downloaded PDF. No watermarks, no surprises.
+- **Your CVs, your account** — sign in, and your CVs are saved under your account, private to you.
 
 ![Resubuild showcase — sign-in, dashboard, editor, and PDF export](./showcase.gif)
 
-## Stack
+---
+
+## For developers
+
+Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authentication + schema validation), and **Supabase Postgres** (RLS-protected storage). Auth is **API-issued Bearer tokens** (JSON over CORS)—the web bundle does **not** embed Supabase client libraries.
+
+### Stack
 
 - **apps/web** — Next.js App Router, shadcn-style UI, token session in `sessionStorage`, calls Nest at `NEXT_PUBLIC_API_URL`
 - **apps/api** — NestJS REST API, `/auth/*` issuance + JWT guard, AJV validation against [JSON Resume schema](https://raw.githubusercontent.com/jsonresume/resume-schema/refs/heads/master/schema.json)
