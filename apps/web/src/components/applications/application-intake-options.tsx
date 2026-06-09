@@ -1,7 +1,7 @@
 'use client';
 
+import { MarkdownEditor } from '@/components/cv/markdown-editor';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import type { CvRecord } from '@/lib/api';
 
 export interface ApplicationIntakeOptionsProps {
@@ -63,13 +63,13 @@ export function ApplicationIntakeOptions({
 
       <div className="space-y-2">
         <Label htmlFor={messageId}>Optional instruction</Label>
-        <Textarea
-          id={messageId}
-          value={message}
-          onChange={(e) => onMessageChange(e.target.value)}
-          rows={3}
-          placeholder="Emphasize React experience…"
-        />
+        <div id={messageId}>
+          <MarkdownEditor
+            value={message}
+            onChange={onMessageChange}
+            placeholder="Emphasize React experience…"
+          />
+        </div>
       </div>
     </>
   );

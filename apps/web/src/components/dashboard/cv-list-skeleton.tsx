@@ -19,15 +19,20 @@ function CvListItemSkeleton() {
 
 export function CvListSkeleton() {
   return (
-    <div
-      className="grid gap-4 md:grid-cols-2"
-      role="status"
-      aria-busy="true"
-      aria-label="Loading CVs"
-    >
-      {Array.from({ length: 4 }, (_, index) => (
-        <CvListItemSkeleton key={index} />
-      ))}
+    <div className="space-y-6" role="status" aria-busy="true" aria-label="Loading CVs">
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-32" />
+          <Skeleton className="h-4 w-72 max-w-full" />
+        </div>
+        <Skeleton className="h-10 w-28 shrink-0" />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {Array.from({ length: 4 }, (_, index) => (
+          <CvListItemSkeleton key={index} />
+        ))}
+      </div>
     </div>
   );
 }

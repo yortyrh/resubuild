@@ -36,11 +36,15 @@ Interactive inputs, selects, and dropdown shells use explicit borders:
 
 ## Applications (`/dashboard/applications`)
 
-| Element                                      | Classes                                                                                                                   |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Workspace panels (job summary, cover letter) | `surface-soft text-card-foreground` + `space-y-3 p-4`                                                                     |
-| Application list row                         | `surface-soft text-card-foreground p-4` inside `ul.space-y-3`                                                             |
-| Tailored CV editor breadcrumb                | Application job label in the CV editor header (`CvApplicationEditorBreadcrumb`); promote clone icon beside export/preview |
+| Element                                          | Classes                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workspace panels (job summary, cover letter)     | `surface-soft text-card-foreground` + `space-y-3 p-4`                                                                                                                                                                                                                                     |
+| Application list row                             | `surface-soft text-card-foreground p-4` inside `ul.space-y-3`                                                                                                                                                                                                                             |
+| Tailored CV editor breadcrumb                    | Application job label in the CV editor header (`CvApplicationEditorBreadcrumb`); promote clone icon beside export/preview                                                                                                                                                                 |
+| Prepare application page chrome                  | `ApplicationWorkspaceBreadcrumb` (`surface-soft` row) + page header `flex items-start justify-between gap-4` with the title/subtitle on the left and a top-right `Button asChild variant="outline"` Cancel link to `/dashboard/applications`                                              |
+| Prepare application: Job source segmented row    | `surface-soft inline-flex flex-wrap rounded-md p-1` strip holding three `aria-pressed` buttons (`secondary` when active, hover-`accent` when inactive). Exactly one mode selected at a time.                                                                                              |
+| Prepare application: Text + Optional instruction | Project `MarkdownEditor` (`@/components/cv/markdown-editor`, default `block` variant) — not bare `<Textarea>`; the value submitted to `POST /applications/prepare` is Markdown                                                                                                            |
+| Prepare application: File picker                 | `PrepareApplicationFilePicker` — `surface-soft` row with an outline "Choose file" button + a metadata row (name, size, MIME) and an `X` Remove icon when a file is selected. Client-side enforces the 5 MB cap and the `application/pdf,image/png,image/jpeg,image/webp` MIME allow-list. |
 
 Compare with `/dashboard` CV list cards when adding new application surfaces.
 
@@ -59,11 +63,12 @@ The white `bg-white` on the iframe (or skeleton inner area) represents the print
 
 When adding or refactoring UI in `apps/web`:
 
-1. If it matches a CV card, list row, side panel, preview frame, or **application workspace/list panel** → **`surface-soft`**
+1. If it matches a CV card, list row, side panel, preview frame, **application workspace/list panel**, or the **Prepare application** page chrome (breadcrumb row, segmented Job source row, file picker strip) → **`surface-soft`**
 2. If it is an input, button outline, or menu → **`border-input`** pattern from shadcn components
 3. Never copy `border` from generated/mock HTML export templates into dashboard chrome
 4. After preview or panel changes, compare visually with `/dashboard` CV list cards
 5. Before shipping applications UI, read the **Applications** table in this doc — do not use bare `rounded-lg border` on dashboard panels
+6. For long-form text inputs on the dashboard (Text job description, Optional instruction) → use the project `MarkdownEditor`, not a bare `<Textarea>`. The intake's segmented Job source row is the only authoring surface that owns the "Text" mode; the workspace's cover letter editor already follows this rule.
 
 ## Related files
 

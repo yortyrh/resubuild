@@ -41,6 +41,15 @@ describe('ApplicationList', () => {
     vi.clearAllMocks();
   });
 
+  it('renders the skeleton while the list is loading', () => {
+    // Promise that never resolves → isLoading stays true.
+    mockListApplications.mockReturnValue(new Promise(() => {}));
+
+    renderList();
+
+    expect(screen.getByText('Loading applications')).toBeInTheDocument();
+  });
+
   it('lists applications', async () => {
     mockListApplications.mockResolvedValue([
       {

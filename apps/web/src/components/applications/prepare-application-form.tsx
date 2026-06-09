@@ -8,15 +8,21 @@ import { toast } from 'sonner';
 import { ApplicationIntakeOptions } from '@/components/applications/application-intake-options';
 import { ApplicationPrepareActions } from '@/components/applications/application-prepare-actions';
 import { ApplicationPrepareProgressBar } from '@/components/applications/application-prepare-progress-bar';
+import { PrepareApplicationFilePicker } from '@/components/applications/prepare-application-file-picker';
+import { MarkdownEditor } from '@/components/cv/markdown-editor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { getApplication, type JobApplicationSummary, listCvs, prepareApplication } from '@/lib/api';
 import { useAiAgentActive } from '@/lib/queries/ai-agent-queries';
 
 type SourceMode = 'url' | 'text' | 'file';
 
 const POLL_MS = 2500;
+const SOURCE_MODES: ReadonlyArray<{ value: SourceMode; label: string }> = [
+  { value: 'url', label: 'URL' },
+  { value: 'text', label: 'Text' },
+  { value: 'file', label: 'PDF or screenshot' },
+];
 
 export function PrepareApplicationForm() {
   const router = useRouter();
@@ -132,58 +138,51 @@ export function PrepareApplicationForm() {
 
   return (
     <form className="space-y-6" onSubmit={onSubmit}>
-      <div>
-        <h1 className="text-2xl font-semibold">Prepare application</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Paste a job posting or upload a file. One run produces a tailored CV and cover letter.
-        </p>
-      </div>
-
       <fieldset className="space-y-3" disabled={inFlight}>
         <legend className="font-medium">Job source</legend>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="radio"
-            checked={sourceMode === 'url'}
-            onChange={() => setSourceMode('url')}
-          />
-          URL
-        </label>
+
+        <div
+          data-testid="source-mode-group"
+          className="surface-soft text-card-foreground inline-flex flex-wrap rounded-md p-1"
+        >
+          {SOURCE_MODES.map((mode) => {
+            const isActive = sourceMode === mode.value;
+            return (
+              <button
+                key={mode.value}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => setSourceMode(mode.value)}
+                disabled={inFlight}
+                data-testid={`source-mode-${mode.value}`}
+                className={
+                  isActive
+                    ? 'bg-secondary text-secondary-foreground rounded-sm px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50'
+                    : 'hover:bg-accent hover:text-accent-foreground rounded-sm px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50'
+                }
+              >
+                {mode.label}
+              </button>
+            );
+          })}
+        </div>
+
         {sourceMode === 'url' ? (
-          <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
-        ) : null}
-
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="radio"
-            checked={sourceMode === 'text'}
-            onChange={() => setSourceMode('text')}
-          />
-          Text
-        </label>
-        {sourceMode === 'text' ? (
-          <Textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={8}
-            placeholder="Paste job description…"
-          />
-        ) : null}
-
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="radio"
-            checked={sourceMode === 'file'}
-            onChange={() => setSourceMode('file')}
-          />
-          PDF or screenshot (max 5 MB)
-        </label>
-        {sourceMode === 'file' ? (
           <Input
-            type="file"
-            accept="application/pdf,image/png,image/jpeg,image/webp"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://…"
+            disabled={inFlight}
+            data-testid="source-input-url"
           />
+        ) : null}
+
+        {sourceMode === 'text' ? (
+          <MarkdownEditor value={text} onChange={setText} placeholder="Paste job description…" />
+        ) : null}
+
+        {sourceMode === 'file' ? (
+          <PrepareApplicationFilePicker value={file} onChange={setFile} disabled={inFlight} />
         ) : null}
       </fieldset>
 

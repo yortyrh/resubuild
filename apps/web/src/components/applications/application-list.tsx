@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { ApplicationListSkeleton } from '@/components/applications/application-list-skeleton';
 import { DeleteItemDialog } from '@/components/cv/cv-item-ui';
 import { Button } from '@/components/ui/button';
 import { deleteApplication, type JobApplicationSummary, listApplications } from '@/lib/api';
@@ -53,7 +54,7 @@ export function ApplicationList() {
   };
 
   if (isLoading) {
-    return <p className="text-muted-foreground text-sm">Loading applications…</p>;
+    return <ApplicationListSkeleton />;
   }
 
   if (error) {
