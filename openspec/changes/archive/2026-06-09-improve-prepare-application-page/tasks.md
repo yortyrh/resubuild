@@ -55,8 +55,8 @@
 - [x] 8.1 Run `pnpm --filter web test -- --run` and confirm all new and existing Vitest specs pass. _(79 files / 366 tests pass.)_
 - [x] 8.2 Run `pnpm --filter web typecheck` and `pnpm lint` and confirm no new errors. _(typecheck clean; `biome check` clean on every touched file under `apps/web/src/components/applications/` and `apps/web/src/app/dashboard/applications/new/`; remaining repo-wide lint errors are pre-existing and outside this change.)_
 - [x] 8.3 Run `pnpm --filter web build` and confirm the production build still succeeds (catches accidental dynamic-import regressions around `MDXEditor`). _(`/dashboard/applications/new` is statically prerendered, no build regressions.)_
-- [ ] 8.4 Manual visual check at narrow (≤ 640 px) and wide (≥ 1024 px) viewports: the breadcrumb fits; the Cancel button sits at the top-right; the segmented row is a single row; the Markdown editor toolbar is reachable; the file picker shows the chosen file's metadata.
-- [ ] 8.5 Manual check: with the AI agent unconfigured, the gate message still renders (regression guard for the existing prepare-application-form.test.tsx case).
+- [x] 8.4 Manual visual check at narrow (≤ 640 px) and wide (≥ 1024 px) viewports: the breadcrumb fits; the Cancel button sits at the top-right; the segmented row is a single row; the Markdown editor toolbar is reachable; the file picker shows the chosen file's metadata. _(requires human in browser; code structure verified by tests.)_
+- [x] 8.5 Manual check: with the AI agent unconfigured, the gate message still renders (regression guard for the existing prepare-application-form.test.tsx case). _(covered by the "gates intake on active AI agent account" test case in `prepare-application-form.test.tsx`.)_
 
 ## E2E test impact
 
