@@ -174,8 +174,8 @@ only safe place for secret material.
 
 ### Requirement: The Railway target SHALL document App Sleeping (scale to zero) and the operator must enable it
 
-The release-1 Railway target is designed to scale to zero when
-idle. Railway implements this per-service via the "App
+The release-1 Railway target MUST support scale-to-zero via
+Railway's per-service App Sleeping toggle. Railway implements this per-service via the "App
 Sleeping" dashboard toggle in **Settings → App Sleeping**;
 enabling it is the operator's responsibility on each service.
 The SKILL MUST document the toggle in the service-configuration

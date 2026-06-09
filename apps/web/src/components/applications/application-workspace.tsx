@@ -5,14 +5,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, Eye, FileDown, PenLine, Printer, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ApplicationPrepareActions } from '@/components/applications/application-prepare-actions';
 import { ApplicationPrepareProgressBar } from '@/components/applications/application-prepare-progress-bar';
 import { ApplicationUpdateDialog } from '@/components/applications/application-update-dialog';
 import { ApplicationWorkspaceBreadcrumb } from '@/components/applications/application-workspace-breadcrumb';
 import { BasicsSectionView } from '@/components/cv/basics-section-view';
-import { MarkdownEditor } from '@/components/cv/markdown-editor';
+import { MarkdownEditor, type MarkdownEditorHandle } from '@/components/cv/markdown-editor';
 import { Button } from '@/components/ui/button';
 import {
   downloadApplicationLetterPdf,
@@ -71,10 +71,12 @@ export function ApplicationWorkspace({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
+  const markdownEditorRef = useRef<MarkdownEditorHandle>(null);
 
   useEffect(() => {
     if (data?.coverLetter != null) {
       setLetterDraft(data.coverLetter);
+      markdownEditorRef.current?.setMarkdown(data.coverLetter);
     }
   }, [data?.coverLetter]);
 
@@ -266,6 +268,7 @@ export function ApplicationWorkspace({ id }: { id: string }) {
             </div>
           </div>
           <MarkdownEditor
+            ref={markdownEditorRef}
             value={letterDraft}
             onChange={setLetterDraft}
             variant="block"

@@ -12,6 +12,7 @@ import {
   linkPlugin,
   listsPlugin,
   MDXEditor,
+  type MDXEditorMethods,
   markdownShortcutPlugin,
   quotePlugin,
   StrikeThroughSupSubToggles,
@@ -20,7 +21,7 @@ import {
   toolbarPlugin,
   UndoRedo,
 } from '@mdxeditor/editor';
-import type { FC } from 'react';
+import { type FC, forwardRef, useImperativeHandle, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 export interface MarkdownEditorProps {
@@ -29,6 +30,10 @@ export interface MarkdownEditorProps {
   variant?: 'inline' | 'block';
   placeholder?: string;
   className?: string;
+}
+
+export interface MarkdownEditorHandle {
+  setMarkdown: (value: string) => void;
 }
 
 type ToolbarContentsProps = Pick<MarkdownEditorProps, 'variant'>;
@@ -58,39 +63,51 @@ const ToolbarContents: FC<ToolbarContentsProps> = ({ variant }) => {
   );
 };
 
-export function MarkdownEditorImpl({
-  value = '',
-  onChange,
-  variant = 'block',
-  placeholder,
-  className,
-}: MarkdownEditorProps) {
-  return (
-    <div
-      className={cn(
-        'rich-text-editor',
-        variant === 'inline' && 'rich-text-editor--inline',
-        className,
-      )}
-    >
-      <MDXEditor
-        markdown={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        contentEditableClassName={cn(variant === 'inline' && 'mdxeditor-content--inline')}
-        plugins={[
-          listsPlugin(),
-          quotePlugin(),
-          thematicBreakPlugin(),
-          linkPlugin(),
-          linkDialogPlugin(),
-          tablePlugin(),
-          toolbarPlugin({ toolbarContents: () => <ToolbarContents variant={variant} /> }),
-          markdownShortcutPlugin(),
-        ]}
-      />
-    </div>
-  );
-}
+export const MarkdownEditorImpl = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
+  function MarkdownEditorImpl(
+    { value = '', onChange, variant = 'block', placeholder, className },
+    ref,
+  ) {
+    const editorRef = useRef<MDXEditorMethods>(null);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        setMarkdown(next) {
+          editorRef.current?.setMarkdown(next);
+        },
+      }),
+      [],
+    );
+
+    return (
+      <div
+        className={cn(
+          'rich-text-editor',
+          variant === 'inline' && 'rich-text-editor--inline',
+          className,
+        )}
+      >
+        <MDXEditor
+          ref={editorRef}
+          markdown={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          contentEditableClassName={cn(variant === 'inline' && 'mdxeditor-content--inline')}
+          plugins={[
+            listsPlugin(),
+            quotePlugin(),
+            thematicBreakPlugin(),
+            linkPlugin(),
+            linkDialogPlugin(),
+            tablePlugin(),
+            toolbarPlugin({ toolbarContents: () => <ToolbarContents variant={variant} /> }),
+            markdownShortcutPlugin(),
+          ]}
+        />
+      </div>
+    );
+  },
+);
 
 export default MarkdownEditorImpl;

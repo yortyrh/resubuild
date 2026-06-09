@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react';
+import { createRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const InlineToolbar = () => (
@@ -47,15 +48,43 @@ const BlockToolbar = () => (
   </>
 );
 
+// Records every `markdown` prop the mock MDXEditor receives and
+// exposes a ref-callable setMarkdown that pushes new values into
+// the same recorder. Tests inspect this array to assert that
+// the wrapper's imperative setter forwarded to the underlying
+// editor instance.
+const markdownHistory: string[] = [];
+
 vi.mock('@mdxeditor/editor', () => {
   return {
     MDXEditor: ({
+      ref,
       plugins,
       contentEditableClassName,
+      markdown,
     }: {
+      ref?:
+        | { current: { setMarkdown: (v: string) => void } | null }
+        | ((
+            instance: {
+              setMarkdown: (v: string) => void;
+            } | null,
+          ) => void);
       plugins?: unknown[];
       contentEditableClassName?: string;
+      markdown?: string;
     }) => {
+      if (typeof markdown === 'string') {
+        markdownHistory.push(markdown);
+      }
+      const setMarkdown = (next: string) => {
+        markdownHistory.push(next);
+      };
+      if (typeof ref === 'function') {
+        ref({ setMarkdown });
+      } else if (ref && typeof ref === 'object') {
+        ref.current = { setMarkdown };
+      }
       const hasToolbar = plugins?.some((p) => p === 'toolbarPlugin');
       const isInline = contentEditableClassName?.includes('inline');
       return (
@@ -63,6 +92,7 @@ vi.mock('@mdxeditor/editor', () => {
           data-testid="mdx-editor"
           data-plugins={plugins?.length ?? 0}
           data-content-class={contentEditableClassName ?? ''}
+          data-markdown={markdown ?? ''}
         >
           {hasToolbar && (isInline ? <InlineToolbar /> : <BlockToolbar />)}
         </div>
@@ -114,11 +144,12 @@ vi.mock('@mdxeditor/editor', () => {
   };
 });
 
-import { MarkdownEditorImpl } from './markdown-editor-impl';
+import { type MarkdownEditorHandle, MarkdownEditorImpl } from './markdown-editor-impl';
 
 describe('MarkdownEditorImpl', () => {
   afterEach(() => {
     cleanup();
+    markdownHistory.length = 0;
   });
 
   it('renders block variant with constrained toolbar items', () => {
@@ -189,5 +220,34 @@ describe('MarkdownEditorImpl', () => {
       <MarkdownEditorImpl value="" onChange={vi.fn()} variant="block" />,
     );
     expect(getByTestId('mdx-editor')).toHaveAttribute('data-content-class', '');
+  });
+
+  it('exposes a setMarkdown ref that pushes new content into the editor', () => {
+    const ref = createRef<MarkdownEditorHandle>();
+    render(<MarkdownEditorImpl ref={ref} value="" onChange={vi.fn()} variant="block" />);
+
+    expect(ref.current).not.toBeNull();
+    expect(typeof ref.current?.setMarkdown).toBe('function');
+
+    // Snapshot the recorder at this point — the initial mount pushed
+    // the empty `value` prop into the mock.
+    const baselineLength = markdownHistory.length;
+    expect(markdownHistory[baselineLength - 1]).toBe('');
+
+    ref.current?.setMarkdown('Hello, world.');
+
+    // The imperative setter must have pushed a new value into the
+    // underlying editor recorder after the baseline.
+    expect(markdownHistory.length).toBeGreaterThan(baselineLength);
+    expect(markdownHistory[markdownHistory.length - 1]).toBe('Hello, world.');
+  });
+
+  it('still renders the initial value when no ref is provided', () => {
+    render(<MarkdownEditorImpl value="initial" onChange={vi.fn()} variant="block" />);
+    const editor = screen.getByTestId('mdx-editor');
+    expect(editor).toHaveAttribute('data-markdown', 'initial');
+    // The recorder must contain the initial value as the last
+    // recorded entry (no imperative setter was ever called).
+    expect(markdownHistory[markdownHistory.length - 1]).toBe('initial');
   });
 });
