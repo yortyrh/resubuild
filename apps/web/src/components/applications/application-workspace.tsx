@@ -14,6 +14,7 @@ import { ApplicationWorkspaceBreadcrumb } from '@/components/applications/applic
 import { BasicsSectionView } from '@/components/cv/basics-section-view';
 import { MarkdownEditor, type MarkdownEditorHandle } from '@/components/cv/markdown-editor';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   downloadApplicationLetterPdf,
   getApplication,
@@ -32,6 +33,33 @@ import { useCvSection } from '@/lib/queries/cv-queries';
 import { cvKeys } from '@/lib/queries/keys';
 
 const POLL_MS = 2500;
+
+const WORKSPACE_TAB_STORAGE_KEY = 'application-workspace:lastTab';
+const WORKSPACE_TAB_IDS = ['summary', 'tailored-cv', 'cover-letter'] as const;
+type WorkspaceTabId = (typeof WORKSPACE_TAB_IDS)[number];
+const DEFAULT_WORKSPACE_TAB: WorkspaceTabId = 'summary';
+
+function readStoredWorkspaceTab(): WorkspaceTabId {
+  if (typeof window === 'undefined') return DEFAULT_WORKSPACE_TAB;
+  try {
+    const stored = window.sessionStorage.getItem(WORKSPACE_TAB_STORAGE_KEY);
+    if (stored && (WORKSPACE_TAB_IDS as readonly string[]).includes(stored)) {
+      return stored as WorkspaceTabId;
+    }
+  } catch {
+    // sessionStorage can throw in private browsing modes; fall through to default.
+  }
+  return DEFAULT_WORKSPACE_TAB;
+}
+
+function writeStoredWorkspaceTab(value: WorkspaceTabId): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(WORKSPACE_TAB_STORAGE_KEY, value);
+  } catch {
+    // Ignore write failures (e.g. quota / disabled storage); the UI still works in-memory.
+  }
+}
 
 export function ApplicationWorkspace({ id }: { id: string }) {
   const router = useRouter();
@@ -71,7 +99,16 @@ export function ApplicationWorkspace({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<WorkspaceTabId>(() => readStoredWorkspaceTab());
   const markdownEditorRef = useRef<MarkdownEditorHandle>(null);
+
+  const handleTabChange = (value: string) => {
+    if ((WORKSPACE_TAB_IDS as readonly string[]).includes(value)) {
+      const next = value as WorkspaceTabId;
+      setActiveTab(next);
+      writeStoredWorkspaceTab(next);
+    }
+  };
 
   useEffect(() => {
     if (data?.coverLetter != null) {
@@ -201,7 +238,7 @@ export function ApplicationWorkspace({ id }: { id: string }) {
         </div>
       ) : null}
 
-      <div className="flex items-center justify-center gap-4">
+      <div className="flex items-center justify-center gap-4" style={{ marginBottom: '8px' }}>
         <div className="min-w-0 flex-1 align-middle">
           <h1 className="sr-only">
             {[data.jobTitle ?? 'Application', data.jobCompany].filter(Boolean).join(' · ')}
@@ -220,72 +257,104 @@ export function ApplicationWorkspace({ id }: { id: string }) {
 
       <ApplicationUpdateDialog application={data} open={updateOpen} onOpenChange={setUpdateOpen} />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="surface-soft text-card-foreground space-y-3 p-4">
-          <h2 className="font-medium">Job summary</h2>
-          <dl className="space-y-2 text-sm">
-            <div>
-              <dt className="text-muted-foreground">Title</dt>
-              <dd>{data.jobTitle}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Company</dt>
-              <dd>{data.jobCompany}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Why this CV</dt>
-              <dd>{data.selectionRationale}</dd>
-            </div>
-          </dl>
-
-          <h2 className="pt-2 font-medium">Tailored CV</h2>
-          {data.tailoredCvId ? (
-            <TailoredCvPanel applicationId={data.id} tailoredCvId={data.tailoredCvId} />
-          ) : null}
-        </section>
-
-        <section className="surface-soft text-card-foreground space-y-3 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-medium">Cover letter</h2>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => void copyRichText()}>
-                <Copy className="h-4 w-4" />
-                Copy letter
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={printing}
-                onClick={() => void printLetter()}
-              >
-                <Printer className="h-4 w-4" />
-                {printing ? 'Printing…' : 'Print'}
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => void downloadPdf()}>
-                <FileDown className="h-4 w-4" />
-                PDF
-              </Button>
+      <div className="surface-soft text-card-foreground p-4">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <TabsList>
+              <TabsTrigger value="summary">Job summary</TabsTrigger>
+              <TabsTrigger value="tailored-cv">Tailored CV</TabsTrigger>
+              <TabsTrigger value="cover-letter">Cover letter</TabsTrigger>
+            </TabsList>
+            <div className="flex flex-wrap items-center gap-2">
+              {activeTab === 'tailored-cv' && data.tailoredCvId ? (
+                <>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/dashboard/cv/${data.tailoredCvId}?applicationId=${data.id}`}>
+                      <PenLine className="h-4 w-4" />
+                      Edit CV
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link
+                      href={`/dashboard/cv/${data.tailoredCvId}/preview?applicationId=${data.id}`}
+                      aria-label="Preview"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Preview
+                    </Link>
+                  </Button>
+                </>
+              ) : null}
+              {activeTab === 'cover-letter' ? (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => void copyRichText()}>
+                    <Copy className="h-4 w-4" />
+                    Copy letter
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={printing}
+                    onClick={() => void printLetter()}
+                  >
+                    <Printer className="h-4 w-4" />
+                    {printing ? 'Printing…' : 'Print'}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => void downloadPdf()}>
+                    <FileDown className="h-4 w-4" />
+                    PDF
+                  </Button>
+                </>
+              ) : null}
             </div>
           </div>
-          <MarkdownEditor
-            ref={markdownEditorRef}
-            value={letterDraft}
-            onChange={setLetterDraft}
-            variant="block"
-            placeholder="Cover letter markdown…"
-            className="cover-letter-editor"
-          />
-          <Button size="sm" disabled={saving} onClick={() => void saveLetter()}>
-            {saving ? 'Saving…' : 'Save letter'}
-          </Button>
-        </section>
+
+          <TabsContent value="summary" className="space-y-3">
+            <dl className="space-y-2 text-sm">
+              <div>
+                <dt className="text-muted-foreground">Title</dt>
+                <dd>{data.jobTitle}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Company</dt>
+                <dd>{data.jobCompany}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Why this CV</dt>
+                <dd>{data.selectionRationale}</dd>
+              </div>
+            </dl>
+          </TabsContent>
+
+          <TabsContent value="tailored-cv" className="space-y-3">
+            {data.tailoredCvId ? (
+              <TailoredCvPanel applicationId={data.id} tailoredCvId={data.tailoredCvId} />
+            ) : (
+              <p className="text-muted-foreground text-sm">No tailored CV is attached.</p>
+            )}
+          </TabsContent>
+
+          <TabsContent value="cover-letter" className="space-y-3">
+            <MarkdownEditor
+              ref={markdownEditorRef}
+              value={letterDraft}
+              onChange={setLetterDraft}
+              variant="block"
+              placeholder="Cover letter markdown…"
+              className="cover-letter-editor"
+            />
+            <Button size="sm" disabled={saving} onClick={() => void saveLetter()}>
+              {saving ? 'Saving…' : 'Save letter'}
+            </Button>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
 }
 
 function TailoredCvPanel({
-  applicationId,
+  applicationId: _applicationId,
   tailoredCvId,
 }: {
   applicationId: string;
@@ -304,25 +373,8 @@ function TailoredCvPanel({
   const basics = (cv?.data as Resume | undefined)?.basics;
   const isLoading = isCvLoading || isProfilesLoading;
 
-  const editHref = `/dashboard/cv/${tailoredCvId}?applicationId=${applicationId}`;
-  const previewHref = `/dashboard/cv/${tailoredCvId}/preview?applicationId=${applicationId}`;
-
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        <Button asChild variant="outline" size="sm">
-          <Link href={editHref}>
-            <PenLine className="h-4 w-4" />
-            Edit CV
-          </Link>
-        </Button>
-        <Button asChild variant="outline" size="sm">
-          <Link href={previewHref} aria-label="Preview">
-            <Eye className="h-4 w-4" />
-            Preview
-          </Link>
-        </Button>
-      </div>
       {isLoading ? (
         <p className="text-muted-foreground text-sm">Loading CV basics…</p>
       ) : basics ? (
