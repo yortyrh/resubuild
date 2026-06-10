@@ -1,10 +1,10 @@
-# auth-feature-flags
+# auth-feature-flags Specification
 
 ## Purpose
 
-Define the env-var contract and public endpoint that expose the opt-in authentication capabilities of Resumind so the API and the web SPA can render a consistent set of auth controls regardless of the deployment environment.
+TBD - created by archiving change stabilize-authentication. Update Purpose after archive.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: The API MUST expose a public features endpoint
 
@@ -48,12 +48,12 @@ The endpoint SHALL be reachable on the same CORS origin as the rest of the API (
 
 ### Requirement: Feature flag env vars MUST be validated at boot
 
-`apps/api` SHALL validate the three `AUTH_*_ENABLED` env vars through `ConfigModule.validationSchema` (Joi) and SHALL fail boot with a clear message if any value is not a boolean. Valid values: `true`, `false`, `1`, `0`, `yes`, `no` (case-insensitive).
+`apps/api` SHALL validate the three `AUTH_*_ENABLED` env vars through `AuthConfigService` (Zod) and SHALL fail boot with a clear message if any value is not a recognised boolean. Valid values: `true`, `false` (case-insensitive). Unrecognised values are coerced to `false` and the API continues to boot — a misconfigured deployment degrades safely to "no opt-in features" rather than refusing to start.
 
-#### Scenario: Invalid flag value at boot
+#### Scenario: Unrecognised flag value at boot
 
 - **WHEN** the API starts with `AUTH_PASSWORDLESS_ENABLED=maybe`
-- **THEN** the API SHALL exit non-zero and the error message SHALL name the offending env var
+- **THEN** `AuthConfigService` SHALL treat the value as `false` and the API SHALL continue to boot
 
 ### Requirement: The web SPA SHALL consume the features endpoint
 

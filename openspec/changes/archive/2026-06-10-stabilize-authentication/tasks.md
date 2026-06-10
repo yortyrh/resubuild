@@ -1,5 +1,46 @@
 # tasks.md
 
+> **Stabilization status (recorded at archive time)**
+>
+> The OpenSpec change is **partially implemented** in this PR. The
+> infrastructure pieces — the module-scoped Supabase client provider, the
+> Zod-backed `AuthConfigService` for feature flags, the new
+> `apps/web/src/lib/supabase/client.ts` and `apps/web/src/lib/queries/auth-*.ts`
+> React Query hooks, the new spec for the `web-application` carve-out, the
+> e2e-friendly feature-flags spec, and the GitHub/Google OAuth surface in
+> `supabase/config.toml` — are all in place.
+>
+> What is **not yet wired** in this PR (intentional follow-up):
+>
+> - `AuthService` still uses the legacy per-call `getBrowserClient()`
+>   factory; the `SUPABASE_CLIENT` provider is created but not consumed
+>   by the service. Tracking: §1.4.
+> - `SupabaseAuthGuard` still validates tokens with the anon key, not
+>   the service-role key. Tracking: §1.5.
+> - The new HTTP endpoints (`POST /auth/logout` revocation,
+>   `POST /auth/password`, `POST /auth/forgot-password`,
+>   `POST /auth/reset-password`, `POST /auth/otp`,
+>   `POST /auth/otp/verify`, `GET /auth/email-verified`,
+>   `GET /auth/features`) are described by the new specs but **the Nest
+>   controller does not expose them yet**. Tracking: §2.1, §6.3, §7.2,
+>   §8.2, §9.2.
+> - The SPA's `LoginForm`, `RegisterForm`, and related components still
+>   use the legacy sessionStorage flow; they are not yet refactored to
+>   the React Query hooks. Tracking: §5.3.
+>
+> Each unchecked task below captures one of those gaps. The
+> `openspec/changes/stabilize-authentication/specs/web-application/spec.md`
+> scenario "Client bundle has Supabase client but no DB-direct symbols"
+> is enforced by `apps/web/src/lib/web-bundle-security.test.ts`, which is
+> the one piece of the new architecture the new code can fully exercise
+> in this PR (the carve-out is now used in production by
+> `auth-session.ts` and the `auth-queries.ts`/`auth-mutations.ts` files).
+>
+> The carve-out's `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` env-var name is
+> the only Supabase key allowed in client bundles; see the
+> `web-bundle-security.test.ts` test and the `openspec/specs/authentication`
+> "Client bundle inspection excludes admin credentials" scenario.
+
 ## 1. Module-scoped Supabase client + config validation
 
 - [ ] 1.1 Add `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SERVICE_ROLE_KEY` to `apps/api/.env.example` and the corresponding `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to `apps/web/.env.example`

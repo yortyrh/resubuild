@@ -124,9 +124,3 @@ Neither `NEXT_PUBLIC_*` anon/publishable keys nor service-role secrets SHALL shi
 **Reason**: The custom `POST /auth/github/callback` endpoint is replaced by the Supabase client API. The `GET /auth/github` URL-initiation endpoint is kept as a deprecated convenience for non-SPA clients but is no longer the primary path.
 
 **Migration**: SPA users should call `supabase.auth.signInWithOAuth({ provider: 'github' })` directly. Programmatic clients (CLI, tests) may still call `GET /auth/github` and then exchange the code via the Supabase SDK of their choice.
-
-### Requirement: Confidential Supabase administrative credentials MUST remain confined to server processes (pre-stabilization)
-
-**Reason**: Replaced by the new requirement above; the carve-out for the publishable key is now explicit.
-
-**Migration**: N/A — the publishable key is a Supabase-defined public key intended for browsers; see the new requirement for the rules around it.
