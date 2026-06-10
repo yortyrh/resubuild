@@ -28,7 +28,7 @@
 
 ## For developers
 
-Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authentication + schema validation), and **Supabase Postgres** (RLS-protected storage). Auth is **API-issued Bearer tokens** (JSON over CORS)—the web bundle does **not** embed Supabase client libraries.
+Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authentication + schema validation), and **Supabase Postgres** (RLS-protected storage). Auth is **API-issued Bearer tokens** (JSON over CORS). The web bundle embeds the **Supabase publishable client** (`@supabase/supabase-js`) **only** for the auth flows listed in the [`authentication`](openspec/specs/authentication/spec.md) spec — the **publishable key** is the only Supabase key allowed in client bundles; **service-role keys remain server-only** (see [`apps/web/src/lib/web-bundle-security.test.ts`](apps/web/src/lib/web-bundle-security.test.ts) for the lint-style guard).
 
 ### Stack
 
@@ -40,6 +40,67 @@ Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authenti
 - **packages/resume-template** — MIT-format HTML renderer for preview and PDF export
 - **packages/import-models** — pinned Mastra provider/model catalog for PDF import settings
 - **supabase/migrations** — `cv` table + RLS policies
+
+## Authentication
+
+Resubuild's authentication is split between the **Nest API** (token issuance, validation, and the service-role Supabase client) and the **Next.js web SPA** (a publishable-key Supabase client for the auth UI only). The two halves are wired by the `authentication`, `web-application`, and the new `auth-feature-flags`, `auth-password-recovery`, `auth-email-verification`, `auth-passwordless`, and `auth-change-password` OpenSpec specs.
+
+### Auth flows
+
+| Flow                              | Always on?             | Feature flag                            | OpenSpec spec             |
+| --------------------------------- | ---------------------- | --------------------------------------- | ------------------------- |
+| Email + password login / register | yes                    | —                                       | `authentication`          |
+| GitHub OAuth (Supabase client)    | yes (provider enabled) | `SUPABASE_AUTH_EXTERNAL_GITHUB_ENABLED` | `authentication`          |
+| Google OAuth (Supabase client)    | opt-in                 | `SUPABASE_AUTH_EXTERNAL_GOOGLE_ENABLED` | `authentication`          |
+| Change password (authenticated)   | yes                    | —                                       | `auth-change-password`    |
+| Forgot / reset password           | opt-in                 | `AUTH_FORGOT_PASSWORD_ENABLED`          | `auth-password-recovery`  |
+| Email verification                | opt-in                 | `AUTH_EMAIL_VERIFICATION_ENABLED`       | `auth-email-verification` |
+| Passwordless — magic link         | opt-in                 | `AUTH_PASSWORDLESS_ENABLED`             | `auth-passwordless`       |
+| Passwordless — 6-digit OTP        | opt-in                 | `AUTH_PASSWORDLESS_ENABLED`             | `auth-passwordless`       |
+
+### Feature flags
+
+Three env vars gate the optional flows. They are validated at boot by `AuthConfigService` (`apps/api/src/auth/config/auth.config.ts`); unrecognised values are coerced to `false` so a misconfigured deployment degrades safely. The SPA calls `GET /auth/features` on every navigation to a guarded route and re-renders the corresponding controls.
+
+```bash
+# apps/api/.env
+AUTH_FORGOT_PASSWORD_ENABLED=true
+AUTH_EMAIL_VERIFICATION_ENABLED=true
+AUTH_PASSWORDLESS_ENABLED=true
+SUPABASE_AUTH_EXTERNAL_GITHUB_ENABLED=true
+SUPABASE_AUTH_EXTERNAL_GOOGLE_ENABLED=true
+```
+
+### Required env vars
+
+| Where      | Var                                                                                | Purpose                                                                  |
+| ---------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `apps/api` | `SUPABASE_URL`                                                                     | Supabase project URL (server)                                            |
+| `apps/api` | `SUPABASE_SERVICE_ROLE_KEY`                                                        | Service-role key for `auth.admin` operations (server-only)               |
+| `apps/api` | `SUPABASE_PUBLISHABLE_KEY`                                                         | Publishable key returned to the SPA so it can pick a feature set         |
+| `apps/web` | `NEXT_PUBLIC_SUPABASE_URL`                                                         | Public Supabase URL for the auth client                                  |
+| `apps/web` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`                                             | The **only** Supabase key in the browser bundle                          |
+| `apps/api` | `SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID` / `SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET` | Read by `supabase start` from the host env, **not** from `apps/api/.env` |
+| `apps/api` | `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` / `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` | Read by `supabase start` from the host env, **not** from `apps/api/.env` |
+
+### Two-knob email verification
+
+Email verification is gated by **two** independent settings, and the operator is responsible for keeping them in sync:
+
+1. `AUTH_EMAIL_VERIFICATION_ENABLED=true` in `apps/api/.env` — surfaces the flag in `GET /auth/features` and makes `GET /auth/email-verified` reachable.
+2. `[auth.email].enable_confirmations = true` in `supabase/config.toml` — tells Supabase itself to send the confirmation email.
+
+**Misconfiguration states:**
+
+- `AUTH_EMAIL_VERIFICATION_ENABLED=true` but `enable_confirmations = false` → the SPA shows the "check your email" page, but the user never receives an email.
+- `AUTH_EMAIL_VERIFICATION_ENABLED=false` but `enable_confirmations = true` → Supabase sends the email, but the SPA has no verification flow to send the user through.
+- Both `false` → no email verification at all (default).
+
+There is no auto-sync. The `setup-local-env.sh` script defaults both to the same value to keep dev sane; production operators must verify both are set before flipping the feature on.
+
+### Bundle security guard
+
+`apps/web/src/lib/web-bundle-security.test.ts` is a Vitest guard that fails CI if any web source file references the service-role key, imports from `apps/api/src/cv/**` or `apps/api/src/database/**`, or uses `@supabase/supabase-js` outside the auth-flow scope. It also asserts the carve-out is documented in `README.md` / `.env.example` / the OpenSpec specs.
 
 ## Prerequisites
 

@@ -2,71 +2,51 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { type AuthTokenPayload, clearSession, saveSession } from '@/lib/auth-session';
+import { getSupabaseClient } from '@/lib/supabase/client';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-
-function AuthCallbackInner() {
+export function AuthCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Handle PKCE flow: access_token comes in URL hash fragment
-    const hash = window.location.hash;
-    if (hash) {
-      const params = new URLSearchParams(hash.substring(1)); // strip '#'
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
-      const expiresIn = params.get('expires_in');
+    let cancelled = false;
 
-      if (accessToken && refreshToken && expiresIn) {
-        saveSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-          expires_in: Number.parseInt(expiresIn, 10),
-          token_type: 'bearer',
-          user: { id: '' }, // PKCE flow doesn't return user; will refetch via /auth/me
-        });
-        // Clean URL hash before navigating
-        window.history.replaceState(null, '', window.location.pathname);
+    const complete = async () => {
+      // Standard PKCE flow: `?code=...` in the query string. We hand
+      // Supabase the full URL so its SDK can do the PKCE exchange.
+      const code = searchParams.get('code');
+      if (code) {
+        const supabase = getSupabaseClient();
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
+          window.location.href,
+        );
+        if (cancelled) return;
+        if (exchangeError) {
+          setError(exchangeError.message);
+          return;
+        }
         router.push('/dashboard');
         return;
       }
-    }
 
-    // Standard flow: exchange code for session
-    const code = searchParams.get('code');
-    if (!code) {
-      setError('No authorization code received');
-      return;
-    }
-
-    const exchange = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/auth/github/callback`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code }),
-        });
-
-        const body = (await response.json()) as AuthTokenPayload & { message?: string };
-
-        if (!response.ok) {
-          setError(body.message ?? 'GitHub sign-in failed');
-          clearSession();
-          return;
-        }
-
-        saveSession(body as AuthTokenPayload);
-        router.push('/dashboard');
-      } catch {
-        setError('An unexpected error occurred');
-        clearSession();
+      // Implicit flow: tokens arrive in the URL hash fragment. Supabase's
+      // client picks them up automatically (detectSessionInUrl=true); we
+      // just need to read the resulting session and route accordingly.
+      const supabase = getSupabaseClient();
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (sessionError || !data.session) {
+        setError('Sign-in failed');
+        return;
       }
+      router.push('/dashboard');
     };
 
-    exchange();
+    void complete();
+    return () => {
+      cancelled = true;
+    };
   }, [searchParams, router]);
 
   if (error) {

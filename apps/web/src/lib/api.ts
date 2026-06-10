@@ -15,6 +15,143 @@ export interface CvRecord {
   updated_at: string;
 }
 
+// ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
+
+/**
+ * Capabilities exposed by `GET /auth/features`. The shape is the public
+ * contract between the SPA and the Nest API; the OpenSpec
+ * `auth-feature-flags` spec defines the on-the-wire JSON.
+ */
+export interface AuthFeatures {
+  forgot_password: boolean;
+  email_verification: boolean;
+  passwordless: boolean;
+  providers: ('github' | 'google')[];
+}
+
+/**
+ * Fetches the deployment's authentication capabilities. This endpoint is
+ * public (no Bearer token), so we call `globalThis.fetch` directly and
+ * surface a clear error on non-OK responses. The web SPA uses this to
+ * hide or render the passwordless/forgot-password/OAuth controls.
+ */
+export async function fetchAuthFeatures(): Promise<AuthFeatures> {
+  const response = await fetch(`${apiUrl}/auth/features`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch auth features (${response.status})`);
+  }
+  return (await response.json()) as AuthFeatures;
+}
+
+export interface AuthMe {
+  user: { id: string; email?: string };
+  has_password: boolean;
+}
+
+export async function fetchAuthMe(): Promise<AuthMe> {
+  return apiFetch<AuthMe>('/auth/me');
+}
+
+/**
+ * Server-issued token shape. Matches the OpenSpec `authentication` spec
+ * scenario for `POST /auth/login`.
+ */
+export interface AuthTokenPayload {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  expires_at?: number;
+  token_type: 'bearer';
+  user: { id: string; email?: string };
+}
+
+export function login(email: string, password: string): Promise<AuthTokenPayload> {
+  return apiFetch<AuthTokenPayload>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function register(
+  email: string,
+  password: string,
+): Promise<AuthTokenPayload | { message: string }> {
+  return apiFetch<AuthTokenPayload | { message: string }>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function logout(token: string): Promise<void> {
+  await fetch(`${apiUrl}/auth/logout`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function changePassword(
+  currentPassword: string | undefined,
+  newPassword: string,
+): Promise<{ updated: true }> {
+  return apiFetch<{ updated: true }>('/auth/password', {
+    method: 'POST',
+    body: JSON.stringify({
+      current_password: currentPassword ?? null,
+      new_password: newPassword,
+    }),
+  });
+}
+
+export function forgotPassword(email: string): Promise<void> {
+  return apiFetch<void>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function resetPassword(
+  accessToken: string,
+  refreshToken: string,
+  password: string,
+): Promise<void> {
+  return apiFetch<void>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      password,
+    }),
+  });
+}
+
+export function requestOtp(email: string): Promise<void> {
+  return apiFetch<void>('/auth/otp', {
+    method: 'POST',
+    body: JSON.stringify({ email, channel: 'email' }),
+  });
+}
+
+export function verifyOtp(email: string, token: string): Promise<AuthTokenPayload> {
+  return apiFetch<AuthTokenPayload>('/auth/otp/verify', {
+    method: 'POST',
+    body: JSON.stringify({ email, token }),
+  });
+}
+
+export function verifyEmail(token: string): Promise<{ verified: boolean }> {
+  return apiFetch<{ verified: boolean }>(
+    `/auth/email-verified${token ? `?token=${encodeURIComponent(token)}` : ''}`,
+  );
+}
+
 export interface CvTemplateMeta {
   id: string;
   label: string;
