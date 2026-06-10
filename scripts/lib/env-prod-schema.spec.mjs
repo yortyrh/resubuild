@@ -66,6 +66,8 @@ describe('validateManifest', () => {
     APP_URL: 'https://app.example.com',
     PUBLIC_API_URL: 'https://api.example.com',
     NEXT_PUBLIC_API_URL: 'https://api.example.com',
+    NEXT_PUBLIC_SUPABASE_URL: 'https://x.supabase.co',
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_TEST',
     AI_AGENT_ENCRYPTION_KEY: 'YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=',
   };
 
@@ -265,6 +267,8 @@ describe('validateManifest DEPLOY_TARGET', () => {
     APP_URL: 'https://app.example.com',
     PUBLIC_API_URL: 'https://api.example.com',
     NEXT_PUBLIC_API_URL: 'https://api.example.com',
+    NEXT_PUBLIC_SUPABASE_URL: 'https://x.supabase.co',
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_TEST',
     AI_AGENT_ENCRYPTION_KEY: 'YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=',
   };
 

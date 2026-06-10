@@ -55,12 +55,12 @@ Nest SHALL enable **CORS** so a browser SPA on a **different origin** than the A
 
 ### Requirement: Confidential Supabase administrative credentials MUST remain confined to server processes
 
-Neither `NEXT_PUBLIC_*` anon/publishable keys nor service-role secrets SHALL ship in browser bundles other than the publishable key explicitly intended for the Supabase client. The service-role key, the GitHub OAuth secret, and the Google OAuth secret MUST remain in `apps/api/.env` (and Supabase's own secret store for the OAuth providers). Browser bundles MAY carry the `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` env vars for auth flows only.
+Neither `NEXT_PUBLIC_*` anon/publishable keys nor service-role secrets SHALL ship in browser bundles other than the publishable key explicitly intended for the Supabase client. The service-role key MUST remain in `apps/api/.env`. Browser bundles MAY carry the `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` env vars for auth flows only.
 
 #### Scenario: Client bundle inspection excludes admin credentials
 
 - **WHEN** a developer inspects emitted browser JavaScript bundles for authenticated pages
-- **THEN** bundles MUST NOT statically embed Supabase service-role keys nor the GitHub/Google OAuth client secrets
+- **THEN** bundles MUST NOT statically embed Supabase service-role keys
 - **AND** the Supabase publishable key MAY appear (it is intentionally public) but MUST NOT be paired with any DB-direct symbol from the cv-rest-api or database-cv-rls specs
 
 ### Requirement: The API MUST expose a server-side logout that revokes refresh tokens
@@ -89,32 +89,16 @@ Neither `NEXT_PUBLIC_*` anon/publishable keys nor service-role secrets SHALL shi
 - **THEN** the service SHALL NOT call `createClient` during the request handler
 - **AND** the same Supabase client instance SHALL be reused across requests
 
-### Requirement: The API MUST remove the custom GitHub OAuth callback
+### Requirement: GitHub and Google OAuth MUST NOT be supported
 
-The `POST /auth/github/callback` endpoint SHALL be removed. The web SPA SHALL complete the GitHub OAuth flow through the Supabase client API (`supabase.auth.signInWithOAuth` + `supabase.auth.exchangeCodeForSession` or automatic PKCE detection). Nest retains `GET /auth/github` only as a deprecated convenience for the rare programmatic client; the SPA no longer calls it.
+The web SPA and Nest API SHALL NOT expose GitHub or Google social-login flows. `supabase/config.toml` SHALL NOT configure `[auth.external.github]` or `[auth.external.google]`. The SPA SHALL NOT render "Continue with GitHub" or "Continue with Google" buttons on `/login` or `/register`. The API SHALL NOT expose `GET /auth/github` or `POST /auth/github/callback`.
 
-#### Scenario: SPA completes GitHub OAuth client-side
+#### Scenario: OAuth endpoints are not reachable
 
-- **WHEN** a user clicks "Continue with GitHub" on `/login`
-- **THEN** the SPA SHALL call `supabase.auth.signInWithOAuth({ provider: 'github' })` and complete the flow client-side
-- **AND** the resulting session SHALL populate the SPA's Supabase client
-
-#### Scenario: Server callback endpoint no longer exists
-
-- **WHEN** a client POSTs to `POST /auth/github/callback`
+- **WHEN** a client GETs `GET /auth/github` or POSTs to `POST /auth/github/callback`
 - **THEN** the API SHALL respond `404 Not Found`
 
-### Requirement: The API MUST expose Google OAuth support
+#### Scenario: Login page has no social buttons
 
-`supabase/config.toml` SHALL configure `[auth.external.google]` enabled, with `client_id` and `secret` read from `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` and `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` env vars (committed `.toml` MUST NOT contain real secret values). The `GET /auth/features` response SHALL include `"google"` in `providers` whenever `[auth.external.google]` is enabled. The web SPA SHALL render a "Continue with Google" button that calls `supabase.auth.signInWithOAuth({ provider: 'google' })`.
-
-#### Scenario: User signs in with Google
-
-- **WHEN** a user clicks "Continue with Google" on `/login` and completes the Google consent flow
-- **THEN** the SPA SHALL persist the resulting Supabase session AND redirect to `/dashboard`
-
-#### Scenario: Google provider not configured
-
-- **WHEN** `[auth.external.google]` is not enabled in `supabase/config.toml`
-- **THEN** `GET /auth/features` SHALL NOT include `"google"` in `providers`
-- **AND** the "Continue with Google" button SHALL NOT render on `/login`
+- **WHEN** a user visits `/login`
+- **THEN** the SPA SHALL NOT render GitHub or Google sign-in buttons

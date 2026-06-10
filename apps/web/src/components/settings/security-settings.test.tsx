@@ -1,15 +1,19 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SecuritySettings } from './security-settings';
 
-const mockChangePassword = vi.fn();
+const mockChangePasswordMutate = vi.fn();
 const mockUseAuthMe = vi.fn();
 
-vi.mock('@/lib/api', () => ({
-  changePassword: (...args: unknown[]) => mockChangePassword(...args),
+vi.mock('@/lib/queries/auth-mutations', () => ({
+  useChangePassword: () => ({
+    mutate: mockChangePasswordMutate,
+    isPending: false,
+    error: null,
+  }),
 }));
 
 vi.mock('@/lib/queries/auth-queries', () => ({
@@ -25,6 +29,11 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 describe('SecuritySettings', () => {
+  beforeEach(() => {
+    cleanup();
+    mockChangePasswordMutate.mockReset();
+  });
+
   it('renders the change password form when user already has a password', () => {
     mockUseAuthMe.mockReturnValue({
       data: { user: { id: 'u1', email: 'a@b.com' }, has_password: true },
@@ -71,9 +80,7 @@ describe('SecuritySettings', () => {
     await userEvent.type(screen.getByLabelText('Current password'), 'oldpassword');
     await userEvent.type(screen.getByLabelText('New password'), 'newpassword123');
     await userEvent.type(screen.getByLabelText('Confirm new password'), 'differentpassword');
-
-    const buttons = screen.getAllByRole('button', { name: /update password/i });
-    await userEvent.click(buttons[0]!);
+    await userEvent.click(screen.getByRole('button', { name: /update password/i }));
 
     expect(screen.getByText('New passwords do not match')).toBeTruthy();
   });
@@ -82,19 +89,19 @@ describe('SecuritySettings', () => {
     mockUseAuthMe.mockReturnValue({
       data: { user: { id: 'u1', email: 'a@b.com' }, has_password: true },
     });
-    mockChangePassword.mockResolvedValue(undefined);
 
     render(<SecuritySettings />, { wrapper });
 
     await userEvent.type(screen.getByLabelText('Current password'), 'oldpassword');
     await userEvent.type(screen.getByLabelText('New password'), 'newpassword123');
     await userEvent.type(screen.getByLabelText('Confirm new password'), 'newpassword123');
-
-    const buttons = screen.getAllByRole('button', { name: /update password/i });
-    await userEvent.click(buttons[0]!);
+    await userEvent.click(screen.getByRole('button', { name: /update password/i }));
 
     await waitFor(() => {
-      expect(mockChangePassword).toHaveBeenCalledWith('oldpassword', 'newpassword123');
+      expect(mockChangePasswordMutate).toHaveBeenCalledWith(
+        { currentPassword: 'oldpassword', newPassword: 'newpassword123' },
+        expect.any(Object),
+      );
     });
   });
 
@@ -102,18 +109,18 @@ describe('SecuritySettings', () => {
     mockUseAuthMe.mockReturnValue({
       data: { user: { id: 'u1', email: 'a@b.com' }, has_password: false },
     });
-    mockChangePassword.mockResolvedValue(undefined);
 
     render(<SecuritySettings />, { wrapper });
 
     await userEvent.type(screen.getByLabelText('New password'), 'newpassword123');
     await userEvent.type(screen.getByLabelText('Confirm new password'), 'newpassword123');
-
-    const buttons = screen.getAllByRole('button', { name: /set password/i });
-    await userEvent.click(buttons[0]!);
+    await userEvent.click(screen.getByRole('button', { name: /set password/i }));
 
     await waitFor(() => {
-      expect(mockChangePassword).toHaveBeenCalledWith(undefined, 'newpassword123');
+      expect(mockChangePasswordMutate).toHaveBeenCalledWith(
+        { newPassword: 'newpassword123' },
+        expect.any(Object),
+      );
     });
   });
 });

@@ -1,8 +1,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { fetchAuthFeatures, fetchAuthMe } from '@/lib/api';
+import { fetchAuthMe } from '@/lib/api';
+import { getAuthFeatures } from '@/lib/auth/features';
 import { getSupabaseClient } from '@/lib/supabase/client';
+
+export type { AuthFeatures } from '@/lib/auth/features';
 
 export const authKeys = {
   all: ['auth'] as const,
@@ -12,13 +15,22 @@ export const authKeys = {
   emailVerification: (token: string) => [...authKeys.all, 'emailVerification', token] as const,
 };
 
-/** Fetch auth capabilities from the API — no Bearer token needed. */
+/**
+ * Read auth capabilities from the client-bundled `NEXT_PUBLIC_*` env vars.
+ *
+ * No network round-trip and no loading state: the values are inlined at
+ * build time, so the hooks that consume this can render the matching
+ * controls synchronously and avoid the layout shift the previous
+ * `/auth/features` fetch caused on every navigation. The hook still goes
+ * through TanStack Query so consumers can keep their existing
+ * `useQuery` patterns (and the test suite can mock the resolver).
+ */
 export function useAuthFeatures(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: authKeys.features(),
-    queryFn: fetchAuthFeatures,
+    queryFn: () => Promise.resolve(getAuthFeatures()),
     enabled: options?.enabled ?? true,
-    staleTime: 5 * 60 * 1000, // 5 min — features rarely change
+    staleTime: Infinity, // build-time constants — never need to refetch
   });
 }
 
@@ -51,7 +63,7 @@ export function useAuthSession() {
         exists: true,
         userId: data.session.user.id,
         email: data.session.user.email ?? null,
-        emailVerified: Boolean(user?.email_verified),
+        emailVerified: Boolean(user.email_confirmed_at ?? user.email_verified),
       };
     },
     staleTime: Infinity,

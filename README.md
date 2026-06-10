@@ -47,56 +47,57 @@ Resubuild's authentication is split between the **Nest API** (token issuance, va
 
 ### Auth flows
 
-| Flow                              | Always on?             | Feature flag                            | OpenSpec spec             |
-| --------------------------------- | ---------------------- | --------------------------------------- | ------------------------- |
-| Email + password login / register | yes                    | —                                       | `authentication`          |
-| GitHub OAuth (Supabase client)    | yes (provider enabled) | `SUPABASE_AUTH_EXTERNAL_GITHUB_ENABLED` | `authentication`          |
-| Google OAuth (Supabase client)    | opt-in                 | `SUPABASE_AUTH_EXTERNAL_GOOGLE_ENABLED` | `authentication`          |
-| Change password (authenticated)   | yes                    | —                                       | `auth-change-password`    |
-| Forgot / reset password           | opt-in                 | `AUTH_FORGOT_PASSWORD_ENABLED`          | `auth-password-recovery`  |
-| Email verification                | opt-in                 | `AUTH_EMAIL_VERIFICATION_ENABLED`       | `auth-email-verification` |
-| Passwordless — magic link         | opt-in                 | `AUTH_PASSWORDLESS_ENABLED`             | `auth-passwordless`       |
-| Passwordless — 6-digit OTP        | opt-in                 | `AUTH_PASSWORDLESS_ENABLED`             | `auth-passwordless`       |
+| Flow                              | Always on? | Feature flag (client-side mirror)             | OpenSpec spec             |
+| --------------------------------- | ---------- | --------------------------------------------- | ------------------------- |
+| Email + password login / register | yes        | —                                             | `authentication`          |
+| Change password (authenticated)   | yes        | —                                             | `auth-change-password`    |
+| Forgot / reset password           | opt-in     | `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED`    | `auth-password-recovery`  |
+| Email verification                | opt-in     | `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED` | `auth-email-verification` |
+| Passwordless — magic link         | opt-in     | `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`       | `auth-passwordless`       |
+| Passwordless — 6-digit OTP        | opt-in     | `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`       | `auth-passwordless`       |
 
 ### Feature flags
 
-Three env vars gate the optional flows. They are validated at boot by `AuthConfigService` (`apps/api/src/auth/config/auth.config.ts`); unrecognised values are coerced to `false` so a misconfigured deployment degrades safely. The SPA calls `GET /auth/features` on every navigation to a guarded route and re-renders the corresponding controls.
+The optional auth flows are gated by **client-side `NEXT_PUBLIC_*` env vars** in `apps/web/.env`. The SPA reads them at build time via `process.env.NEXT_PUBLIC_*` (resolved by `apps/web/src/lib/auth/features.ts`); no API round-trip, no layout shift on auth pages. Each value is interpreted as a strict boolean — only the literal string `true` enables the flag; anything else (including the empty string, `1`, `yes`, `TRUE`) is treated as `false`, and a missing var defaults to `false`. Flipping a flag requires a web redeploy to take effect in production.
+
+The only flag that **also** lives on the API side is `AUTH_FORGOT_PASSWORD_ENABLED` in `apps/api/.env` — it is consumed by the server-side `ForgotPasswordEnabledGuard` on `POST /auth/forgot-password` and `POST /auth/reset-password` so a misconfigured SPA cannot trigger recovery emails when the API operator has disabled the flow. `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED` is a mirror for the UI; the two must agree at runtime. `setup:env` writes the same value to both files.
 
 ```bash
-# apps/api/.env
+# apps/web/.env — mirror to apps/api/.env for the forgot-password one only
+NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED=true
+NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=true
+NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED=true
+
+# apps/api/.env — only the server-side flag
 AUTH_FORGOT_PASSWORD_ENABLED=true
-AUTH_EMAIL_VERIFICATION_ENABLED=true
-AUTH_PASSWORDLESS_ENABLED=true
-SUPABASE_AUTH_EXTERNAL_GITHUB_ENABLED=true
-SUPABASE_AUTH_EXTERNAL_GOOGLE_ENABLED=true
 ```
 
 ### Required env vars
 
-| Where      | Var                                                                                | Purpose                                                                  |
-| ---------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `apps/api` | `SUPABASE_URL`                                                                     | Supabase project URL (server)                                            |
-| `apps/api` | `SUPABASE_SERVICE_ROLE_KEY`                                                        | Service-role key for `auth.admin` operations (server-only)               |
-| `apps/api` | `SUPABASE_PUBLISHABLE_KEY`                                                         | Publishable key returned to the SPA so it can pick a feature set         |
-| `apps/web` | `NEXT_PUBLIC_SUPABASE_URL`                                                         | Public Supabase URL for the auth client                                  |
-| `apps/web` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`                                             | The **only** Supabase key in the browser bundle                          |
-| `apps/api` | `SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID` / `SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET` | Read by `supabase start` from the host env, **not** from `apps/api/.env` |
-| `apps/api` | `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` / `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` | Read by `supabase start` from the host env, **not** from `apps/api/.env` |
+| Where      | Var                                    | Purpose                                                                                                        |
+| ---------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `apps/api` | `SUPABASE_URL`                         | Supabase project URL (server)                                                                                  |
+| `apps/api` | `SUPABASE_SERVICE_ROLE_KEY`            | Service-role key for `auth.admin` operations (server-only)                                                     |
+| `apps/api` | `SUPABASE_PUBLISHABLE_KEY`             | Publishable key mirrored to the SPA (the web bundle also reads its own `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) |
+| `apps/web` | `NEXT_PUBLIC_SUPABASE_URL`             | Public Supabase URL for the auth client                                                                        |
+| `apps/web` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | The **only** Supabase key in the browser bundle                                                                |
 
 ### Two-knob email verification
 
 Email verification is gated by **two** independent settings, and the operator is responsible for keeping them in sync:
 
-1. `AUTH_EMAIL_VERIFICATION_ENABLED=true` in `apps/api/.env` — surfaces the flag in `GET /auth/features` and makes `GET /auth/email-verified` reachable.
+1. `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=true` in `apps/web/.env` — controls whether the SPA routes unverified signups to `/auth/check-email`. This is the only auth capability flag for email verification; the API does not gate `GET /auth/email-verified` behind a server-side flag, and the previous `AUTH_EMAIL_VERIFICATION_ENABLED` env var was removed from `apps/api/.env` and `AuthConfigService`'s Zod schema.
 2. `[auth.email].enable_confirmations = true` in `supabase/config.toml` — tells Supabase itself to send the confirmation email.
 
 **Misconfiguration states:**
 
-- `AUTH_EMAIL_VERIFICATION_ENABLED=true` but `enable_confirmations = false` → the SPA shows the "check your email" page, but the user never receives an email.
-- `AUTH_EMAIL_VERIFICATION_ENABLED=false` but `enable_confirmations = true` → Supabase sends the email, but the SPA has no verification flow to send the user through.
+- `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=true` but `enable_confirmations = false` → the SPA shows the "check your email" page, but the user never receives an email.
+- `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=false` but `enable_confirmations = true` → Supabase sends the email, but the SPA has no verification flow to send the user through.
 - Both `false` → no email verification at all (default).
 
 There is no auto-sync. The `setup-local-env.sh` script defaults both to the same value to keep dev sane; production operators must verify both are set before flipping the feature on.
+
+In **local development**, confirmation and passwordless emails do not leave your machine — they appear in [Mailpit](#local-auth-emails-mailpit) at http://127.0.0.1:54324.
 
 ### Bundle security guard
 
@@ -141,6 +142,33 @@ pnpm dev            # web :3000 + api :3001
 ```
 
 Open http://localhost:3000, sign in with the developer account, and you should see 10 sample CVs on the dashboard.
+
+### Local auth emails (Mailpit)
+
+Local Supabase does **not** deliver auth email to real inboxes. Messages are captured by **Mailpit** (enabled via `[inbucket] enabled = true` in `supabase/config.toml`).
+
+**Inbox URL:** http://127.0.0.1:54324
+
+After `supabase start`, the CLI prints the Mailpit URL under **Development Tools**. You can also run `supabase status` to see it again.
+
+When `pnpm dev` targets local Supabase (`NEXT_PUBLIC_SUPABASE_URL` on `localhost` / `127.0.0.1`), the web app shows a dashed **Development** banner on login, register, forgot-password, and check-email screens with a direct Mailpit link. It is omitted in production builds and when the SPA points at cloud Supabase.
+
+Use Mailpit when testing any flow that sends email:
+
+| Flow                    | Where to trigger it                  | What to look for in Mailpit     |
+| ----------------------- | ------------------------------------ | ------------------------------- |
+| Signup confirmation     | `/register`                          | Confirmation link               |
+| Forgot password         | `/login` → **Forgot your password?** | Reset link → `/reset-password`  |
+| Email code (OTP)        | `/login` → **Email code** tab        | 6-digit code                    |
+| Email link (magic link) | `/login` → **Email link** tab        | Sign-in link → `/auth/callback` |
+
+**Quick OTP / magic-link check**
+
+1. Enable `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED=true` in `apps/web/.env` and restart `pnpm dev`.
+2. On `/login`, use the **Email code** or **Email link** tab with `developer@resubuild.local` (or any registered address).
+3. Open Mailpit, open the newest message, and use the code or click the link.
+
+Emails are not sent in production-like Docker/cloud setups unless you configure SMTP in the Supabase dashboard.
 
 ### CV preview and PDF export
 

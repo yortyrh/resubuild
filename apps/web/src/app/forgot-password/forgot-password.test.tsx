@@ -1,6 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createQueryWrapper } from '@/lib/queries/test-utils';
 import ForgotPasswordPage from './page';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -14,7 +15,7 @@ const mockUseForgotPassword = vi.fn(
   }),
 );
 const mockUseAuthFeatures = vi.fn(() => ({
-  data: { forgot_password: true, email_verification: false, passwordless: false, providers: [] },
+  data: { forgot_password: true, email_verification: false, passwordless: false },
   isLoading: false,
 }));
 
@@ -26,8 +27,11 @@ vi.mock('@/lib/queries/auth-queries', () => ({
   useAuthFeatures: () => mockUseAuthFeatures(),
 }));
 
+const renderPage = () => render(<ForgotPasswordPage />, { wrapper: createQueryWrapper() });
+
 describe('ForgotPasswordPage', () => {
   beforeEach(() => {
+    cleanup();
     vi.clearAllMocks();
     mockMutate.mockReset();
     mockUseForgotPassword.mockReturnValue({
@@ -38,7 +42,7 @@ describe('ForgotPasswordPage', () => {
   });
 
   it('renders email input and submit button', () => {
-    render(<ForgotPasswordPage />);
+    renderPage();
     expect(screen.getByLabelText('Email')).toBeTruthy();
     expect(screen.getByRole('button', { name: /send reset link/i })).toBeTruthy();
   });
@@ -48,7 +52,7 @@ describe('ForgotPasswordPage', () => {
       options?.onSuccess?.();
     });
 
-    render(<ForgotPasswordPage />);
+    renderPage();
     await userEvent.type(screen.getByLabelText('Email'), 'test@example.com');
     const buttons = screen.getAllByRole('button', { name: /send reset link/i });
     await userEvent.click(buttons[0]!);
@@ -65,13 +69,11 @@ describe('ForgotPasswordPage', () => {
       error: { message: 'Failed to send' },
     });
 
-    render(<ForgotPasswordPage />);
+    renderPage();
     await userEvent.type(screen.getByLabelText('Email'), 'test@example.com');
     const buttons = screen.getAllByRole('button', { name: /send reset link/i });
     await userEvent.click(buttons[0]!);
 
-    await waitFor(() => {
-      expect(screen.getByText(/failed to send/i)).toBeTruthy();
-    });
+    expect(screen.getByText(/failed to send/i)).toBeTruthy();
   });
 });

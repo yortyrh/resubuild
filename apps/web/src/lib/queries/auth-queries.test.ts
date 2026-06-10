@@ -2,11 +2,9 @@
 import { waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-const mockFetchAuthFeatures = vi.fn();
 const mockFetchAuthMe = vi.fn();
 
 vi.mock('@/lib/api', () => ({
-  fetchAuthFeatures: (...args: unknown[]) => mockFetchAuthFeatures(...args),
   fetchAuthMe: (...args: unknown[]) => mockFetchAuthMe(...args),
 }));
 
@@ -20,42 +18,53 @@ vi.mock('@/lib/supabase/client', () => ({
   }),
 }));
 
+import * as featuresModule from '@/lib/auth/features';
 import { useAuthFeatures, useAuthMe, useAuthSession } from '@/lib/queries/auth-queries';
 import { renderHookWithQueryClient } from '@/lib/queries/test-utils';
 
 describe('auth query hooks', () => {
   describe('useAuthFeatures', () => {
-    it('returns parsed auth features', async () => {
-      mockFetchAuthFeatures.mockResolvedValue({
+    it('returns the auth features resolved from the build-time env (no network round-trip)', async () => {
+      // The hook now reads the flags from
+      // apps/web/src/lib/auth/features.ts at build time (no
+      // `/auth/features` round-trip) — the hook still uses TanStack
+      // Query so consumers keep the existing useQuery patterns and
+      // we can swap the resolver in tests.
+      const getAuthFeaturesSpy = vi.spyOn(featuresModule, 'getAuthFeatures').mockReturnValue({
         forgot_password: true,
         email_verification: true,
         passwordless: false,
-        providers: ['github'],
       });
 
-      const { result } = renderHookWithQueryClient(() => useAuthFeatures());
+      try {
+        const { result } = renderHookWithQueryClient(() => useAuthFeatures());
 
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true);
-      });
+        await waitFor(() => {
+          expect(result.current.isSuccess).toBe(true);
+        });
 
-      expect(result.current.data).toEqual({
-        forgot_password: true,
-        email_verification: true,
-        passwordless: false,
-        providers: ['github'],
-      });
+        expect(result.current.data).toEqual({
+          forgot_password: true,
+          email_verification: true,
+          passwordless: false,
+        });
+        expect(getAuthFeaturesSpy).toHaveBeenCalled();
+      } finally {
+        getAuthFeaturesSpy.mockRestore();
+      }
     });
 
-    it('returns defaults while loading', async () => {
-      mockFetchAuthFeatures.mockImplementation(
-        () => new Promise(() => {}), // never resolves
-      );
+    it('does not fetch when disabled', () => {
+      const getAuthFeaturesSpy = vi.spyOn(featuresModule, 'getAuthFeatures');
+      try {
+        const { result } = renderHookWithQueryClient(() => useAuthFeatures({ enabled: false }));
 
-      const { result } = renderHookWithQueryClient(() => useAuthFeatures({ enabled: false }));
-
-      expect(result.current.data).toBeUndefined();
-      expect(result.current.isLoading).toBe(false);
+        expect(result.current.isLoading).toBe(false);
+        expect(result.current.data).toBeUndefined();
+        expect(getAuthFeaturesSpy).not.toHaveBeenCalled();
+      } finally {
+        getAuthFeaturesSpy.mockRestore();
+      }
     });
   });
 

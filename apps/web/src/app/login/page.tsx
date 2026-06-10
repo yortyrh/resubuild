@@ -1,20 +1,25 @@
+import { Suspense } from 'react';
 import { AuthCrossLink } from '@/components/auth/auth-cross-link';
+import { AuthPageShell } from '@/components/auth/auth-page-shell';
 import { LoginForm } from '@/components/auth/login-form';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+function LoginFormFallback() {
+  return null;
+}
 
 export default function LoginPage() {
   return (
-    <div className="flex flex-1 items-center justify-center p-6">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>Access your Resubuild dashboard</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LoginForm />
-          <AuthCrossLink variant="login" />
-        </CardContent>
-      </Card>
-    </div>
+    <AuthPageShell
+      title="Sign in"
+      description="Access your Resubuild dashboard"
+      footer={<AuthCrossLink variant="login" />}
+    >
+      {/* `LoginForm` reads `?error=` from the URL to surface auth callback
+          failures. `useSearchParams` requires a Suspense boundary in the
+          App Router so the page can statically prerender. */}
+      <Suspense fallback={<LoginFormFallback />}>
+        <LoginForm />
+      </Suspense>
+    </AuthPageShell>
   );
 }

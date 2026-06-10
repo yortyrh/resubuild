@@ -2,7 +2,6 @@
 
 import { Settings, UserRound } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,19 +10,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { clearSession } from '@/lib/auth-session';
-
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+import { useLogout } from '@/lib/queries/auth-mutations';
 
 export function UserMenu() {
-  const router = useRouter();
-
-  const handleSignOut = async () => {
-    void fetch(`${apiUrl}/auth/logout`, { method: 'POST' }).catch(() => {});
-    clearSession();
-    router.push('/login');
-    router.refresh();
-  };
+  const logout = useLogout();
 
   return (
     <DropdownMenu modal={false}>
@@ -46,7 +36,9 @@ export function UserMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => void handleSignOut()}>Sign out</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => logout.mutate()} disabled={logout.isPending}>
+          Sign out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -3,22 +3,26 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import {
-  changePassword,
-  forgotPassword,
-  login,
-  logout,
-  register,
-  requestOtp,
-  resetPassword,
-  verifyEmail,
-  verifyOtp,
-} from '@/lib/api';
-import { type AuthTokenPayload, clearSession, saveSession } from '@/lib/auth-session';
+import { changePassword, logout } from '@/lib/api';
+import { clearSession, persistSupabaseSession, STORAGE_KEYS } from '@/lib/auth-session';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { authKeys } from './auth-queries';
 
 export { authKeys };
+
+const callbackUrl = () => `${window.location.origin}/auth/callback`;
+const resetPasswordUrl = () => `${window.location.origin}/reset-password`;
+
+function authErrorMessage(error: { message: string } | null, fallback: string): string {
+  return error?.message ?? fallback;
+}
+
+async function syncSessionAfterAuth(): Promise<void> {
+  const { data } = await getSupabaseClient().auth.getSession();
+  if (data.session) {
+    persistSupabaseSession(data.session);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Login / Register
@@ -29,26 +33,18 @@ export function useLogin() {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) =>
-      login(email, password),
-    onSuccess: async (data) => {
-      const payload: AuthTokenPayload = {
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-        expires_in: data.expires_in,
-        token_type: 'bearer',
-        user: data.user,
-      };
-      saveSession(payload);
-
-      // The API issues tokens server-side; hydrate the browser Supabase
-      // client so useAuthSession/SessionGate see the session and the client
-      // can auto-refresh tokens.
-      await getSupabaseClient().auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
+    mutationFn: async ({ email, password }: { email: string; password: string }) => {
+      const { data, error } = await getSupabaseClient().auth.signInWithPassword({
+        email,
+        password,
       });
-
+      if (error || !data.session) {
+        throw new Error(authErrorMessage(error, 'Invalid credentials'));
+      }
+      return data.session;
+    },
+    onSuccess: async (session) => {
+      persistSupabaseSession(session);
       void queryClient.invalidateQueries({ queryKey: authKeys.session() });
       router.push('/dashboard');
       router.refresh();
@@ -59,34 +55,41 @@ export function useLogin() {
   });
 }
 
+export type RegisterResult = { kind: 'session' } | { kind: 'verification'; message: string };
+
 export function useRegister() {
   const queryClient = useQueryClient();
   const router = useRouter();
 
   return useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) =>
-      register(email, password),
-    onSuccess: async (data) => {
-      if ('access_token' in data && data.access_token) {
-        const payload: AuthTokenPayload = {
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
-          expires_in: data.expires_in,
-          token_type: 'bearer',
-          user: (data as { user?: { id: string; email?: string } }).user ?? { id: '' },
-        };
-        saveSession(payload);
-
-        // Hydrate the browser Supabase client so SessionGate sees the session.
-        await getSupabaseClient().auth.setSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
-        });
-
+    mutationFn: async ({
+      email,
+      password,
+    }: {
+      email: string;
+      password: string;
+    }): Promise<RegisterResult> => {
+      const { data, error } = await getSupabaseClient().auth.signUp({ email, password });
+      if (error) {
+        throw new Error(authErrorMessage(error, 'Registration failed'));
+      }
+      if (data.session) {
+        return { kind: 'session' };
+      }
+      return {
+        kind: 'verification',
+        message: 'Check your email to confirm your account, then sign in.',
+      };
+    },
+    onSuccess: async (result) => {
+      if (result.kind === 'session') {
+        await syncSessionAfterAuth();
         void queryClient.invalidateQueries({ queryKey: authKeys.session() });
         router.push('/dashboard');
         router.refresh();
+        return;
       }
+      router.push('/auth/check-email');
     },
     onError: () => {
       clearSession();
@@ -103,15 +106,17 @@ export function useLogout() {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: () => {
-      const token = sessionStorage.getItem('resubuild.access_token');
+    mutationFn: async () => {
+      const token = sessionStorage.getItem(STORAGE_KEYS.access_token);
       if (token) {
-        return logout(token);
+        await logout(token).catch(() => {});
       }
-      return Promise.resolve();
+      const { error } = await getSupabaseClient().auth.signOut();
+      if (error) {
+        throw new Error(error.message);
+      }
     },
     onSettled: () => {
-      getSupabaseClient().auth.signOut();
       clearSession();
       void queryClient.invalidateQueries({ queryKey: authKeys.session() });
       router.push('/login');
@@ -136,10 +141,6 @@ export function useChangePassword() {
       newPassword: string;
     }) => changePassword(currentPassword, newPassword),
     onSuccess: async (_data, variables) => {
-      // The server uses supabase.auth.admin.updateUserById, which invalidates
-      // the current session's JWT and refresh token. Re-establish a fresh
-      // session by signing in with the new password so subsequent API calls
-      // don't fail with 401 "Invalid or expired token".
       const supabase = getSupabaseClient();
       const { data: sessionData } = await supabase.auth.getSession();
       const email = sessionData.session?.user?.email;
@@ -150,19 +151,13 @@ export function useChangePassword() {
           password: variables.newPassword,
         });
         if (signInError) {
-          // If re-authentication fails, surface the error and let the user
-          // sign in manually. Do not pretend the password change succeeded
-          // beyond what the server already confirmed.
           toast.error('Password updated, but you need to sign in again');
           clearSession();
+        } else {
+          await syncSessionAfterAuth();
         }
-      } else {
-        // No email in the current session (e.g. magic link user) — nothing
-        // to sign in with. The server still updated the password.
       }
 
-      // Force the auth queries to refetch so the new session is picked up
-      // (e.g. the me query will return has_password: true after sign-in).
       void queryClient.invalidateQueries({ queryKey: authKeys.session() });
       void queryClient.invalidateQueries({ queryKey: authKeys.me() });
 
@@ -173,25 +168,35 @@ export function useChangePassword() {
 
 export function useForgotPassword() {
   return useMutation({
-    mutationFn: (email: string) => forgotPassword(email),
+    mutationFn: async (email: string) => {
+      const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email, {
+        redirectTo: resetPasswordUrl(),
+      });
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
   });
 }
 
-// ---------------------------------------------------------------------------
-// Password reset (Supabase recovery flow)
-// ---------------------------------------------------------------------------
-
 export function useResetPassword() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
   return useMutation({
-    mutationFn: ({
-      accessToken,
-      refreshToken,
-      password,
-    }: {
-      accessToken: string;
-      refreshToken: string;
-      password: string;
-    }) => resetPassword(accessToken, refreshToken, password),
+    mutationFn: async (password: string) => {
+      const { error } = await getSupabaseClient().auth.updateUser({ password });
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
+    onSuccess: async () => {
+      await getSupabaseClient().auth.signOut();
+      clearSession();
+      void queryClient.invalidateQueries({ queryKey: authKeys.session() });
+      toast.success('Password reset successful. Please sign in.');
+      router.push('/login');
+    },
   });
 }
 
@@ -201,7 +206,12 @@ export function useResetPassword() {
 
 export function useRequestOtp() {
   return useMutation({
-    mutationFn: (email: string) => requestOtp(email),
+    mutationFn: async (email: string) => {
+      const { error } = await getSupabaseClient().auth.signInWithOtp({ email });
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
   });
 }
 
@@ -210,21 +220,19 @@ export function useVerifyOtp() {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: ({ email, token }: { email: string; token: string }) => verifyOtp(email, token),
-    onSuccess: async () => {
-      // Sync Supabase session into our storage mirror
-      const supabase = getSupabaseClient();
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        saveSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token ?? '',
-          expires_in: data.session.expires_in,
-          expires_at: data.session.expires_at,
-          token_type: data.session.token_type,
-          user: data.session.user,
-        });
+    mutationFn: async ({ email, token }: { email: string; token: string }) => {
+      const { data, error } = await getSupabaseClient().auth.verifyOtp({
+        email,
+        token,
+        type: 'email',
+      });
+      if (error || !data.session) {
+        throw new Error(authErrorMessage(error, 'Invalid or expired code'));
       }
+      return data.session;
+    },
+    onSuccess: async (session) => {
+      persistSupabaseSession(session);
       void queryClient.invalidateQueries({ queryKey: authKeys.session() });
       router.push('/dashboard');
       router.refresh();
@@ -234,11 +242,15 @@ export function useVerifyOtp() {
 
 export function useSendMagicLink() {
   return useMutation({
-    mutationFn: (email: string) =>
-      getSupabaseClient().auth.signInWithOtp({
+    mutationFn: async (email: string) => {
+      const { error } = await getSupabaseClient().auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-      }),
+        options: { emailRedirectTo: callbackUrl() },
+      });
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
   });
 }
 
@@ -248,34 +260,15 @@ export function useSendMagicLink() {
 
 export function useVerifyEmailToken() {
   return useMutation({
-    mutationFn: (token: string) => verifyEmail(token),
-  });
-}
-
-// ---------------------------------------------------------------------------
-// OAuth helpers (wrapping Supabase client, no API call)
-// ---------------------------------------------------------------------------
-
-export function useGithubSignIn() {
-  return useMutation({
-    mutationFn: () =>
-      getSupabaseClient().auth.signInWithOAuth({
-        provider: 'github',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      }),
-  });
-}
-
-export function useGoogleSignIn() {
-  return useMutation({
-    mutationFn: () =>
-      getSupabaseClient().auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      }),
+    mutationFn: async (token: string) => {
+      const { data, error } = await getSupabaseClient().auth.verifyOtp({
+        token_hash: token,
+        type: 'email',
+      });
+      if (error) {
+        return { verified: false as const };
+      }
+      return { verified: Boolean(data.session) };
+    },
   });
 }

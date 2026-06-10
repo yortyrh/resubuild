@@ -19,7 +19,8 @@ TBD - created by archiving change stabilize-authentication. Update Purpose after
 
 - **WHEN** `AUTH_FORGOT_PASSWORD_ENABLED` is unset or `false`
 - **THEN** `POST /auth/forgot-password` SHALL respond `404 Not Found`
-- **AND** `GET /auth/features` SHALL return `forgot_password: false`
+- **AND** `getAuthFeatures().forgot_password` SHALL be `false` (resolved
+  client-side from `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED`)
 
 #### Scenario: Enumeration-resistant response
 
@@ -44,10 +45,13 @@ TBD - created by archiving change stabilize-authentication. Update Purpose after
 
 The SPA SHALL expose:
 
-- `/forgot-password` (client page): collects an email, POSTs to `/auth/forgot-password`, shows the generic confirmation message. Hidden when `forgot_password` is false on `GET /auth/features`.
+- `/forgot-password` (client page): collects an email, POSTs to `/auth/forgot-password`, shows the generic confirmation message. Hidden when `getAuthFeatures().forgot_password` is `false` (resolved client-side from `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED`).
 - `/reset-password` (client page): picks up the recovery session from the Supabase client (the user lands here by clicking the email link), prompts for a new password, and calls `supabase.auth.updateUser({ password })` directly. The Supabase client supplies the recovery session; the SPA never asks the user to paste a token.
 
-The `/login` page SHALL render a "Forgot your password?" link when `forgot_password: true` is returned by `GET /auth/features`, linking to `/forgot-password`.
+The `/login` page SHALL render a "Forgot your password?" link when
+`getAuthFeatures().forgot_password` is `true` (i.e.
+`NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED=true`), linking to
+`/forgot-password`.
 
 #### Scenario: User requests a recovery email
 
@@ -68,6 +72,8 @@ The `/login` page SHALL render a "Forgot your password?" link when `forgot_passw
 
 #### Scenario: Forgot password link is hidden when flag is off
 
-- **WHEN** `GET /auth/features` returns `forgot_password: false`
+- **WHEN** `getAuthFeatures().forgot_password` is `false` (i.e.
+  `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED` is not the literal string
+  `true`)
 - **THEN** the `/login` page SHALL NOT render the "Forgot your password?" link
 - **AND** direct navigation to `/forgot-password` SHALL render a "Not available" page (server-rendered 404-style message)

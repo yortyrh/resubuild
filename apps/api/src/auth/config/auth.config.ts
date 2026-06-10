@@ -8,12 +8,12 @@ const boolFromString = z
   .catch(false);
 
 const schema = z.object({
-  SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
+  SUPABASE_PUBLISHABLE_KEY: z.string().min(1).optional(),
+  SUPABASE_ANON_KEY: z.string().min(1).optional(),
+  // Gates server-side forgot-password flows (see ForgotPasswordEnabledGuard).
+  // The SPA also reads the corresponding NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED
+  // so it can decide whether to render the "Forgot password?" link.
   AUTH_FORGOT_PASSWORD_ENABLED: boolFromString,
-  AUTH_EMAIL_VERIFICATION_ENABLED: boolFromString,
-  AUTH_PASSWORDLESS_ENABLED: boolFromString,
-  SUPABASE_AUTH_EXTERNAL_GITHUB_ENABLED: boolFromString,
-  SUPABASE_AUTH_EXTERNAL_GOOGLE_ENABLED: boolFromString,
 });
 
 export type AuthConfig = z.infer<typeof schema>;
@@ -34,23 +34,21 @@ export class AuthConfigService {
   private loadConfig(): AuthConfig {
     const result = schema.safeParse({
       SUPABASE_PUBLISHABLE_KEY: this.configService.get<string>('SUPABASE_PUBLISHABLE_KEY'),
+      SUPABASE_ANON_KEY: this.configService.get<string>('SUPABASE_ANON_KEY'),
       AUTH_FORGOT_PASSWORD_ENABLED: this.configService.get<string>('AUTH_FORGOT_PASSWORD_ENABLED'),
-      AUTH_EMAIL_VERIFICATION_ENABLED: this.configService.get<string>(
-        'AUTH_EMAIL_VERIFICATION_ENABLED',
-      ),
-      AUTH_PASSWORDLESS_ENABLED: this.configService.get<string>('AUTH_PASSWORDLESS_ENABLED'),
-      SUPABASE_AUTH_EXTERNAL_GITHUB_ENABLED: this.configService.get<string>(
-        'SUPABASE_AUTH_EXTERNAL_GITHUB_ENABLED',
-      ),
-      SUPABASE_AUTH_EXTERNAL_GOOGLE_ENABLED: this.configService.get<string>(
-        'SUPABASE_AUTH_EXTERNAL_GOOGLE_ENABLED',
-      ),
     });
 
     if (!result.success) {
       throw new Error(`Auth config validation failed: ${result.error.message}`);
     }
 
-    return result.data;
+    const publishable = result.data.SUPABASE_PUBLISHABLE_KEY ?? result.data.SUPABASE_ANON_KEY;
+    if (!publishable) {
+      throw new Error(
+        'Auth config validation failed: SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY) is required',
+      );
+    }
+
+    return { ...result.data, SUPABASE_PUBLISHABLE_KEY: publishable };
   }
 }

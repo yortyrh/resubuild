@@ -1,8 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockGetSession = vi.fn();
+const mockRefreshSession = vi.fn();
+const mockSetSession = vi.fn();
+
+vi.mock('@/lib/supabase/client', () => ({
+  getSupabaseClient: () => ({
+    auth: {
+      getSession: mockGetSession,
+      refreshSession: mockRefreshSession,
+      setSession: mockSetSession,
+    },
+  }),
+}));
+
 import {
   clearSession,
   getValidAccessToken,
   hasSession,
+  persistSupabaseSession,
   STORAGE_KEYS,
   saveSession,
 } from './auth-session';
@@ -25,7 +41,7 @@ function installBrowserSessionStorage() {
 describe('auth-session', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.useRealTimers();
+    vi.clearAllMocks();
   });
 
   describe('saveSession / clearSession / hasSession', () => {
@@ -80,6 +96,25 @@ describe('auth-session', () => {
     });
   });
 
+  describe('persistSupabaseSession', () => {
+    beforeEach(() => {
+      installBrowserSessionStorage();
+    });
+
+    it('mirrors a supabase session into sessionStorage', () => {
+      persistSupabaseSession({
+        access_token: 'acc',
+        refresh_token: 'ref',
+        expires_in: 3600,
+        expires_at: 1_800_000_000,
+        token_type: 'bearer',
+        user: { id: 'u1', email: 'a@b.com' } as never,
+      });
+      expect(sessionStorage.getItem(STORAGE_KEYS.access_token)).toBe('acc');
+      expect(sessionStorage.getItem(STORAGE_KEYS.refresh_token)).toBe('ref');
+    });
+  });
+
   describe('SSR / no window', () => {
     beforeEach(() => {
       vi.stubGlobal('window', undefined);
@@ -108,92 +143,136 @@ describe('auth-session', () => {
       installBrowserSessionStorage();
     });
 
-    it('returns cached access token when expiry is comfortably in the future', async () => {
-      const expiresAtUnix = Math.floor(Date.now() / 1000) + 3600;
-      sessionStorage.setItem(STORAGE_KEYS.access_token, 'acc');
-      sessionStorage.setItem(STORAGE_KEYS.refresh_token, 'ref');
-      sessionStorage.setItem(STORAGE_KEYS.expires_at, String(expiresAtUnix));
-
-      await expect(getValidAccessToken('https://api.example')).resolves.toBe('acc');
+    afterEach(() => {
+      vi.useRealTimers();
     });
 
-    it('refreshes when missing expires_at / zero expiry window (expires soon)', async () => {
-      sessionStorage.setItem(STORAGE_KEYS.access_token, 'old');
-      sessionStorage.setItem(STORAGE_KEYS.refresh_token, 'ref');
+    it('returns cached access token when expiry is comfortably in the future', async () => {
+      const expiresAtUnix = Math.floor(Date.now() / 1000) + 3600;
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: {
+            access_token: 'acc',
+            refresh_token: 'ref',
+            expires_in: 3600,
+            expires_at: expiresAtUnix,
+            token_type: 'bearer',
+            user: { id: 'u1' },
+          },
+        },
+        error: null,
+      });
 
-      const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(
-          JSON.stringify({
+      await expect(getValidAccessToken()).resolves.toBe('acc');
+      expect(mockRefreshSession).not.toHaveBeenCalled();
+    });
+
+    it('refreshes when the session expires soon', async () => {
+      const soon = Math.floor(Date.now() / 1000) + 30;
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: {
+            access_token: 'old',
+            refresh_token: 'ref',
+            expires_in: 30,
+            expires_at: soon,
+            token_type: 'bearer',
+            user: { id: 'u1' },
+          },
+        },
+        error: null,
+      });
+      mockRefreshSession.mockResolvedValue({
+        data: {
+          session: {
             access_token: 'new',
             refresh_token: 'ref2',
             expires_in: 3600,
             expires_at: Math.floor(Date.now() / 1000) + 3600,
             token_type: 'bearer',
-            user: { id: 'u' },
-          }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        ),
-      );
+            user: { id: 'u1' },
+          },
+        },
+        error: null,
+      });
 
-      await expect(getValidAccessToken('https://api.example')).resolves.toBe('new');
-      expect(spy).toHaveBeenCalledTimes(1);
-      expect(JSON.parse(spy.mock.calls[0]![1]!.body as string)).toEqual({ refresh_token: 'ref' });
+      await expect(getValidAccessToken()).resolves.toBe('new');
+      expect(mockRefreshSession).toHaveBeenCalledTimes(1);
       expect(sessionStorage.getItem(STORAGE_KEYS.access_token)).toBe('new');
     });
 
     it('throws when not authenticated', async () => {
-      await expect(getValidAccessToken('https://api.example')).rejects.toThrow(
-        /Not authenticated/i,
-      );
+      mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
+      mockSetSession.mockResolvedValue({ data: { session: null }, error: null });
+
+      await expect(getValidAccessToken()).rejects.toThrow(/Not authenticated/i);
+    });
+
+    it('rehydrates the Supabase client from sessionStorage when cookies are missing', async () => {
+      sessionStorage.setItem(STORAGE_KEYS.access_token, 'stored-acc');
+      sessionStorage.setItem(STORAGE_KEYS.refresh_token, 'stored-ref');
+      mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
+      mockSetSession.mockResolvedValue({
+        data: {
+          session: {
+            access_token: 'stored-acc',
+            refresh_token: 'stored-ref',
+            expires_in: 3600,
+            expires_at: Math.floor(Date.now() / 1000) + 3600,
+            token_type: 'bearer',
+            user: { id: 'u1' },
+          },
+        },
+        error: null,
+      });
+
+      await expect(getValidAccessToken()).resolves.toBe('stored-acc');
+      expect(mockSetSession).toHaveBeenCalledWith({
+        access_token: 'stored-acc',
+        refresh_token: 'stored-ref',
+      });
     });
 
     it('clears session and throws when refresh is needed but refresh_token missing', async () => {
-      sessionStorage.setItem(STORAGE_KEYS.access_token, 'old');
-      sessionStorage.removeItem(STORAGE_KEYS.refresh_token);
-
-      await expect(getValidAccessToken('https://api.example')).rejects.toThrow(/Session expired/i);
-      expect(sessionStorage.getItem(STORAGE_KEYS.access_token)).toBeNull();
-    });
-
-    it('clears session when refresh responds non-OK', async () => {
-      sessionStorage.setItem(STORAGE_KEYS.access_token, 'old');
-      sessionStorage.setItem(STORAGE_KEYS.refresh_token, 'ref');
-
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 401 }));
-
-      await expect(getValidAccessToken('https://api.example')).rejects.toThrow(/Session expired/i);
-      expect(sessionStorage.getItem(STORAGE_KEYS.access_token)).toBeNull();
-    });
-  });
-
-  describe('loadStored expiry parsing', () => {
-    beforeEach(() => {
-      installBrowserSessionStorage();
-    });
-
-    it('treats invalid expires_at as missing (triggers refresh path)', async () => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date('2026-05-01T12:00:00.000Z'));
-
-      sessionStorage.setItem(STORAGE_KEYS.access_token, 'old');
-      sessionStorage.setItem(STORAGE_KEYS.refresh_token, 'ref');
-      sessionStorage.setItem(STORAGE_KEYS.expires_at, 'not-a-number');
-
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            access_token: 'refreshed',
-            refresh_token: 'ref',
-            expires_in: 3600,
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: {
+            access_token: 'old',
+            refresh_token: '',
+            expires_in: 30,
+            expires_at: Math.floor(Date.now() / 1000) + 30,
             token_type: 'bearer',
-            user: { id: 'u' },
-          }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        ),
-      );
+            user: { id: 'u1' },
+          },
+        },
+        error: null,
+      });
 
-      await expect(getValidAccessToken('https://api')).resolves.toBe('refreshed');
-      vi.useRealTimers();
+      await expect(getValidAccessToken()).rejects.toThrow(/Session expired/i);
+      expect(sessionStorage.getItem(STORAGE_KEYS.access_token)).toBeNull();
+    });
+
+    it('clears session when refresh fails', async () => {
+      mockGetSession.mockResolvedValue({
+        data: {
+          session: {
+            access_token: 'old',
+            refresh_token: 'ref',
+            expires_in: 30,
+            expires_at: Math.floor(Date.now() / 1000) + 30,
+            token_type: 'bearer',
+            user: { id: 'u1' },
+          },
+        },
+        error: null,
+      });
+      mockRefreshSession.mockResolvedValue({
+        data: { session: null },
+        error: { message: 'expired' },
+      });
+
+      await expect(getValidAccessToken()).rejects.toThrow(/Session expired/i);
+      expect(sessionStorage.getItem(STORAGE_KEYS.access_token)).toBeNull();
     });
   });
 });

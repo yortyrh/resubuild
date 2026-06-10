@@ -23,8 +23,3 @@ export class RefreshDto {
   @MinLength(10)
   refresh_token!: string;
 }
-
-export class GithubCallbackDto {
-  @IsString()
-  code!: string;
-}

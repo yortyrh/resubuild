@@ -8,7 +8,7 @@ Capture how the Resumind frontend authenticates users via the Nest API, calls CV
 
 ### Requirement: The web app MUST use backend-owned HTTP endpoints for authentication and authenticated Nest API access
 
-Interactive client bundles (`'use client'` modules and hooks) MAY import `@supabase/supabase-js` **exclusively for authentication flows** (sign-in, sign-out, OAuth, OTP, magic link, email verification, session inspection). The Supabase client SHALL be initialised with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` only. Direct database access, server-side secret access, and any symbol from `cv-rest-api` or `database-cv-rls` specs MUST remain server-side.
+Interactive client bundles (`'use client'` modules and hooks) MAY import `@supabase/supabase-js` **exclusively for authentication flows** (sign-in, sign-out, OTP, magic link, email verification, session inspection). The Supabase client SHALL be initialised with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` only. Direct database access, server-side secret access, and any symbol from `cv-rest-api` or `database-cv-rls` specs MUST remain server-side.
 
 Session establishment, credential verification, logout, renewal, and user resolution for SPA purposes SHALL occur through either the Supabase client (preferred for the SPA) or documented HTTP endpoints on the Nest API origin identified by `NEXT_PUBLIC_API_URL`. The API origin **MAY differ** from the web origin; Nest **SHALL** enable **CORS** allowing the web origin and required methods and headers (including `Authorization` and `Content-Type`) for these calls. Next.js Route Handlers are **not required** for credential transport and SHOULD NOT duplicate auth business logic.
 

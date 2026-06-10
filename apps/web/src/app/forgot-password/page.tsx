@@ -1,7 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Suspense, useState } from 'react';
+import { AuthPageShell } from '@/components/auth/auth-page-shell';
+import { DevMailpitHint } from '@/components/auth/dev-mailpit-hint';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,30 +26,40 @@ function ForgotPasswordForm() {
 
   if (sent) {
     return (
-      <div className="space-y-4 text-center">
-        <h1 className="text-2xl font-semibold">Check your email</h1>
-        <p className="text-muted-foreground text-sm">
-          If an account exists for <strong>{email}</strong>, we sent a password reset link.
-        </p>
-        <Button variant="outline" onClick={() => router.push('/login')}>
+      <AuthPageShell
+        title="Check your email"
+        description={
+          <>
+            If an account exists for <strong>{email}</strong>, we sent a password reset link.
+          </>
+        }
+      >
+        <DevMailpitHint emailKind="password reset link" />
+        <Button type="button" className="w-full" onClick={() => router.push('/login')}>
           Return to sign in
         </Button>
-      </div>
+      </AuthPageShell>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Reset your password</h1>
+    <AuthPageShell
+      title="Reset your password"
+      description="Enter your email address and we'll send you a reset link."
+      footer={
         <p className="text-muted-foreground text-sm">
-          Enter your email address and we&apos;ll send you a reset link.
+          Remember your password?{' '}
+          <Link href="/login" className="text-primary underline-offset-4 hover:underline">
+            Sign in
+          </Link>
         </p>
-      </div>
-
+      }
+    >
       {forgotPassword.error?.message ? (
         <p className="text-destructive text-sm">{forgotPassword.error.message}</p>
       ) : null}
+
+      <DevMailpitHint emailKind="password reset link" />
 
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <div className="space-y-2">
@@ -65,20 +78,13 @@ function ForgotPasswordForm() {
           {forgotPassword.isPending ? 'Sending…' : 'Send reset link'}
         </Button>
       </form>
-
-      <p className="text-muted-foreground text-center text-sm">
-        Remember your password?{' '}
-        <a href="/login" className="text-primary hover:underline">
-          Sign in
-        </a>
-      </p>
-    </div>
+    </AuthPageShell>
   );
 }
 
 export default function ForgotPasswordPage() {
   return (
-    <Suspense fallback={<div className="text-muted-foreground text-sm">Loading…</div>}>
+    <Suspense fallback={<div className="text-muted-foreground p-6 text-sm">Loading…</div>}>
       <ForgotPasswordForm />
     </Suspense>
   );

@@ -14,18 +14,16 @@ port = 54323
 [auth]
 enabled = true
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000"]
+additional_redirect_urls = [
+  "http://localhost:3000",
+  "http://localhost:3000/reset-password",
+  "http://localhost:3000/auth/callback",
+  "http://localhost:3000/auth/check-email",
+]
 
 [auth.email]
 enable_signup = true
-enable_confirmations = false
-
-[auth.external.github]
-enabled = true
-client_id = "Ov23lia4p7SgTimOeAex"
-secret = "9858df0d80efb20133f699a347ec937f78a62464"
-
-
+enable_confirmations = true
 
 [realtime]
 enabled = false
@@ -48,7 +46,7 @@ file_size_limit = "10MiB"
 allowed_mime_types = ["application/pdf", "text/html", "image/png", "application/json"]
 
 [inbucket]
-enabled = false
+enabled = true
 
 [edge_runtime]
 enabled = false

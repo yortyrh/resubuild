@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { GithubCallbackDto, LoginDto, RefreshDto, RegisterDto } from './dto/auth.dto';
+import { LoginDto, RefreshDto, RegisterDto } from './dto/auth.dto';
 import type { AuthMeResponse, AuthTokenResponse } from './session.types';
 import { type AuthenticatedRequest, SupabaseAuthGuard } from './supabase-auth.guard';
 
@@ -30,18 +30,6 @@ export class AuthController {
   @HttpCode(204)
   logout(): void {
     // Client discards tokens; optional server-side revocation can be added later.
-  }
-
-  @Get('github')
-  @HttpCode(200)
-  getGithubAuthUrl(): Promise<{ url: string }> {
-    return this.authService.getGithubAuthUrl();
-  }
-
-  @Post('github/callback')
-  @HttpCode(200)
-  githubCallback(@Body() dto: GithubCallbackDto): Promise<AuthTokenResponse> {
-    return this.authService.handleGithubCallback(dto);
   }
 
   @Get('me')

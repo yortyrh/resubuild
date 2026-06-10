@@ -54,7 +54,8 @@ function loadSourceFiles(): ScannedFile[] {
       path: relative(webRoot, path).split(sep).join('/'),
       content: readFileSync(path, 'utf8'),
     }))
-    .filter((file) => file.path !== SELF_PATH);
+    .filter((file) => file.path !== SELF_PATH)
+    .toSorted((a, b) => a.path.localeCompare(b.path));
 }
 
 const SOURCE_FILES = loadSourceFiles();
@@ -142,7 +143,8 @@ describe('web bundle security invariants (source-level)', () => {
     // Every other location must go through the API layer (see
     // biome.jsonc `noRestrictedImports` rule in `apps/web/src/lib/cv-*`
     // and `apps/web/src/components/cv/*`).
-    const allowed = /^src\/(lib\/supabase\/|lib\/queries\/auth-)/;
+    const allowed =
+      /^src\/(lib\/supabase\/|lib\/queries\/auth-|lib\/auth-session\.ts|app\/auth\/|components\/auth\/)/;
     const offenders = SOURCE_FILES.filter((file) =>
       /from\s+['"]@supabase\//.test(file.content),
     ).filter((file) => !allowed.test(file.path));

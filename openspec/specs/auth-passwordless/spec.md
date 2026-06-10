@@ -26,7 +26,8 @@ The endpoint SHALL respond `404 Not Found` when `AUTH_PASSWORDLESS_ENABLED` is u
 
 - **WHEN** `AUTH_PASSWORDLESS_ENABLED` is unset or `false`
 - **THEN** `POST /auth/otp` SHALL respond `404 Not Found`
-- **AND** `GET /auth/features` SHALL return `passwordless: false`
+- **AND** `getAuthFeatures().passwordless` SHALL be `false` (resolved
+  client-side from `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`)
 
 ### Requirement: The API MUST expose an OTP verify endpoint
 
@@ -46,7 +47,9 @@ The endpoint SHALL respond `404 Not Found` when `AUTH_PASSWORDLESS_ENABLED` is u
 
 The `/login` page SHALL render a tabbed or segmented control with three options: "Password" (default), "Email me a code", "Email me a link". The "Email me a code" tab SHALL collect an email, call `POST /auth/otp`, then prompt for the 6-digit code and call `POST /auth/otp/verify`. The "Email me a link" tab SHALL call `supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: '<APP_URL>/auth/callback' } })` and instruct the user to click the link in their email. The SPA picks up the resulting session from the URL hash via the Supabase client.
 
-The tab group SHALL render only when `passwordless: true` is returned by `GET /auth/features`.
+The tab group SHALL render only when `getAuthFeatures().passwordless` is
+`true` (resolved client-side from
+`NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`).
 
 #### Scenario: User signs in with an OTP code
 
@@ -61,5 +64,7 @@ The tab group SHALL render only when `passwordless: true` is returned by `GET /a
 
 #### Scenario: Passwordless controls hidden when flag is off
 
-- **WHEN** `GET /auth/features` returns `passwordless: false`
+- **WHEN** `getAuthFeatures().passwordless` is `false` (i.e.
+  `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED` is not the literal string
+  `true`)
 - **THEN** the `/login` page SHALL render only the password form (no tabs)

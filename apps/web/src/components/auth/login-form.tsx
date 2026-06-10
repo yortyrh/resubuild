@@ -1,133 +1,226 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import {
+  SignedInAuthFallback,
+  useAuthenticatedEntryRedirect,
+} from '@/components/auth/authenticated-entry';
+import { DevMailpitHint } from '@/components/auth/dev-mailpit-hint';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { type AuthTokenPayload, clearSession, hasSession, saveSession } from '@/lib/auth-session';
-
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { oauthCallbackErrorMessage } from '@/lib/auth/oauth-callback-error';
+import {
+  useLogin,
+  useRequestOtp,
+  useSendMagicLink,
+  useVerifyOtp,
+} from '@/lib/queries/auth-mutations';
+import { useAuthFeatures } from '@/lib/queries/auth-queries';
 
 export function LoginForm() {
-  const router = useRouter();
+  const { showSignedInUi } = useAuthenticatedEntryRedirect();
+  const { data: features } = useAuthFeatures();
+  const searchParams = useSearchParams();
+
+  const login = useLogin();
+  const requestOtp = useRequestOtp();
+  const verifyOtp = useVerifyOtp();
+  const sendMagicLink = useSendMagicLink();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [githubLoading, setGithubLoading] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
-  useEffect(() => {
-    if (hasSession()) {
-      router.replace('/dashboard');
-    }
-  }, [router]);
+  if (showSignedInUi) {
+    return <SignedInAuthFallback />;
+  }
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const passwordless = features?.passwordless ?? false;
+  const forgotPassword = features?.forgot_password ?? false;
+
+  const callbackError = (() => {
+    const errorCode = searchParams.get('error_code');
+    const errorDescription = searchParams.get('error_description');
+    const error = searchParams.get('error');
+    if (!errorCode && !errorDescription && !error) return null;
+    return oauthCallbackErrorMessage(errorCode, errorDescription);
+  })();
+
+  const formError =
+    callbackError ??
+    login.error?.message ??
+    requestOtp.error?.message ??
+    verifyOtp.error?.message ??
+    sendMagicLink.error?.message ??
+    null;
+
+  const handlePasswordSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${apiUrl}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const body = (await response.json().catch(() => ({}))) as {
-        message?: string | string[];
-        access_token?: string;
-      };
-
-      setLoading(false);
-
-      if (!response.ok) {
-        const msg = Array.isArray(body.message)
-          ? body.message.join(', ')
-          : typeof body.message === 'string'
-            ? body.message
-            : 'Invalid credentials';
-        setError(msg);
-        clearSession();
-        return;
-      }
-
-      saveSession(body as AuthTokenPayload);
-      router.push('/dashboard');
-      router.refresh();
-    } catch {
-      setLoading(false);
-      setError('Sign in failed. Try again.');
-      clearSession();
-    }
+    login.mutate({ email, password });
   };
 
-  const handleGithubSignIn = async () => {
-    setGithubLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${apiUrl}/auth/github`);
-      if (!response.ok) {
-        throw new Error('Failed to initiate GitHub sign-in');
-      }
-      const { url } = (await response.json()) as { url: string };
-      window.location.href = url;
-    } catch {
-      setGithubLoading(false);
-      setError('GitHub sign-in failed. Try again.');
-    }
+  const handleRequestOtp = (event: React.FormEvent) => {
+    event.preventDefault();
+    requestOtp.mutate(email, {
+      onSuccess: () => setOtpSent(true),
+    });
   };
+
+  const handleVerifyOtp = (event: React.FormEvent) => {
+    event.preventDefault();
+    verifyOtp.mutate({ email, token: otpCode });
+  };
+
+  const handleSendMagicLink = (event: React.FormEvent) => {
+    event.preventDefault();
+    sendMagicLink.mutate(email, {
+      onSuccess: () => setMagicLinkSent(true),
+    });
+  };
+
+  const passwordForm = (
+    <form onSubmit={handlePasswordSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password">Password</Label>
+          {forgotPassword ? (
+            <Link href="/forgot-password" className="text-primary text-sm hover:underline">
+              Forgot your password?
+            </Link>
+          ) : null}
+        </div>
+        <Input
+          id="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          minLength={6}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
+      <Button type="submit" className="w-full" disabled={login.isPending}>
+        {login.isPending ? 'Signing in…' : 'Sign in'}
+      </Button>
+    </form>
+  );
+
+  const otpForm = (
+    <div className="space-y-4">
+      <DevMailpitHint emailKind="sign-in code" />
+      {!otpSent ? (
+        <form onSubmit={handleRequestOtp} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="otp-email">Email</Label>
+            <Input
+              id="otp-email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={requestOtp.isPending}>
+            {requestOtp.isPending ? 'Sending…' : 'Send code'}
+          </Button>
+        </form>
+      ) : (
+        <form onSubmit={handleVerifyOtp} className="space-y-4">
+          <p className="text-muted-foreground text-sm">
+            Enter the 6-digit code sent to <strong>{email}</strong>.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="otp-code">Code</Label>
+            <Input
+              id="otp-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+              minLength={6}
+              maxLength={6}
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value)}
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={verifyOtp.isPending}>
+            {verifyOtp.isPending ? 'Verifying…' : 'Verify code'}
+          </Button>
+        </form>
+      )}
+    </div>
+  );
+
+  const magicLinkForm = (
+    <div className="space-y-4">
+      <DevMailpitHint emailKind="sign-in link" />
+      {magicLinkSent ? (
+        <p className="text-muted-foreground text-sm">
+          Check your inbox for a sign-in link sent to <strong>{email}</strong>.
+        </p>
+      ) : (
+        <form onSubmit={handleSendMagicLink} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="link-email">Email</Label>
+            <Input
+              id="link-email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={sendMagicLink.isPending}>
+            {sendMagicLink.isPending ? 'Sending…' : 'Send sign-in link'}
+          </Button>
+        </form>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-4">
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full"
-        onClick={handleGithubSignIn}
-        disabled={githubLoading}
-      >
-        {githubLoading ? 'Redirecting…' : 'Continue with GitHub'}
-      </Button>
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background text-muted-foreground px-2">Or continue with</span>
-        </div>
-      </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        {error ? <p className="text-destructive text-sm">{error}</p> : null}
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Signing in…' : 'Sign in'}
-        </Button>
-      </form>
+      {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
+
+      {passwordless ? (
+        <Tabs defaultValue="password">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="password">Password</TabsTrigger>
+            <TabsTrigger value="otp">Email code</TabsTrigger>
+            <TabsTrigger value="link">Email link</TabsTrigger>
+          </TabsList>
+          <TabsContent value="password" className="mt-4">
+            {passwordForm}
+          </TabsContent>
+          <TabsContent value="otp" className="mt-4">
+            {otpForm}
+          </TabsContent>
+          <TabsContent value="link" className="mt-4">
+            {magicLinkForm}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        passwordForm
+      )}
     </div>
   );
 }

@@ -1,6 +1,14 @@
 /**
  * Mirrors openspec/specs/authentication (guard + JWT validation is separate specs)
  * plus API auth issuance: login/register/refresh and misconfiguration handling.
+ *
+ * Note: the previous `getFeatures()` method was removed. Auth capability
+ * flags (forgot-password, email-verification, passwordless) are now
+ * resolved client-side by
+ * `apps/web/src/lib/auth/features.ts` at build time, which removes
+ * the `/auth/features` round-trip and the layout shift the round-trip
+ * caused. The `AuthConfigService` dependency was removed from
+ * `AuthService` accordingly.
  */
 
 import { UnauthorizedException } from '@nestjs/common';

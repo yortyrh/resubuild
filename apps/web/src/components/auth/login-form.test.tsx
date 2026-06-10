@@ -1,20 +1,24 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createQueryWrapper } from '@/lib/queries/test-utils';
 import { LoginForm } from './login-form';
+
+const renderLoginForm = () => render(<LoginForm />, { wrapper: createQueryWrapper() });
+
+const mockSearchParams = new URLSearchParams();
+const useSearchParamsMock = vi.fn(() => mockSearchParams);
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => useSearchParamsMock(),
 }));
 
 const mockLoginMutate = vi.fn();
 const mockRequestOtpMutate = vi.fn();
 const mockVerifyOtpMutate = vi.fn();
 const mockSendMagicLinkMutate = vi.fn();
-const mockGithubSignInMutate = vi.fn();
-const mockGoogleSignInMutate = vi.fn();
 
 const mockUseAuthFeatures = vi.fn();
 const mockUseAuthSession = vi.fn();
@@ -40,16 +44,6 @@ vi.mock('@/lib/queries/auth-mutations', () => ({
     error: null,
     mutate: mockSendMagicLinkMutate,
   }),
-  useGithubSignIn: () => ({
-    isPending: false,
-    error: null,
-    mutate: mockGithubSignInMutate,
-  }),
-  useGoogleSignIn: () => ({
-    isPending: false,
-    error: null,
-    mutate: mockGoogleSignInMutate,
-  }),
 }));
 
 vi.mock('@/lib/queries/auth-queries', () => ({
@@ -61,30 +55,55 @@ function setFeatures(features: {
   forgot_password: boolean;
   email_verification: boolean;
   passwordless: boolean;
-  providers: string[];
 }) {
   mockUseAuthFeatures.mockReturnValue({ data: features, isLoading: false });
 }
 
 function setSession(exists: boolean) {
-  mockUseAuthSession.mockReturnValue({ data: { exists }, isLoading: false });
+  mockUseAuthSession.mockReturnValue({
+    data: {
+      exists,
+      userId: exists ? 'user-1' : null,
+      email: exists ? 'user@test.dev' : null,
+      emailVerified: exists,
+    },
+    isPending: false,
+    isLoading: false,
+  });
 }
 
 describe('LoginForm', () => {
   beforeEach(() => {
+    cleanup();
     vi.clearAllMocks();
     setSession(false);
+    for (const key of [...mockSearchParams.keys()]) {
+      mockSearchParams.delete(key);
+    }
   });
 
-  it('renders the password-only form when passwordless is off and no providers are enabled', () => {
+  it('shows a dashboard link when the user is already signed in', () => {
     setFeatures({
       forgot_password: false,
       email_verification: false,
       passwordless: false,
-      providers: [],
+    });
+    setSession(true);
+
+    renderLoginForm();
+
+    expect(screen.getByRole('link', { name: /go to dashboard/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Email')).not.toBeInTheDocument();
+  });
+
+  it('renders the password-only form when passwordless is off', () => {
+    setFeatures({
+      forgot_password: false,
+      email_verification: false,
+      passwordless: false,
     });
 
-    render(<LoginForm />);
+    renderLoginForm();
 
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
@@ -98,10 +117,9 @@ describe('LoginForm', () => {
       forgot_password: false,
       email_verification: false,
       passwordless: true,
-      providers: [],
     });
 
-    render(<LoginForm />);
+    renderLoginForm();
 
     expect(screen.getByRole('tab', { name: /password/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /email code/i })).toBeInTheDocument();
@@ -113,10 +131,9 @@ describe('LoginForm', () => {
       forgot_password: true,
       email_verification: false,
       passwordless: true,
-      providers: [],
     });
 
-    render(<LoginForm />);
+    renderLoginForm();
 
     expect(screen.getByText(/forgot your password\?/i)).toBeInTheDocument();
   });
@@ -126,26 +143,11 @@ describe('LoginForm', () => {
       forgot_password: false,
       email_verification: false,
       passwordless: true,
-      providers: [],
     });
 
-    render(<LoginForm />);
+    renderLoginForm();
 
     expect(screen.queryByText(/forgot your password\?/i)).not.toBeInTheDocument();
-  });
-
-  it('renders GitHub and Google buttons when their providers are enabled', () => {
-    setFeatures({
-      forgot_password: false,
-      email_verification: false,
-      passwordless: false,
-      providers: ['github', 'google'],
-    });
-
-    render(<LoginForm />);
-
-    expect(screen.getByRole('button', { name: /continue with github/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
   });
 
   it('submits the password form with email and password', async () => {
@@ -153,10 +155,9 @@ describe('LoginForm', () => {
       forgot_password: false,
       email_verification: false,
       passwordless: false,
-      providers: [],
     });
 
-    render(<LoginForm />);
+    renderLoginForm();
 
     await userEvent.type(screen.getByLabelText('Email'), 'user@example.com');
     await userEvent.type(screen.getByLabelText('Password'), 'supersecret');
@@ -174,10 +175,9 @@ describe('LoginForm', () => {
       forgot_password: false,
       email_verification: false,
       passwordless: true,
-      providers: [],
     });
 
-    render(<LoginForm />);
+    renderLoginForm();
 
     await userEvent.click(screen.getByRole('tab', { name: /email code/i }));
     await userEvent.type(screen.getByLabelText('Email'), 'otp@example.com');
@@ -193,10 +193,9 @@ describe('LoginForm', () => {
       forgot_password: false,
       email_verification: false,
       passwordless: true,
-      providers: [],
     });
 
-    render(<LoginForm />);
+    renderLoginForm();
 
     await userEvent.click(screen.getByRole('tab', { name: /email link/i }));
     await userEvent.type(screen.getByLabelText('Email'), 'link@example.com');
@@ -207,17 +206,51 @@ describe('LoginForm', () => {
     });
   });
 
-  it('renders nothing when the user is already signed in', () => {
-    setSession(true);
-    setFeatures({
-      forgot_password: false,
-      email_verification: false,
-      passwordless: true,
-      providers: ['github', 'google'],
+  describe('auth callback error rendering', () => {
+    function setCallbackError(params: Record<string, string>) {
+      for (const [key, value] of Object.entries(params)) {
+        mockSearchParams.set(key, value);
+      }
+    }
+
+    function setBasicFeatures() {
+      setFeatures({
+        forgot_password: false,
+        email_verification: false,
+        passwordless: false,
+      });
+    }
+
+    it('renders the PKCE-friendly copy when the callback bounced a PKCE error', () => {
+      setBasicFeatures();
+      setCallbackError({
+        error_code: 'pkce_code_verifier_not_found',
+        error_description: 'PKCE+code+verifier+not+found+in+storage',
+      });
+
+      renderLoginForm();
+
+      expect(screen.getByText(/auth handshake expired/i)).toBeInTheDocument();
     });
 
-    const { container } = render(<LoginForm />);
+    it('renders the raw description when no known error pattern matches', () => {
+      setBasicFeatures();
+      setCallbackError({
+        error_code: 'unknown_thing',
+        error_description: 'Some+unspecified+failure',
+      });
 
-    expect(container).toBeEmptyDOMElement();
+      renderLoginForm();
+
+      expect(screen.getByText('Some unspecified failure')).toBeInTheDocument();
+    });
+
+    it('does not show an error banner when no error params are present', () => {
+      setBasicFeatures();
+
+      renderLoginForm();
+
+      expect(screen.queryByText(/auth handshake expired/i)).not.toBeInTheDocument();
+    });
   });
 });

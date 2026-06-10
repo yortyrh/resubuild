@@ -2,69 +2,214 @@
 
 ## Purpose
 
-TBD - created by archiving change stabilize-authentication. Update Purpose after archive.
+Define how authentication capability flags (forgot-password, email-verification,
+passwordless) are exposed to the web SPA, and which flags MUST additionally be
+readable by the API for server-side enforcement.
+
+The flags are build-time configuration (read from `process.env.NEXT_PUBLIC_*`
+in the SPA) and are NOT fetched from a runtime endpoint. The previous
+`GET /auth/features` round-trip was removed because it caused a layout shift
+on the auth pages: the SPA had to wait for a network response before it could
+decide which controls to render, and the resulting flicker on every page mount
+was visible to operators and to end users on slow networks. Resolving the
+flags at build time eliminates that round-trip entirely.
 
 ## Requirements
 
-### Requirement: The API MUST expose a public features endpoint
+### Requirement: Auth feature flags MUST be resolved client-side at build time
 
-`apps/api` SHALL expose `GET /auth/features` (no auth required) returning the set of authentication capabilities enabled in the current deployment. The response SHALL be JSON of the form:
+The web SPA SHALL resolve the three authentication feature flags directly from
+`process.env.NEXT_PUBLIC_*` environment variables, via
+`apps/web/src/lib/auth/features.ts`. The three flags are:
 
-```json
-{
-  "forgot_password": false,
-  "email_verification": false,
-  "passwordless": false,
-  "providers": ["github", "google"]
-}
+- `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED`
+- `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED`
+- `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`
+
+Each value is interpreted as a strict boolean: only the literal string `true`
+enables the flag. Any other value (including the empty string, `1`, `yes`,
+`TRUE` — case matters) is treated as `false`. A missing env var defaults to
+`false`. This is enforced by `getAuthFeatures()` and covered by
+`apps/web/src/lib/auth/features.test.ts`.
+
+The resolved shape is:
+
+```ts
+type AuthFeatures = {
+  forgot_password: boolean;
+  email_verification: boolean;
+  passwordless: boolean;
+};
 ```
 
-The endpoint SHALL be reachable on the same CORS origin as the rest of the API (no `Authorization` header required, no cookie required).
+The SPA SHALL consume this via the `useAuthFeatures` React Query hook (or
+the synchronous `getAuthFeatures()` for build-time / SSR contexts). Because
+the value is a build-time constant, the hook SHALL use `staleTime: Infinity`
+and SHALL NOT refetch at runtime.
 
 #### Scenario: All three opt-in flows disabled
 
-- **WHEN** the operator has not set any of `AUTH_FORGOT_PASSWORD_ENABLED`, `AUTH_EMAIL_VERIFICATION_ENABLED`, `AUTH_PASSWORDLESS_ENABLED`
-- **THEN** `GET /auth/features` SHALL return all three flags as `false` and `providers` SHALL contain the OAuth providers currently enabled in Supabase (`github` and `google` when their `[auth.external.*]` blocks are enabled)
+- **WHEN** none of the three `NEXT_PUBLIC_AUTH_*` flags are set to `true` in
+  `apps/web/.env`
+- **THEN** `getAuthFeatures()` SHALL return
+  `{ forgot_password: false, email_verification: false, passwordless: false }`
+- **AND** the SPA SHALL NOT render the "Forgot your password?" link, the
+  passwordless tab group, or any signup-time email-verification routing
 
 #### Scenario: Forgot password enabled
 
-- **WHEN** `AUTH_FORGOT_PASSWORD_ENABLED=true` in `apps/api/.env`
-- **THEN** `GET /auth/features` SHALL return `forgot_password: true` AND `POST /auth/forgot-password` SHALL be reachable
+- **WHEN** `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED=true` in
+  `apps/web/.env`
+- **THEN** `getAuthFeatures().forgot_password` SHALL be `true`
+- **AND** the SPA SHALL render the "Forgot your password?" link on `/login`
+  AND the `/forgot-password` page SHALL be reachable
 
 #### Scenario: Email verification enabled
 
-- **WHEN** `AUTH_EMAIL_VERIFICATION_ENABLED=true` AND `[auth.email].enable_confirmations = true` in `supabase/config.toml` (both must be set in sync; the spec does not auto-sync them)
-- **THEN** `GET /auth/features` SHALL return `email_verification: true` AND `GET /auth/email-verified` SHALL be reachable
+- **WHEN** `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=true` in
+  `apps/web/.env`
+- **THEN** `getAuthFeatures().email_verification` SHALL be `true`
+- **AND** the SPA SHALL route unverified signups to `/auth/check-email`
 
 #### Scenario: Passwordless enabled
 
-- **WHEN** `AUTH_PASSWORDLESS_ENABLED=true`
-- **THEN** `GET /auth/features` SHALL return `passwordless: true` AND `POST /auth/otp` and `POST /auth/otp/verify` SHALL be reachable
+- **WHEN** `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED=true` in
+  `apps/web/.env`
+- **THEN** `getAuthFeatures().passwordless` SHALL be `true`
+- **AND** the `/login` page SHALL render the "Email me a code" and
+  "Email me a link" tabs
 
-#### Scenario: Disabled flow returns 404 from its endpoint
+#### Scenario: Defensive parsing of non-`true` strings
 
-- **WHEN** a client calls an endpoint belonging to a disabled feature flag
-- **THEN** the API SHALL respond `404 Not Found` so the SPA can treat a stale `GET /auth/features` response as authoritative
+- **WHEN** an env var is set to `1`, `yes`, `TRUE`, or any value other than
+  the literal lowercase string `true`
+- **THEN** `getAuthFeatures()` SHALL treat the value as `false` — the
+  behaviour MUST be uniform across the three flags and covered by
+  `features.test.ts`
 
-### Requirement: Feature flag env vars MUST be validated at boot
+### Requirement: Forgot-password MUST be mirrored to the API for server-side enforcement
 
-`apps/api` SHALL validate the three `AUTH_*_ENABLED` env vars through `AuthConfigService` (Zod) and SHALL fail boot with a clear message if any value is not a recognised boolean. Valid values: `true`, `false` (case-insensitive). Unrecognised values are coerced to `false` and the API continues to boot — a misconfigured deployment degrades safely to "no opt-in features" rather than refusing to start.
+`AUTH_FORGOT_PASSWORD_ENABLED` in `apps/api/.env` is the only capability
+flag that the API still reads. It is consumed by `AuthConfigService` and
+gated through a server-side `ForgotPasswordEnabledGuard` on
+`POST /auth/forgot-password` and `POST /auth/reset-password` so a misconfigured
+SPA cannot trigger recovery emails when the API operator has disabled the
+flow.
 
-#### Scenario: Unrecognised flag value at boot
+`NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED` in `apps/web/.env` is a
+mirror of the API flag, used by the SPA to decide whether to render the
+"Forgot your password?" link. The two MUST agree at runtime; the
+`scripts/lib/local-env-composer.mjs` mirror logic writes the same value
+to both files when re-running `setup:env`. A divergence is treated as a
+deployment misconfiguration and is NOT validated at build time.
 
-- **WHEN** the API starts with `AUTH_PASSWORDLESS_ENABLED=maybe`
-- **THEN** `AuthConfigService` SHALL treat the value as `false` and the API SHALL continue to boot
+#### Scenario: API flag off, web flag on (misconfiguration)
 
-### Requirement: The web SPA SHALL consume the features endpoint
+- **WHEN** `AUTH_FORGOT_PASSWORD_ENABLED` is `false` in `apps/api/.env` but
+  `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED` is `true` in `apps/web/.env`
+- **THEN** the SPA SHALL render the "Forgot your password?" link AND
+  `POST /auth/forgot-password` SHALL respond `404 Not Found` (the SPA
+  treats the 404 as authoritative and re-hides the link on next mount)
 
-The web SPA SHALL call `GET /auth/features` once on mount of the auth pages (`/login`, `/register`, `/auth/check-email`, `/forgot-password`, `/dashboard/settings/security`) and SHALL hide or render controls based on the response. The SPA SHALL revalidate the flags on each navigation to a guarded route so an operator's change takes effect without a rebuild.
+#### Scenario: API flag on, web flag off (misconfiguration)
 
-#### Scenario: Forgot password link appears when flag is on
+- **WHEN** `AUTH_FORGOT_PASSWORD_ENABLED` is `true` in `apps/api/.env` but
+  `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED` is `false` in `apps/web/.env`
+- **THEN** the SPA SHALL NOT render the "Forgot your password?" link AND
+  a direct navigation to `/forgot-password` SHALL render a "Not available"
+  page (the recovery endpoint is reachable but the SPA UI to reach it is
+  not)
 
-- **WHEN** `GET /auth/features` returns `forgot_password: true`
-- **THEN** the "Forgot your password?" link SHALL appear beneath the password field on `/login`
+#### Scenario: Server-side flag enforced regardless of SPA
 
-#### Scenario: Stale flag is ignored
+- **WHEN** the API operator sets `AUTH_FORGOT_PASSWORD_ENABLED=false`
+- **THEN** `POST /auth/forgot-password` SHALL respond `404 Not Found`
+  regardless of what the SPA believes — the server-side `Guard` is the
+  authoritative check
 
-- **WHEN** the SPA cached a flag value but the server now reports the feature as disabled
-- **THEN** clicking the cached button SHALL route to a 404 from the server and the SPA SHALL re-render the auth page without that control on next mount
+### Requirement: The API MUST NOT expose a features endpoint
+
+`apps/api` SHALL NOT expose `GET /auth/features` (or any equivalent runtime
+endpoint that returns the auth capability flags). The endpoint was removed
+because:
+
+1. It caused a layout shift on every auth-page mount: the SPA had to wait
+   for a network response before deciding which controls to render.
+2. The flags are build-time configuration; the SPA already knows the
+   answer at compile time.
+3. Operators flip the flags infrequently, so the staleness introduced by
+   removing the round-trip (a redeploy is required to take effect) is
+   acceptable and matches the existing model for `NEXT_PUBLIC_*` env vars.
+
+The `AuthService.getFeatures()` method, the `AuthFeaturesDto`, and the
+`@Get('features')` controller route are all removed. The remaining
+`AuthConfigService` surface exposes only `SUPABASE_PUBLISHABLE_KEY`,
+`SUPABASE_ANON_KEY`, and `AUTH_FORGOT_PASSWORD_ENABLED` — the first two
+are required for `AuthConfigService` to load, the last is consumed by the
+`ForgotPasswordEnabledGuard`.
+
+#### Scenario: The endpoint is not reachable
+
+- **WHEN** a client GETs `GET /auth/features`
+- **THEN** the API SHALL respond `404 Not Found`
+
+#### Scenario: The endpoint does not appear in the OpenAPI surface
+
+- **WHEN** the OpenAPI document is regenerated after a build
+- **THEN** `/auth/features` SHALL NOT appear in the document
+
+### Requirement: The local env composer MUST mirror capability flags between api and web
+
+`scripts/lib/local-env-composer.mjs` MUST keep the API and web
+`.env` files in sync with respect to the auth capability flags. On a
+re-run with a previous `apps/api/.env`:
+
+- `AUTH_FORGOT_PASSWORD_ENABLED` MUST be preserved verbatim (or default
+  to `false` on first run) — this is `OPERATOR_CONTROLLED_KEYS` for the
+  API.
+- The three `NEXT_PUBLIC_*` mirror keys MUST be preserved verbatim (or
+  default to `false` on first run) — this is `WEB_OPERATOR_CONTROLLED_KEYS`
+  for the web.
+
+The `setup:env` script MUST be re-runnable without silently changing any
+of the three web mirrors — operator decisions on a given deployment MUST
+survive a re-run of `setup:env`.
+
+#### Scenario: First run
+
+- **WHEN** the operator runs `setup:env` for the first time (neither
+  `apps/api/.env` nor `apps/web/.env` exists)
+- **THEN** `AUTH_FORGOT_PASSWORD_ENABLED` SHALL be written to
+  `apps/api/.env` as `false`
+- **AND** the three `NEXT_PUBLIC_AUTH_*` keys SHALL be written to
+  `apps/web/.env` as `false`
+
+#### Scenario: Re-run with operator overrides
+
+- **WHEN** the operator has set `AUTH_FORGOT_PASSWORD_ENABLED=true` and
+  `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=true` in the
+  previous `apps/api/.env` and `apps/web/.env` respectively
+- **AND** the operator runs `setup:env` again
+- **THEN** both values SHALL survive the re-run verbatim — neither
+  defaults to `false` nor is silently flipped
+
+### Requirement: The production env schema MUST declare the web-mirror flags
+
+`scripts/lib/env-prod-schema.mjs` MUST declare the three
+`NEXT_PUBLIC_*` mirror keys in the `Web` group of the production
+manifest schema, with descriptive help text that points operators to
+`apps/web/src/lib/auth/features.ts`. The capability flags that moved to
+the web side (`AUTH_EMAIL_VERIFICATION_ENABLED`,
+`AUTH_PASSWORDLESS_ENABLED`) MUST be removed from the manifest schema's
+`Auth` group, because the API no longer reads them.
+
+#### Scenario: Manifest includes web mirrors
+
+- **WHEN** the operator runs `setup:env:prod` to generate
+  `.env.prod`
+- **THEN** the generated file SHALL include all three
+  `NEXT_PUBLIC_*` mirror keys (defaulted to `false` if the operator
+  provides no value)
+- **AND** the manifest SHALL NOT include
+  `AUTH_EMAIL_VERIFICATION_ENABLED` or
+  `AUTH_PASSWORDLESS_ENABLED` as required fields

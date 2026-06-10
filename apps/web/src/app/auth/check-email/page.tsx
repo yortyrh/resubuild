@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
+import { AuthPageShell } from '@/components/auth/auth-page-shell';
+import { DevMailpitHint } from '@/components/auth/dev-mailpit-hint';
 import { Button } from '@/components/ui/button';
 import { useVerifyEmailToken } from '@/lib/queries/auth-mutations';
 
@@ -16,37 +18,31 @@ export default function CheckEmailPage() {
   }, [token, verifyEmail.mutate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (verifyEmail.isPending) {
-    return (
-      <div className="space-y-4 text-center">
-        <h1 className="text-2xl font-semibold">Checking verification…</h1>
-      </div>
-    );
+    return <AuthPageShell title="Checking verification…" description="Please wait a moment." />;
   }
 
   if (verifyEmail.data?.verified) {
     return (
-      <div className="space-y-4 text-center">
-        <h1 className="text-2xl font-semibold">Email verified!</h1>
-        <p className="text-muted-foreground text-sm">
-          Your email has been verified. You can now sign in.
-        </p>
-        <Button variant="outline" onClick={() => (window.location.href = '/login')}>
+      <AuthPageShell
+        title="Email verified!"
+        description="Your email has been verified. You can now sign in."
+      >
+        <Button type="button" className="w-full" onClick={() => (window.location.href = '/login')}>
           Go to sign in
         </Button>
-      </div>
+      </AuthPageShell>
     );
   }
 
   return (
-    <div className="space-y-4 text-center">
-      <h1 className="text-2xl font-semibold">Check your email</h1>
-      <p className="text-muted-foreground text-sm">
-        We sent a confirmation link to your email. Click the link to verify your account, then sign
-        in.
-      </p>
-      <Button variant="outline" onClick={() => (window.location.href = '/login')}>
+    <AuthPageShell
+      title="Check your email"
+      description="We sent a confirmation link to your email. Click the link to verify your account, then sign in."
+    >
+      <DevMailpitHint emailKind="confirmation link" />
+      <Button type="button" className="w-full" onClick={() => (window.location.href = '/login')}>
         Go to sign in
       </Button>
-    </div>
+    </AuthPageShell>
   );
 }

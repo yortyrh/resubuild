@@ -1,5 +1,8 @@
 'use client';
 
+import type { Session, SupabaseClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/supabase/client';
+
 const PREFIX = 'resubuild.';
 export const STORAGE_KEYS = {
   access_token: `${PREFIX}access_token`,
@@ -7,7 +10,7 @@ export const STORAGE_KEYS = {
   expires_at: `${PREFIX}expires_at`,
 } as const;
 
-/** Shape returned by Nest `POST /auth/login`, `POST /auth/register`, and `POST /auth/refresh` */
+/** Shape mirrored from a Supabase session for apiFetch compatibility */
 export interface AuthTokenPayload {
   access_token: string;
   refresh_token: string;
@@ -27,6 +30,17 @@ export function saveSession(payload: AuthTokenPayload): void {
   }
 }
 
+export function persistSupabaseSession(session: Session): void {
+  saveSession({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token ?? '',
+    expires_in: session.expires_in ?? 3600,
+    expires_at: session.expires_at ?? undefined,
+    token_type: 'bearer',
+    user: { id: session.user.id, email: session.user.email ?? undefined },
+  });
+}
+
 export function clearSession(): void {
   if (typeof window === 'undefined') return;
 
@@ -41,62 +55,65 @@ export function hasSession(): boolean {
   return Boolean(sessionStorage.getItem(STORAGE_KEYS.access_token));
 }
 
-function loadStored(): {
-  access_token: string | null;
-  refresh_token: string | null;
-  expires_at: number | null;
-} {
-  if (typeof window === 'undefined') {
-    return { access_token: null, refresh_token: null, expires_at: null };
-  }
+function sessionExpiresSoon(session: Session): boolean {
+  const expiresAt = session.expires_at;
+  if (expiresAt == null) return true;
+  return expiresAt * 1000 < Date.now() + 60_000;
+}
 
-  const access_token = sessionStorage.getItem(STORAGE_KEYS.access_token);
-  const refresh_token = sessionStorage.getItem(STORAGE_KEYS.refresh_token);
-  const expiresRaw = sessionStorage.getItem(STORAGE_KEYS.expires_at);
-  const expires_at =
-    expiresRaw != null && expiresRaw !== '' ? Number.parseInt(expiresRaw, 10) : null;
+async function hydrateSessionFromStorage(supabase: SupabaseClient): Promise<Session | null> {
+  if (typeof window === 'undefined') return null;
 
-  return {
-    access_token,
-    refresh_token,
-    expires_at: Number.isFinite(expires_at) ? expires_at! : null,
-  };
+  const accessToken = sessionStorage.getItem(STORAGE_KEYS.access_token);
+  const refreshToken = sessionStorage.getItem(STORAGE_KEYS.refresh_token);
+  if (!accessToken || !refreshToken) return null;
+
+  const { data, error } = await supabase.auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
+  if (error || !data.session?.access_token) return null;
+  return data.session;
 }
 
 /**
- * Ensures we have an access token, refreshing shortly before expiry.
+ * Returns a valid access token from the Supabase client session, refreshing
+ * through the publishable-key session when needed. Mirrors tokens to
+ * sessionStorage for apiFetch compatibility.
  */
-export async function getValidAccessToken(apiUrl: string): Promise<string> {
-  const { access_token, refresh_token, expires_at } = loadStored();
+export async function getValidAccessToken(_apiUrl?: string): Promise<string> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.auth.getSession();
 
-  if (!access_token) {
+  let session = data.session;
+  if (!session?.access_token) {
+    session = await hydrateSessionFromStorage(supabase);
+  }
+
+  if (error && !session?.access_token) {
+    clearSession();
     throw new Error('Not authenticated');
   }
 
-  const expiryMs = expires_at != null ? expires_at * 1000 : 0;
-  const expiresSoon = expiryMs === 0 || expiryMs < Date.now() + 60_000;
-
-  if (!expiresSoon) {
-    return access_token;
-  }
-
-  if (!refresh_token) {
+  if (!session?.access_token) {
     clearSession();
-    throw new Error('Session expired');
+    throw new Error('Not authenticated');
   }
 
-  const response = await fetch(`${apiUrl}/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token }),
-  });
+  if (sessionExpiresSoon(session)) {
+    if (!session.refresh_token) {
+      clearSession();
+      throw new Error('Session expired');
+    }
 
-  if (!response.ok) {
-    clearSession();
-    throw new Error('Session expired');
+    const refreshed = await supabase.auth.refreshSession();
+    if (refreshed.error || !refreshed.data.session?.access_token) {
+      clearSession();
+      throw new Error('Session expired');
+    }
+    session = refreshed.data.session;
   }
 
-  const payload = (await response.json()) as AuthTokenPayload;
-  saveSession(payload);
-  return payload.access_token;
+  persistSupabaseSession(session);
+  return session.access_token;
 }

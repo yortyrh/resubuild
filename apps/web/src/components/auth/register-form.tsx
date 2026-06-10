@@ -1,80 +1,38 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import {
+  SignedInAuthFallback,
+  useAuthenticatedEntryRedirect,
+} from '@/components/auth/authenticated-entry';
+import { DevMailpitHint } from '@/components/auth/dev-mailpit-hint';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { type AuthTokenPayload, clearSession, hasSession, saveSession } from '@/lib/auth-session';
-
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+import { useRegister } from '@/lib/queries/auth-mutations';
 
 export function RegisterForm() {
-  const router = useRouter();
+  const { showSignedInUi } = useAuthenticatedEntryRedirect();
+  const register = useRegister();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (hasSession()) {
-      router.replace('/dashboard');
-    }
-  }, [router]);
+  if (showSignedInUi) {
+    return <SignedInAuthFallback />;
+  }
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-
-    try {
-      const response = await fetch(`${apiUrl}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const body = (await response.json().catch(() => ({}))) as {
-        message?: string | string[];
-        access_token?: string;
-      };
-
-      setLoading(false);
-
-      if (!response.ok) {
-        const msg = Array.isArray(body.message)
-          ? body.message.join(', ')
-          : typeof body.message === 'string'
-            ? body.message
-            : 'Registration failed';
-        setError(msg);
-        clearSession();
-        return;
-      }
-
-      if ('access_token' in body && 'refresh_token' in body && body.access_token) {
-        saveSession(body as AuthTokenPayload);
-        router.push('/dashboard');
-        router.refresh();
-        return;
-      }
-
-      setMessage(
-        typeof body.message === 'string'
-          ? body.message
-          : 'Check your email to confirm your account.',
-      );
-    } catch {
-      setLoading(false);
-      setError('Registration failed. Try again.');
-      clearSession();
-    }
+    register.mutate({ email, password });
   };
+
+  const verificationMessage =
+    register.isSuccess && register.data?.kind === 'verification' ? register.data.message : null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <DevMailpitHint emailKind="confirmation link" />
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input
@@ -98,10 +56,14 @@ export function RegisterForm() {
           onChange={(e) => setPassword(e.target.value)}
         />
       </div>
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
-      {message ? <p className="text-muted-foreground text-sm">{message}</p> : null}
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? 'Creating account…' : 'Register'}
+      {register.error?.message ? (
+        <p className="text-destructive text-sm">{register.error.message}</p>
+      ) : null}
+      {verificationMessage ? (
+        <p className="text-muted-foreground text-sm">{verificationMessage}</p>
+      ) : null}
+      <Button type="submit" className="w-full" disabled={register.isPending}>
+        {register.isPending ? 'Creating account…' : 'Register'}
       </Button>
     </form>
   );

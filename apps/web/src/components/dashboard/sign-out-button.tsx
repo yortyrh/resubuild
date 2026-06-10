@@ -1,23 +1,13 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { clearSession } from '@/lib/auth-session';
-
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+import { useLogout } from '@/lib/queries/auth-mutations';
 
 export function SignOutButton() {
-  const router = useRouter();
-
-  const handleSignOut = async () => {
-    void fetch(`${apiUrl}/auth/logout`, { method: 'POST' }).catch(() => {});
-    clearSession();
-    router.push('/login');
-    router.refresh();
-  };
+  const logout = useLogout();
 
   return (
-    <Button variant="outline" onClick={handleSignOut}>
+    <Button variant="outline" onClick={() => logout.mutate()} disabled={logout.isPending}>
       Sign out
     </Button>
   );

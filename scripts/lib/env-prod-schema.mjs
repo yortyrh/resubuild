@@ -89,6 +89,72 @@ export const MANIFEST_SCHEMA = {
       'Public API URL that the Next.js browser bundle calls (same as PUBLIC_API_URL in most setups)',
     group: 'Web',
   },
+  // Browser Supabase client (mirrors the server-side Supabase keys; the
+  // publishable key is the only one safe in a client bundle).
+  NEXT_PUBLIC_SUPABASE_URL: {
+    required: true,
+    description:
+      'Supabase project URL for the browser Supabase client (mirror of SUPABASE_URL, exposed via NEXT_PUBLIC_ for the web bundle)',
+    group: 'Web',
+  },
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: {
+    required: true,
+    description:
+      'Supabase publishable key for the browser Supabase client (the only Supabase key safe in client bundles; used for passwordless, OTP, session management)',
+    group: 'Web',
+  },
+
+  // Auth feature flags. The server-side `AUTH_FORGOT_PASSWORD_ENABLED`
+  // gates the server-side ForgotPasswordEnabledGuard. The passwordless /
+  // email-verification flags are web-only and exposed
+  // via the matching `NEXT_PUBLIC_*` mirrors below — they are
+  // resolved at build time by `apps/web/src/lib/auth/features.ts`
+  // (the previous `GET /auth/features` endpoint was removed to
+  // eliminate the layout shift the round-trip caused on every auth
+  // navigation). The [auth.email].enable_confirmations dependency
+  // remains relevant for AUTH_EMAIL_VERIFICATION_ENABLED.
+  AUTH_FORGOT_PASSWORD_ENABLED: {
+    required: false,
+    description:
+      'Enable the forgot-password / reset-password server-side guard (default false). Mirror on the web side as NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED so the SPA can render the matching control. See openspec/specs/auth-password-recovery/spec.md.',
+    group: 'Auth',
+    default: 'false',
+  },
+  // Web-side mirrors of the auth capability flags. Resolved by
+  // `apps/web/src/lib/auth/features.ts` at build time from
+  // process.env. Defaults to false so a misconfigured deployment
+  // does not accidentally expose opt-in features.
+  NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED: {
+    required: false,
+    description:
+      'Web mirror of AUTH_FORGOT_PASSWORD_ENABLED. When true, the SPA renders the "Forgot password?" link. Default false.',
+    group: 'Web',
+    default: 'false',
+  },
+  NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED: {
+    required: false,
+    description:
+      'Enable email verification on signup (default false). MUST be kept in sync with [auth.email].enable_confirmations in supabase/config.toml — the generator does not auto-sync them.',
+    group: 'Web',
+    default: 'false',
+  },
+  NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED: {
+    required: false,
+    description:
+      'Enable passwordless sign-in (magic link + OTP, default false). See openspec/specs/auth-passwordless/spec.md.',
+    group: 'Web',
+    default: 'false',
+  },
+
+  // Server-side publishable key (used by AuthConfigService as a
+  // fallback for SUPABASE_ANON_KEY validation; required at API boot
+  // regardless of whether the browser client is in use).
+  SUPABASE_PUBLISHABLE_KEY: {
+    required: false,
+    description:
+      'Supabase publishable key, used server-side by AuthConfigService (falls back to SUPABASE_ANON_KEY when unset). Required at API boot.',
+    group: 'Supabase',
+  },
 
   // AI / PDF import
   AI_AGENT_ENCRYPTION_KEY: {
@@ -416,6 +482,7 @@ export function serializeToDotenv(manifest, extras = {}) {
       keys: [
         'SUPABASE_URL',
         'SUPABASE_ANON_KEY',
+        'SUPABASE_PUBLISHABLE_KEY',
         'SUPABASE_SERVICE_ROLE_KEY',
         'SUPABASE_JWT_SECRET',
       ],
@@ -430,7 +497,18 @@ export function serializeToDotenv(manifest, extras = {}) {
     },
     {
       title: 'Web (Next.js)',
-      keys: ['NEXT_PUBLIC_API_URL'],
+      keys: [
+        'NEXT_PUBLIC_API_URL',
+        'NEXT_PUBLIC_SUPABASE_URL',
+        'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+        'NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED',
+        'NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED',
+        'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED',
+      ],
+    },
+    {
+      title: 'Auth (server-side flag)',
+      keys: ['AUTH_FORGOT_PASSWORD_ENABLED'],
     },
     {
       title: 'AI / PDF Import',

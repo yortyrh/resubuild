@@ -1,81 +1,81 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import Link from 'next/link';
+import { Suspense, useEffect, useState } from 'react';
+import { AuthPageShell } from '@/components/auth/auth-page-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useResetPassword } from '@/lib/queries/auth-mutations';
+import { getSupabaseClient } from '@/lib/supabase/client';
 
-function ResetPasswordForm({ tokenFound }: { tokenFound: boolean }) {
-  const router = useRouter();
+function ResetPasswordForm({ sessionReady }: { sessionReady: boolean }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const resetPassword = useResetPassword();
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setLocalError(null);
 
-      if (password !== confirmPassword) {
-        toast.error('Passwords do not match');
-        return;
-      }
+    if (password !== confirmPassword) {
+      setLocalError('Passwords do not match');
+      return;
+    }
 
-      if (password.length < 8) {
-        toast.error('Password must be at least 8 characters');
-        return;
-      }
+    if (password.length < 8) {
+      setLocalError('Password must be at least 8 characters');
+      return;
+    }
 
-      const accessToken = sessionStorage.getItem('reset_access_token');
-      const refreshToken = sessionStorage.getItem('reset_refresh_token');
+    resetPassword.mutate(password);
+  };
 
-      if (!accessToken || !refreshToken) {
-        toast.error('Reset session expired. Please request a new reset link.');
-        return;
-      }
-
-      resetPassword.mutate(
-        { accessToken, refreshToken, password },
-        {
-          onSuccess: () => {
-            sessionStorage.removeItem('reset_access_token');
-            sessionStorage.removeItem('reset_refresh_token');
-            toast.success('Password reset successful. Please sign in.');
-            router.push('/login');
-          },
-        },
-      );
-    },
-    [password, confirmPassword, router, resetPassword],
-  );
-
-  if (!tokenFound) {
+  if (!sessionReady) {
     return (
-      <div className="space-y-4 text-center">
-        <h1 className="text-2xl font-semibold">Invalid reset link</h1>
-        <p className="text-muted-foreground text-sm">
-          This password reset link is invalid or has expired. Please request a new one.
-        </p>
-        <Button variant="outline" onClick={() => router.push('/forgot-password')}>
+      <AuthPageShell
+        title="Invalid reset link"
+        description="This password reset link is invalid or has expired. Please request a new one."
+        footer={
+          <p className="text-muted-foreground text-sm">
+            <Link
+              href="/forgot-password"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Request a new reset link
+            </Link>
+          </p>
+        }
+      >
+        <Button
+          type="button"
+          className="w-full"
+          onClick={() => (window.location.href = '/forgot-password')}
+        >
           Request new link
         </Button>
-      </div>
+      </AuthPageShell>
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Set new password</h1>
-        <p className="text-muted-foreground text-sm">Enter your new password below.</p>
-      </div>
+  const error = localError ?? resetPassword.error?.message ?? null;
 
-      {resetPassword.error?.message ? (
-        <p className="text-destructive text-sm">{resetPassword.error.message}</p>
-      ) : null}
+  return (
+    <AuthPageShell
+      title="Set new password"
+      description="Enter your new password below."
+      footer={
+        <p className="text-muted-foreground text-sm">
+          Remember your password?{' '}
+          <Link href="/login" className="text-primary underline-offset-4 hover:underline">
+            Sign in
+          </Link>
+        </p>
+      }
+    >
+      {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <div className="space-y-2">
@@ -108,40 +108,67 @@ function ResetPasswordForm({ tokenFound }: { tokenFound: boolean }) {
           {resetPassword.isPending ? 'Resetting…' : 'Reset password'}
         </Button>
       </form>
-    </div>
+    </AuthPageShell>
   );
 }
 
 function ResetPasswordLoader() {
-  const [tokenFound, setTokenFound] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash) {
-      const params = new URLSearchParams(hash.substring(1));
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
-      if (accessToken && refreshToken) {
-        sessionStorage.setItem('reset_access_token', accessToken);
-        sessionStorage.setItem('reset_refresh_token', refreshToken);
-        setTokenFound(true);
-        window.history.replaceState(null, '', window.location.pathname);
+    let cancelled = false;
+
+    const resolveRecoverySession = async () => {
+      const supabase = getSupabaseClient();
+      const { data } = await supabase.auth.getSession();
+      if (!cancelled && data.session) {
+        setSessionReady(true);
+        setChecking(false);
         return;
       }
-    }
 
-    const stored = sessionStorage.getItem('reset_access_token');
-    if (stored) {
-      setTokenFound(true);
-    }
+      const hash = window.location.hash;
+      if (hash) {
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        if (accessToken && refreshToken) {
+          const { data: setData, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (!cancelled && !error && setData.session) {
+            window.history.replaceState(null, '', window.location.pathname);
+            setSessionReady(true);
+            setChecking(false);
+            return;
+          }
+        }
+      }
+
+      if (!cancelled) {
+        setSessionReady(false);
+        setChecking(false);
+      }
+    };
+
+    void resolveRecoverySession();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  return <ResetPasswordForm tokenFound={tokenFound} />;
+  if (checking) {
+    return <AuthPageShell title="Set new password" description="Loading your reset session…" />;
+  }
+
+  return <ResetPasswordForm sessionReady={sessionReady} />;
 }
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="text-muted-foreground text-sm">Loading…</div>}>
+    <Suspense fallback={<AuthPageShell title="Set new password" description="Loading…" />}>
       <ResetPasswordLoader />
     </Suspense>
   );

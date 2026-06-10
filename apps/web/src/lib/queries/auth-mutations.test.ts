@@ -3,57 +3,51 @@
 import { waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockLogin = vi.fn();
-const mockRegister = vi.fn();
-const mockLogout = vi.fn();
 const mockChangePassword = vi.fn();
-const mockForgotPassword = vi.fn();
-const mockResetPassword = vi.fn();
-const mockRequestOtp = vi.fn();
-const mockVerifyOtp = vi.fn();
-const mockVerifyEmail = vi.fn();
-const mockSignInWithOtp = vi.fn();
-const mockSignInWithOAuth = vi.fn();
-const mockSaveSession = vi.fn();
-const mockClearSession = vi.fn();
+const mockLogout = vi.fn();
+const mockSignInWithPassword = vi.fn();
+const mockSignUp = vi.fn();
 const mockSignOut = vi.fn();
 const mockGetSession = vi.fn();
-const mockSignInWithPassword = vi.fn();
+const mockRefreshSession = vi.fn();
 const mockSetSession = vi.fn();
+const mockResetPasswordForEmail = vi.fn();
+const mockUpdateUser = vi.fn();
+const mockSignInWithOtp = vi.fn();
+const mockVerifyOtp = vi.fn();
+const mockSaveSession = vi.fn();
+const mockPersistSupabaseSession = vi.fn();
+const mockClearSession = vi.fn();
 
 vi.mock('@/lib/api', () => ({
-  login: (...args: unknown[]) => mockLogin(...args),
-  register: (...args: unknown[]) => mockRegister(...args),
-  logout: (...args: unknown[]) => mockLogout(...args),
   changePassword: (...args: unknown[]) => mockChangePassword(...args),
-  forgotPassword: (...args: unknown[]) => mockForgotPassword(...args),
-  resetPassword: (...args: unknown[]) => mockResetPassword(...args),
-  requestOtp: (...args: unknown[]) => mockRequestOtp(...args),
-  verifyOtp: (...args: unknown[]) => mockVerifyOtp(...args),
-  verifyEmail: (...args: unknown[]) => mockVerifyEmail(...args),
-  fetchAuthFeatures: vi.fn().mockResolvedValue({
-    forgot_password: false,
-    email_verification: false,
-    passwordless: false,
-    providers: [],
-  }),
+  logout: (...args: unknown[]) => mockLogout(...args),
 }));
 
 vi.mock('@/lib/auth-session', () => ({
   saveSession: (...args: unknown[]) => mockSaveSession(...args),
+  persistSupabaseSession: (...args: unknown[]) => mockPersistSupabaseSession(...args),
   clearSession: (...args: unknown[]) => mockClearSession(...args),
-  getValidAccessToken: vi.fn().mockResolvedValue(null),
+  STORAGE_KEYS: {
+    access_token: 'resubuild.access_token',
+    refresh_token: 'resubuild.refresh_token',
+    expires_at: 'resubuild.expires_at',
+  },
 }));
 
 vi.mock('@/lib/supabase/client', () => ({
   getSupabaseClient: () => ({
     auth: {
+      signInWithPassword: mockSignInWithPassword,
+      signUp: mockSignUp,
       signOut: mockSignOut,
       getSession: mockGetSession,
-      signInWithPassword: mockSignInWithPassword,
+      refreshSession: mockRefreshSession,
       setSession: mockSetSession,
+      resetPasswordForEmail: mockResetPasswordForEmail,
+      updateUser: mockUpdateUser,
       signInWithOtp: mockSignInWithOtp,
-      signInWithOAuth: mockSignInWithOAuth,
+      verifyOtp: mockVerifyOtp,
     },
   }),
 }));
@@ -68,8 +62,6 @@ vi.mock('next/navigation', () => ({
 import {
   useChangePassword,
   useForgotPassword,
-  useGithubSignIn,
-  useGoogleSignIn,
   useLogin,
   useLogout,
   useRegister,
@@ -81,48 +73,56 @@ import {
 } from '@/lib/queries/auth-mutations';
 import { renderHookWithQueryClient } from '@/lib/queries/test-utils';
 
+const sampleSession = {
+  user: { id: 'user-1', email: 'test@example.com' },
+  access_token: 'tok-abc',
+  refresh_token: 'ref-xyz',
+  expires_in: 3600,
+  expires_at: Math.floor(Date.now() / 1000) + 3600,
+  token_type: 'bearer',
+};
+
 describe('auth mutation hooks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(window, 'sessionStorage', {
+      value: {
+        getItem: vi.fn(() => 'tok-abc'),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      },
+      writable: true,
+    });
   });
 
   describe('useLogin', () => {
-    it('calls api, saves session, hydrates the supabase client, and redirects on success', async () => {
-      mockLogin.mockResolvedValue({
-        access_token: 'tok-abc',
-        refresh_token: 'ref-xyz',
-        expires_in: 3600,
-        user: { id: 'user-1', email: 'test@example.com' },
+    it('signs in via supabase, persists session, and redirects on success', async () => {
+      mockSignInWithPassword.mockResolvedValue({
+        data: { session: sampleSession },
+        error: null,
       });
-      mockSetSession.mockResolvedValue({ data: { session: {} }, error: null });
 
       const { result } = renderHookWithQueryClient(() => useLogin());
 
       result.current.mutate({ email: 'test@example.com', password: 'password123' });
 
       await waitFor(() => {
-        expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123');
-      });
-
-      await waitFor(() => {
-        expect(mockSaveSession).toHaveBeenCalledWith(
-          expect.objectContaining({
-            access_token: 'tok-abc',
-            refresh_token: 'ref-xyz',
-          }),
-        );
-      });
-
-      await waitFor(() => {
-        expect(mockSetSession).toHaveBeenCalledWith({
-          access_token: 'tok-abc',
-          refresh_token: 'ref-xyz',
+        expect(mockSignInWithPassword).toHaveBeenCalledWith({
+          email: 'test@example.com',
+          password: 'password123',
         });
+      });
+
+      await waitFor(() => {
+        expect(mockPersistSupabaseSession).toHaveBeenCalledWith(sampleSession);
       });
     });
 
     it('clears session on error', async () => {
-      mockLogin.mockRejectedValue(new Error('Invalid credentials'));
+      mockSignInWithPassword.mockResolvedValue({
+        data: { session: null },
+        error: { message: 'Invalid credentials' },
+      });
 
       const { result } = renderHookWithQueryClient(() => useLogin());
 
@@ -137,13 +137,9 @@ describe('auth mutation hooks', () => {
   });
 
   describe('useLogout', () => {
-    it('calls API logout and clears session', async () => {
+    it('calls API logout, supabase signOut, and clears session', async () => {
       mockLogout.mockResolvedValue(undefined);
-
-      Object.defineProperty(window, 'sessionStorage', {
-        value: { getItem: () => 'tok-abc' },
-        writable: true,
-      });
+      mockSignOut.mockResolvedValue({ error: null });
 
       const { result } = renderHookWithQueryClient(() => useLogout());
 
@@ -174,27 +170,12 @@ describe('auth mutation hooks', () => {
       expect(mockChangePassword).toHaveBeenCalledWith('oldpass', 'newpass123');
     });
 
-    it('calls changePassword without current password (OAuth users)', async () => {
-      mockChangePassword.mockResolvedValue(undefined);
-      mockGetSession.mockResolvedValue({ data: { session: null } });
-
-      const { result } = renderHookWithQueryClient(() => useChangePassword());
-
-      result.current.mutate({ newPassword: 'newpass123' });
-
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true);
-      });
-
-      expect(mockChangePassword).toHaveBeenCalledWith(undefined, 'newpass123');
-    });
-
     it('re-authenticates with the new password to refresh the invalidated session', async () => {
       mockChangePassword.mockResolvedValue(undefined);
       mockGetSession.mockResolvedValue({
         data: { session: { user: { email: 'test@example.com' } } },
       });
-      mockSignInWithPassword.mockResolvedValue({ data: { session: {} }, error: null });
+      mockSignInWithPassword.mockResolvedValue({ data: { session: sampleSession }, error: null });
 
       const { result } = renderHookWithQueryClient(() => useChangePassword());
 
@@ -212,10 +193,8 @@ describe('auth mutation hooks', () => {
   });
 
   describe('useForgotPassword', () => {
-    it('calls forgotPassword API', async () => {
-      mockForgotPassword.mockResolvedValue({
-        message: 'If an account exists, a reset link was sent',
-      });
+    it('calls supabase resetPasswordForEmail', async () => {
+      mockResetPasswordForEmail.mockResolvedValue({ error: null });
 
       const { result } = renderHookWithQueryClient(() => useForgotPassword());
 
@@ -225,33 +204,33 @@ describe('auth mutation hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockForgotPassword).toHaveBeenCalledWith('test@example.com');
+      expect(mockResetPasswordForEmail).toHaveBeenCalledWith('test@example.com', {
+        redirectTo: expect.stringContaining('/reset-password'),
+      });
     });
   });
 
   describe('useResetPassword', () => {
-    it('calls resetPassword with tokens and password', async () => {
-      mockResetPassword.mockResolvedValue(undefined);
+    it('calls supabase updateUser with the new password', async () => {
+      mockUpdateUser.mockResolvedValue({ error: null });
+      mockSignOut.mockResolvedValue({ error: null });
 
       const { result } = renderHookWithQueryClient(() => useResetPassword());
 
-      result.current.mutate({
-        accessToken: 'access-tok',
-        refreshToken: 'refresh-tok',
-        password: 'newpassword123',
-      });
+      result.current.mutate('newpassword123');
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockResetPassword).toHaveBeenCalledWith('access-tok', 'refresh-tok', 'newpassword123');
+      expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'newpassword123' });
+      expect(mockSignOut).toHaveBeenCalled();
     });
   });
 
   describe('useRequestOtp', () => {
-    it('calls requestOtp API', async () => {
-      mockRequestOtp.mockResolvedValue({ message: 'Code sent' });
+    it('calls supabase signInWithOtp', async () => {
+      mockSignInWithOtp.mockResolvedValue({ error: null });
 
       const { result } = renderHookWithQueryClient(() => useRequestOtp());
 
@@ -261,24 +240,15 @@ describe('auth mutation hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockRequestOtp).toHaveBeenCalledWith('test@example.com');
+      expect(mockSignInWithOtp).toHaveBeenCalledWith({ email: 'test@example.com' });
     });
   });
 
   describe('useVerifyOtp', () => {
-    it('calls verifyOtp and syncs session on success', async () => {
-      mockVerifyOtp.mockResolvedValue(undefined);
-      mockGetSession.mockResolvedValue({
-        data: {
-          session: {
-            user: { id: 'u1', email: 'a@b.com' },
-            access_token: 'tok',
-            refresh_token: 'ref',
-            expires_in: 3600,
-            expires_at: Date.now() / 1000 + 3600,
-            token_type: 'bearer',
-          },
-        },
+    it('verifies OTP and persists session on success', async () => {
+      mockVerifyOtp.mockResolvedValue({
+        data: { session: sampleSession },
+        error: null,
       });
 
       const { result } = renderHookWithQueryClient(() => useVerifyOtp());
@@ -289,39 +259,44 @@ describe('auth mutation hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockVerifyOtp).toHaveBeenCalledWith('test@example.com', '123456');
-      expect(mockSaveSession).toHaveBeenCalled();
+      expect(mockVerifyOtp).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        token: '123456',
+        type: 'email',
+      });
+      expect(mockPersistSupabaseSession).toHaveBeenCalledWith(sampleSession);
     });
   });
 
   describe('useRegister', () => {
-    it('hydrates supabase client and persists session on success when token is returned', async () => {
-      mockRegister.mockResolvedValue({
-        access_token: 'reg-tok',
-        refresh_token: 'reg-ref',
-        expires_in: 3600,
+    it('persists session when signUp returns a session', async () => {
+      mockSignUp.mockResolvedValue({
+        data: { session: sampleSession, user: sampleSession.user },
+        error: null,
       });
-      mockSetSession.mockResolvedValue({ data: { session: {} }, error: null });
+      mockGetSession.mockResolvedValue({ data: { session: sampleSession } });
 
       const { result } = renderHookWithQueryClient(() => useRegister());
 
       result.current.mutate({ email: 'new@example.com', password: 'newpassword123' });
 
       await waitFor(() => {
-        expect(mockRegister).toHaveBeenCalledWith('new@example.com', 'newpassword123');
+        expect(mockSignUp).toHaveBeenCalledWith({
+          email: 'new@example.com',
+          password: 'newpassword123',
+        });
       });
 
       await waitFor(() => {
-        expect(mockSetSession).toHaveBeenCalledWith({
-          access_token: 'reg-tok',
-          refresh_token: 'reg-ref',
-        });
+        expect(mockPersistSupabaseSession).toHaveBeenCalled();
       });
-      expect(mockSaveSession).toHaveBeenCalled();
     });
 
-    it('does not hydrate supabase client when registration returns no session (e.g. email verification required)', async () => {
-      mockRegister.mockResolvedValue({ message: 'Check your email to confirm your account' });
+    it('does not persist session when email verification is required', async () => {
+      mockSignUp.mockResolvedValue({
+        data: { session: null, user: { id: 'u1' } },
+        error: null,
+      });
 
       const { result } = renderHookWithQueryClient(() => useRegister());
 
@@ -331,14 +306,17 @@ describe('auth mutation hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockSetSession).not.toHaveBeenCalled();
-      expect(mockSaveSession).not.toHaveBeenCalled();
+      expect(mockPersistSupabaseSession).not.toHaveBeenCalled();
+      expect(result.current.data).toEqual({
+        kind: 'verification',
+        message: 'Check your email to confirm your account, then sign in.',
+      });
     });
   });
 
   describe('useSendMagicLink', () => {
-    it('calls supabase signInWithOtp with the email and a callback URL', async () => {
-      mockSignInWithOtp.mockResolvedValue({ data: {}, error: null });
+    it('calls supabase signInWithOtp with a callback URL', async () => {
+      mockSignInWithOtp.mockResolvedValue({ error: null });
 
       const { result } = renderHookWithQueryClient(() => useSendMagicLink());
 
@@ -356,8 +334,11 @@ describe('auth mutation hooks', () => {
   });
 
   describe('useVerifyEmailToken', () => {
-    it('calls verifyEmail with the provided token', async () => {
-      mockVerifyEmail.mockResolvedValue({ verified: true });
+    it('verifies email token via supabase verifyOtp', async () => {
+      mockVerifyOtp.mockResolvedValue({
+        data: { session: sampleSession },
+        error: null,
+      });
 
       const { result } = renderHookWithQueryClient(() => useVerifyEmailToken());
 
@@ -367,12 +348,18 @@ describe('auth mutation hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockVerifyEmail).toHaveBeenCalledWith('abc123');
+      expect(mockVerifyOtp).toHaveBeenCalledWith({
+        token_hash: 'abc123',
+        type: 'email',
+      });
       expect(result.current.data).toEqual({ verified: true });
     });
 
-    it('surfaces a verified=false response', async () => {
-      mockVerifyEmail.mockResolvedValue({ verified: false });
+    it('returns verified false when verification fails', async () => {
+      mockVerifyOtp.mockResolvedValue({
+        data: { session: null },
+        error: { message: 'expired' },
+      });
 
       const { result } = renderHookWithQueryClient(() => useVerifyEmailToken());
 
@@ -383,50 +370,6 @@ describe('auth mutation hooks', () => {
       });
 
       expect(result.current.data).toEqual({ verified: false });
-    });
-  });
-
-  describe('useGithubSignIn', () => {
-    it('calls supabase signInWithOAuth with the github provider', async () => {
-      mockSignInWithOAuth.mockResolvedValue({
-        data: { url: 'https://github.com/oauth' },
-        error: null,
-      });
-
-      const { result } = renderHookWithQueryClient(() => useGithubSignIn());
-
-      result.current.mutate();
-
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true);
-      });
-
-      expect(mockSignInWithOAuth).toHaveBeenCalledWith({
-        provider: 'github',
-        options: { redirectTo: expect.stringContaining('/auth/callback') },
-      });
-    });
-  });
-
-  describe('useGoogleSignIn', () => {
-    it('calls supabase signInWithOAuth with the google provider', async () => {
-      mockSignInWithOAuth.mockResolvedValue({
-        data: { url: 'https://google.com/oauth' },
-        error: null,
-      });
-
-      const { result } = renderHookWithQueryClient(() => useGoogleSignIn());
-
-      result.current.mutate();
-
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true);
-      });
-
-      expect(mockSignInWithOAuth).toHaveBeenCalledWith({
-        provider: 'google',
-        options: { redirectTo: expect.stringContaining('/auth/callback') },
-      });
     });
   });
 });
