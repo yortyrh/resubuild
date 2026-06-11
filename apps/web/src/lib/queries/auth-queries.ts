@@ -25,11 +25,11 @@ export const authKeys = {
  * through TanStack Query so consumers can keep their existing
  * `useQuery` patterns (and the test suite can mock the resolver).
  */
-export function useAuthFeatures(options?: { enabled?: boolean }) {
+export function useAuthFeatures(_options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: authKeys.features(),
-    queryFn: () => Promise.resolve(getAuthFeatures()),
-    enabled: options?.enabled ?? true,
+    queryFn: getAuthFeatures,
+    initialData: getAuthFeatures(),
     staleTime: Infinity, // build-time constants — never need to refetch
   });
 }

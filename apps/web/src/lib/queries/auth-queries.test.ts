@@ -24,46 +24,42 @@ import { renderHookWithQueryClient } from '@/lib/queries/test-utils';
 
 describe('auth query hooks', () => {
   describe('useAuthFeatures', () => {
-    it('returns the auth features resolved from the build-time env (no network round-trip)', async () => {
-      // The hook now reads the flags from
-      // apps/web/src/lib/auth/features.ts at build time (no
-      // `/auth/features` round-trip) — the hook still uses TanStack
-      // Query so consumers keep the existing useQuery patterns and
-      // we can swap the resolver in tests.
+    it('returns the auth features from initialData synchronously (no loading, no network round-trip)', async () => {
+      // With initialData the query is immediately successful — data is
+      // available on the very first render without any async gap or layout shift.
+      const { result } = renderHookWithQueryClient(() => useAuthFeatures());
+
+      // No waitFor needed — data is synchronous with initialData
+      expect(result.current.isSuccess).toBe(true);
+      expect(result.current.data).toEqual({
+        forgot_password: false,
+        email_verification: false,
+        passwordless: false,
+        github_oauth: false,
+      });
+    });
+
+    it('does not fetch when disabled — uses initialData synchronously', () => {
       const getAuthFeaturesSpy = vi.spyOn(featuresModule, 'getAuthFeatures').mockReturnValue({
         forgot_password: true,
-        email_verification: true,
-        passwordless: false,
+        email_verification: false,
+        passwordless: true,
         github_oauth: false,
       });
 
       try {
-        const { result } = renderHookWithQueryClient(() => useAuthFeatures());
+        const { result } = renderHookWithQueryClient(() => useAuthFeatures({ enabled: false }));
 
-        await waitFor(() => {
-          expect(result.current.isSuccess).toBe(true);
-        });
-
+        // With initialData, data is available synchronously — no loading state,
+        // no network round-trip, no layout shift.
+        expect(result.current.isLoading).toBe(false);
         expect(result.current.data).toEqual({
           forgot_password: true,
-          email_verification: true,
-          passwordless: false,
+          email_verification: false,
+          passwordless: true,
           github_oauth: false,
         });
         expect(getAuthFeaturesSpy).toHaveBeenCalled();
-      } finally {
-        getAuthFeaturesSpy.mockRestore();
-      }
-    });
-
-    it('does not fetch when disabled', () => {
-      const getAuthFeaturesSpy = vi.spyOn(featuresModule, 'getAuthFeatures');
-      try {
-        const { result } = renderHookWithQueryClient(() => useAuthFeatures({ enabled: false }));
-
-        expect(result.current.isLoading).toBe(false);
-        expect(result.current.data).toBeUndefined();
-        expect(getAuthFeaturesSpy).not.toHaveBeenCalled();
       } finally {
         getAuthFeaturesSpy.mockRestore();
       }
