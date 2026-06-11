@@ -1,5 +1,5 @@
 ---
-name: /opsx-plan-parallel
+name: opsx-plan-parallel
 id: opsx-plan-parallel
 category: Workflow
 description: Analyze OpenSpec changes and produce a parallel-execution plan with conflict detection

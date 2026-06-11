@@ -1,4 +1,4 @@
-# /opsx:setup-prod-env
+# opsx:setup-prod-env
 
 Generate a `.env.prod` file for the release-1 docker compose target connected to a cloud Supabase instance.
 

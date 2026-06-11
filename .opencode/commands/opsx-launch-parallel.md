@@ -1,5 +1,5 @@
 ---
-name: /opsx-launch-parallel
+name: opsx-launch-parallel
 id: opsx-launch-parallel
 category: Workflow
 description: Execute parallel OpenSpec changes, then auto-merge each to main with verify/fix between integrations

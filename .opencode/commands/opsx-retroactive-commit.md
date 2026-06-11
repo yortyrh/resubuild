@@ -1,5 +1,5 @@
 ---
-name: /opsx-retroactive-commit
+name: opsx-retroactive-commit
 id: opsx-retroactive-commit
 category: Workflow
 description: >-

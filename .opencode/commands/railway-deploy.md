@@ -1,4 +1,4 @@
-# /opsx:railway-deploy
+# opsx:railway-deploy
 
 Walk the operator (or an LLM agent) through the release-1 Railway deploy target for resubuild.
 

@@ -1,5 +1,5 @@
 ---
-name: /opsx-parallel-cleanup
+name: opsx-parallel-cleanup
 id: opsx-parallel-cleanup
 category: Workflow
 description: Remove OpenSpec parallel worktrees safely - never deletes uncommitted work without explicit confirmation

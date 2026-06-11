@@ -1,5 +1,5 @@
 ---
-name: /opsx-parallel-integrate
+name: opsx-parallel-integrate
 id: opsx-parallel-integrate
 category: Workflow
 description: Integrate one completed parallel change into main (merge + rebase siblings) or open a documented PR with diagrams

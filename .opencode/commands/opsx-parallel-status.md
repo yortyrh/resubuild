@@ -1,5 +1,5 @@
 ---
-name: /opsx-parallel-status
+name: opsx-parallel-status
 id: opsx-parallel-status
 category: Workflow
 description: Show status of all OpenSpec parallel worktrees - tasks completed, commits, dirty state
