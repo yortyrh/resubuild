@@ -57,6 +57,7 @@ Resubuild's authentication is split between the **Nest API** (token issuance, va
 | Passwordless — 6-digit OTP        | opt-in     | `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`       | `auth-passwordless`       |
 | GitHub OAuth                      | opt-in     | `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED`       | `auth-github-oauth`       |
 | Google OAuth                      | opt-in     | `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED`       | `auth-google-oauth`       |
+| LinkedIn OAuth                    | opt-in     | `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED`     | `auth-linkedin-oauth`     |
 
 ### Feature flags
 
@@ -71,26 +72,41 @@ NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=true
 NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED=true
 NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED=true
 NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED=true
+NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED=true
 
 # apps/api/.env — only the server-side flag
 AUTH_FORGOT_PASSWORD_ENABLED=true
 ```
 
-The `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED` flag controls whether the SPA renders the **Continue with GitHub** button on `/login` and `/register`. The `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED` flag analogously controls the **Continue with Google** button. Enabling either flag is **necessary but not sufficient**: the Supabase project must also have the corresponding real provider configured (locally, that means non-stub credentials in `supabase/.env`; in production, the equivalent keys in the Supabase Cloud dashboard). `setup:env` writes `github-oauth-stub` and `google-oauth-stub` placeholders on first run so `supabase start` boots, but those placeholders make `signInWithOAuth` fail at click time — replace them with real credentials to go live. The button-gating flags and the provider credentials are independent so a misconfigured provider never silently leaks failed OAuth attempts to the UI. See `openspec/specs/auth-github-oauth/spec.md` and `openspec/specs/auth-google-oauth/spec.md` for the end-to-end flows.
+The `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED` flag controls whether the SPA renders the **Continue with GitHub** button on `/login` and `/register`. The `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED` flag analogously controls the **Continue with Google** button. The `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED` flag analogously controls the **Continue with LinkedIn** button. Enabling any of these flags is **necessary but not sufficient**: the Supabase project must also have the corresponding real provider configured (locally, that means non-stub credentials in `supabase/.env`; in production, the equivalent keys in the Supabase Cloud dashboard). `setup:env` writes `github-oauth-stub`, `google-oauth-stub`, and `linkedin-oauth-stub` placeholders on first run so `supabase start` boots, but those placeholders make `signInWithOAuth` fail at click time — replace them with real credentials to go live. The button-gating flags and the provider credentials are independent so a misconfigured provider never silently leaks failed OAuth attempts to the UI. See `openspec/specs/auth-github-oauth/spec.md`, `openspec/specs/auth-google-oauth/spec.md`, and `openspec/specs/auth-linkedin-oauth/spec.md` for the end-to-end flows.
+
+#### LinkedIn-specific setup
+
+The LinkedIn provider has one extra operator step that GitHub and Google do not: the underlying LinkedIn OAuth app must have the **"Sign In with LinkedIn using OpenID Connect"** product enabled in the LinkedIn Developer portal. Without it, LinkedIn's authorisation server rejects the `openid profile email` scopes that the Supabase `linkedin_oidc` provider requests, and clicking the button lands back on `/login?error=invalid_scope_error&error_description=The+requested+permission+scope+is+not+valid` even though the credentials are correct.
+
+To wire up LinkedIn end-to-end:
+
+1. Open **https://www.linkedin.com/developers/apps** and create a new app (or select an existing one). On the **Auth** tab, add the Supabase callback URL to **Authorized redirect URLs for your app**: `http://127.0.0.1:54321/auth/v1/callback` for local dev, or `https://<PROJECT_REF>.supabase.co/auth/v1/callback` for a hosted Supabase project.
+2. On the **Products** tab, click **Add product** next to **"Sign In with LinkedIn using OpenID Connect"** and wait for LinkedIn to confirm the product is active. This is the step most operators miss — until the product is added, the Supabase `linkedin_oidc` provider will always fail with `invalid_scope_error` no matter what credentials are configured.
+3. Copy the **Client ID** and **Primary Client Secret** from the **Auth** tab into `LINKEDIN_OAUTH_CLIENT_ID` and `LINKEDIN_OAUTH_SECRET` in `supabase/.env` (or into the **Authentication → Providers → LinkedIn (OIDC)** section of the Supabase Cloud dashboard for hosted projects), then restart `supabase start` so the new env vars are picked up.
+
+The Supabase SDK uses the post-August-2023 `linkedin_oidc` provider, which is NOT compatible with LinkedIn apps that only have the legacy **"Sign In with LinkedIn"** product enabled. If you have a pre-August-2023 LinkedIn app using the deprecated `r_liteprofile` / `r_emailaddress` scopes, add the OIDC product to it (LinkedIn allows this on legacy apps) or create a new app enrolled in OIDC.
 
 ### Required env vars
 
-| Where      | Var                                    | Purpose                                                                                                                                                             |
-| ---------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/api` | `SUPABASE_URL`                         | Supabase project URL (server)                                                                                                                                       |
-| `apps/api` | `SUPABASE_SERVICE_ROLE_KEY`            | Service-role key for `auth.admin` operations (server-only)                                                                                                          |
-| `apps/api` | `SUPABASE_PUBLISHABLE_KEY`             | Publishable key mirrored to the SPA (the web bundle also reads its own `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`)                                                      |
-| `apps/web` | `NEXT_PUBLIC_SUPABASE_URL`             | Public Supabase URL for the auth client                                                                                                                             |
-| `apps/web` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | The **only** Supabase key in the browser bundle                                                                                                                     |
-| `supabase` | `GITHUB_OAUTH_CLIENT_ID`               | GitHub OAuth app client_id, consumed by `[auth.external.github]` in `supabase/config.toml` (non-functional `github-oauth-stub` written by `setup:env` on first run) |
-| `supabase` | `GITHUB_OAUTH_SECRET`                  | GitHub OAuth app client_secret (same source of truth as the client_id)                                                                                              |
-| `supabase` | `GOOGLE_OAUTH_CLIENT_ID`               | Google OAuth app client_id, consumed by `[auth.external.google]` in `supabase/config.toml` (non-functional `google-oauth-stub` written by `setup:env` on first run) |
-| `supabase` | `GOOGLE_OAUTH_SECRET`                  | Google OAuth app client_secret (same source of truth as the client_id)                                                                                              |
+| Where      | Var                                    | Purpose                                                                                                                                                                                                                                                                      |
+| ---------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api` | `SUPABASE_URL`                         | Supabase project URL (server)                                                                                                                                                                                                                                                |
+| `apps/api` | `SUPABASE_SERVICE_ROLE_KEY`            | Service-role key for `auth.admin` operations (server-only)                                                                                                                                                                                                                   |
+| `apps/api` | `SUPABASE_PUBLISHABLE_KEY`             | Publishable key mirrored to the SPA (the web bundle also reads its own `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`)                                                                                                                                                               |
+| `apps/web` | `NEXT_PUBLIC_SUPABASE_URL`             | Public Supabase URL for the auth client                                                                                                                                                                                                                                      |
+| `apps/web` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | The **only** Supabase key in the browser bundle                                                                                                                                                                                                                              |
+| `supabase` | `GITHUB_OAUTH_CLIENT_ID`               | GitHub OAuth app client_id, consumed by `[auth.external.github]` in `supabase/config.toml` (non-functional `github-oauth-stub` written by `setup:env` on first run)                                                                                                          |
+| `supabase` | `GITHUB_OAUTH_SECRET`                  | GitHub OAuth app client_secret (same source of truth as the client_id)                                                                                                                                                                                                       |
+| `supabase` | `GOOGLE_OAUTH_CLIENT_ID`               | Google OAuth app client_id, consumed by `[auth.external.google]` in `supabase/config.toml` (non-functional `google-oauth-stub` written by `setup:env` on first run)                                                                                                          |
+| `supabase` | `GOOGLE_OAUTH_SECRET`                  | Google OAuth app client_secret (same source of truth as the client_id)                                                                                                                                                                                                       |
+| `supabase` | `LINKEDIN_OAUTH_CLIENT_ID`             | LinkedIn OAuth app client_id from a LinkedIn app with the **"Sign In with LinkedIn using OpenID Connect"** product enabled, consumed by `[auth.external.linkedin_oidc]` in `supabase/config.toml` (non-functional `linkedin-oauth-stub` written by `setup:env` on first run) |
+| `supabase` | `LINKEDIN_OAUTH_SECRET`                | LinkedIn OAuth app Primary Client Secret (same source of truth as the client_id; the OIDC product MUST be active on the LinkedIn app or the button fails with `invalid_scope_error`)                                                                                         |
 
 ### Two-knob email verification
 

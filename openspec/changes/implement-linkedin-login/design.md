@@ -46,3 +46,4 @@ Following the established pattern from `auth-github-oauth`.
 
 - [Risk] LinkedIn OAuth app approval: LinkedIn requires app review for certain permissions (email, profile). → Mitigation: Start with basic profile scope, add scopes as needed for specific features.
 - [Risk] Inconsistent user experience if LinkedIn button behaves differently from GitHub button → Mitigation: Follow exact same implementation pattern as GitHub OAuth helper.
+- [Risk] Operator installs the LinkedIn app credentials but forgets to enable the **"Sign In with LinkedIn using OpenID Connect"** product on the LinkedIn Developer portal. → Symptom is `?error=invalid_scope_error&error_description=The+requested+permission+scope+is+not+valid` on `/login` even with correct credentials. → Mitigation: document the product-add step prominently in `README.md` under the **LinkedIn-specific setup** subsection, and in the new `auth-linkedin-oauth` spec Requirement that explicitly requires the OIDC product.
