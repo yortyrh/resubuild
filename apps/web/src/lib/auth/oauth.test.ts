@@ -11,7 +11,12 @@ vi.mock('@/lib/supabase/client', () => ({
   }),
 }));
 
-import { GITHUB_OAUTH_ERROR_MESSAGE, signInWithGitHub } from './oauth';
+import {
+  GITHUB_OAUTH_ERROR_MESSAGE,
+  GOOGLE_OAUTH_ERROR_MESSAGE,
+  signInWithGitHub,
+  signInWithGoogle,
+} from './oauth';
 
 describe('signInWithGitHub', () => {
   beforeEach(() => {
@@ -80,6 +85,79 @@ describe('signInWithGitHub', () => {
       await signInWithGitHub();
       expect(mockSignInWithOAuth).toHaveBeenCalledWith({
         provider: 'github',
+        options: { redirectTo: 'https://app.example.test/auth/callback' },
+      });
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { ...window.location, origin: originalOrigin },
+      });
+    }
+  });
+});
+
+describe('signInWithGoogle', () => {
+  beforeEach(() => {
+    mockSignInWithOAuth.mockReset();
+  });
+
+  it('calls supabase.auth.signInWithOAuth with the google provider and an /auth/callback redirectTo', async () => {
+    mockSignInWithOAuth.mockResolvedValue({
+      data: { url: 'https://accounts.google.com/.../authorize' },
+      error: null,
+    });
+
+    const result = await signInWithGoogle();
+
+    expect(mockSignInWithOAuth).toHaveBeenCalledTimes(1);
+    expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    expect(result).toEqual({ navigated: true });
+  });
+
+  it('returns navigated=false when the SDK returns no url (e.g. PKCE storage error)', async () => {
+    mockSignInWithOAuth.mockResolvedValue({ data: { url: null }, error: null });
+
+    const result = await signInWithGoogle();
+
+    expect(result).toEqual({ navigated: false });
+  });
+
+  it('throws the SDK error message when signInWithOAuth returns an error', async () => {
+    mockSignInWithOAuth.mockResolvedValue({
+      data: { url: null },
+      error: { message: 'Provider not enabled', name: 'AuthError', status: 400 },
+    });
+
+    await expect(signInWithGoogle()).rejects.toThrow('Provider not enabled');
+  });
+
+  it('falls back to the generic error message when the SDK error has no message', async () => {
+    mockSignInWithOAuth.mockResolvedValue({
+      data: { url: null },
+      error: { message: '', name: 'AuthError', status: 500 },
+    });
+
+    await expect(signInWithGoogle()).rejects.toThrow(GOOGLE_OAUTH_ERROR_MESSAGE);
+  });
+
+  it('uses the existing public origin (not a hardcoded host) so the redirect matches the magic-link emailRedirectTo', async () => {
+    mockSignInWithOAuth.mockResolvedValue({
+      data: { url: 'https://accounts.google.com/.../authorize' },
+      error: null,
+    });
+
+    const originalOrigin = window.location.origin;
+    try {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { ...window.location, origin: 'https://app.example.test' },
+      });
+      await signInWithGoogle();
+      expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+        provider: 'google',
         options: { redirectTo: 'https://app.example.test/auth/callback' },
       });
     } finally {

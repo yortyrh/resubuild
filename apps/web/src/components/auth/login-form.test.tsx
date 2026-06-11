@@ -57,6 +57,7 @@ function setFeatures(
     email_verification: boolean;
     passwordless: boolean;
     github_oauth: boolean;
+    google_oauth: boolean;
   }> = {},
 ) {
   mockUseAuthFeatures.mockReturnValue({ data: features, isLoading: false });
@@ -196,6 +197,52 @@ describe('LoginForm', () => {
     // auth-github-oauth spec's Resolved Decisions).
     expect(
       githubButton.compareDocumentPosition(emailField) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('hides the "Continue with Google" button when google_oauth is off (default)', () => {
+    setFeatures({
+      forgot_password: false,
+      email_verification: false,
+      passwordless: false,
+      github_oauth: false,
+      google_oauth: false,
+    });
+
+    renderLoginForm();
+
+    expect(screen.queryByRole('button', { name: /continue with google/i })).not.toBeInTheDocument();
+  });
+
+  it('renders the "Continue with Google" button when google_oauth is on', () => {
+    setFeatures({
+      forgot_password: false,
+      email_verification: false,
+      passwordless: false,
+      github_oauth: false,
+      google_oauth: true,
+    });
+
+    renderLoginForm();
+
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
+  });
+
+  it('renders the Google button above the email field when google_oauth is on', () => {
+    setFeatures({
+      forgot_password: false,
+      email_verification: false,
+      passwordless: false,
+      github_oauth: false,
+      google_oauth: true,
+    });
+
+    renderLoginForm();
+
+    const googleButton = screen.getByRole('button', { name: /continue with google/i });
+    const emailField = screen.getByLabelText('Email');
+    expect(
+      googleButton.compareDocumentPosition(emailField) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 

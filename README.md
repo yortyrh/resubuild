@@ -56,6 +56,7 @@ Resubuild's authentication is split between the **Nest API** (token issuance, va
 | Passwordless — magic link         | opt-in     | `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`       | `auth-passwordless`       |
 | Passwordless — 6-digit OTP        | opt-in     | `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`       | `auth-passwordless`       |
 | GitHub OAuth                      | opt-in     | `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED`       | `auth-github-oauth`       |
+| Google OAuth                      | opt-in     | `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED`       | `auth-google-oauth`       |
 
 ### Feature flags
 
@@ -69,12 +70,13 @@ NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED=true
 NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=true
 NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED=true
 NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED=true
+NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED=true
 
 # apps/api/.env — only the server-side flag
 AUTH_FORGOT_PASSWORD_ENABLED=true
 ```
 
-The `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED` flag controls whether the SPA renders the **Continue with GitHub** button on `/login` and `/register`. Enabling it is **necessary but not sufficient**: the Supabase project must also have a real `[auth.external.github]` provider configured (locally, that means non-stub `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_SECRET` in `supabase/.env`; in production, the equivalent provider keys in the Supabase Cloud dashboard). `setup:env` writes `github-oauth-stub` placeholders on first run so `supabase start` boots, but those placeholders make `signInWithOAuth` fail at click time — replace them with the real client_id and secret from a GitHub OAuth app registration to go live. The button-gating flag and the provider credentials are independent so a misconfigured GitHub app never silently leaks failed OAuth attempts to the UI. See `openspec/specs/auth-github-oauth/spec.md` for the end-to-end flow.
+The `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED` flag controls whether the SPA renders the **Continue with GitHub** button on `/login` and `/register`. The `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED` flag analogously controls the **Continue with Google** button. Enabling either flag is **necessary but not sufficient**: the Supabase project must also have the corresponding real provider configured (locally, that means non-stub credentials in `supabase/.env`; in production, the equivalent keys in the Supabase Cloud dashboard). `setup:env` writes `github-oauth-stub` and `google-oauth-stub` placeholders on first run so `supabase start` boots, but those placeholders make `signInWithOAuth` fail at click time — replace them with real credentials to go live. The button-gating flags and the provider credentials are independent so a misconfigured provider never silently leaks failed OAuth attempts to the UI. See `openspec/specs/auth-github-oauth/spec.md` and `openspec/specs/auth-google-oauth/spec.md` for the end-to-end flows.
 
 ### Required env vars
 
@@ -87,6 +89,8 @@ The `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED` flag controls whether the SPA render
 | `apps/web` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | The **only** Supabase key in the browser bundle                                                                                                                     |
 | `supabase` | `GITHUB_OAUTH_CLIENT_ID`               | GitHub OAuth app client_id, consumed by `[auth.external.github]` in `supabase/config.toml` (non-functional `github-oauth-stub` written by `setup:env` on first run) |
 | `supabase` | `GITHUB_OAUTH_SECRET`                  | GitHub OAuth app client_secret (same source of truth as the client_id)                                                                                              |
+| `supabase` | `GOOGLE_OAUTH_CLIENT_ID`               | Google OAuth app client_id, consumed by `[auth.external.google]` in `supabase/config.toml` (non-functional `google-oauth-stub` written by `setup:env` on first run) |
+| `supabase` | `GOOGLE_OAUTH_SECRET`                  | Google OAuth app client_secret (same source of truth as the client_id)                                                                                              |
 
 ### Two-knob email verification
 

@@ -8,10 +8,12 @@ import {
   useAuthenticatedEntryRedirect,
 } from '@/components/auth/authenticated-entry';
 import { ContinueWithGitHubButton } from '@/components/auth/continue-with-github-button';
+import { ContinueWithGoogleButton } from '@/components/auth/continue-with-google-button';
 import { DevMailpitHint } from '@/components/auth/dev-mailpit-hint';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { oauthCallbackErrorMessage } from '@/lib/auth/oauth-callback-error';
 import {
@@ -45,6 +47,7 @@ export function LoginForm() {
   const passwordless = features?.passwordless ?? false;
   const forgotPassword = features?.forgot_password ?? false;
   const githubOauth = features?.github_oauth ?? false;
+  const googleOauth = features?.google_oauth ?? false;
 
   const callbackError = (() => {
     const errorCode = searchParams.get('error_code');
@@ -203,7 +206,18 @@ export function LoginForm() {
     <div className="space-y-4">
       {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
 
-      {githubOauth ? <ContinueWithGitHubButton /> : null}
+      {githubOauth || googleOauth ? (
+        <div className="space-y-4">
+          {githubOauth ? <ContinueWithGitHubButton /> : null}
+          {googleOauth ? <ContinueWithGoogleButton /> : null}
+          <div className="relative">
+            <Separator />
+            <span className="bg-card text-muted-foreground absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-2 text-xs uppercase">
+              or
+            </span>
+          </div>
+        </div>
+      ) : null}
 
       {passwordless ? (
         <Tabs defaultValue="password">

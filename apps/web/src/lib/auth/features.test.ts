@@ -27,6 +27,7 @@ describe('getAuthFeatures', () => {
       'NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED',
       'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED',
       'NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED',
+      'NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED',
     ]) {
       delete process.env[key];
     }
@@ -35,6 +36,7 @@ describe('getAuthFeatures', () => {
       email_verification: false,
       passwordless: false,
       github_oauth: false,
+      google_oauth: false,
     });
   });
 
@@ -65,12 +67,14 @@ describe('getAuthFeatures', () => {
     process.env.NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED = 'true';
     process.env.NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED = 'true';
     process.env.NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED = 'true';
+    process.env.NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED = 'true';
 
     expect(getAuthFeatures()).toEqual({
       forgot_password: true,
       email_verification: true,
       passwordless: true,
       github_oauth: true,
+      google_oauth: true,
     });
   });
 
@@ -87,6 +91,22 @@ describe('getAuthFeatures', () => {
     for (const falsyButUnset of ['false', '', '1', 'TRUE', 'True', ' yes ', 'on']) {
       process.env.NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED = falsyButUnset;
       expect(getAuthFeatures().github_oauth).toBe(false);
+    }
+  });
+
+  it('parses the google_oauth flag with the same strict-true rules as the other four', () => {
+    // Defaults to false when unset.
+    delete process.env.NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED;
+    expect(getAuthFeatures().google_oauth).toBe(false);
+
+    // Literal "true" opts in.
+    process.env.NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED = 'true';
+    expect(getAuthFeatures().google_oauth).toBe(true);
+
+    // "false", empty, and non-literal truthy values all coerce to false.
+    for (const falsyButUnset of ['false', '', '1', 'TRUE', 'True', ' yes ', 'on']) {
+      process.env.NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED = falsyButUnset;
+      expect(getAuthFeatures().google_oauth).toBe(false);
     }
   });
 

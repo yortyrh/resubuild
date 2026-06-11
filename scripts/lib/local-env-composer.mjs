@@ -164,7 +164,7 @@ export function composeApiEnv(input) {
     `PUBLIC_API_URL=${input.publicApiUrl}`,
     '',
     '# Auth feature flags — server-side enforcement only. The other auth',
-    '# capability flags (email-verification, passwordless, GitHub, Google)',
+    '# capability flags (email-verification, passwordless, GitHub OAuth, Google OAuth)',
     '# are resolved client-side from apps/web/.env (NEXT_PUBLIC_* mirrors).',
     `AUTH_FORGOT_PASSWORD_ENABLED=${operator.AUTH_FORGOT_PASSWORD_ENABLED}`,
     '',
@@ -228,11 +228,14 @@ export function composeWebEnv(input) {
 
   // Mirror the auth feature flags from the previous web .env so re-runs
   // preserve operator decisions. Defaults to 'false' on the first run,
-  // matching apps/web/.env.example. The GitHub OAuth flag is web-only —
-  // the SPA uses it to decide whether to render the "Continue with
-  // GitHub" button. The actual provider liveness is controlled by the
-  // `[auth.external.github]` block in supabase/config.toml (env vars
-  // `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_SECRET`).
+  // matching apps/web/.env.example. The GitHub OAuth and Google OAuth
+  // flags are web-only — the SPA uses them to decide whether to render
+  // the "Continue with GitHub" and "Continue with Google" buttons. The
+  // actual provider liveness is controlled by the
+  // `[auth.external.github]` and `[auth.external.google]` blocks in
+  // supabase/config.toml (env vars `GITHUB_OAUTH_CLIENT_ID` /
+  // `GITHUB_OAUTH_SECRET` and `GOOGLE_OAUTH_CLIENT_ID` /
+  // `GOOGLE_OAUTH_SECRET`).
   const webOperator = readOperatorControlledWebValues(input.previousEnv);
 
   return [
@@ -256,6 +259,7 @@ export function composeWebEnv(input) {
     `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=${webOperator.NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED}`,
     `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED=${webOperator.NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED}`,
     `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED=${webOperator.NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED}`,
+    `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED=${webOperator.NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED}`,
     '',
   ].join('\n');
 }
@@ -283,18 +287,22 @@ export function readOperatorControlledWebValues(previousWebEnv) {
 /**
  * The `NEXT_PUBLIC_*` mirror keys written to `apps/web/.env`.
  * `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED` mirrors the API-side
- * `AUTH_FORGOT_PASSWORD_ENABLED` flag; the other three are web-only.
+ * `AUTH_FORGOT_PASSWORD_ENABLED` flag; the other four are web-only.
  * `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED` gates the "Continue with
- * GitHub" button on `/login` and `/register`; the actual provider
- * liveness is controlled by the `[auth.external.github]` block in
- * `supabase/config.toml` (env vars `GITHUB_OAUTH_CLIENT_ID` and
- * `GITHUB_OAUTH_SECRET`).
+ * GitHub" button; `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED` gates the
+ * "Continue with Google" button — on `/login` and `/register`. The
+ * actual provider liveness is controlled by the
+ * `[auth.external.github]` and `[auth.external.google]` blocks in
+ * `supabase/config.toml` (env vars `GITHUB_OAUTH_CLIENT_ID` /
+ * `GITHUB_OAUTH_SECRET` and `GOOGLE_OAUTH_CLIENT_ID` /
+ * `GOOGLE_OAUTH_SECRET`).
  */
 export const WEB_OPERATOR_CONTROLLED_KEYS = Object.freeze([
   'NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED',
   'NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED',
   'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED',
   'NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED',
+  'NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED',
 ]);
 
 /**
@@ -314,6 +322,8 @@ export const WEB_OPERATOR_CONTROLLED_KEYS = Object.freeze([
 export const SUPABASE_OPERATOR_CONTROLLED_KEYS = Object.freeze([
   'GITHUB_OAUTH_CLIENT_ID',
   'GITHUB_OAUTH_SECRET',
+  'GOOGLE_OAUTH_CLIENT_ID',
+  'GOOGLE_OAUTH_SECRET',
 ]);
 
 /**
@@ -342,6 +352,14 @@ export function composeSupabaseEnv(input) {
     `GITHUB_OAUTH_CLIENT_ID=${operator.GITHUB_OAUTH_CLIENT_ID}`,
     `GITHUB_OAUTH_SECRET=${operator.GITHUB_OAUTH_SECRET}`,
     '',
+    '# Google OAuth credentials consumed by the [auth.external.google] block',
+    '# in supabase/config.toml via env() interpolation. The stub values below',
+    '# are NON-FUNCTIONAL — replace them with the client_id and secret from a',
+    '# real Google OAuth app registration (https://console.cloud.google.com/apis/credentials).',
+    '# See openspec/specs/auth-google-oauth/spec.md for the end-to-end flow.',
+    `GOOGLE_OAUTH_CLIENT_ID=${operator.GOOGLE_OAUTH_CLIENT_ID}`,
+    `GOOGLE_OAUTH_SECRET=${operator.GOOGLE_OAUTH_SECRET}`,
+    '',
   ].join('\n');
 }
 
@@ -354,7 +372,13 @@ export function readSupabaseOperatorControlledValues(previousSupabaseEnv) {
   const out = {};
   for (const key of SUPABASE_OPERATOR_CONTROLLED_KEYS) {
     const raw = previousSupabaseEnv[key];
-    out[key] = raw === undefined || raw === '' ? 'github-oauth-stub' : raw;
+    if (raw !== undefined && raw !== '') {
+      out[key] = raw;
+    } else if (key.startsWith('GOOGLE_')) {
+      out[key] = 'google-oauth-stub';
+    } else {
+      out[key] = 'github-oauth-stub';
+    }
   }
   return out;
 }

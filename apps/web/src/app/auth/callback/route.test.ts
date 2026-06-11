@@ -49,6 +49,20 @@ describe('/auth/callback route handler', () => {
     expect(response.headers.get('location')).toBe('https://app.example.com/dashboard');
   });
 
+  it('exchanges the Google-issued code via the same code path (no provider branching)', async () => {
+    // Google OAuth (supabase.auth.signInWithOAuth({ provider: 'google' }))
+    // round-trips through the same PKCE code query param as the magic
+    // link and GitHub. The handler MUST be provider-agnostic so the
+    // Google flow reuses this exact route — see auth-google-oauth spec.
+    mockExchangeCodeForSession.mockResolvedValue({ error: null });
+    const request = makeRequest('https://app.example.com/auth/callback?code=google_code_xyz');
+
+    const response = await GET(request);
+
+    expect(mockExchangeCodeForSession).toHaveBeenCalledWith('google_code_xyz');
+    expect(response.headers.get('location')).toBe('https://app.example.com/dashboard');
+  });
+
   it('honors a safe same-origin ?next= after a successful exchange', async () => {
     mockExchangeCodeForSession.mockResolvedValue({ error: null });
     const request = makeRequest(

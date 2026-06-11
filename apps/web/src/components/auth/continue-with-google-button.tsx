@@ -1,16 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { SiGithub } from 'react-icons/si';
+import { SiGoogle } from 'react-icons/si';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { GITHUB_OAUTH_ERROR_MESSAGE, signInWithGitHub } from '@/lib/auth/oauth';
+import { GOOGLE_OAUTH_ERROR_MESSAGE, signInWithGoogle } from '@/lib/auth/oauth';
 
 /**
- * Renders the "Continue with GitHub" OAuth button.
+ * Renders the "Continue with Google" OAuth button.
  *
  * The button is disabled while the OAuth call is in flight. On failure
- * it surfaces a non-blocking Sonner toast (per the `auth-github-oauth`
+ * it surfaces a non-blocking Sonner toast (per the `auth-google-oauth`
  * spec) and the user is NOT navigated away from the current page.
  *
  * The visual divider ("or") that separates this row from the
@@ -18,18 +18,18 @@ import { GITHUB_OAUTH_ERROR_MESSAGE, signInWithGitHub } from '@/lib/auth/oauth';
  * `RegisterForm`, not by this component, so that a single divider
  * appears regardless of whether one or two OAuth providers are shown.
  */
-export function ContinueWithGitHubButton() {
+export function ContinueWithGoogleButton() {
   const [isPending, setIsPending] = useState(false);
 
   const handleClick = async () => {
     if (isPending) return;
     setIsPending(true);
     try {
-      await signInWithGitHub();
+      await signInWithGoogle();
     } catch (error) {
       setIsPending(false);
       const message =
-        error instanceof Error && error.message ? error.message : GITHUB_OAUTH_ERROR_MESSAGE;
+        error instanceof Error && error.message ? error.message : GOOGLE_OAUTH_ERROR_MESSAGE;
       toast.error(message);
     }
   };
@@ -41,11 +41,11 @@ export function ContinueWithGitHubButton() {
       className="w-full"
       onClick={handleClick}
       disabled={isPending}
-      aria-label="Continue with GitHub"
-      data-testid="continue-with-github"
+      aria-label="Continue with Google"
+      data-testid="continue-with-google"
     >
-      <SiGithub className="size-4" aria-hidden="true" />
-      {isPending ? 'Redirecting to GitHub…' : 'Continue with GitHub'}
+      <SiGoogle className="size-4" aria-hidden="true" />
+      {isPending ? 'Redirecting to Google…' : 'Continue with Google'}
     </Button>
   );
 }

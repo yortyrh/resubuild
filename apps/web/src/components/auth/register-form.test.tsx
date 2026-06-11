@@ -36,6 +36,7 @@ function setFeatures(
     email_verification: boolean;
     passwordless: boolean;
     github_oauth: boolean;
+    google_oauth: boolean;
   }> = {},
 ) {
   mockUseAuthFeatures.mockReturnValue({ data: features, isLoading: false });
@@ -86,5 +87,29 @@ describe('RegisterForm', () => {
     renderRegisterForm();
 
     expect(screen.queryByRole('button', { name: /continue with github/i })).not.toBeInTheDocument();
+  });
+
+  it('renders the Continue with Google button when google_oauth is true (and not signed in)', () => {
+    setFeatures({ google_oauth: true });
+
+    renderRegisterForm();
+
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
+  });
+
+  it('does NOT render the Continue with Google button when google_oauth is false', () => {
+    setFeatures({ google_oauth: false });
+
+    renderRegisterForm();
+
+    expect(screen.queryByRole('button', { name: /continue with google/i })).not.toBeInTheDocument();
+  });
+
+  it('does NOT render the Continue with Google button when the feature flag is absent (undefined)', () => {
+    mockUseAuthFeatures.mockReturnValue({ data: {}, isLoading: false });
+
+    renderRegisterForm();
+
+    expect(screen.queryByRole('button', { name: /continue with google/i })).not.toBeInTheDocument();
   });
 });
