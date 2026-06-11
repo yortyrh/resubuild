@@ -392,3 +392,10 @@ Optional sign-in flows (forgot password, email verification, passwordless magic 
 - **WHEN** `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED` is unset, the empty string, `1`, `yes`, `TRUE`, or any value other than the literal string `true`
 - **THEN** the SPA SHALL treat the flag as `false`
 - **AND** the "Continue with GitHub" button SHALL NOT render on `/login` or `/register`
+
+#### Scenario: Login page has no Google sign-in button
+
+- **WHEN** a user visits `/login` or `/register`
+- **THEN** the SPA SHALL NOT render a "Continue with Google" button
+- **AND** `supabase/config.toml` SHALL NOT configure `[auth.external.google]`
+- **AND** the API SHALL NOT expose `GET /auth/google` or `POST /auth/google/callback` (these respond `404 Not Found`)
