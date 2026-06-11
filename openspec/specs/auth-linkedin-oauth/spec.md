@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by change implement-linkedin-login. Update Purpose after archive.
+TBD - created by archiving change implement-linkedin-login. Update Purpose after archive.
 
 ## Requirements
 

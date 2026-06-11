@@ -18,13 +18,14 @@ flags at build time eliminates that round-trip entirely.
 
 ### Requirement: Auth feature flags MUST be resolved client-side at build time
 
-The web SPA SHALL resolve the three authentication feature flags directly from
+The web SPA SHALL resolve the authentication feature flags directly from
 `process.env.NEXT_PUBLIC_*` environment variables, via
-`apps/web/src/lib/auth/features.ts`. The three flags are:
+`apps/web/src/lib/auth/features.ts`. The four flags are:
 
 - `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED`
 - `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED`
 - `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`
+- `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED`
 
 Each value is interpreted as a strict boolean: only the literal string `true`
 enables the flag. Any other value (including the empty string, `1`, `yes`,
@@ -39,53 +40,17 @@ type AuthFeatures = {
   forgot_password: boolean;
   email_verification: boolean;
   passwordless: boolean;
+  linkedin_oauth: boolean;
 };
 ```
 
-The SPA SHALL consume this via the `useAuthFeatures` React Query hook (or
-the synchronous `getAuthFeatures()` for build-time / SSR contexts). Because
-the value is a build-time constant, the hook SHALL use `staleTime: Infinity`
-and SHALL NOT refetch at runtime.
+#### Scenario: LinkedIn OAuth enabled
 
-#### Scenario: All three opt-in flows disabled
-
-- **WHEN** none of the three `NEXT_PUBLIC_AUTH_*` flags are set to `true` in
+- **WHEN** `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED=true` in
   `apps/web/.env`
-- **THEN** `getAuthFeatures()` SHALL return
-  `{ forgot_password: false, email_verification: false, passwordless: false }`
-- **AND** the SPA SHALL NOT render the "Forgot your password?" link, the
-  passwordless tab group, or any signup-time email-verification routing
-
-#### Scenario: Forgot password enabled
-
-- **WHEN** `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED=true` in
-  `apps/web/.env`
-- **THEN** `getAuthFeatures().forgot_password` SHALL be `true`
-- **AND** the SPA SHALL render the "Forgot your password?" link on `/login`
-  AND the `/forgot-password` page SHALL be reachable
-
-#### Scenario: Email verification enabled
-
-- **WHEN** `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=true` in
-  `apps/web/.env`
-- **THEN** `getAuthFeatures().email_verification` SHALL be `true`
-- **AND** the SPA SHALL route unverified signups to `/auth/check-email`
-
-#### Scenario: Passwordless enabled
-
-- **WHEN** `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED=true` in
-  `apps/web/.env`
-- **THEN** `getAuthFeatures().passwordless` SHALL be `true`
-- **AND** the `/login` page SHALL render the "Email me a code" and
-  "Email me a link" tabs
-
-#### Scenario: Defensive parsing of non-`true` strings
-
-- **WHEN** an env var is set to `1`, `yes`, `TRUE`, or any value other than
-  the literal lowercase string `true`
-- **THEN** `getAuthFeatures()` SHALL treat the value as `false` — the
-  behaviour MUST be uniform across the three flags and covered by
-  `features.test.ts`
+- **THEN** `getAuthFeatures().linkedin_oauth` SHALL be `true`
+- **AND** the SPA SHALL render the "Continue with LinkedIn" button on `/login`
+  and `/register` pages
 
 ### Requirement: Forgot-password MUST be mirrored to the API for server-side enforcement
 
