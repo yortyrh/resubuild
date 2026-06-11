@@ -260,6 +260,7 @@ export function composeWebEnv(input) {
     `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED=${webOperator.NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED}`,
     `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED=${webOperator.NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED}`,
     `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED=${webOperator.NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED}`,
+    `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED=${webOperator.NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED}`,
     '',
   ].join('\n');
 }
@@ -290,12 +291,13 @@ export function readOperatorControlledWebValues(previousWebEnv) {
  * `AUTH_FORGOT_PASSWORD_ENABLED` flag; the other four are web-only.
  * `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED` gates the "Continue with
  * GitHub" button; `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED` gates the
- * "Continue with Google" button — on `/login` and `/register`. The
- * actual provider liveness is controlled by the
- * `[auth.external.github]` and `[auth.external.google]` blocks in
- * `supabase/config.toml` (env vars `GITHUB_OAUTH_CLIENT_ID` /
- * `GITHUB_OAUTH_SECRET` and `GOOGLE_OAUTH_CLIENT_ID` /
- * `GOOGLE_OAUTH_SECRET`).
+ * "Continue with Google" button; `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED`
+ * gates the "Continue with LinkedIn" button — on `/login` and `/register`.
+ * The actual provider liveness is controlled by the
+ * `[auth.external.github]`, `[auth.external.google]`, and `[auth.external.linkedin]`
+ * blocks in `supabase/config.toml` (env vars `GITHUB_OAUTH_CLIENT_ID` /
+ * `GITHUB_OAUTH_SECRET`, `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_SECRET`,
+ * and `LINKEDIN_OAUTH_CLIENT_ID` / `LINKEDIN_OAUTH_SECRET`).
  */
 export const WEB_OPERATOR_CONTROLLED_KEYS = Object.freeze([
   'NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED',
@@ -303,27 +305,28 @@ export const WEB_OPERATOR_CONTROLLED_KEYS = Object.freeze([
   'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED',
   'NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED',
   'NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED',
+  'NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED',
 ]);
 
 /**
  * The Supabase-side env vars written to `supabase/.env` for the local
- * stack. The GitHub OAuth stub values are NON-FUNCTIONAL: clicking
- * "Continue with GitHub" while these stubs are in place will fail
- * with a "Sign-in failed" toast. Operators MUST replace them with
- * real GitHub OAuth app credentials (`GITHUB_OAUTH_CLIENT_ID` and
- * `GITHUB_OAUTH_SECRET` from a real OAuth app registration) to
- * enable the provider. The stubs exist solely so `supabase start`
- * does not fail when the `[auth.external.github]` block in
- * `supabase/config.toml` reads `env(GITHUB_OAUTH_*)`.
+ * stack. The GitHub, Google, and LinkedIn OAuth stub values are NON-FUNCTIONAL:
+ * clicking "Continue with GitHub/Google/LinkedIn" while these stubs are in place
+ * will fail with a "Sign-in failed" toast. Operators MUST replace them with
+ * real OAuth app credentials to enable the provider. The stubs exist solely
+ * so `supabase start` does not fail when the `[auth.external.*]` blocks in
+ * `supabase/config.toml` read `env(...)`.
  *
  * Re-runs preserve the operator's real values verbatim — only the
- * first run writes the `github-oauth-stub` defaults.
+ * first run writes the `*-oauth-stub` defaults.
  */
 export const SUPABASE_OPERATOR_CONTROLLED_KEYS = Object.freeze([
   'GITHUB_OAUTH_CLIENT_ID',
   'GITHUB_OAUTH_SECRET',
   'GOOGLE_OAUTH_CLIENT_ID',
   'GOOGLE_OAUTH_SECRET',
+  'LINKEDIN_OAUTH_CLIENT_ID',
+  'LINKEDIN_OAUTH_SECRET',
 ]);
 
 /**
@@ -360,6 +363,14 @@ export function composeSupabaseEnv(input) {
     `GOOGLE_OAUTH_CLIENT_ID=${operator.GOOGLE_OAUTH_CLIENT_ID}`,
     `GOOGLE_OAUTH_SECRET=${operator.GOOGLE_OAUTH_SECRET}`,
     '',
+    '# LinkedIn OAuth credentials consumed by the [auth.external.linkedin_oidc] block',
+    '# in supabase/config.toml via env() interpolation. The stub values below',
+    '# are NON-FUNCTIONAL — replace them with the client_id and secret from a',
+    '# real LinkedIn OAuth app registration (https://www.linkedin.com/developers/).',
+    '# See openspec/specs/auth-linkedin-oauth/spec.md for the end-to-end flow.',
+    `LINKEDIN_OAUTH_CLIENT_ID=${operator.LINKEDIN_OAUTH_CLIENT_ID}`,
+    `LINKEDIN_OAUTH_SECRET=${operator.LINKEDIN_OAUTH_SECRET}`,
+    '',
   ].join('\n');
 }
 
@@ -376,6 +387,8 @@ export function readSupabaseOperatorControlledValues(previousSupabaseEnv) {
       out[key] = raw;
     } else if (key.startsWith('GOOGLE_')) {
       out[key] = 'google-oauth-stub';
+    } else if (key.startsWith('LINKEDIN_')) {
+      out[key] = 'linkedin-oauth-stub';
     } else {
       out[key] = 'github-oauth-stub';
     }

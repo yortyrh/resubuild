@@ -57,6 +57,22 @@ secret = "env(GOOGLE_OAUTH_SECRET)"
 # The existing /auth/callback entry above is reused for the Google
 # redirect — no new line in [auth].additional_redirect_urls is required.
 
+# LinkedIn OAuth — gated client-side by NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED.
+# The SPA only renders the "Continue with LinkedIn" button when that flag is
+# the literal string "true". The actual provider liveness is controlled by
+# this block: enabled = true plus real LINKEDIN_OAUTH_CLIENT_ID and
+# LINKEDIN_OAUTH_SECRET in supabase/.env. The local-env-composer writes
+# `linkedin-oauth-stub` placeholders so `supabase start` boots; those stubs
+# make signInWithOAuth fail with a "Sign-in failed" toast at click time —
+# the SPA stays usable and the operator supplies real credentials to go
+# live. See openspec/specs/auth-linkedin-oauth/spec.md.
+[auth.external.linkedin_oidc]
+enabled = true
+client_id = "env(LINKEDIN_OAUTH_CLIENT_ID)"
+secret = "env(LINKEDIN_OAUTH_SECRET)"
+# The existing /auth/callback entry above is reused for the LinkedIn
+# redirect — no new line in [auth].additional_redirect_urls is required.
+
 [realtime]
 enabled = false
 

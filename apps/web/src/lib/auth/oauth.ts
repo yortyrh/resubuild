@@ -29,6 +29,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 
 export const GITHUB_OAUTH_ERROR_MESSAGE = 'Sign-in failed. Please try again.';
 export const GOOGLE_OAUTH_ERROR_MESSAGE = 'Sign-in failed. Please try again.';
+export const LINKEDIN_OAUTH_ERROR_MESSAGE = 'Sign-in failed. Please try again.';
 
 export interface SignInWithGitHubResult {
   /** True when the SDK handed back a provider URL and we are about to navigate. */
@@ -36,6 +37,11 @@ export interface SignInWithGitHubResult {
 }
 
 export interface SignInWithGoogleResult {
+  /** True when the SDK handed back a provider URL and we are about to navigate. */
+  navigated: boolean;
+}
+
+export interface SignInWithLinkedInResult {
   /** True when the SDK handed back a provider URL and we are about to navigate. */
   navigated: boolean;
 }
@@ -83,6 +89,30 @@ export async function signInWithGoogle(): Promise<SignInWithGoogleResult> {
 
   if (error) {
     throw new Error(error.message || GOOGLE_OAUTH_ERROR_MESSAGE);
+  }
+
+  return { navigated: Boolean(data?.url) };
+}
+
+/**
+ * Kick off the LinkedIn OAuth flow. The browser is redirected to LinkedIn by
+ * the Supabase client on success; the function resolves once that
+ * navigation has been issued (or rejects on a hard SDK failure such as
+ * the provider being disabled at the Supabase project).
+ *
+ * Callers MUST disable the button while the returned promise is in
+ * flight and MUST surface a non-blocking error toast on rejection — see
+ * `LoginForm` / `RegisterForm` and the `auth-linkedin-oauth` spec.
+ */
+export async function signInWithLinkedIn(): Promise<SignInWithLinkedInResult> {
+  const redirectTo = `${window.location.origin}/auth/callback`;
+  const { data, error } = await getSupabaseClient().auth.signInWithOAuth({
+    provider: 'linkedin_oidc',
+    options: { redirectTo },
+  });
+
+  if (error) {
+    throw new Error(error.message || LINKEDIN_OAUTH_ERROR_MESSAGE);
   }
 
   return { navigated: Boolean(data?.url) };

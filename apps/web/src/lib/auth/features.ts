@@ -29,6 +29,7 @@ export interface AuthFeatures {
   passwordless: boolean;
   github_oauth: boolean;
   google_oauth: boolean;
+  linkedin_oauth: boolean;
 }
 
 function readBooleanFlag(envVar: string | undefined): boolean {
@@ -48,5 +49,6 @@ export function getAuthFeatures(): AuthFeatures {
     passwordless: readBooleanFlag(process.env.NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED),
     github_oauth: readBooleanFlag(process.env.NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED),
     google_oauth: readBooleanFlag(process.env.NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED),
+    linkedin_oauth: readBooleanFlag(process.env.NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED),
   };
 }

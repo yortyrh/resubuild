@@ -37,6 +37,7 @@ describe('auth query hooks', () => {
         passwordless: false,
         github_oauth: false,
         google_oauth: false,
+        linkedin_oauth: false,
       });
     });
 
@@ -47,6 +48,7 @@ describe('auth query hooks', () => {
         passwordless: true,
         github_oauth: false,
         google_oauth: false,
+        linkedin_oauth: false,
       });
 
       try {
@@ -61,6 +63,7 @@ describe('auth query hooks', () => {
           passwordless: true,
           github_oauth: false,
           google_oauth: false,
+          linkedin_oauth: false,
         });
         expect(getAuthFeaturesSpy).toHaveBeenCalled();
       } finally {

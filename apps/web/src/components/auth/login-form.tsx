@@ -9,6 +9,7 @@ import {
 } from '@/components/auth/authenticated-entry';
 import { ContinueWithGitHubButton } from '@/components/auth/continue-with-github-button';
 import { ContinueWithGoogleButton } from '@/components/auth/continue-with-google-button';
+import { ContinueWithLinkedInButton } from '@/components/auth/continue-with-linkedin-button';
 import { DevMailpitHint } from '@/components/auth/dev-mailpit-hint';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +49,7 @@ export function LoginForm() {
   const forgotPassword = features?.forgot_password ?? false;
   const githubOauth = features?.github_oauth ?? false;
   const googleOauth = features?.google_oauth ?? false;
+  const linkedinOauth = features?.linkedin_oauth ?? false;
 
   const callbackError = (() => {
     const errorCode = searchParams.get('error_code');
@@ -206,10 +208,11 @@ export function LoginForm() {
     <div className="space-y-4">
       {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
 
-      {githubOauth || googleOauth ? (
+      {githubOauth || googleOauth || linkedinOauth ? (
         <div className="space-y-4">
           {githubOauth ? <ContinueWithGitHubButton /> : null}
           {googleOauth ? <ContinueWithGoogleButton /> : null}
+          {linkedinOauth ? <ContinueWithLinkedInButton /> : null}
           <div className="relative">
             <Separator />
             <span className="bg-card text-muted-foreground absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-2 text-xs uppercase">

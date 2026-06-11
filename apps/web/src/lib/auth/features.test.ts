@@ -28,6 +28,7 @@ describe('getAuthFeatures', () => {
       'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED',
       'NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED',
       'NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED',
+      'NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED',
     ]) {
       delete process.env[key];
     }
@@ -37,6 +38,7 @@ describe('getAuthFeatures', () => {
       passwordless: false,
       github_oauth: false,
       google_oauth: false,
+      linkedin_oauth: false,
     });
   });
 
@@ -68,6 +70,7 @@ describe('getAuthFeatures', () => {
     process.env.NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED = 'true';
     process.env.NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED = 'true';
     process.env.NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED = 'true';
+    process.env.NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED = 'true';
 
     expect(getAuthFeatures()).toEqual({
       forgot_password: true,
@@ -75,6 +78,7 @@ describe('getAuthFeatures', () => {
       passwordless: true,
       github_oauth: true,
       google_oauth: true,
+      linkedin_oauth: true,
     });
   });
 
@@ -107,6 +111,22 @@ describe('getAuthFeatures', () => {
     for (const falsyButUnset of ['false', '', '1', 'TRUE', 'True', ' yes ', 'on']) {
       process.env.NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED = falsyButUnset;
       expect(getAuthFeatures().google_oauth).toBe(false);
+    }
+  });
+
+  it('parses the linkedin_oauth flag with the same strict-true rules as the other five', () => {
+    // Defaults to false when unset.
+    delete process.env.NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED;
+    expect(getAuthFeatures().linkedin_oauth).toBe(false);
+
+    // Literal "true" opts in.
+    process.env.NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED = 'true';
+    expect(getAuthFeatures().linkedin_oauth).toBe(true);
+
+    // "false", empty, and non-literal truthy values all coerce to false.
+    for (const falsyButUnset of ['false', '', '1', 'TRUE', 'True', ' yes ', 'on']) {
+      process.env.NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED = falsyButUnset;
+      expect(getAuthFeatures().linkedin_oauth).toBe(false);
     }
   });
 
