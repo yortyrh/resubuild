@@ -25,6 +25,22 @@ additional_redirect_urls = [
 enable_signup = true
 enable_confirmations = true
 
+# GitHub OAuth — gated client-side by NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED.
+# The SPA only renders the "Continue with GitHub" button when that flag is
+# the literal string "true". The actual provider liveness is controlled by
+# this block: enabled = true plus real GITHUB_OAUTH_CLIENT_ID and
+# GITHUB_OAUTH_SECRET in supabase/.env. The local-env-composer writes
+# `github-oauth-stub` placeholders so `supabase start` boots; those stubs
+# make signInWithOAuth fail with a "Sign-in failed" toast at click time —
+# the SPA stays usable and the operator supplies real credentials to go
+# live. See openspec/specs/auth-github-oauth/spec.md.
+[auth.external.github]
+enabled = true
+client_id = "env(GITHUB_OAUTH_CLIENT_ID)"
+secret = "env(GITHUB_OAUTH_SECRET)"
+# The existing /auth/callback entry above is reused for the GitHub
+# redirect — no new line in [auth].additional_redirect_urls is required.
+
 [realtime]
 enabled = false
 

@@ -26,6 +26,7 @@ describe('getAuthFeatures', () => {
       'NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED',
       'NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED',
       'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED',
+      'NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED',
     ]) {
       delete process.env[key];
     }
@@ -33,6 +34,7 @@ describe('getAuthFeatures', () => {
       forgot_password: false,
       email_verification: false,
       passwordless: false,
+      github_oauth: false,
     });
   });
 
@@ -62,12 +64,30 @@ describe('getAuthFeatures', () => {
     process.env.NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED = 'true';
     process.env.NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED = 'true';
     process.env.NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED = 'true';
+    process.env.NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED = 'true';
 
     expect(getAuthFeatures()).toEqual({
       forgot_password: true,
       email_verification: true,
       passwordless: true,
+      github_oauth: true,
     });
+  });
+
+  it('parses the github_oauth flag with the same strict-true rules as the other three', () => {
+    // Defaults to false when unset.
+    delete process.env.NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED;
+    expect(getAuthFeatures().github_oauth).toBe(false);
+
+    // Literal "true" opts in.
+    process.env.NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED = 'true';
+    expect(getAuthFeatures().github_oauth).toBe(true);
+
+    // "false", empty, and non-literal truthy values all coerce to false.
+    for (const falsyButUnset of ['false', '', '1', 'TRUE', 'True', ' yes ', 'on']) {
+      process.env.NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED = falsyButUnset;
+      expect(getAuthFeatures().github_oauth).toBe(false);
+    }
   });
 
   it('is pure — repeated calls with the same env return the same result', () => {

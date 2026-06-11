@@ -7,6 +7,7 @@ import {
   SignedInAuthFallback,
   useAuthenticatedEntryRedirect,
 } from '@/components/auth/authenticated-entry';
+import { ContinueWithGitHubButton } from '@/components/auth/continue-with-github-button';
 import { DevMailpitHint } from '@/components/auth/dev-mailpit-hint';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +44,7 @@ export function LoginForm() {
 
   const passwordless = features?.passwordless ?? false;
   const forgotPassword = features?.forgot_password ?? false;
+  const githubOauth = features?.github_oauth ?? false;
 
   const callbackError = (() => {
     const errorCode = searchParams.get('error_code');
@@ -200,6 +202,8 @@ export function LoginForm() {
   return (
     <div className="space-y-4">
       {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
+
+      {githubOauth ? <ContinueWithGitHubButton /> : null}
 
       {passwordless ? (
         <Tabs defaultValue="password">

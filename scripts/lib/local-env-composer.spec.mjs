@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   composeApiEnv,
+  composeSupabaseEnv,
   composeWebEnv,
   OPERATOR_CONTROLLED_KEYS,
   parseDotenv,
   readOperatorControlledValues,
   readOperatorControlledWebValues,
+  readSupabaseOperatorControlledValues,
+  SUPABASE_OPERATOR_CONTROLLED_KEYS,
   WEB_OPERATOR_CONTROLLED_KEYS,
 } from './local-env-composer.mjs';
 
@@ -144,11 +147,12 @@ describe('readOperatorControlledWebValues', () => {
     expect(out.NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED).toBe('false');
   });
 
-  it('exports the full list of web-mirror keys', () => {
+  it('exports the full list of web-mirror keys (including the GitHub OAuth flag)', () => {
     expect(WEB_OPERATOR_CONTROLLED_KEYS).toEqual([
       'NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED',
       'NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED',
       'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED',
+      'NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED',
     ]);
   });
 });
@@ -298,11 +302,12 @@ describe('composeWebEnv', () => {
     expect(read(body, 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY')).toBe('sb_publishable_TEST');
   });
 
-  it('writes the three NEXT_PUBLIC_* auth capability mirrors (client-only feature flags)', () => {
+  it('writes the four NEXT_PUBLIC_* auth capability mirrors (client-only feature flags)', () => {
     const body = composeWebEnv(makeWebInput());
     expect(read(body, 'NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED')).toBe('false');
     expect(read(body, 'NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED')).toBe('false');
     expect(read(body, 'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED')).toBe('false');
+    expect(read(body, 'NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED')).toBe('false');
   });
 
   it('preserves operator decisions on the web mirrors across a re-run', () => {
@@ -311,6 +316,7 @@ describe('composeWebEnv', () => {
         previousEnv: {
           NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED: 'true',
           NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED: 'true',
+          NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED: 'true',
         },
       }),
     );
@@ -318,6 +324,7 @@ describe('composeWebEnv', () => {
     expect(read(second, 'NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED')).toBe('true');
     expect(read(second, 'NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED')).toBe('true');
     expect(read(second, 'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED')).toBe('false');
+    expect(read(second, 'NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED')).toBe('true');
   });
 
   it('does not leak the server-side auth keys (the SPA only sees the NEXT_PUBLIC_* mirrors)', () => {
@@ -369,5 +376,69 @@ describe('composeWebEnv', () => {
       }),
     );
     expect(read(body, 'NEXT_PUBLIC_SUPABASE_URL')).toBe('http://custom.example.invalid');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// composeSupabaseEnv — writes the [auth.external.github] env stub to
+// supabase/.env on first run. Re-runs preserve real operator values.
+// ---------------------------------------------------------------------------
+
+describe('readSupabaseOperatorControlledValues', () => {
+  it('defaults both GitHub OAuth envs to the `github-oauth-stub` placeholder when previousSupabaseEnv is empty', () => {
+    const out = readSupabaseOperatorControlledValues({});
+    expect(out.GITHUB_OAUTH_CLIENT_ID).toBe('github-oauth-stub');
+    expect(out.GITHUB_OAUTH_SECRET).toBe('github-oauth-stub');
+  });
+
+  it('preserves real operator-supplied credentials across a re-run (regression: never silently overwrite)', () => {
+    const out = readSupabaseOperatorControlledValues({
+      GITHUB_OAUTH_CLIENT_ID: 'Iv1.real_client_id',
+      GITHUB_OAUTH_SECRET: 'a_real_github_oauth_secret',
+    });
+    expect(out.GITHUB_OAUTH_CLIENT_ID).toBe('Iv1.real_client_id');
+    expect(out.GITHUB_OAUTH_SECRET).toBe('a_real_github_oauth_secret');
+  });
+
+  it('treats an empty string the same as missing (defensive default to stub)', () => {
+    const out = readSupabaseOperatorControlledValues({
+      GITHUB_OAUTH_CLIENT_ID: '',
+    });
+    expect(out.GITHUB_OAUTH_CLIENT_ID).toBe('github-oauth-stub');
+  });
+
+  it('exports the full list of supabase-side operator-controlled keys', () => {
+    expect(SUPABASE_OPERATOR_CONTROLLED_KEYS).toEqual([
+      'GITHUB_OAUTH_CLIENT_ID',
+      'GITHUB_OAUTH_SECRET',
+    ]);
+  });
+});
+
+describe('composeSupabaseEnv', () => {
+  it('writes both GITHUB_OAUTH_* keys as `github-oauth-stub` on first run', () => {
+    const body = composeSupabaseEnv({ previousEnv: {} });
+    expect(read(body, 'GITHUB_OAUTH_CLIENT_ID')).toBe('github-oauth-stub');
+    expect(read(body, 'GITHUB_OAUTH_SECRET')).toBe('github-oauth-stub');
+  });
+
+  it('preserves operator credentials across a re-run (regression: never clobber)', () => {
+    const first = composeSupabaseEnv({
+      previousEnv: {
+        GITHUB_OAUTH_CLIENT_ID: 'Iv1.real_client_id',
+        GITHUB_OAUTH_SECRET: 'a_real_github_oauth_secret',
+      },
+    });
+    const second = composeSupabaseEnv({ previousEnv: parseDotenv(first) });
+    expect(read(second, 'GITHUB_OAUTH_CLIENT_ID')).toBe('Iv1.real_client_id');
+    expect(read(second, 'GITHUB_OAUTH_SECRET')).toBe('a_real_github_oauth_secret');
+  });
+
+  it('emits a header comment that documents the non-functional stub', () => {
+    const body = composeSupabaseEnv({ previousEnv: {} });
+    // Operators SHOULD see at a glance that the stubs are placeholders,
+    // not real credentials, so they know to replace them to go live.
+    expect(body).toMatch(/NON-FUNCTIONAL/i);
+    expect(body).toMatch(/GITHUB_OAUTH_/);
   });
 });

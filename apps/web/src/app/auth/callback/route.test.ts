@@ -35,6 +35,20 @@ describe('/auth/callback route handler', () => {
     expect(response.headers.get('location')).toBe('https://app.example.com/dashboard');
   });
 
+  it('exchanges the GitHub-issued code via the same code path (no provider branching)', async () => {
+    // GitHub OAuth (supabase.auth.signInWithOAuth({ provider: 'github' }))
+    // round-trips through the same PKCE code query param as the magic
+    // link. The handler MUST be provider-agnostic so the new GitHub
+    // flow reuses this exact route — see auth-github-oauth spec.
+    mockExchangeCodeForSession.mockResolvedValue({ error: null });
+    const request = makeRequest('https://app.example.com/auth/callback?code=github_code_xyz');
+
+    const response = await GET(request);
+
+    expect(mockExchangeCodeForSession).toHaveBeenCalledWith('github_code_xyz');
+    expect(response.headers.get('location')).toBe('https://app.example.com/dashboard');
+  });
+
   it('honors a safe same-origin ?next= after a successful exchange', async () => {
     mockExchangeCodeForSession.mockResolvedValue({ error: null });
     const request = makeRequest(

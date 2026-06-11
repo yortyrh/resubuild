@@ -51,11 +51,14 @@ vi.mock('@/lib/queries/auth-queries', () => ({
   useAuthSession: () => mockUseAuthSession(),
 }));
 
-function setFeatures(features: {
-  forgot_password: boolean;
-  email_verification: boolean;
-  passwordless: boolean;
-}) {
+function setFeatures(
+  features: Partial<{
+    forgot_password: boolean;
+    email_verification: boolean;
+    passwordless: boolean;
+    github_oauth: boolean;
+  }> = {},
+) {
   mockUseAuthFeatures.mockReturnValue({ data: features, isLoading: false });
 }
 
@@ -148,6 +151,52 @@ describe('LoginForm', () => {
     renderLoginForm();
 
     expect(screen.queryByText(/forgot your password\?/i)).not.toBeInTheDocument();
+  });
+
+  it('hides the "Continue with GitHub" button when github_oauth is off (default)', () => {
+    setFeatures({
+      forgot_password: false,
+      email_verification: false,
+      passwordless: false,
+      github_oauth: false,
+    });
+
+    renderLoginForm();
+
+    expect(screen.queryByRole('button', { name: /continue with github/i })).not.toBeInTheDocument();
+  });
+
+  it('renders the "Continue with GitHub" button when github_oauth is on', () => {
+    setFeatures({
+      forgot_password: false,
+      email_verification: false,
+      passwordless: false,
+      github_oauth: true,
+    });
+
+    renderLoginForm();
+
+    expect(screen.getByRole('button', { name: /continue with github/i })).toBeInTheDocument();
+  });
+
+  it('renders the GitHub button above the password form when github_oauth is on', () => {
+    setFeatures({
+      forgot_password: false,
+      email_verification: false,
+      passwordless: false,
+      github_oauth: true,
+    });
+
+    renderLoginForm();
+
+    const githubButton = screen.getByRole('button', { name: /continue with github/i });
+    const emailField = screen.getByLabelText('Email');
+    // GitHub row must come before the email field in DOM order so the
+    // social-login entry point sits above the password form (per the
+    // auth-github-oauth spec's Resolved Decisions).
+    expect(
+      githubButton.compareDocumentPosition(emailField) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('submits the password form with email and password', async () => {

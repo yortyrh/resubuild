@@ -15,7 +15,12 @@ const mockUseForgotPassword = vi.fn(
   }),
 );
 const mockUseAuthFeatures = vi.fn(() => ({
-  data: { forgot_password: true, email_verification: false, passwordless: false },
+  data: {
+    forgot_password: true,
+    email_verification: false,
+    passwordless: false,
+    github_oauth: false,
+  },
   isLoading: false,
 }));
 

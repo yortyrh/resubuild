@@ -1,0 +1,92 @@
+// @vitest-environment jsdom
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockSignInWithOAuth = vi.fn();
+
+vi.mock('@/lib/supabase/client', () => ({
+  getSupabaseClient: () => ({
+    auth: {
+      signInWithOAuth: mockSignInWithOAuth,
+    },
+  }),
+}));
+
+import { GITHUB_OAUTH_ERROR_MESSAGE, signInWithGitHub } from './oauth';
+
+describe('signInWithGitHub', () => {
+  beforeEach(() => {
+    mockSignInWithOAuth.mockReset();
+  });
+
+  it('calls supabase.auth.signInWithOAuth with the github provider and an /auth/callback redirectTo', async () => {
+    mockSignInWithOAuth.mockResolvedValue({
+      data: { url: 'https://github.com/.../authorize' },
+      error: null,
+    });
+
+    const result = await signInWithGitHub();
+
+    expect(mockSignInWithOAuth).toHaveBeenCalledTimes(1);
+    expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+      provider: 'github',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    expect(result).toEqual({ navigated: true });
+  });
+
+  it('returns navigated=false when the SDK returns no url (e.g. PKCE storage error)', async () => {
+    mockSignInWithOAuth.mockResolvedValue({ data: { url: null }, error: null });
+
+    const result = await signInWithGitHub();
+
+    expect(result).toEqual({ navigated: false });
+  });
+
+  it('throws the SDK error message when signInWithOAuth returns an error', async () => {
+    mockSignInWithOAuth.mockResolvedValue({
+      data: { url: null },
+      error: { message: 'Provider not enabled', name: 'AuthError', status: 400 },
+    });
+
+    await expect(signInWithGitHub()).rejects.toThrow('Provider not enabled');
+  });
+
+  it('falls back to the generic error message when the SDK error has no message', async () => {
+    mockSignInWithOAuth.mockResolvedValue({
+      data: { url: null },
+      error: { message: '', name: 'AuthError', status: 500 },
+    });
+
+    await expect(signInWithGitHub()).rejects.toThrow(GITHUB_OAUTH_ERROR_MESSAGE);
+  });
+
+  it('uses the existing public origin (not a hardcoded host) so the redirect matches the magic-link emailRedirectTo', async () => {
+    // The helper must read window.location.origin at call time so the
+    // redirect lands on the same origin the user is on (the same value
+    // useSendMagicLink uses for emailRedirectTo).
+    mockSignInWithOAuth.mockResolvedValue({
+      data: { url: 'https://github.com/.../authorize' },
+      error: null,
+    });
+
+    const originalOrigin = window.location.origin;
+    try {
+      // jsdom does not allow direct assignment to `origin`, so we spy
+      // on the property descriptor instead.
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { ...window.location, origin: 'https://app.example.test' },
+      });
+      await signInWithGitHub();
+      expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+        provider: 'github',
+        options: { redirectTo: 'https://app.example.test/auth/callback' },
+      });
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { ...window.location, origin: originalOrigin },
+      });
+    }
+  });
+});

@@ -1,0 +1,59 @@
+/**
+ * GitHub OAuth sign-in helper for the SPA.
+ *
+ * Drives the Supabase PKCE flow from the browser:
+ *   1. `supabase.auth.signInWithOAuth({ provider: 'github' })` returns a
+ *      Supabase-hosted authorization URL.
+ *   2. The browser navigates the user to GitHub.
+ *   3. On success, GitHub redirects the user back to
+ *      `<window.location.origin>/auth/callback` with a Supabase-issued
+ *      authorization code.
+ *   4. The existing `/auth/callback` server route handler exchanges the
+ *      code for a session and redirects the user to `/dashboard` (or the
+ *      `?next=` query param if present).
+ *
+ * The `redirectTo` is derived from `window.location.origin` — the same
+ * public value that the existing magic-link flow uses for its
+ * `emailRedirectTo` (see `useSendMagicLink` in
+ * `apps/web/src/lib/queries/auth-mutations.ts`). No new env var is
+ * required: the public site URL is implicit in the browser context.
+ *
+ * The helper does NOT render the button — the button is rendered by
+ * `LoginForm` and `RegisterForm` when `getAuthFeatures().github_oauth` is
+ * `true`. Keeping the button placement and the underlying call in
+ * separate modules lets the forms gate the button without coupling to
+ * the Supabase SDK directly.
+ */
+
+import { getSupabaseClient } from '@/lib/supabase/client';
+
+export const GITHUB_OAUTH_ERROR_MESSAGE = 'Sign-in failed. Please try again.';
+
+export interface SignInWithGitHubResult {
+  /** True when the SDK handed back a provider URL and we are about to navigate. */
+  navigated: boolean;
+}
+
+/**
+ * Kick off the GitHub OAuth flow. The browser is redirected to GitHub by
+ * the Supabase client on success; the function resolves once that
+ * navigation has been issued (or rejects on a hard SDK failure such as
+ * the provider being disabled at the Supabase project).
+ *
+ * Callers MUST disable the button while the returned promise is in
+ * flight and MUST surface a non-blocking error toast on rejection — see
+ * `LoginForm` / `RegisterForm` and the `auth-github-oauth` spec.
+ */
+export async function signInWithGitHub(): Promise<SignInWithGitHubResult> {
+  const redirectTo = `${window.location.origin}/auth/callback`;
+  const { data, error } = await getSupabaseClient().auth.signInWithOAuth({
+    provider: 'github',
+    options: { redirectTo },
+  });
+
+  if (error) {
+    throw new Error(error.message || GITHUB_OAUTH_ERROR_MESSAGE);
+  }
+
+  return { navigated: Boolean(data?.url) };
+}

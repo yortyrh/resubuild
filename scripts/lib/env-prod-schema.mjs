@@ -145,6 +145,22 @@ export const MANIFEST_SCHEMA = {
     group: 'Web',
     default: 'false',
   },
+  // Web-only mirror of the GitHub OAuth feature flag. When true, the
+  // SPA renders the "Continue with GitHub" button on /login and /register.
+  // The actual provider liveness is controlled by the
+  // `[auth.external.github]` block in supabase/config.toml (env vars
+  // GITHUB_OAUTH_CLIENT_ID and GITHUB_OAUTH_SECRET). Both knobs must be
+  // enabled for a real sign-in; setting just the SPA flag without the
+  // Supabase-side credentials results in a "Sign-in failed" toast at
+  // click time. See openspec/specs/auth-github-oauth/spec.md and
+  // apps/web/src/lib/auth/features.ts.
+  NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED: {
+    required: false,
+    description:
+      'Render the "Continue with GitHub" button on /login and /register (default false). MUST be paired with real GITHUB_OAUTH_CLIENT_ID / GITHUB_OAUTH_SECRET in supabase/.env (or the Supabase Cloud dashboard) for sign-in to succeed. See openspec/specs/auth-github-oauth/spec.md.',
+    group: 'Web',
+    default: 'false',
+  },
 
   // Server-side publishable key (used by AuthConfigService as a
   // fallback for SUPABASE_ANON_KEY validation; required at API boot
@@ -504,6 +520,7 @@ export function serializeToDotenv(manifest, extras = {}) {
         'NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED',
         'NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED',
         'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED',
+        'NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED',
       ],
     },
     {

@@ -34,6 +34,7 @@ describe('auth query hooks', () => {
         forgot_password: true,
         email_verification: true,
         passwordless: false,
+        github_oauth: false,
       });
 
       try {
@@ -47,6 +48,7 @@ describe('auth query hooks', () => {
           forgot_password: true,
           email_verification: true,
           passwordless: false,
+          github_oauth: false,
         });
         expect(getAuthFeaturesSpy).toHaveBeenCalled();
       } finally {

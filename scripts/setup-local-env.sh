@@ -32,6 +32,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 API_ENV="$REPO_ROOT/apps/api/.env"
 WEB_ENV="$REPO_ROOT/apps/web/.env"
+SUPABASE_ENV="$REPO_ROOT/supabase/.env"
 CONFIG_TOML="$REPO_ROOT/supabase/config.toml"
 
 PORT="${PORT:-3001}"
@@ -352,6 +353,16 @@ compose_web_json() {
   '
 }
 
+compose_supabase_json() {
+  SUPABASE_PREVIOUS_ENV_PATH="$SUPABASE_ENV" \
+  node -e '
+    const data = {
+      supabasePreviousEnvPath: process.env.SUPABASE_PREVIOUS_ENV_PATH,
+    };
+    process.stdout.write(JSON.stringify(data));
+  '
+}
+
 api_env_content="$(compose_api_json | node "$SCRIPT_DIR/lib/local-env-composer.mjs" api)" || {
   echo "error: local-env-composer failed to generate apps/api/.env" >&2
   exit 1
@@ -359,6 +370,11 @@ api_env_content="$(compose_api_json | node "$SCRIPT_DIR/lib/local-env-composer.m
 
 web_env_content="$(compose_web_json | node "$SCRIPT_DIR/lib/local-env-composer.mjs" web)" || {
   echo "error: local-env-composer failed to generate apps/web/.env" >&2
+  exit 1
+}
+
+supabase_env_content="$(compose_supabase_json | node "$SCRIPT_DIR/lib/local-env-composer.mjs" supabase)" || {
+  echo "error: local-env-composer failed to generate supabase/.env" >&2
   exit 1
 }
 
@@ -377,6 +393,7 @@ write_file() {
 
 write_file "$API_ENV" "$api_env_content"
 write_file "$WEB_ENV" "$web_env_content"
+write_file "$SUPABASE_ENV" "$supabase_env_content"
 
 if ! $dry_run; then
   echo "Local env ready (SUPABASE_URL=${API_URL}, MEDIA_BUCKET=${media_bucket})"
