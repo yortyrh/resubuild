@@ -147,12 +147,14 @@ describe('readOperatorControlledWebValues', () => {
     expect(out.NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED).toBe('false');
   });
 
-  it('exports the full list of web-mirror keys (including the GitHub OAuth flag)', () => {
+  it('exports the full list of web-mirror keys (including the OAuth provider flags)', () => {
     expect(WEB_OPERATOR_CONTROLLED_KEYS).toEqual([
       'NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED',
       'NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED',
       'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED',
       'NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED',
+      'NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED',
+      'NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED',
     ]);
   });
 });
@@ -302,12 +304,14 @@ describe('composeWebEnv', () => {
     expect(read(body, 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY')).toBe('sb_publishable_TEST');
   });
 
-  it('writes the four NEXT_PUBLIC_* auth capability mirrors (client-only feature flags)', () => {
+  it('writes the six NEXT_PUBLIC_* auth capability mirrors (client-only feature flags)', () => {
     const body = composeWebEnv(makeWebInput());
     expect(read(body, 'NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED')).toBe('false');
     expect(read(body, 'NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED')).toBe('false');
     expect(read(body, 'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED')).toBe('false');
     expect(read(body, 'NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED')).toBe('false');
+    expect(read(body, 'NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED')).toBe('false');
+    expect(read(body, 'NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED')).toBe('false');
   });
 
   it('preserves operator decisions on the web mirrors across a re-run', () => {
@@ -411,6 +415,10 @@ describe('readSupabaseOperatorControlledValues', () => {
     expect(SUPABASE_OPERATOR_CONTROLLED_KEYS).toEqual([
       'GITHUB_OAUTH_CLIENT_ID',
       'GITHUB_OAUTH_SECRET',
+      'GOOGLE_OAUTH_CLIENT_ID',
+      'GOOGLE_OAUTH_SECRET',
+      'LINKEDIN_OAUTH_CLIENT_ID',
+      'LINKEDIN_OAUTH_SECRET',
     ]);
   });
 });
