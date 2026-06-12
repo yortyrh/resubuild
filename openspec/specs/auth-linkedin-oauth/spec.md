@@ -8,14 +8,14 @@ TBD - created by archiving change implement-linkedin-login. Update Purpose after
 
 ### Requirement: The web SPA MUST provide a LinkedIn sign-in button
 
-The `/login` and `/register` pages SHALL render a "Continue with LinkedIn" button when `getAuthFeatures().linkedin_oauth` is `true`. The button SHALL call a single helper, `signInWithLinkedIn()`, in `apps/web/src/lib/auth/oauth.ts` (or co-located in the existing auth directory), which in turn calls `supabase.auth.signInWithOAuth({ provider: 'linkedin_oidc', options: { redirectTo: `${APP_URL}/auth/callback` } })` on the publishable-key Supabase client. `APP_URL` SHALL be derived from the existing public env var that already drives the magic-link `emailRedirectTo` value. The button SHALL be disabled while the call is in flight and SHALL surface a non-blocking error toast on failure.
+The `/login` and `/register` pages SHALL render a "Continue with LinkedIn" button when `getAuthFeatures().linkedin_oauth` is `true`. The button SHALL call a single helper, `signInWithLinkedIn()`, in `apps/web/src/lib/auth/oauth.ts` (or co-located in the existing auth directory), which in turn calls `supabase.auth.signInWithOAuth({ provider: 'linkedin_oidc', options: { redirectTo: \`\${APP_URL}/auth/callback\` } })`on the publishable-key Supabase client.`APP_URL`SHALL be derived from`process.env.NEXT_PUBLIC_APP_URL`at build time; when that env var is unset it falls back to`window.location.origin`(correct for local dev). The value MUST be registered in`[auth].additional_redirect_urls`in`supabase/config.toml` and in the Supabase Cloud dashboard. The button SHALL be disabled while the call is in flight and SHALL surface a non-blocking error toast on failure.
 
 The LinkedIn button SHALL render only when `getAuthFeatures().linkedin_oauth` is `true` (resolved client-side at build time from `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED` — only the literal string `true` enables it, matching the parsing rules in the `auth-feature-flags` spec). The button MUST NOT render when the flag is missing, empty, or any other value.
 
 #### Scenario: User signs in with LinkedIn
 
 - **WHEN** a user on `/login` clicks "Continue with LinkedIn" while `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED=true`
-- **THEN** the SPA SHALL call `supabase.auth.signInWithOAuth({ provider: 'linkedin_oidc', options: { redirectTo: '<APP_URL>/auth/callback' } })`
+- **THEN** the SPA SHALL call `supabase.auth.signInWithOAuth({ provider: 'linkedin_oidc', options: { redirectTo: '<NEXT_PUBLIC_APP_URL or window.location.origin>/auth/callback' } })`
 - **AND** the browser SHALL be redirected to LinkedIn for authorisation
 - **AND** after LinkedIn authorises the app, the browser SHALL return to `<APP_URL>/auth/callback` with the Supabase-issued session
 

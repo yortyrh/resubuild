@@ -39,6 +39,10 @@ services:
         NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED: ${NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED}
         NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED: ${NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED}
         NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED: ${NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED}
+        # OAuth redirectTo base — must match the value in [auth].additional_redirect_urls
+        # in the Supabase project. Without this, social-login redirects fall back to
+        # window.location.origin which may be http://localhost:... in containers.
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
     ports:
       - '3000:3000'
     env_file:

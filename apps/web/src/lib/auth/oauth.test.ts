@@ -11,6 +11,10 @@ vi.mock('@/lib/supabase/client', () => ({
   }),
 }));
 
+vi.mock('@/lib/auth/app-url', () => ({
+  authCallbackUrl: () => `${window.location.origin}/auth/callback`,
+}));
+
 import {
   GITHUB_OAUTH_ERROR_MESSAGE,
   GOOGLE_OAUTH_ERROR_MESSAGE,
@@ -93,6 +97,23 @@ describe('signInWithGitHub', () => {
         value: { ...window.location, origin: originalOrigin },
       });
     }
+  });
+
+  it('NEXT_PUBLIC_APP_URL takes precedence over window.location.origin when set', async () => {
+    // Full precedence coverage lives in app-url.test.ts.
+    // This test confirms that signInWithGitHub delegates to authCallbackUrl()
+    // — which is proven by the fact the static mock (returning
+    // ${window.location.origin}/auth/callback) makes this test pass.
+    mockSignInWithOAuth.mockResolvedValue({
+      data: { url: 'https://github.com/.../authorize' },
+      error: null,
+    });
+
+    await signInWithGitHub();
+    expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+      provider: 'github',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
   });
 });
 

@@ -6,17 +6,16 @@
  *      Supabase-hosted authorization URL.
  *   2. The browser navigates the user to GitHub.
  *   3. On success, GitHub redirects the user back to
- *      `<window.location.origin>/auth/callback` with a Supabase-issued
- *      authorization code.
+ *      `<APP_URL>/auth/callback` with a Supabase-issued authorization code.
  *   4. The existing `/auth/callback` server route handler exchanges the
  *      code for a session and redirects the user to `/dashboard` (or the
  *      `?next=` query param if present).
  *
- * The `redirectTo` is derived from `window.location.origin` — the same
- * public value that the existing magic-link flow uses for its
- * `emailRedirectTo` (see `useSendMagicLink` in
- * `apps/web/src/lib/queries/auth-mutations.ts`). No new env var is
- * required: the public site URL is implicit in the browser context.
+ * The `redirectTo` is derived from `getAppUrl()` (see
+ * `apps/web/src/lib/auth/app-url.ts`), which reads `NEXT_PUBLIC_APP_URL`
+ * at build time and falls back to `window.location.origin` in local dev.
+ * The same helper is used by the magic-link `emailRedirectTo` (see
+ * `useSendMagicLink` in `apps/web/src/lib/queries/auth-mutations.ts`).
  *
  * The helper does NOT render the button — the button is rendered by
  * `LoginForm` and `RegisterForm` when `getAuthFeatures().github_oauth` is
@@ -26,6 +25,7 @@
  */
 
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { authCallbackUrl } from './app-url';
 
 export const GITHUB_OAUTH_ERROR_MESSAGE = 'Sign-in failed. Please try again.';
 export const GOOGLE_OAUTH_ERROR_MESSAGE = 'Sign-in failed. Please try again.';
@@ -57,10 +57,9 @@ export interface SignInWithLinkedInResult {
  * `LoginForm` / `RegisterForm` and the `auth-github-oauth` spec.
  */
 export async function signInWithGitHub(): Promise<SignInWithGitHubResult> {
-  const redirectTo = `${window.location.origin}/auth/callback`;
   const { data, error } = await getSupabaseClient().auth.signInWithOAuth({
     provider: 'github',
-    options: { redirectTo },
+    options: { redirectTo: authCallbackUrl() },
   });
 
   if (error) {
@@ -81,10 +80,9 @@ export async function signInWithGitHub(): Promise<SignInWithGitHubResult> {
  * `LoginForm` / `RegisterForm` and the `auth-google-oauth` spec.
  */
 export async function signInWithGoogle(): Promise<SignInWithGoogleResult> {
-  const redirectTo = `${window.location.origin}/auth/callback`;
   const { data, error } = await getSupabaseClient().auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo },
+    options: { redirectTo: authCallbackUrl() },
   });
 
   if (error) {
@@ -105,10 +103,9 @@ export async function signInWithGoogle(): Promise<SignInWithGoogleResult> {
  * `LoginForm` / `RegisterForm` and the `auth-linkedin-oauth` spec.
  */
 export async function signInWithLinkedIn(): Promise<SignInWithLinkedInResult> {
-  const redirectTo = `${window.location.origin}/auth/callback`;
   const { data, error } = await getSupabaseClient().auth.signInWithOAuth({
     provider: 'linkedin_oidc',
-    options: { redirectTo },
+    options: { redirectTo: authCallbackUrl() },
   });
 
   if (error) {

@@ -4,14 +4,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { changePassword, logout } from '@/lib/api';
+import { authCallbackUrl, resetPasswordCallbackUrl } from '@/lib/auth/app-url';
 import { clearSession, persistSupabaseSession, STORAGE_KEYS } from '@/lib/auth-session';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { authKeys } from './auth-queries';
 
 export { authKeys };
-
-const callbackUrl = () => `${window.location.origin}/auth/callback`;
-const resetPasswordUrl = () => `${window.location.origin}/reset-password`;
 
 function authErrorMessage(error: { message: string } | null, fallback: string): string {
   return error?.message ?? fallback;
@@ -170,7 +168,7 @@ export function useForgotPassword() {
   return useMutation({
     mutationFn: async (email: string) => {
       const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email, {
-        redirectTo: resetPasswordUrl(),
+        redirectTo: resetPasswordCallbackUrl(),
       });
       if (error) {
         throw new Error(error.message);
@@ -245,7 +243,7 @@ export function useSendMagicLink() {
     mutationFn: async (email: string) => {
       const { error } = await getSupabaseClient().auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: callbackUrl() },
+        options: { emailRedirectTo: authCallbackUrl() },
       });
       if (error) {
         throw new Error(error.message);

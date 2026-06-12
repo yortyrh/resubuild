@@ -89,6 +89,12 @@ export const MANIFEST_SCHEMA = {
       'Public API URL that the Next.js browser bundle calls (same as PUBLIC_API_URL in most setups)',
     group: 'Web',
   },
+  NEXT_PUBLIC_APP_URL: {
+    required: false,
+    description:
+      'Public origin of the web app (used for Supabase OAuth redirectTo and emailRedirectTo). MUST match the value in [auth].additional_redirect_urls of the Supabase project. Leave blank in local dev to fall back to window.location.origin.',
+    group: 'Web',
+  },
   // Browser Supabase client (mirrors the server-side Supabase keys; the
   // publishable key is the only one safe in a client bundle).
   NEXT_PUBLIC_SUPABASE_URL: {
@@ -429,6 +435,7 @@ const TARGETED_PUBLIC_URL_KEYS = [
   'APP_URL',
   'PUBLIC_API_URL',
   'NEXT_PUBLIC_API_URL',
+  'NEXT_PUBLIC_APP_URL',
 ];
 
 /**
@@ -442,6 +449,7 @@ function defaultsForTarget(target) {
       APP_URL: 'https://app.resubuild.dev',
       PUBLIC_API_URL: 'https://api.resubuild.dev',
       NEXT_PUBLIC_API_URL: 'https://api.resubuild.dev',
+      NEXT_PUBLIC_APP_URL: 'https://app.resubuild.dev',
     };
   }
   // docker-compose (default) — leave the operator's manifest values
@@ -452,6 +460,7 @@ function defaultsForTarget(target) {
     APP_URL: 'http://localhost:3000',
     PUBLIC_API_URL: 'http://localhost:3001',
     NEXT_PUBLIC_API_URL: 'http://localhost:3001',
+    NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
   };
 }
 
@@ -531,6 +540,7 @@ export function serializeToDotenv(manifest, extras = {}) {
       title: 'Web (Next.js)',
       keys: [
         'NEXT_PUBLIC_API_URL',
+        'NEXT_PUBLIC_APP_URL',
         'NEXT_PUBLIC_SUPABASE_URL',
         'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
         'NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED',
