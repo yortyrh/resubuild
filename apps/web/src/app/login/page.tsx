@@ -11,7 +11,7 @@ export default function LoginPage() {
   return (
     <AuthPageShell
       title="Sign in"
-      description="Access your Resubuild dashboard"
+      description="Welcome back"
       footer={<AuthCrossLink variant="login" />}
     >
       {/* `LoginForm` reads `?error=` from the URL to surface auth callback

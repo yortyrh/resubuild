@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApplicationWorkspace } from './application-workspace';
@@ -140,5 +140,42 @@ describe('ApplicationWorkspace tabs', () => {
     await waitFor(() => {
       expect(window.sessionStorage.getItem(STORAGE_KEY)).toBe('cover-letter');
     });
+  });
+
+  it('shows the job title as a visible heading below the breadcrumb row with the Update button', async () => {
+    renderWorkspace();
+
+    const heading = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Senior Engineer · Acme',
+    });
+    expect(heading).toHaveClass('text-2xl', 'font-semibold');
+
+    // The Update button sits on the breadcrumb row, above the heading.
+    const updateButton = screen.getByRole('button', { name: /Update/ });
+    expect(
+      updateButton.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('keeps the breadcrumb to a single Applications link', async () => {
+    renderWorkspace();
+
+    const nav = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(nav).getByRole('link', { name: 'Applications' })).toHaveAttribute(
+      'href',
+      '/dashboard/applications',
+    );
+    // Trail end was moved to the page title, so the breadcrumb must not
+    // contain the job title/company segments anymore.
+    expect(within(nav).queryByText('Senior Engineer')).not.toBeInTheDocument();
+  });
+
+  it('hides the Update button label on mobile only and exposes it via aria-label', async () => {
+    renderWorkspace();
+
+    const updateButton = await screen.findByRole('button', { name: /Update/ });
+    expect(updateButton).toHaveAttribute('aria-label', 'Update application');
+    expect(within(updateButton).getByText('Update')).toHaveClass('hidden', 'sm:inline');
   });
 });

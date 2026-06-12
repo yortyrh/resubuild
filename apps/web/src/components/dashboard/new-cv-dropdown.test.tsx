@@ -40,4 +40,15 @@ describe('NewCvDropdown', () => {
     render(<NewCvDropdown label="Create CV" />);
     expect(screen.getByRole('button', { name: /Create CV/i })).toBeInTheDocument();
   });
+
+  it('hides the visible label below the sm breakpoint and preserves the accessible name', () => {
+    const { container } = render(<NewCvDropdown />);
+
+    const trigger = screen.getByRole('button', { name: 'New CV' });
+    expect(trigger).toHaveAttribute('aria-label', 'New CV');
+
+    const visibleLabel = container.querySelector('span.hidden.sm\\:inline');
+    expect(visibleLabel).not.toBeNull();
+    expect(visibleLabel).toHaveTextContent('New CV');
+  });
 });

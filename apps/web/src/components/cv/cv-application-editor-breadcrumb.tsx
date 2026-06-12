@@ -51,32 +51,39 @@ export function CvApplicationEditorBreadcrumb({
   );
 
   return (
-    <Breadcrumb className={cn('mt-2', className)}>
-      <BreadcrumbList>
-        <BreadcrumbItem className="min-w-0">
-          <BreadcrumbLink asChild className="min-w-0">
-            <Link href={applicationHref}>{label}</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        {showCvLink && cvHref ? (
-          <>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem className="min-w-0">
-              <BreadcrumbLink asChild className="min-w-0">
-                <Link href={cvHref}>Edit CV</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-          </>
-        ) : null}
-        {showTrailEnd ? (
-          <>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{showTrailEnd}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </>
-        ) : null}
-      </BreadcrumbList>
-    </Breadcrumb>
+    <div className={cn('space-y-1', className)}>
+      <Breadcrumb className="mt-0">
+        <BreadcrumbList>
+          <BreadcrumbItem className="min-w-0">
+            <BreadcrumbLink asChild className="min-w-0">
+              <Link href={applicationHref}>{label}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          {showCvLink && cvHref ? (
+            <>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem className="min-w-0">
+                <BreadcrumbLink asChild className="min-w-0">
+                  <Link href={cvHref}>Edit CV</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+            </>
+          ) : null}
+          {showTrailEnd ? (
+            <>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{showTrailEnd}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </>
+          ) : null}
+        </BreadcrumbList>
+      </Breadcrumb>
+      {showTrailEnd ? (
+        <h1 className="text-2xl font-semibold tracking-tight" data-testid="cv-page-title">
+          {showTrailEnd}
+        </h1>
+      ) : null}
+    </div>
   );
 }

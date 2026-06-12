@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ApplicationWorkspaceBreadcrumb } from './application-workspace-breadcrumb';
 
@@ -26,5 +26,23 @@ describe('ApplicationWorkspaceBreadcrumb', () => {
     render(<ApplicationWorkspaceBreadcrumb pageLabel="Preparing application…" />);
 
     expect(screen.getByText('Preparing application…')).toBeInTheDocument();
+  });
+
+  it('hides the trail end when hideTrail is set', () => {
+    render(
+      <ApplicationWorkspaceBreadcrumb
+        jobTitle="Engineering Manager"
+        jobCompany="Acme Corp"
+        hideTrail
+      />,
+    );
+
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(nav).getByRole('link', { name: 'Applications' })).toHaveAttribute(
+      'href',
+      '/dashboard/applications',
+    );
+    expect(within(nav).queryByText('Engineering Manager')).not.toBeInTheDocument();
+    expect(within(nav).queryByText('Acme Corp')).not.toBeInTheDocument();
   });
 });

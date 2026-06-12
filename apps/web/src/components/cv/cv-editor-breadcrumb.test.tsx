@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CvEditorBreadcrumb } from './cv-editor-breadcrumb';
 
@@ -33,10 +33,12 @@ describe('CvEditorBreadcrumb', () => {
       />,
     );
 
-    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(nav).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'My CVs' })).toHaveAttribute('href', '/dashboard');
     expect(screen.getByText('Jane Doe — Senior Software Engineer')).toBeInTheDocument();
-    expect(screen.queryByText('Basics')).not.toBeInTheDocument();
+    expect(within(nav).queryByText('Basics')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('cv-page-title')).not.toBeInTheDocument();
   });
 
   it('renders the active section as the current page on section routes', () => {
@@ -51,7 +53,23 @@ describe('CvEditorBreadcrumb', () => {
     expect(
       screen.getByRole('link', { name: 'Jane Doe — Senior Software Engineer' }),
     ).toHaveAttribute('href', '/dashboard/cv/cv-1');
-    expect(screen.getByText('Projects')).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(nav).getByText('Projects')).toBeInTheDocument();
+  });
+
+  it('shows the trail-end as a page title on three-level breadcrumbs', () => {
+    render(
+      <CvEditorBreadcrumb
+        cvId="cv-1"
+        basics={{ name: 'Jane Doe', label: 'Engineer' }}
+        activeSection="volunteer"
+      />,
+    );
+
+    const title = screen.getByTestId('cv-page-title');
+    expect(title.tagName).toBe('H1');
+    expect(title).toHaveTextContent('Volunteer');
+    expect(title).toHaveClass('text-2xl', 'font-semibold');
   });
 
   it('styles untitled CVs with muted text on the current page', () => {
@@ -74,6 +92,8 @@ describe('CvEditorBreadcrumb', () => {
       'href',
       '/dashboard/cv/cv-1',
     );
-    expect(screen.getByText('Preview')).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(nav).getByText('Preview')).toBeInTheDocument();
+    expect(screen.getByTestId('cv-page-title')).toHaveTextContent('Preview');
   });
 });

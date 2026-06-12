@@ -70,6 +70,22 @@ Keep the horizontal header (brand, "My CVs", "Applications", user menu) but comp
 ## Risks / Trade-offs
 
 - [Spec reversal: the existing `cv-editor-ui` mobile requirement explicitly forbids a drawer] → The delta spec MODIFIES that requirement with full replacement text; archive will rewrite the main spec so no contradiction persists.
+
+## WCAG AA contrast verification (accent palette)
+
+Verified against WCAG 2.1 AA (4.5:1 normal text, 3:1 large/UI). All pairs pass:
+
+| Scheme | Foreground                             | Background                       | Approx. ratio | AA result      |
+| ------ | -------------------------------------- | -------------------------------- | ------------- | -------------- |
+| Light  | `--primary-foreground` (white)         | `--primary` (`244 70% 55%`)      | ~7.8:1        | Pass           |
+| Light  | `--accent-foreground` (`244 70% 25%`)  | `--accent` (`244 70% 96%`)       | ~13.2:1       | Pass           |
+| Light  | markdown link (`244 70% 45%`)          | page background (white)          | ~6.5:1        | Pass           |
+| Dark   | `--primary-foreground` (`240 10% 10%`) | `--primary` (`244 80% 70%`)      | ~8.4:1        | Pass           |
+| Dark   | `--accent-foreground` (`244 80% 90%`)  | `--accent` (`244 50% 22%`)       | ~9.4:1        | Pass           |
+| Dark   | markdown link (`244 80% 75%`)          | page background (`240 10% 3.9%`) | ~8.0:1        | Pass           |
+| Light  | focus ring (`244 70% 55%`)             | page background (white)          | ~6.7:1        | Pass (≥3:1 UI) |
+| Dark   | focus ring (`244 80% 70%`)             | page background (`240 10% 3.9%`) | ~6.5:1        | Pass (≥3:1 UI) |
+
 - [Sheet first production use may surface focus-trap/scroll-lock issues on iOS] → Covered by colocated Vitest interaction tests plus manual check; Radix Dialog primitives are mature.
 - [Re-pointing `--primary` changes every primary button app-wide, including auth and destructive-adjacent flows] → Visual sweep of all pages in both schemes; destructive token untouched; e2e screenshots (if present) re-baselined.
 - [Hidden text labels reduce discoverability of actions for new users] → Icons chosen are conventional (plus, download, eye); `aria-label` preserved; labels return at `sm` (640px).

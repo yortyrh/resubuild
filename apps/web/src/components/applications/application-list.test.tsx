@@ -93,4 +93,18 @@ describe('ApplicationList', () => {
       expect(mockDeleteApplication.mock.calls[0]?.[0]).toBe('app-1');
     });
   });
+
+  it('hides the "Prepare application" visible label below sm and exposes it via aria-label', async () => {
+    mockListApplications.mockResolvedValue([]);
+
+    const { container } = renderList();
+
+    const trigger = await screen.findByRole('link', { name: 'Prepare application' });
+    expect(trigger).toHaveAttribute('aria-label', 'Prepare application');
+    expect(trigger).toHaveAttribute('href', '/dashboard/applications/new');
+
+    const visibleLabel = container.querySelector('span.hidden.sm\\:inline');
+    expect(visibleLabel).not.toBeNull();
+    expect(visibleLabel).toHaveTextContent('Prepare application');
+  });
 });

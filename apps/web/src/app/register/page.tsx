@@ -6,7 +6,7 @@ export default function RegisterPage() {
   return (
     <AuthPageShell
       title="Create account"
-      description="Start managing your Resubuild CVs"
+      description="Build a CV in minutes"
       footer={<AuthCrossLink variant="register" />}
     >
       <RegisterForm />

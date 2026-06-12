@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CvApplicationEditorBreadcrumb } from './cv-application-editor-breadcrumb';
 
@@ -24,6 +24,7 @@ describe('CvApplicationEditorBreadcrumb', () => {
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'My CVs' })).not.toBeInTheDocument();
     expect(screen.getByTitle('Engineering Manager · Acme')).toBeInTheDocument();
+    expect(screen.queryByTestId('cv-page-title')).not.toBeInTheDocument();
   });
 
   it('links back to the application workspace on section routes', () => {
@@ -33,7 +34,16 @@ describe('CvApplicationEditorBreadcrumb', () => {
       'href',
       '/dashboard/applications/app-1',
     );
-    expect(screen.getByText('Work')).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(nav).getByText('Work')).toBeInTheDocument();
+  });
+
+  it('renders the trail-end as a page title when the breadcrumb has three levels', () => {
+    render(<CvApplicationEditorBreadcrumb application={application} activeSection="work" />);
+
+    const title = screen.getByTestId('cv-page-title');
+    expect(title.tagName).toBe('H1');
+    expect(title).toHaveTextContent('Work');
   });
 
   it('renders preview trail with Edit CV link before Preview', () => {
@@ -53,6 +63,8 @@ describe('CvApplicationEditorBreadcrumb', () => {
       'href',
       '/dashboard/cv/clone-1',
     );
-    expect(screen.getByText('Preview')).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(nav).getByText('Preview')).toBeInTheDocument();
+    expect(screen.getByTestId('cv-page-title')).toHaveTextContent('Preview');
   });
 });

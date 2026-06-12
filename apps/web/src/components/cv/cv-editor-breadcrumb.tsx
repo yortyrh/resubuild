@@ -69,36 +69,43 @@ export function CvEditorBreadcrumb({
   const cvHref = `/dashboard/cv/${cvId}`;
 
   return (
-    <Breadcrumb className={cn('mt-2', className)}>
-      <BreadcrumbList>
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="/dashboard">My CVs</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          {onBasics ? (
-            <BreadcrumbPage>
-              <CvTitleDisplay basics={basics} muted={isUntitled} />
-            </BreadcrumbPage>
-          ) : (
+    <div className={cn('space-y-1', className)}>
+      <Breadcrumb className="mt-0">
+        <BreadcrumbList>
+          <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href={cvHref} aria-label={title}>
-                <CvTitleDisplay basics={basics} muted={isUntitled} />
-              </Link>
+              <Link href="/dashboard">My CVs</Link>
             </BreadcrumbLink>
-          )}
-        </BreadcrumbItem>
-        {showTrailEnd ? (
-          <>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{showTrailEnd}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </>
-        ) : null}
-      </BreadcrumbList>
-    </Breadcrumb>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            {onBasics ? (
+              <BreadcrumbPage>
+                <CvTitleDisplay basics={basics} muted={isUntitled} />
+              </BreadcrumbPage>
+            ) : (
+              <BreadcrumbLink asChild>
+                <Link href={cvHref} aria-label={title}>
+                  <CvTitleDisplay basics={basics} muted={isUntitled} />
+                </Link>
+              </BreadcrumbLink>
+            )}
+          </BreadcrumbItem>
+          {showTrailEnd ? (
+            <>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{showTrailEnd}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </>
+          ) : null}
+        </BreadcrumbList>
+      </Breadcrumb>
+      {showTrailEnd ? (
+        <h1 className="text-2xl font-semibold tracking-tight" data-testid="cv-page-title">
+          {showTrailEnd}
+        </h1>
+      ) : null}
+    </div>
   );
 }

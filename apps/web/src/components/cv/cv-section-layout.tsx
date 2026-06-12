@@ -4,6 +4,14 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { createContext, useContext, useState } from 'react';
 import { CvSectionNav } from '@/components/cv/cv-section-nav-links';
 import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { useIsMobile } from '@/lib/use-is-mobile';
 import { cn } from '@/lib/utils';
 
 interface CvSectionLayoutProps {
@@ -15,7 +23,9 @@ type NavState = 'auto' | 'collapsed' | 'expanded';
 
 interface CvSectionLayoutContextValue {
   navState: NavState;
+  isMobile: boolean;
   toggleCollapsed: () => void;
+  openDrawer: () => void;
 }
 
 const CvSectionLayoutContext = createContext<CvSectionLayoutContextValue | null>(null);
@@ -51,7 +61,26 @@ function getAutoToggleCollapsed(): boolean {
 }
 
 export function CvSectionNavToggle({ className }: { className?: string }) {
-  const { navState, toggleCollapsed } = useCvSectionLayout();
+  const { navState, isMobile, toggleCollapsed, openDrawer } = useCvSectionLayout();
+
+  if (isMobile) {
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={openDrawer}
+        aria-label="Open section navigation"
+        aria-controls="cv-section-nav-drawer"
+        className={cn(
+          'text-muted-foreground size-9 shrink-0 pl-0 pt-0 text-left align-top',
+          className,
+        )}
+      >
+        <PanelLeftOpen className="size-4" aria-hidden="true" />
+      </Button>
+    );
+  }
 
   return (
     <Button
@@ -75,13 +104,8 @@ export function CvSectionNavToggle({ className }: { className?: string }) {
     >
       {navState === 'collapsed' ? (
         <PanelLeftOpen className="size-4" aria-hidden="true" />
-      ) : navState === 'expanded' ? (
-        <PanelLeftClose className="size-4" aria-hidden="true" />
       ) : (
-        <>
-          <PanelLeftOpen className="size-4 md:hidden" aria-hidden="true" />
-          <PanelLeftClose className="hidden size-4 md:block" aria-hidden="true" />
-        </>
+        <PanelLeftClose className="size-4" aria-hidden="true" />
       )}
     </Button>
   );
@@ -89,7 +113,9 @@ export function CvSectionNavToggle({ className }: { className?: string }) {
 
 export function CvSectionLayout({ cvId, children }: CvSectionLayoutProps) {
   const [userCollapsed, setUserCollapsed] = useState<boolean | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const navState = resolveNavState(userCollapsed);
+  const isMobile = useIsMobile();
 
   const toggleCollapsed = () => {
     setUserCollapsed((current) => {
@@ -101,15 +127,17 @@ export function CvSectionLayout({ cvId, children }: CvSectionLayoutProps) {
     });
   };
 
+  const openDrawer = () => setDrawerOpen(true);
+
   return (
-    <CvSectionLayoutContext.Provider value={{ navState, toggleCollapsed }}>
+    <CvSectionLayoutContext.Provider value={{ navState, isMobile, toggleCollapsed, openDrawer }}>
       <div className="flex gap-2">
         <aside
           className={cn(
-            'shrink-0 transition-[width] duration-200 ease-in-out',
-            navState === 'auto' && 'w-12 md:w-48',
-            navState === 'collapsed' && 'w-12',
-            navState === 'expanded' && 'w-48',
+            'hidden shrink-0 transition-[width] duration-200 ease-in-out md:block',
+            navState === 'auto' && 'md:w-48',
+            navState === 'collapsed' && 'md:w-12',
+            navState === 'expanded' && 'md:w-48',
           )}
         >
           <div className="sticky top-6 flex flex-col gap-1">
@@ -121,6 +149,27 @@ export function CvSectionLayout({ cvId, children }: CvSectionLayoutProps) {
 
         <div className="min-w-0 flex-1">{children}</div>
       </div>
+
+      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <SheetContent
+          id="cv-section-nav-drawer"
+          side="left"
+          className="flex w-72 flex-col gap-2 sm:max-w-sm"
+        >
+          <SheetHeader>
+            <SheetTitle>Sections</SheetTitle>
+            <SheetDescription>Jump to a CV section.</SheetDescription>
+          </SheetHeader>
+          <div className="-mx-2 flex-1 overflow-y-auto px-2">
+            <CvSectionNav
+              cvId={cvId}
+              navState="expanded"
+              density="comfortable"
+              onSelect={() => setDrawerOpen(false)}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </CvSectionLayoutContext.Provider>
   );
 }

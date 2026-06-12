@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { CvTemplatePresentationConfig } from '@resubuild/resume-template';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CvPreviewClient } from './cv-preview-client';
 
@@ -27,6 +27,10 @@ vi.mock('@/lib/cv-preview-resume', () => ({
   fetchCvResumeForPreview: vi.fn(),
 }));
 
+vi.mock('@/lib/use-is-mobile', () => ({
+  useIsMobile: vi.fn(() => false),
+}));
+
 vi.mock('@resubuild/resume-template', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@resubuild/resume-template')>();
   return {
@@ -48,6 +52,7 @@ import {
   updateCvTemplatePresentation,
 } from '@/lib/api';
 import { fetchCvResumeForPreview } from '@/lib/cv-preview-resume';
+import { useIsMobile } from '@/lib/use-is-mobile';
 
 const templates = [
   {
@@ -174,7 +179,7 @@ describe('CvPreviewClient', () => {
       { timeout: 10_000 },
     );
     expect(screen.queryByLabelText('Loading breadcrumb')).not.toBeInTheDocument();
-    expect(screen.getByText('Preview')).toBeInTheDocument();
+    expect(screen.getByTestId('cv-page-title')).toHaveTextContent('Preview');
 
     await waitFor(
       () => {
@@ -288,8 +293,8 @@ describe('CvPreviewClient', () => {
     });
   });
 
-  it('keeps preview beside layout panel on small screens when expanded', async () => {
-    mockViewport(false);
+  it('opens the layout panel in a mobile drawer and keeps the toggle visible', async () => {
+    vi.mocked(useIsMobile).mockReturnValue(true);
 
     render(<CvPreviewClient cvId="cv-1" />);
 
@@ -297,40 +302,69 @@ describe('CvPreviewClient', () => {
       expect(screen.getByRole('button', { name: 'Show layout panel' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show layout panel' }));
+    const toggle = screen.getByRole('button', { name: 'Show layout panel' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAttribute('aria-controls', 'cv-layout-panel-drawer');
 
-    const iframe = screen.getByTitle('Resume preview');
-    const layoutPanel = document.getElementById('cv-layout-panel');
-    const previewFrame = iframe.parentElement;
-    const row = previewFrame?.parentElement?.parentElement;
+    fireEvent.click(toggle);
 
-    expect(row).toHaveClass('flex');
-    expect(layoutPanel).toBeInTheDocument();
-    expect(previewFrame).toHaveClass('surface-soft');
-    expect(iframe).toHaveClass('border-0');
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      within(dialog).getByText('Configure which sections and fields appear.'),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('checkbox', { name: 'Show Education section' }),
+    ).toBeInTheDocument();
+
+    // The toolbar toggle is aria-hidden while the Sheet dialog owns focus, so query by aria-label.
+    const collapsedToggle = screen.getByLabelText('Hide layout panel');
+    expect(collapsedToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(collapsedToggle).toHaveAttribute('aria-controls', 'cv-layout-panel-drawer');
   });
 
-  it('hides layout panel on small screens until toggled', async () => {
-    mockViewport(false);
+  it('does not render the inline layout panel on mobile', () => {
+    vi.mocked(useIsMobile).mockReturnValue(true);
+
+    render(<CvPreviewClient cvId="cv-1" />);
+
+    expect(document.getElementById('cv-layout-panel')).toBeNull();
+  });
+
+  it('renders the inline layout panel on desktop and toggles via the visible button', async () => {
+    vi.mocked(useIsMobile).mockReturnValue(false);
+    mockViewport(true);
 
     render(<CvPreviewClient cvId="cv-1" />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Show layout panel' })).toBeInTheDocument();
+      expect(document.getElementById('cv-layout-panel')).toBeInTheDocument();
     });
 
-    const layoutPanel = document.getElementById('cv-layout-panel');
-    const layoutWrapper = layoutPanel?.parentElement?.parentElement;
-    expect(layoutWrapper).toHaveClass('hidden');
+    const toggle = screen.getByRole('button', { name: 'Hide layout panel' });
+    expect(toggle).toHaveAttribute('aria-controls', 'cv-layout-panel');
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
-    const iframe = screen.getByTitle('Resume preview');
-    expect(iframe).not.toHaveClass('hidden');
+    fireEvent.click(toggle);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show layout panel' }));
-    expect(layoutWrapper).toHaveClass('block');
-    expect(layoutWrapper).not.toHaveClass('hidden');
+    await waitFor(() => {
+      expect(document.getElementById('cv-layout-panel')).toBeNull();
+    });
+    expect(screen.getByRole('button', { name: 'Show layout panel' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Hide layout panel' }));
-    expect(layoutWrapper).toHaveClass('hidden');
+  it('hides the "Template" label below sm but keeps the select accessible', () => {
+    vi.mocked(useIsMobile).mockReturnValue(true);
+
+    render(<CvPreviewClient cvId="cv-1" />);
+
+    const label = screen.getByText('Template');
+    expect(label).toHaveClass('hidden');
+    expect(label).toHaveClass('sm:inline');
+
+    const select = screen.getByLabelText('Template');
+    expect(select).toBeInTheDocument();
   });
 });

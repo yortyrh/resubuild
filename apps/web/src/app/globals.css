@@ -5,18 +5,20 @@
   --foreground: 240 10% 3.9%;
   --card: 0 0% 100%;
   --card-foreground: 240 10% 3.9%;
-  --primary: 240 5.9% 10%;
-  --primary-foreground: 0 0% 98%;
+  /* Accent (indigo) — primary action, focus ring, active nav state. */
+  --primary: 244 70% 55%;
+  --primary-foreground: 0 0% 100%;
   --secondary: 240 4.8% 95.9%;
   --secondary-foreground: 240 5.9% 10%;
   --muted: 240 4.8% 95.9%;
   --muted-foreground: 240 3.8% 46.1%;
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
+  /* Soft accent tint — active/selected states (e.g. active nav item). */
+  --accent: 244 70% 96%;
+  --accent-foreground: 244 70% 25%;
   --destructive: 0 84.2% 60.2%;
   --border: 240 6% 93%;
   --input: 240 6% 91%;
-  --ring: 240 5.9% 10%;
+  --ring: 244 70% 55%;
   --popover: 0 0% 100%;
   --popover-foreground: 240 10% 3.9%;
 }
@@ -27,18 +29,19 @@
     --foreground: 0 0% 98%;
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
+    /* Lightened indigo for contrast against the dark surface. */
+    --primary: 244 80% 70%;
+    --primary-foreground: 240 10% 10%;
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 244 50% 22%;
+    --accent-foreground: 244 80% 90%;
     --destructive: 0 62.8% 30.6%;
     --border: 240 4% 22%;
     --input: 240 4% 20%;
-    --ring: 240 4.9% 83.9%;
+    --ring: 244 80% 70%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
   }
@@ -65,11 +68,6 @@
   --color-popover-foreground: hsl(var(--popover-foreground));
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-html,
-body {
-  scrollbar-gutter: stable;
 }
 
 body {
@@ -276,16 +274,16 @@ html body[data-scroll-locked] {
 }
 
 .rich-text-editor .mdxeditor a {
-  color: rgb(3 105 161);
+  color: hsl(244 70% 45%);
   text-decoration: underline;
-  text-decoration-color: rgb(3 105 161 / 0.5);
+  text-decoration-color: hsl(244 70% 45% / 0.5);
   text-underline-offset: 2px;
 }
 
 @media (prefers-color-scheme: dark) {
   .rich-text-editor .mdxeditor a {
-    color: rgb(56 189 248);
-    text-decoration-color: rgb(56 189 248 / 0.5);
+    color: hsl(244 80% 75%);
+    text-decoration-color: hsl(244 80% 75% / 0.5);
   }
 }
 
@@ -335,16 +333,16 @@ html body[data-scroll-locked] {
 }
 
 .markdown-view a {
-  color: rgb(3 105 161);
+  color: hsl(244 70% 45%);
   text-decoration: underline;
-  text-decoration-color: rgb(3 105 161 / 0.5);
+  text-decoration-color: hsl(244 70% 45% / 0.5);
   text-underline-offset: 2px;
 }
 
 @media (prefers-color-scheme: dark) {
   .markdown-view a {
-    color: rgb(56 189 248);
-    text-decoration-color: rgb(56 189 248 / 0.5);
+    color: hsl(244 80% 75%);
+    text-decoration-color: hsl(244 80% 75% / 0.5);
   }
 }
 

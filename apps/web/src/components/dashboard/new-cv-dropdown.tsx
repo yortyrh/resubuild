@@ -37,10 +37,10 @@ export function NewCvDropdown({ label = 'New CV', size = 'default' }: NewCvDropd
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button size={size}>
-          <Plus className="mr-2 h-4 w-4" />
-          {label}
-          <ChevronDown className="ml-2 h-4 w-4" />
+        <Button size={size} aria-label={label}>
+          <Plus className="size-4 shrink-0 sm:mr-2" aria-hidden="true" />
+          <span className="hidden sm:inline">{label}</span>
+          <ChevronDown className="ml-2 hidden h-4 w-4 sm:inline" aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

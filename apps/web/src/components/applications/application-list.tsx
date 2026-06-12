@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { FilePlus2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -69,8 +70,11 @@ export function ApplicationList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Applications</h1>
-        <Button asChild>
-          <Link href="/dashboard/applications/new">Prepare application</Link>
+        <Button asChild aria-label="Prepare application">
+          <Link href="/dashboard/applications/new">
+            <FilePlus2 className="size-4 shrink-0 sm:mr-2" aria-hidden="true" />
+            <span className="hidden sm:inline">Prepare application</span>
+          </Link>
         </Button>
       </div>
 

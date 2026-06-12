@@ -103,4 +103,20 @@ describe('CvEditorHeaderActions', () => {
       expect(screen.getByText('Request failed (500)')).toBeInTheDocument();
     });
   });
+
+  it('hides the visible Export and Preview labels below sm and keeps accessible names', () => {
+    const { container } = renderActions();
+
+    const exportTrigger = screen.getByRole('button', { name: 'Export' });
+    expect(exportTrigger).toHaveAttribute('aria-label', 'Export');
+
+    const previewLink = screen.getByRole('link', { name: 'Preview' });
+    expect(previewLink).toHaveAttribute('aria-label', 'Preview');
+
+    const hiddenSpans = container.querySelectorAll('span.hidden.sm\\:inline');
+    expect(hiddenSpans.length).toBeGreaterThanOrEqual(2);
+    const labels = Array.from(hiddenSpans).map((s) => s.textContent);
+    expect(labels).toContain('Export');
+    expect(labels).toContain('Preview');
+  });
 });

@@ -15,6 +15,8 @@ interface ApplicationWorkspaceBreadcrumbProps {
   jobTitle?: string | null;
   jobCompany?: string | null;
   pageLabel?: string;
+  /** When true, only render the root "Applications" link (the trail end is rendered as a separate title). */
+  hideTrail?: boolean;
   className?: string;
 }
 
@@ -22,6 +24,7 @@ export function ApplicationWorkspaceBreadcrumb({
   jobTitle,
   jobCompany,
   pageLabel,
+  hideTrail = false,
   className,
 }: ApplicationWorkspaceBreadcrumbProps) {
   return (
@@ -32,16 +35,24 @@ export function ApplicationWorkspaceBreadcrumb({
             <Link href="/dashboard/applications">Applications</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem className="min-w-0">
-          <BreadcrumbPage className="min-w-0">
-            {pageLabel ? (
-              pageLabel
-            ) : (
-              <ApplicationJobLabel jobTitle={jobTitle} jobCompany={jobCompany} variant="compact" />
-            )}
-          </BreadcrumbPage>
-        </BreadcrumbItem>
+        {hideTrail ? null : (
+          <>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem className="min-w-0">
+              <BreadcrumbPage className="min-w-0">
+                {pageLabel ? (
+                  pageLabel
+                ) : (
+                  <ApplicationJobLabel
+                    jobTitle={jobTitle}
+                    jobCompany={jobCompany}
+                    variant="compact"
+                  />
+                )}
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </>
+        )}
       </BreadcrumbList>
     </Breadcrumb>
   );

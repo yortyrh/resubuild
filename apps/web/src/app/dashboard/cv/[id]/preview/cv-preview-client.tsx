@@ -4,7 +4,7 @@ import { type CvTemplatePresentationConfig, renderResumeHtml } from '@resubuild/
 import type { CvTitleBasics, Resume } from '@resubuild/types';
 import { ArrowLeft, Braces, FileDown, PanelLeftClose, PanelLeftOpen, Printer } from 'lucide-react';
 import Link from 'next/link';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CvApplicationEditorBreadcrumb } from '@/components/cv/cv-application-editor-breadcrumb';
 import { CvEditorBreadcrumb } from '@/components/cv/cv-editor-breadcrumb';
 import { CvPreviewIframe } from '@/components/cv/cv-preview-iframe';
@@ -12,6 +12,13 @@ import { TemplateConfigPanel } from '@/components/cv/template-config-panel';
 import { useApplicationForCv } from '@/components/cv/use-application-for-cv';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   type CvTemplateMeta,
   downloadCvJson,
@@ -24,19 +31,11 @@ import {
   updateCvTemplatePresentation,
 } from '@/lib/api';
 import { fetchCvResumeForPreview } from '@/lib/cv-preview-resume';
-import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/lib/use-is-mobile';
 import { CvPreviewBreadcrumbSkeleton, CvPreviewLoadingRow } from './cv-preview-skeleton';
 
 interface CvPreviewClientProps {
   cvId: string;
-}
-
-type LayoutPanelState = 'auto' | 'collapsed' | 'expanded';
-
-function resolveLayoutPanelState(userCollapsed: boolean | null): LayoutPanelState {
-  if (userCollapsed === true) return 'collapsed';
-  if (userCollapsed === false) return 'expanded';
-  return 'auto';
 }
 
 function getAutoLayoutExpanded(): boolean {
@@ -55,42 +54,13 @@ function renderPreviewHtml(
   return renderResumeHtml(resume, templateId, { presentationConfig: config });
 }
 
-const CvLayoutPanelColumn = memo(function CvLayoutPanelColumn({
-  layoutPanelState,
-  initialConfig,
-  templateId,
-  onConfigChange,
-}: {
-  layoutPanelState: LayoutPanelState;
-  initialConfig: CvTemplatePresentationConfig;
-  templateId: string;
-  onConfigChange: (next: CvTemplatePresentationConfig) => void;
-}) {
-  return (
-    <div
-      className={cn(
-        'shrink-0',
-        layoutPanelState === 'auto' && 'hidden lg:block',
-        layoutPanelState === 'collapsed' && 'hidden',
-        layoutPanelState === 'expanded' && 'block',
-      )}
-    >
-      <div className="sticky top-6">
-        <TemplateConfigPanel
-          key={templateId}
-          id="cv-layout-panel"
-          initialConfig={initialConfig}
-          onChange={onConfigChange}
-        />
-      </div>
-    </div>
-  );
-});
-
 export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
   const application = useApplicationForCv(cvId);
-  const [layoutCollapsed, setLayoutCollapsed] = useState<boolean | null>(null);
-  const layoutPanelState = resolveLayoutPanelState(layoutCollapsed);
+  const isMobile = useIsMobile();
+  const [desktopPanelCollapsed, setDesktopPanelCollapsed] = useState<boolean | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const desktopPanelExpanded =
+    desktopPanelCollapsed === null ? getAutoLayoutExpanded() : !desktopPanelCollapsed;
   const [html, setHtml] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -263,14 +233,19 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
   );
 
   const toggleLayoutPanel = useCallback(() => {
-    setLayoutCollapsed((current) => {
+    if (isMobile) {
+      setDrawerOpen((open) => !open);
+      return;
+    }
+
+    setDesktopPanelCollapsed((current) => {
       if (current === null) {
         return getAutoLayoutExpanded();
       }
 
       return !current;
     });
-  }, []);
+  }, [isMobile]);
 
   const handlePrint = useCallback(() => {
     const printWindow = previewFrameRef.current?.contentWindow;
@@ -317,7 +292,7 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+      <div className="flex flex-wrap items-start gap-x-2 gap-y-2">
         <div className="min-w-0 flex-1">
           {breadcrumbReady ? (
             application ? (
@@ -341,15 +316,43 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
         </div>
         <Button type="button" variant="outline" size="sm" className="no-print shrink-0" asChild>
           <Link href={backHref} aria-label={backAriaLabel}>
-            <ArrowLeft className="size-4 shrink-0 lg:mr-1.5" aria-hidden />
-            <span className="hidden lg:inline">Back</span>
+            <ArrowLeft className="size-4 shrink-0 sm:mr-1.5" aria-hidden />
+            <span className="hidden sm:inline">Back</span>
           </Link>
         </Button>
       </div>
 
-      <div className="no-print flex flex-wrap items-center gap-4">
-        <div className="flex min-w-[14rem] items-center gap-2">
-          <Label htmlFor="cv-template-select" className="shrink-0">
+      <div className="no-print flex flex-wrap items-start gap-x-2 gap-y-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="shrink-0"
+          onClick={toggleLayoutPanel}
+          disabled={!layoutInitialConfig}
+          aria-expanded={isMobile ? drawerOpen : !desktopPanelCollapsed}
+          aria-controls={isMobile ? 'cv-layout-panel-drawer' : 'cv-layout-panel'}
+          aria-label={
+            (isMobile ? drawerOpen : !desktopPanelCollapsed)
+              ? 'Hide layout panel'
+              : 'Show layout panel'
+          }
+        >
+          {(isMobile ? drawerOpen : !desktopPanelCollapsed) ? (
+            <>
+              <PanelLeftClose className="size-4 shrink-0 sm:mr-1.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Hide layout</span>
+            </>
+          ) : (
+            <>
+              <PanelLeftOpen className="size-4 shrink-0 sm:mr-1.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Layout</span>
+            </>
+          )}
+        </Button>
+
+        <div className="flex min-w-[12rem] flex-1 items-center gap-2 sm:min-w-[14rem]">
+          <Label htmlFor="cv-template-select" className="hidden shrink-0 sm:inline">
             Template
           </Label>
           <select
@@ -358,6 +361,7 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
             value={selectedTemplateId}
             onChange={(event) => void handleTemplateChange(event.target.value)}
             disabled={templateOptions.length === 0}
+            aria-label="Template"
           >
             {templateOptions.map((template) => (
               <option key={template.id} value={template.id}>
@@ -371,36 +375,14 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
           <Button
             type="button"
             variant="outline"
-            className="lg:hidden"
-            onClick={toggleLayoutPanel}
-            disabled={!layoutInitialConfig}
-            aria-expanded={layoutPanelState === 'expanded'}
-            aria-controls="cv-layout-panel"
-            aria-label={layoutPanelState === 'expanded' ? 'Hide layout panel' : 'Show layout panel'}
-          >
-            {layoutPanelState === 'expanded' ? (
-              <>
-                <PanelLeftClose className="mr-1.5 size-4" aria-hidden="true" />
-                Hide layout
-              </>
-            ) : (
-              <>
-                <PanelLeftOpen className="mr-1.5 size-4" aria-hidden="true" />
-                Layout
-              </>
-            )}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
             size="sm"
             className="shrink-0"
             onClick={handlePrint}
             disabled={!html}
             aria-label="Print"
           >
-            <Printer className="size-4 shrink-0 lg:mr-1.5" aria-hidden />
-            <span className="hidden lg:inline">Print</span>
+            <Printer className="size-4 shrink-0 sm:mr-1.5" aria-hidden />
+            <span className="hidden sm:inline">Print</span>
           </Button>
           <Button
             type="button"
@@ -411,8 +393,8 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
             disabled={!html || downloadingJson}
             aria-label={downloadingJson ? 'Downloading JSON Resume' : 'JSON Resume'}
           >
-            <Braces className="size-4 shrink-0 lg:mr-1.5" aria-hidden />
-            <span className="hidden lg:inline">
+            <Braces className="size-4 shrink-0 sm:mr-1.5" aria-hidden />
+            <span className="hidden sm:inline">
               {downloadingJson ? 'Downloading…' : 'JSON Resume'}
             </span>
           </Button>
@@ -424,8 +406,8 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
             disabled={!html || downloading}
             aria-label={downloading ? 'Downloading PDF' : 'PDF'}
           >
-            <FileDown className="size-4 shrink-0 lg:mr-1.5" aria-hidden />
-            <span className="hidden lg:inline">{downloading ? 'Downloading…' : 'PDF'}</span>
+            <FileDown className="size-4 shrink-0 sm:mr-1.5" aria-hidden />
+            <span className="hidden sm:inline">{downloading ? 'Downloading…' : 'PDF'}</span>
           </Button>
         </div>
       </div>
@@ -441,13 +423,17 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
           <CvPreviewLoadingRow />
         ) : (
           <>
-            {layoutInitialConfig ? (
-              <CvLayoutPanelColumn
-                layoutPanelState={layoutPanelState}
-                initialConfig={layoutInitialConfig}
-                templateId={selectedTemplateId}
-                onConfigChange={handlePresentationChange}
-              />
+            {layoutInitialConfig && desktopPanelExpanded ? (
+              <div className="hidden shrink-0 lg:block">
+                <div className="sticky top-6">
+                  <TemplateConfigPanel
+                    key={selectedTemplateId}
+                    id="cv-layout-panel"
+                    initialConfig={layoutInitialConfig}
+                    onChange={handlePresentationChange}
+                  />
+                </div>
+              </div>
             ) : null}
 
             <div className="relative min-w-0 flex-1">
@@ -456,6 +442,30 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
           </>
         )}
       </div>
+
+      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <SheetContent
+          id="cv-layout-panel-drawer"
+          side="left"
+          className="flex w-72 flex-col gap-3 overflow-y-auto sm:max-w-sm"
+        >
+          <SheetHeader>
+            <SheetTitle>Layout</SheetTitle>
+            <SheetDescription>Configure which sections and fields appear.</SheetDescription>
+          </SheetHeader>
+          <div className="-mx-2 flex-1 px-2">
+            {layoutInitialConfig ? (
+              <TemplateConfigPanel
+                key={selectedTemplateId}
+                id="cv-layout-panel-drawer-content"
+                initialConfig={layoutInitialConfig}
+                onChange={handlePresentationChange}
+                className="bg-transparent p-0"
+              />
+            ) : null}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

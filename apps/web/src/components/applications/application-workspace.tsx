@@ -238,21 +238,27 @@ export function ApplicationWorkspace({ id }: { id: string }) {
         </div>
       ) : null}
 
-      <div className="flex items-center justify-center gap-4" style={{ marginBottom: '8px' }}>
-        <div className="min-w-0 flex-1 align-middle">
-          <h1 className="sr-only">
-            {[data.jobTitle ?? 'Application', data.jobCompany].filter(Boolean).join(' · ')}
-          </h1>
-          <ApplicationWorkspaceBreadcrumb jobTitle={data.jobTitle} jobCompany={data.jobCompany} />
+      <div className="space-y-2 px-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <ApplicationWorkspaceBreadcrumb
+            jobTitle={data.jobTitle}
+            jobCompany={data.jobCompany}
+            hideTrail
+            className="min-w-0 flex-1"
+          />
+          <Button
+            variant="outline"
+            disabled={data.updateInProgress}
+            onClick={() => setUpdateOpen(true)}
+            aria-label="Update application"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span className="hidden sm:inline">Update</span>
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          disabled={data.updateInProgress}
-          onClick={() => setUpdateOpen(true)}
-        >
-          <Sparkles className="h-4 w-4" />
-          Update
-        </Button>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {[data.jobTitle, data.jobCompany].filter(Boolean).join(' · ') || 'Application'}
+        </h1>
       </div>
 
       <ApplicationUpdateDialog application={data} open={updateOpen} onOpenChange={setUpdateOpen} />
