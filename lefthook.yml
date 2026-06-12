@@ -25,8 +25,14 @@ pre-push:
     verify:
       # Lefthook skips pre-push commands when it finds no push-scoped files.
       # {all_files} opts out of that skip so the full verify suite always runs.
+      # The `node-version:ensure` prefix auto-detects a Node version manager
+      # (fnm > mise > volta > asdf > n > nvm), installs .nvmrc's required
+      # Node major if needed, and emits shell that prepends its bin dir to
+      # PATH. The `eval` mutates this subshell's PATH so `pnpm verify` (and
+      # its child `check-node-version.mjs` guard) run on Node 22 instead of
+      # whatever's on PATH. See scripts/ensure-node-version.mjs.
       env:
         NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
         NEXT_PUBLIC_SUPABASE_ANON_KEY: anon-ci-placeholder-key
         NEXT_PUBLIC_API_URL: http://localhost:3001
-      run: ': {all_files}; pnpm verify'
+      run: ': {all_files}; eval "$(node scripts/ensure-node-version.mjs)" && pnpm verify'
