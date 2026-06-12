@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { getAppUrl } from '@/lib/auth/app-url';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 
 /**
@@ -9,6 +10,13 @@ import { getSupabaseServerClient } from '@/lib/supabase/server';
  * request. On success, the session cookies are written by the SDK and we 302 to
  * `/dashboard`. On failure we 302 to `/login?error=…&error_description=…` so the
  * login page can surface `oauthCallbackErrorMessage` copy.
+ *
+ * Every absolute redirect built here uses `getAppUrl(request.nextUrl.origin)`,
+ * which prefers `NEXT_PUBLIC_APP_URL` (the public origin baked in at build
+ * time) and only falls back to the request's apparent origin when the env var
+ * is unset. In Docker / reverse-proxy deployments the request origin is the
+ * internal container address (e.g. `http://localhost:8080`), so the env var
+ * is what keeps the browser's address bar pointed at the real public URL.
  */
 
 function safeNext(next: string | null): string {
@@ -20,7 +28,7 @@ function safeNext(next: string | null): string {
 }
 
 function loginUrlWithError(request: NextRequest, params: URLSearchParams): URL {
-  const url = new URL('/login', request.nextUrl.origin);
+  const url = new URL('/login', getAppUrl(request.nextUrl.origin));
   for (const [key, value] of params.entries()) {
     url.searchParams.set(key, value);
   }
@@ -68,5 +76,5 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(loginUrlWithError(request, params));
   }
 
-  return NextResponse.redirect(new URL(next, request.nextUrl.origin));
+  return NextResponse.redirect(new URL(next, getAppUrl(request.nextUrl.origin)));
 }

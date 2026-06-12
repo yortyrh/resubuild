@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { NextRequest, NextResponse } from 'next/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockExchangeCodeForSession = vi.fn();
 
@@ -14,6 +14,17 @@ vi.mock('@/lib/supabase/server', () => ({
 
 import { GET } from './route';
 
+const APP_URL_ENV = 'NEXT_PUBLIC_APP_URL';
+const ORIGINAL_APP_URL = process.env[APP_URL_ENV];
+
+function setAppUrl(value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[APP_URL_ENV];
+  } else {
+    process.env[APP_URL_ENV] = value;
+  }
+}
+
 function makeRequest(url: string): NextRequest {
   return new NextRequest(new Request(url));
 }
@@ -21,6 +32,10 @@ function makeRequest(url: string): NextRequest {
 describe('/auth/callback route handler', () => {
   beforeEach(() => {
     mockExchangeCodeForSession.mockReset();
+  });
+
+  afterEach(() => {
+    setAppUrl(ORIGINAL_APP_URL);
   });
 
   it('exchanges the code and redirects to /dashboard on success', async () => {
@@ -168,5 +183,97 @@ describe('/auth/callback route handler', () => {
     expect(url.pathname).toBe('/login');
     expect(url.searchParams.get('error')).toBe('missing_code');
     expect(url.searchParams.get('error_description')).toMatch(/missing the authorization code/);
+  });
+
+  // -----------------------------------------------------------------------
+  // NEXT_PUBLIC_APP_URL server-side redirect behavior
+  // -----------------------------------------------------------------------
+  // In production (Docker container behind a reverse proxy) the request
+  // hits the Next.js server via the internal container address (e.g.
+  // http://localhost:8080). The route must redirect to the public origin
+  // baked in via NEXT_PUBLIC_APP_URL, not the internal origin — otherwise
+  // the browser's address bar shows http://localhost:8080/dashboard and
+  // users can't bookmark or share the URL they actually signed in at.
+
+  it('redirects to NEXT_PUBLIC_APP_URL after a successful exchange (production redirect bug fix)', async () => {
+    setAppUrl('https://app.resubuild.dev');
+    mockExchangeCodeForSession.mockResolvedValue({ error: null });
+    // Simulate a request that hit the Docker internal port — the public
+    // origin should still win.
+    const request = makeRequest('http://localhost:8080/auth/callback?code=abc123');
+
+    const response = await GET(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('https://app.resubuild.dev/dashboard');
+  });
+
+  it('redirects to NEXT_PUBLIC_APP_URL when the SDK exchange fails (production redirect bug fix)', async () => {
+    setAppUrl('https://app.resubuild.dev');
+    mockExchangeCodeForSession.mockResolvedValue({
+      error: {
+        message: 'PKCE code verifier not found in storage.',
+        code: 'pkce_code_verifier_not_found',
+        status: 400,
+      },
+    });
+    const request = makeRequest('http://localhost:8080/auth/callback?code=stale');
+
+    const response = await GET(request);
+
+    const url = new URL(response.headers.get('location')!);
+    expect(url.origin).toBe('https://app.resubuild.dev');
+    expect(url.pathname).toBe('/login');
+  });
+
+  it('redirects to NEXT_PUBLIC_APP_URL when the provider forwards an error (production redirect bug fix)', async () => {
+    setAppUrl('https://app.resubuild.dev');
+    const request = makeRequest(
+      'http://localhost:8080/auth/callback' +
+        '?error=server_error' +
+        '&error_code=unexpected_failure' +
+        '&error_description=oops',
+    );
+
+    const response = await GET(request);
+
+    const url = new URL(response.headers.get('location')!);
+    expect(url.origin).toBe('https://app.resubuild.dev');
+    expect(url.pathname).toBe('/login');
+    expect(url.searchParams.get('error')).toBe('server_error');
+  });
+
+  it('redirects to NEXT_PUBLIC_APP_URL when the callback URL is malformed (production redirect bug fix)', async () => {
+    setAppUrl('https://app.resubuild.dev');
+    const request = makeRequest('http://localhost:8080/auth/callback');
+
+    const response = await GET(request);
+
+    const url = new URL(response.headers.get('location')!);
+    expect(url.origin).toBe('https://app.resubuild.dev');
+    expect(url.pathname).toBe('/login');
+    expect(url.searchParams.get('error')).toBe('missing_code');
+  });
+
+  it('falls back to the request origin when NEXT_PUBLIC_APP_URL is unset (local dev)', async () => {
+    setAppUrl(undefined);
+    mockExchangeCodeForSession.mockResolvedValue({ error: null });
+    const request = makeRequest('http://localhost:3000/auth/callback?code=abc123');
+
+    const response = await GET(request);
+
+    expect(response.headers.get('location')).toBe('http://localhost:3000/dashboard');
+  });
+
+  it('honors a same-origin ?next= against NEXT_PUBLIC_APP_URL (production redirect bug fix)', async () => {
+    setAppUrl('https://app.resubuild.dev');
+    mockExchangeCodeForSession.mockResolvedValue({ error: null });
+    const request = makeRequest(
+      'http://localhost:8080/auth/callback?code=abc&next=/dashboard/onboarding',
+    );
+
+    const response = await GET(request);
+
+    expect(response.headers.get('location')).toBe('https://app.resubuild.dev/dashboard/onboarding');
   });
 });

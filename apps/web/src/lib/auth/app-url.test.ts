@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { authCallbackUrl, getAppUrl, resetPasswordCallbackUrl } from './app-url';
 
 /**
@@ -68,6 +68,54 @@ describe('getAppUrl', () => {
     const first = getAppUrl();
     const second = getAppUrl();
     expect(first).toBe(second);
+  });
+
+  it('on the server, falls back to the caller-provided request origin when env var is unset', () => {
+    // Simulates the /auth/callback route running server-side in a Docker
+    // container where the request hits the Next.js server via the
+    // internal port (e.g. http://localhost:8080) and the SPA is not in a
+    // browser context. The route must pass `request.nextUrl.origin` so
+    // local dev still works when NEXT_PUBLIC_APP_URL is empty.
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    vi.stubGlobal('window', undefined);
+    try {
+      expect(getAppUrl('http://localhost:8080')).toBe('http://localhost:8080');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('on the server, strips a trailing slash from the request origin', () => {
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    vi.stubGlobal('window', undefined);
+    try {
+      expect(getAppUrl('http://localhost:8080/')).toBe('http://localhost:8080');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('on the server, NEXT_PUBLIC_APP_URL still takes precedence over request origin', () => {
+    // Production: the env var is baked in at build time. Even though the
+    // request origin is the internal container address, the public
+    // origin wins.
+    process.env.NEXT_PUBLIC_APP_URL = 'https://app.resubuild.dev';
+    vi.stubGlobal('window', undefined);
+    try {
+      expect(getAppUrl('http://localhost:8080')).toBe('https://app.resubuild.dev');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('on the server with no env var and no request origin, returns empty string', () => {
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    vi.stubGlobal('window', undefined);
+    try {
+      expect(getAppUrl()).toBe('');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

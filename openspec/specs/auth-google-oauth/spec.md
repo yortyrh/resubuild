@@ -12,6 +12,21 @@ TBD - created by archiving change implement-google-authentication. Update Purpos
 
 **Now:** `redirectTo` is built via `authCallbackUrl()` from the new `apps/web/src/lib/auth/app-url.ts` helper, which resolves `process.env.NEXT_PUBLIC_APP_URL` (with `window.location.origin` fallback). All other language in the requirement and scenarios is unchanged.
 
+### Requirement: The `/auth/callback` server route MUST redirect to the public origin after exchanging the Google-issued code
+
+The `GET /auth/callback` server route handler in `apps/web/src/app/auth/callback/route.ts` runs on the server after Google redirects the browser back. The post-exchange redirect to `/dashboard` (or to the `?next=` query param if present) and the error redirect to `/login?error=…` MUST be built from `getAppUrl(request.nextUrl.origin)` (defined in `apps/web/src/lib/auth/app-url.ts`), which prefers `process.env.NEXT_PUBLIC_APP_URL` and falls back to the request origin when the env var is unset. This prevents the browser from being redirected to the internal container origin (e.g. `http://localhost:8080`) when the app is deployed behind a reverse proxy or port mapping, which would otherwise put the internal origin in the address bar and break user-facing URLs.
+
+#### Scenario: Callback in production returns the public origin in the address bar
+
+- **WHEN** `NEXT_PUBLIC_APP_URL=https://app.resubuild.dev` and the request hits the Next.js server via the internal container address `http://localhost:8080`
+- **THEN** the route's success redirect SHALL be `Location: https://app.resubuild.dev/dashboard`
+- **AND** the route's error redirect SHALL be `Location: https://app.resubuild.dev/login?error=…`
+
+#### Scenario: Callback in local dev returns the request origin
+
+- **WHEN** `NEXT_PUBLIC_APP_URL` is unset and the request hits the Next.js server via `http://localhost:3000`
+- **THEN** the route's success redirect SHALL be `Location: http://localhost:3000/dashboard`
+
 ### Requirement: The SPA MUST complete the Google PKCE redirect via the existing `/auth/callback` route
 
 The existing `/auth/callback` route handler at `apps/web/src/app/auth/callback/route.ts` SHALL handle the Google PKCE redirect by calling `supabase.auth.exchangeCodeForSession(code)` and SHALL then redirect the user to the post-login destination (the `?next=` query param if present, otherwise `/dashboard`). The handler SHALL NOT branch on provider — the same code path handles the magic-link, GitHub, and Google redirects.
