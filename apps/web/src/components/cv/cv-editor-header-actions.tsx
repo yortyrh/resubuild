@@ -76,8 +76,8 @@ export function CvEditorHeaderActions({ cvId, className }: CvEditorHeaderActions
               aria-haspopup="menu"
               aria-label={isExporting ? 'Exporting' : 'Export'}
             >
-              <Download className="size-4 shrink-0 lg:mr-1.5" aria-hidden />
-              <span className="hidden lg:inline">{isExporting ? 'Exporting…' : 'Export'}</span>
+              <Download className="size-4 shrink-0 sm:mr-1.5" aria-hidden />
+              <span className="hidden sm:inline">{isExporting ? 'Exporting…' : 'Export'}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -91,8 +91,8 @@ export function CvEditorHeaderActions({ cvId, className }: CvEditorHeaderActions
         </DropdownMenu>
         <Button type="button" variant="outline" size="sm" className="shrink-0" asChild>
           <Link href={`/dashboard/cv/${cvId}/preview`} aria-label="Preview">
-            <Eye className="size-4 shrink-0 lg:mr-1.5" aria-hidden />
-            <span className="hidden lg:inline">Preview</span>
+            <Eye className="size-4 shrink-0 sm:mr-1.5" aria-hidden />
+            <span className="hidden sm:inline">Preview</span>
           </Link>
         </Button>
       </div>

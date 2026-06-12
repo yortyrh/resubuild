@@ -51,7 +51,7 @@ export function CvEditorChrome({ cvId, children }: CvEditorChromeProps) {
               />
             )}
           </div>
-          <div className="no-print flex w-full items-center justify-end gap-2 sm:ml-auto sm:w-auto">
+          <div className="no-print ml-auto flex shrink-0 items-center gap-2">
             {application ? <CvApplicationPromoteButton application={application} /> : null}
             <CvEditorHeaderActions cvId={cvId} className="w-auto" />
           </div>
