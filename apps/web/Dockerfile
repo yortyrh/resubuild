@@ -5,10 +5,33 @@ WORKDIR /app
 
 # NEXT_PUBLIC_* vars are inlined into the client bundle at build time, so they
 # must be present during `next build` — passing them as runtime env vars only
-# is too late. Pass via `docker build --build-arg NEXT_PUBLIC_API_URL=...` or
-# Compose `args:` so the value is baked into the production bundle.
+# is too late (the runtime `env_file` from docker-compose.prod.yml arrives
+# after the build layer). Pass via `docker build --build-arg ...` or Compose
+# `args:` so the values are baked into the production bundle.
+#
+# All keys listed here MUST match a var in `apps/web/src/lib/supabase/client.ts`,
+# `apps/web/src/lib/supabase/server.ts`, and `apps/web/src/lib/auth/features.ts`.
+# A missing arg at build time causes the `?? ''` fallback in those modules to
+# resolve to an empty string, which @supabase/ssr rejects with
+# "Your project's URL and API key are required to create a Supabase client!".
 ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+ARG NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED
+ARG NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED
+ARG NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED
+ARG NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED
+ARG NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED
+ARG NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED=$NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED
+ENV NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=$NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED
+ENV NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED=$NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED
+ENV NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED=$NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED
+ENV NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED=$NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED
+ENV NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED=$NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED
 
 # Install git (needed by some postinstall scripts)
 RUN apk add --no-cache git

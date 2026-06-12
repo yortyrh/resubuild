@@ -23,8 +23,22 @@ services:
       args:
         # Required: Next.js inlines NEXT_PUBLIC_* at build time, so it must be
         # passed as a build arg (not just a runtime env var) for the production
-        # bundle to call the correct API URL.
+        # bundle to call the correct API URL and Supabase project. Without
+        # NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY the
+        # @supabase/ssr client throws "Your project's URL and API key are
+        # required" the first time it tries to instantiate.
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+        # Auth feature flags — consumed by apps/web/src/lib/auth/features.ts at
+        # build time. The runtime `env_file` below is too late; these must be
+        # baked into the bundle for the SPA to render the matching controls.
+        NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED: ${NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED}
+        NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED: ${NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED}
+        NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED: ${NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED}
+        NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED: ${NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED}
+        NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED: ${NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED}
+        NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED: ${NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED}
     ports:
       - '3000:3000'
     env_file:
