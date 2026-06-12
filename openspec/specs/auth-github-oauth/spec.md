@@ -8,27 +8,9 @@ TBD - created by archiving change add-github-login. Update Purpose after archive
 
 ### Requirement: The web SPA MUST provide a GitHub sign-in button
 
-The `/login` and `/register` pages SHALL render a "Continue with GitHub" button when `getAuthFeatures().github_oauth` is `true`. The button SHALL call a single helper, `signInWithGitHub()`, in `apps/web/src/lib/auth/oauth.ts` (or co-located in the existing auth directory), which in turn calls `supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: \`\${APP_URL}/auth/callback\` } })`on the publishable-key Supabase client.`APP_URL`SHALL be derived from`process.env.NEXT_PUBLIC_APP_URL`at build time; when that env var is unset it falls back to`window.location.origin`(correct for local dev). The value MUST be registered in`[auth].additional_redirect_urls`in`supabase/config.toml` and in the Supabase Cloud dashboard. The button SHALL be disabled while the call is in flight and SHALL surface a non-blocking error toast on failure.
+**Previously:** `redirectTo: \`${APP_URL}/auth/callback\``—`APP_URL`was derived inline in`oauth.ts`from`window.location.origin`.
 
-The GitHub button SHALL render only when `getAuthFeatures().github_oauth` is `true` (resolved client-side at build time from `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED` — only the literal string `true` enables it, matching the parsing rules in the `auth-feature-flags` spec). The button MUST NOT render when the flag is missing, empty, or any other value.
-
-#### Scenario: User signs in with GitHub
-
-- **WHEN** a user on `/login` clicks "Continue with GitHub" while `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED=true`
-- **THEN** the SPA SHALL call `supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: '<NEXT_PUBLIC_APP_URL or window.location.origin>/auth/callback' } })`
-- **AND** the browser SHALL be redirected to GitHub for authorisation
-- **AND** after GitHub authorises the app, the browser SHALL return to `<APP_URL>/auth/callback` with the Supabase-issued session
-
-#### Scenario: GitHub button hidden when flag is off
-
-- **WHEN** `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED` is unset, empty, or any value other than the literal string `true`
-- **THEN** the `/login` and `/register` pages SHALL NOT render the "Continue with GitHub" button
-
-#### Scenario: GitHub provider misconfigured in Supabase
-
-- **WHEN** the user clicks "Continue with GitHub" and Supabase returns an error (e.g. provider not enabled at the Supabase project)
-- **THEN** the SPA SHALL surface a non-blocking error toast with a generic "Sign-in failed" message
-- **AND** SHALL NOT navigate the user away from `/login`
+**Now:** `redirectTo` is built via `authCallbackUrl()` from the new `apps/web/src/lib/auth/app-url.ts` helper, which resolves `process.env.NEXT_PUBLIC_APP_URL` (with `window.location.origin` fallback). All other language in the requirement and scenarios is unchanged.
 
 ### Requirement: The SPA MUST complete the GitHub PKCE redirect via the existing `/auth/callback` page
 
