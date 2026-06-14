@@ -26,6 +26,18 @@ describe('isDevMailpitHintVisible', () => {
 
     expect(isDevMailpitHintVisible()).toBe(false);
   });
+
+  it('is false when ?hide-dev-banner=1 is in the URL', () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:54321');
+
+    // Simulate window.location.search = '?hide-dev-banner=1'
+    vi.stubGlobal('window', {
+      location: { search: '?hide-dev-banner=1' },
+    });
+
+    expect(isDevMailpitHintVisible()).toBe(false);
+  });
 });
 
 describe('DEV_MAILPIT_URL', () => {

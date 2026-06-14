@@ -21,8 +21,11 @@
 - **Clean MIT-format editor** — tweak every section in a focused, keyboard-friendly editor. No formatting fight, no broken layouts.
 - **One-click PDF export** — what you see in the preview is what you get in the downloaded PDF. No watermarks, no surprises.
 - **Your CVs, your account** — sign in, and your CVs are saved under your account, private to you.
+- **[See all features with video walkthroughs](/features)** — short recordings of every major feature.
 
-![Resubuild showcase — sign-in, dashboard, editor, and PDF export](./showcase.gif)
+<video controls autoplay muted loop playsinline style="max-width:100%;border-radius:0.75rem;" src="apps/web/public/recordings/showcase.mp4">
+  <a href="/features">See all features</a>
+</video>
 
 ---
 
