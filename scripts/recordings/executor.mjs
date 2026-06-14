@@ -40,6 +40,9 @@ export class Executor {
   #ctx;
   #captureInterval;
   #startTime;
+  // Serializes all page-touching operations so the capture loop never races
+  // with goto/click/type and the CDP target stays in a consistent state.
+  #pageLock = Promise.resolve();
 
   constructor(browser, page, opts = {}) {
     this.#browser = browser;
@@ -52,6 +55,18 @@ export class Executor {
     this.#ctx = null;
     this.#captureInterval = null;
     this.#startTime = 0;
+  }
+
+  /**
+   * Run `fn` exclusively against the page. The capture loop will not
+   * attempt a screenshot while the returned promise is pending.
+   */
+  #withPageLock(fn) {
+    const next = this.#pageLock.then(async () => fn());
+    // Swallow rejection on the chain itself so one failure doesn't
+    // poison subsequent calls. Callers still receive the original error.
+    this.#pageLock = next.catch(() => {});
+    return next;
   }
 
   /** Launch a fresh browser and create an Executor. Call close() when done. */
@@ -93,21 +108,27 @@ export class Executor {
 
   /** Navigate to a URL (relative to baseUrl). */
   async goto(relativeUrl) {
-    const url = relativeUrl.startsWith('http') ? relativeUrl : `${this.#baseUrl}${relativeUrl}`;
-    await this.#page.goto(url, { waitUntil: 'networkidle2', timeout: 30_000 });
-    this.#ctx.url = relativeUrl;
+    return this.#withPageLock(async () => {
+      const url = relativeUrl.startsWith('http') ? relativeUrl : `${this.#baseUrl}${relativeUrl}`;
+      await this.#page.goto(url, { waitUntil: 'networkidle2', timeout: 30_000 });
+      this.#ctx.url = relativeUrl;
+    });
   }
 
   /** Click a selector and wait briefly for the DOM to settle. */
   async click(selector) {
-    await this.#page.click(selector, { timeout: 10_000 });
-    await this.#page.waitForTimeout(300);
+    return this.#withPageLock(async () => {
+      await this.#page.click(selector, { timeout: 10_000 });
+      await new Promise((r) => setTimeout(r, 300));
+    });
   }
 
   /** Type text into an input or textarea. */
   async type(selector, text) {
-    await this.#page.focus(selector);
-    await this.#page.keyboard.type(text, { delay: 50 });
+    return this.#withPageLock(async () => {
+      await this.#page.focus(selector);
+      await this.#page.keyboard.type(text, { delay: 50 });
+    });
   }
 
   /**
@@ -115,90 +136,103 @@ export class Executor {
    * Dispatches input + change events to trigger React state updates.
    */
   async fillReact(selector, value) {
-    await this.#page.evaluate(
-      (sel, val) => {
-        const el = document.querySelector(sel);
-        if (!el) return;
-        // Bypass read-only value setters used by React
-        const nativeSetter =
-          Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set ??
-          Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-        if (nativeSetter) {
-          nativeSetter.call(el, val);
-        } else {
-          el.value = val;
-        }
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-      },
-      selector,
-      value,
-    );
-    await this.#page.waitForTimeout(200);
+    return this.#withPageLock(async () => {
+      await this.#page.evaluate(
+        (sel, val) => {
+          const el = document.querySelector(sel);
+          if (!el) return;
+          // Bypass read-only value setters used by React
+          const nativeSetter =
+            Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set ??
+            Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+          if (nativeSetter) {
+            nativeSetter.call(el, val);
+          } else {
+            el.value = val;
+          }
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        },
+        selector,
+        value,
+      );
+      await new Promise((r) => setTimeout(r, 200));
+    });
   }
 
   /** Upload a file to a file input. */
   async uploadFile(selector, filePath) {
-    const input = await this.#page.$(selector);
-    if (!input) throw new Error(`File input not found: ${selector}`);
-    await input.uploadFile(filePath);
-    await this.#page.waitForTimeout(500);
+    return this.#withPageLock(async () => {
+      const input = await this.#page.$(selector);
+      if (!input) throw new Error(`File input not found: ${selector}`);
+      await input.uploadFile(filePath);
+      await new Promise((r) => setTimeout(r, 500));
+    });
   }
 
   /** Wait for a selector to appear. */
   async waitFor(selector, timeoutMs = 10_000) {
-    await this.#page.waitForSelector(selector, { timeout: timeoutMs, visible: true });
+    return this.#withPageLock(async () => {
+      await this.#page.waitForSelector(selector, { timeout: timeoutMs, visible: true });
+    });
   }
 
   /** Wait for a URL pattern to match. */
   async waitForUrl(pattern, timeoutMs = 10_000) {
-    const re = pattern instanceof RegExp ? pattern : new RegExp(pattern);
-    await this.#page.waitForFunction(
-      (reStr) => new RegExp(reStr).test(window.location.href),
-      { timeout: timeoutMs },
-      re.source,
-    );
+    return this.#withPageLock(async () => {
+      const re = pattern instanceof RegExp ? pattern : new RegExp(pattern);
+      await this.#page.waitForFunction(
+        (reStr) => new RegExp(reStr).test(window.location.href),
+        { timeout: timeoutMs },
+        re.source,
+      );
+    });
   }
 
   /** Wait for a fixed number of milliseconds. */
   async wait(ms) {
-    await this.#page.waitForTimeout(ms);
+    await new Promise((r) => setTimeout(r, ms));
   }
 
   /**
    * Capture the current frame as a PNG.
+   * Goes through the page lock so it never overlaps with goto/click/type.
    * @returns {Promise<number>} frame number (1-indexed)
    */
   async capture() {
-    const framePath = path.join(
-      this.#ctx.tempDir,
-      `frame-${String(this.#ctx.frame + 1).padStart(4, '0')}.png`,
-    );
-    await this.#page.screenshot({
-      path: framePath,
-      type: 'png',
-      omitBackground: false,
+    return this.#withPageLock(async () => {
+      const framePath = path.join(
+        this.#ctx.tempDir,
+        `frame-${String(this.#ctx.frame + 1).padStart(4, '0')}.png`,
+      );
+      await this.#page.screenshot({
+        path: framePath,
+        type: 'png',
+        omitBackground: false,
+      });
+      this.#ctx.frame++;
+      return this.#ctx.frame;
     });
-    this.#ctx.frame++;
-    return this.#ctx.frame;
   }
 
   /** Start the frame-capture loop at the configured FPS. */
   startCapture() {
     if (this.#captureInterval) return;
-    this.#captureInterval = setInterval(async () => {
+    const tick = async () => {
       try {
         await this.capture();
       } catch {
-        // Best-effort in the interval
+        // Best-effort in the loop
       }
-    }, FRAME_DELAY_MS);
+      this.#captureInterval = setTimeout(tick, FRAME_DELAY_MS);
+    };
+    this.#captureInterval = setTimeout(tick, FRAME_DELAY_MS);
   }
 
   /** Stop the frame-capture loop. */
   stopCapture() {
     if (this.#captureInterval) {
-      clearInterval(this.#captureInterval);
+      clearTimeout(this.#captureInterval);
       this.#captureInterval = null;
     }
   }
@@ -291,5 +325,10 @@ export class Executor {
   /** Get the base URL. */
   getBaseUrl() {
     return this.#baseUrl;
+  }
+
+  /** Number of frames captured in the current screenplay. */
+  get frameCount() {
+    return this.#ctx?.frame ?? 0;
   }
 }

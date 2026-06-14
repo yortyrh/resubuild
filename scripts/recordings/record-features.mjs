@@ -156,7 +156,7 @@ async function runScreenplay(id, screenplays, opts) {
     posterPath = poster;
 
     const duration = exec.elapsedSec();
-    console.error(`  ✓ ${id} — ${exec.ctx.frame} frames, ${duration.toFixed(1)}s`);
+    console.error(`  ✓ ${id} — ${exec.frameCount} frames, ${duration.toFixed(1)}s`);
   } catch (err) {
     await exec.cleanupTempDir();
     console.error(`  ✗ ${id} failed: ${err.message}`);
