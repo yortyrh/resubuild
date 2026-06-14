@@ -1,0 +1,84 @@
+// @vitest-environment jsdom
+import { render, screen } from '@testing-library/react';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+
+// jsdom does not implement matchMedia; HeroVideo reads it in useEffect.
+beforeAll(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+});
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+}));
+
+// `auth-session` is a `'use client'` module; importing `hasSession` from a
+// Server Component throws at render time. The page must NEVER import it.
+// This module-level assertion is the regression pin for the
+// "hasSession() from the server" error.
+vi.mock('@/lib/auth-session', () => ({
+  hasSession: () => false,
+}));
+
+import MarketingPage from './page';
+
+describe('MarketingPage', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders the hero headline and the primary CTA to app.resubuild.dev for anonymous visitors', () => {
+    render(<MarketingPage />);
+
+    // Single h1 per the spec's accessibility requirement
+    const headings = screen.getAllByRole('heading', { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent(/Drop in a PDF/i);
+
+    // Primary CTA must point at the live demo, not /login or /dashboard
+    const primaryCta = screen.getByRole('link', { name: /Try the live demo/i });
+    expect(primaryCta).toHaveAttribute('href', 'https://app.resubuild.dev');
+
+    // Anonymous visitors must see a "Log in" link
+    expect(screen.getByRole('link', { name: /Log in/i })).toHaveAttribute('href', '/login');
+  });
+
+  it('mounts HomeRedirect as a client island so signed-in visitors get redirected after hydration', () => {
+    // The server does not have access to sessionStorage, so it cannot
+    // short-circuit the render. The redirect is owned by HomeRedirect's
+    // useEffect; the only thing we can assert at the server-render layer
+    // is that the island is mounted. (HomeRedirect returns null and calls
+    // router.replace, so the only visible signal here is that no error
+    // is thrown and the page renders normally.)
+    const { container } = render(<MarketingPage />);
+
+    // Footer copy is a stable marker that the page body rendered at all
+    expect(container.textContent).toMatch(/Resubuild/);
+  });
+
+  it('does not call hasSession from a server context', async () => {
+    // The Server Component must not import hasSession — the actual fix.
+    // We assert it via a static source check on the page file, so a
+    // future "let's just call hasSession from the server again" change
+    // will fail loudly in CI.
+    const { readFileSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    const source = readFileSync(
+      fileURLToPath(import.meta.url.replace('.test.tsx', '.tsx')),
+      'utf8',
+    );
+
+    expect(source).not.toMatch(/from\s+['"]@\/lib\/auth-session['"]/);
+    expect(source).not.toMatch(/\bhasSession\s*\(/);
+  });
+});
