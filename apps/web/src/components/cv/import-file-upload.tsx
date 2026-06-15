@@ -92,19 +92,19 @@ export function ImportFileUpload({
     event.target.value = '';
   };
 
-  const handleDragOver = (event: React.DragEvent<HTMLButtonElement>) => {
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     if (!disabled) {
       setDragActive(true);
     }
   };
 
-  const handleDragLeave = (event: React.DragEvent<HTMLButtonElement>) => {
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragActive(false);
   };
 
-  const handleDrop = (event: React.DragEvent<HTMLButtonElement>) => {
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragActive(false);
     if (disabled) {
