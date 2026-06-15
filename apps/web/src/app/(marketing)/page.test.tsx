@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 // jsdom does not implement matchMedia; define a stub so any future
@@ -36,6 +36,7 @@ import MarketingPage from './page';
 
 describe('MarketingPage', () => {
   afterEach(() => {
+    cleanup();
     vi.clearAllMocks();
   });
 
@@ -53,6 +54,18 @@ describe('MarketingPage', () => {
 
     // Anonymous visitors must see a "Log in" link
     expect(screen.getByRole('link', { name: /Log in/i })).toHaveAttribute('href', '/login');
+  });
+
+  it('renders the header "Get Started Free" CTA pointing to /register with the primary button style', () => {
+    render(<MarketingPage />);
+
+    // The header CTA is the registration entry point and uses the same
+    // pill button styling as the original "Try live demo" link.
+    const registerCta = screen.getByRole('link', { name: /Get Started Free/i });
+    expect(registerCta).toHaveAttribute('href', '/register');
+    expect(registerCta.className).toContain('rounded-full');
+    expect(registerCta.className).toContain('bg-primary');
+    expect(registerCta.className).toContain('text-primary-foreground');
   });
 
   it('mounts HomeRedirect as a client island so signed-in visitors get redirected after hydration', () => {

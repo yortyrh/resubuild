@@ -44,10 +44,10 @@ export default function MarketingPage() {
                 Log in
               </Link>
               <Link
-                href="https://app.resubuild.dev"
+                href="/register"
                 className="bg-primary text-primary-foreground rounded-full px-4 py-2 font-medium hover:opacity-90"
               >
-                Try live demo
+                Get Started Free
               </Link>
             </nav>
           </div>
