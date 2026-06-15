@@ -8,7 +8,14 @@ export function MarketingFooter() {
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2.5">
             <span className="landing-logo-mark h-7 w-7">
-              <Image src="/icon-2.png" alt="" width={28} height={28} className="h-7 w-7" />
+              <Image
+                src="/icon-2.png"
+                alt="Resubuild"
+                width={28}
+                height={28}
+                className="h-7 w-7"
+                sizes="28px"
+              />
             </span>
             <span className="landing-logo-wordmark text-base">Resubuild</span>
           </div>

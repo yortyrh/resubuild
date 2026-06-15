@@ -30,7 +30,7 @@
   --marketing-paper: 0 0% 100%;
   --marketing-ink: 240 10% 9%;
   --marketing-rule: 244 30% 55%;
-  --marketing-display-font: 'Instrument Serif', Georgia, serif;
+  --marketing-display-font: var(--font-display), Georgia, serif;
   --marketing-mono-font: var(--font-geist-mono);
 }
 

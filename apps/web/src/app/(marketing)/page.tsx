@@ -8,6 +8,8 @@ import { HeroVisual } from '@/components/landing/hero-visual';
 import { MarketingHowItWorks } from '@/components/landing/how-it-works';
 import { MarketingOpenStandard } from '@/components/landing/open-standard';
 
+export const dynamic = 'force-static';
+
 export default function MarketingPage() {
   return (
     <>

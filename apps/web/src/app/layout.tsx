@@ -1,24 +1,22 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono, Instrument_Serif } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { AppProviders } from '@/components/providers/app-providers';
+import { siteConfig } from '@/lib/site';
 import './globals.css';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
+  display: 'swap',
 });
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+  display: 'swap',
 });
 
-// Display face used by the marketing landing page (`/`) and the features
-// page (`/features`). Lives in the root layout so the CSS variable is
-// available to every route without each route-group layout having to
-// register a separate <html> wrapper (which would produce invalid nested
-// <html>/<body> markup and break SSR hydration).
 const instrumentSerif = Instrument_Serif({
   subsets: ['latin'],
   weight: ['400'],
@@ -26,9 +24,72 @@ const instrumentSerif = Instrument_Serif({
   display: 'swap',
 });
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0f' },
+  ],
+};
+
 export const metadata: Metadata = {
-  title: 'Resubuild',
-  description: 'Manage your Resubuild CVs',
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: siteConfig.title,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  keywords: siteConfig.keywords,
+  applicationName: siteConfig.name,
+  authors: [{ name: siteConfig.name, url: siteConfig.url }],
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    locale: siteConfig.locale,
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: [
+      {
+        url: siteConfig.ogImage,
+        width: 1200,
+        height: 630,
+        alt: `${siteConfig.name} — AI-powered CV builder`,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: [siteConfig.ogImage],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  icons: {
+    icon: [{ url: '/icon-2.png', type: 'image/png' }],
+    apple: [{ url: '/icon-2.png', type: 'image/png' }],
+  },
+  alternates: {
+    canonical: '/',
+  },
 };
 
 export default function RootLayout({

@@ -1,14 +1,6 @@
-'use client';
-
 import type { ReactNode } from 'react';
-import { SupabaseListener } from '@/components/auth/supabase-listener';
-import { QueryProvider } from '@/components/providers/query-provider';
 
+/** Root shell wrapper. Auth/query providers live in dashboard and auth layouts. */
 export function AppProviders({ children }: { children: ReactNode }) {
-  return (
-    <QueryProvider>
-      <SupabaseListener />
-      {children}
-    </QueryProvider>
-  );
+  return children;
 }

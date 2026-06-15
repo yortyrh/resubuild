@@ -13,7 +13,15 @@ export function MarketingHeader() {
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-3">
           <span className="landing-logo-mark">
-            <Image src="/icon-2.png" alt="" width={40} height={40} className="h-10 w-10" priority />
+            <Image
+              src="/icon-2.png"
+              alt="Resubuild"
+              width={40}
+              height={40}
+              className="h-10 w-10"
+              priority
+              sizes="40px"
+            />
           </span>
           <span className="landing-logo-wordmark">Resubuild</span>
         </Link>
