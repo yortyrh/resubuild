@@ -2,7 +2,9 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-// jsdom does not implement matchMedia; HeroVideo reads it in useEffect.
+// jsdom does not implement matchMedia; define a stub so any future
+// client component that reads it (e.g. for prefers-reduced-motion) does
+// not throw during the test render.
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,

@@ -21,6 +21,17 @@
   --ring: 244 70% 55%;
   --popover: 0 0% 100%;
   --popover-foreground: 240 10% 3.9%;
+
+  /* Marketing-only tokens (paper + ink + indigo rule). The marketing
+     route group layers these on top of the existing semantic tokens so
+     the landing page reads as a paper-and-ink document, not a generic
+     SaaS surface. They MUST stay scoped to the (marketing) route group
+     and MUST NOT bleed into the dashboard or auth chrome. */
+  --marketing-paper: 0 0% 100%;
+  --marketing-ink: 240 10% 9%;
+  --marketing-rule: 244 30% 55%;
+  --marketing-display-font: 'Instrument Serif', Georgia, serif;
+  --marketing-mono-font: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -44,6 +55,11 @@
     --ring: 244 80% 70%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
+
+    /* Dark-mode marketing tokens. */
+    --marketing-paper: 240 10% 5%;
+    --marketing-ink: 0 0% 98%;
+    --marketing-rule: 244 40% 65%;
   }
 }
 
@@ -68,6 +84,7 @@
   --color-popover-foreground: hsl(var(--popover-foreground));
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--marketing-display-font);
 }
 
 body {

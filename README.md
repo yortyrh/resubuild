@@ -23,6 +23,8 @@
 - **Your CVs, your account** — sign in, and your CVs are saved under your account, private to you.
 - **[See all features with video walkthroughs](/features)** — short recordings of every major feature.
 
+The public marketing entry is **`/`** — a landing page that demonstrates the PDF-to-clean-CV transform before the auth wall. Deep-links to `/login`, `/register`, `/forgot-password`, etc. continue to work exactly as before.
+
 <video controls autoplay muted loop playsinline style="max-width:100%;border-radius:0.75rem;" src="apps/web/public/recordings/showcase.mp4">
   <a href="/features">See all features</a>
 </video>

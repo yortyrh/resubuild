@@ -64,4 +64,27 @@ describe('AuthPageShell', () => {
     expect(screen.getByText('Sign in')).toBeInTheDocument();
     expect(screen.queryByText('Welcome back')).not.toBeInTheDocument();
   });
+
+  it('renders a close button linking to the homepage in the top-right corner of the card', () => {
+    const { container } = render(
+      <AuthPageShell title="Sign in" description="Welcome back">
+        <button type="button">Submit</button>
+      </AuthPageShell>,
+    );
+
+    const closeLink = screen.getByRole('link', { name: /close and return to resubuild home/i });
+    expect(closeLink).toBeInTheDocument();
+    expect(closeLink).toHaveAttribute('href', '/');
+    // The close button is absolutely positioned in the top-right corner of
+    // the card and uses an icon-sized tap target.
+    expect(closeLink.className).toContain('absolute');
+    expect(closeLink.className).toContain('right-3');
+    expect(closeLink.className).toContain('top-3');
+    expect(closeLink.className).toContain('sm:right-4');
+    expect(closeLink.className).toContain('sm:top-4');
+    // The close button lives inside the card, not the viewport wrapper.
+    const card = container.querySelector('.text-card-foreground');
+    expect(card).not.toBeNull();
+    expect(card!.contains(closeLink)).toBe(true);
+  });
 });
