@@ -165,8 +165,16 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 60% 50% at 20% 0%, color-mix(in srgb, var(--landing-primary-500) 12%, transparent), transparent 70%),
-    radial-gradient(ellipse 50% 40% at 80% 10%, color-mix(in srgb, var(--landing-accent-500) 10%, transparent), transparent 65%);
+    radial-gradient(
+      ellipse 60% 50% at 20% 0%,
+      color-mix(in srgb, var(--landing-primary-500) 12%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 50% 40% at 80% 10%,
+      color-mix(in srgb, var(--landing-accent-500) 10%, transparent),
+      transparent 65%
+    );
 }
 
 .landing-eyebrow {

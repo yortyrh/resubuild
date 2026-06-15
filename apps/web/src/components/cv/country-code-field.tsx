@@ -90,7 +90,7 @@ export function CountryCodeField({
     setActiveIdx(0);
   };
 
-  const onComboKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+  const onComboKeyDown = (e: ReactKeyboardEvent<HTMLButtonElement>) => {
     if (!open) {
       return;
     }
@@ -119,20 +119,14 @@ export function CountryCodeField({
     <div className="space-y-2">
       <Label>{label}</Label>
       {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
-      <div
-        ref={wrapperRef}
-        className="relative"
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={open ? `${listId}-dropdown` : undefined}
-        aria-haspopup="listbox"
-        aria-owns={`${listId}-listbox`}
-        onKeyDown={onComboKeyDown}
-      >
+      <div ref={wrapperRef} className="relative">
         <Button
           type="button"
           variant="outline"
+          role="combobox"
           aria-expanded={open}
+          aria-haspopup="listbox"
+          aria-owns={`${listId}-listbox`}
           className={cn(
             'relative h-10 w-full justify-between px-3 font-normal transition-[box-shadow,transform,color] duration-150',
             open &&
@@ -140,6 +134,7 @@ export function CountryCodeField({
           )}
           aria-label={`${label}, choose country`}
           aria-controls={open ? `${listId}-dropdown` : undefined}
+          onKeyDown={onComboKeyDown}
           onClick={() => {
             const nextOpen = !open;
             setOpen(nextOpen);

@@ -7,7 +7,7 @@
 // small CJS shims / UMD bundles that jest can load under CJS. Shims live
 // in `apps/api/test/e2e/_esm-stubs/`. New ESM-only deps should be added
 // here as the dep tree evolves.
-const path = require('path');
+const path = require('node:path');
 const repoRoot = path.join(__dirname, '..', '..', '..', '..');
 const stubsDir = path.join(__dirname, '_esm-stubs');
 const markedUmd = path.join(

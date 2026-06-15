@@ -169,13 +169,13 @@ export function ImportFileUpload({
           </button>
         </div>
       ) : (
-        <div
-          role="button"
+        <button
+          type="button"
           tabIndex={disabled ? -1 : 0}
           aria-disabled={disabled}
           className={cn(
             dashedBoxClassName,
-            'hover:bg-accent/40 focus-visible:ring-ring flex flex-col items-center justify-center gap-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+            'hover:bg-accent/40 focus-visible:ring-ring flex w-full flex-col items-center justify-center gap-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
             dragActive && 'border-primary bg-accent/30',
             disabled && 'pointer-events-none',
           )}
@@ -201,7 +201,7 @@ export function ImportFileUpload({
           <Upload className="text-muted-foreground size-8" aria-hidden />
           <span className="text-sm font-medium">{hint}</span>
           <span className="text-muted-foreground text-xs">Max {formatFileSize(maxBytes)}</span>
-        </div>
+        </button>
       )}
       {validationError ? (
         <p

@@ -50,7 +50,7 @@ export function useImportJsonPreview(jsonText: string) {
       }
 
       setPreview((current) => {
-        if (!current || !current.valid || current.basicsImage !== imageUrl) {
+        if (!current?.valid || current.basicsImage !== imageUrl) {
           return current;
         }
         return {

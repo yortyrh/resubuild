@@ -888,7 +888,7 @@ describe('ImportService', () => {
       });
       schemaValidator.validate.mockReturnValue(undefined);
 
-      const result = await service.startMarkdownImport(user, {
+      const _result = await service.startMarkdownImport(user, {
         mimetype: 'text/markdown',
         size: 20,
         buffer: Buffer.from('# Jane Doe\nEngineer'),

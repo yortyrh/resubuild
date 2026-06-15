@@ -31,6 +31,7 @@ export function useImportPreviewToasts({
   const imageStatusRef = useRef<string | null>(null);
 
   useEffect(() => {
+    void resetKey;
     readySourceRef.current = null;
     imageStatusRef.current = null;
   }, [resetKey]);

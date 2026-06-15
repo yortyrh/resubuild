@@ -90,7 +90,7 @@ export function SocialNetworkCombobox({
 
   const picked = filtered[Math.min(activeIdx, Math.max(0, filtered.length - 1))];
 
-  const onComboKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+  const onComboKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       if (!open) setOpen(true);
@@ -125,25 +125,21 @@ export function SocialNetworkCombobox({
     <div className="space-y-2">
       <Label htmlFor={`${listId}-input`}>{label}</Label>
       {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
-      <div
-        ref={wrapperRef}
-        className="relative"
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={open ? `${listId}-dropdown` : undefined}
-        aria-haspopup="listbox"
-        onKeyDown={onComboKeyDown}
-      >
+      <div ref={wrapperRef} className="relative">
         <div className="relative">
           <Input
             ref={inputRef}
             id={`${listId}-input`}
+            role="combobox"
+            aria-expanded={open}
+            aria-haspopup="listbox"
             value={displayValue}
             placeholder="LinkedIn, GitHub, or custom…"
             aria-autocomplete="list"
             aria-controls={open ? `${listId}-listbox` : undefined}
             aria-activedescendant={open && picked ? `${listId}-opt-${picked}` : undefined}
             className="pe-9"
+            onKeyDown={onComboKeyDown}
             onFocus={() => {
               setQuery(trimmedValue);
               setOpen(true);

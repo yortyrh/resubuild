@@ -8,7 +8,7 @@ const GRAVATAR_SIZE_PX = 512;
  */
 export function buildGravatarImageUrl(email: string, size = GRAVATAR_SIZE_PX): string | null {
   const normalized = email.trim().toLowerCase();
-  if (!normalized || !normalized.includes('@')) {
+  if (!normalized?.includes('@')) {
     return null;
   }
 

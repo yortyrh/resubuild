@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { purgeSupabaseSessionCookies } from './client';
 
 const setCookie = (name: string, value: string) => {
+  // biome-ignore lint/suspicious/noDocumentCookie: test helper for cookie purge behavior
   document.cookie = `${name}=${value}; path=/`;
 };
 
@@ -13,6 +14,7 @@ const getCookieNames = () =>
 
 const clearAllCookies = () => {
   for (const name of getCookieNames()) {
+    // biome-ignore lint/suspicious/noDocumentCookie: test helper for cookie purge behavior
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
   }
 };

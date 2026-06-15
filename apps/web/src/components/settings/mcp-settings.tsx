@@ -15,7 +15,6 @@ import {
 import {
   createMcpApiKey,
   getMcpSettings,
-  type McpApiKey,
   type McpSettingsResponse,
   patchMcpSettings,
 } from '@/lib/api';

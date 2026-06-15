@@ -119,7 +119,7 @@ export function ProfilePhotoCropDialog({
             minWidth={32}
             minHeight={32}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* biome-ignore lint/performance/noImgElement: ReactCrop requires a native img for canvas cropping */}
             <img
               ref={imgRef}
               src={imageUrl}

@@ -14,14 +14,16 @@ export function purgeSupabaseSessionCookies(): void {
   const host = window.location.hostname;
   for (const raw of cookies) {
     const name = raw.split('=')[0]?.trim();
-    if (!name || !name.startsWith('sb-')) continue;
+    if (!name?.startsWith('sb-')) continue;
     // The PKCE verifier is the active in-flight OAuth flow's secret. Deleting
     // it before `exchangeCodeForSession` runs breaks the callback. Skip it
     // (and any chunked variants like `…-code-verifier.0`) on every cleanup.
     if (name.endsWith('-code-verifier') || /-code-verifier\.\d+$/.test(name)) {
       continue;
     }
+    // biome-ignore lint/suspicious/noDocumentCookie: legacy cookie purge before Cookie Store API adoption
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    // biome-ignore lint/suspicious/noDocumentCookie: legacy cookie purge before Cookie Store API adoption
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${host}`;
   }
 }

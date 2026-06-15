@@ -55,7 +55,7 @@ export function ImportPreviewDialog({ open, onOpenChange, resume }: ImportPrevie
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, selectedTemplateId]);
 
   const html = useMemo(() => {
     if (!resume) {

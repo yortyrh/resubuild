@@ -64,7 +64,7 @@ export function IsoDateField({
           {label}
           {required ? <span className="text-destructive ml-0.5">*</span> : null}
         </Label>
-        <div className="flex gap-1" role="group" aria-label={`${label} precision`}>
+        <fieldset className="flex gap-1 border-0 p-0" aria-label={`${label} precision`}>
           {(['year', 'month', 'date'] as const).map((option) => (
             <Button
               key={option}
@@ -76,7 +76,7 @@ export function IsoDateField({
               {precisionLabels[option]}
             </Button>
           ))}
-        </div>
+        </fieldset>
       </div>
       {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
 

@@ -90,7 +90,7 @@ export function ProfilePhotoThumbnail({
       role="img"
       aria-label="Profile"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {/* biome-ignore lint/performance/noImgElement: dynamic user-uploaded URL with onError fallback */}
       <img
         src={src}
         alt=""

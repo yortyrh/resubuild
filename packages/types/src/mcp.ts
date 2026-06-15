@@ -18,4 +18,4 @@ export interface McpPatchSettingsBody {
   mcpEnabled?: boolean;
 }
 
-export type McpCreateKeyBody = {};
+export type McpCreateKeyBody = Record<string, never>;

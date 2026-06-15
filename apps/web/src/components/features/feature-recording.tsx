@@ -29,8 +29,7 @@ export function FeatureRecording({ id, title, caption, className }: FeatureRecor
     <div className={clsx('flex flex-col gap-4', className)}>
       <div className="border-border bg-surface-soft relative overflow-hidden rounded-xl border">
         {prefersReducedMotion ? (
-          // Reduced motion: show static poster image only
-          // eslint-disable-next-line @next/next/no-img-element
+          // biome-ignore lint/performance/noImgElement: static poster fallback when reduced motion is enabled
           <img
             src={`/recordings/${id}.png`}
             alt={`${title} demo`}
