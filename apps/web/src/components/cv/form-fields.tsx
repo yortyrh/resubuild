@@ -139,7 +139,7 @@ export function StringListField({
     pendingFocusIndex.current = null;
     focusListItem(inputRefs.current[focusIndex]);
     return undefined;
-  }, [markdown]);
+  }, [values, markdown]);
 
   return (
     <div className="space-y-2">

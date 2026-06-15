@@ -10,14 +10,14 @@ describe('CountryCodeField', () => {
 
   it('renders empty trigger when value is null', () => {
     render(<CountryCodeField value={null} onChange={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /Country, choose country/i })).toHaveTextContent(
+    expect(screen.getByRole('combobox', { name: /Country, choose country/i })).toHaveTextContent(
       'Select country…',
     );
   });
 
   it('displays country name when value is a known code', () => {
     render(<CountryCodeField value="US" onChange={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /Country, choose country/i })).toHaveTextContent(
+    expect(screen.getByRole('combobox', { name: /Country, choose country/i })).toHaveTextContent(
       'United States',
     );
   });

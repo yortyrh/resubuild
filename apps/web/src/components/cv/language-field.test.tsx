@@ -12,21 +12,21 @@ describe('LanguageField', () => {
 
   it('renders empty trigger when value is null', () => {
     render(<LanguageField value={null} onChange={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /Language, choose language/i })).toHaveTextContent(
+    expect(screen.getByRole('combobox', { name: /Language, choose language/i })).toHaveTextContent(
       'Select language…',
     );
   });
 
   it('displays legacy custom value when not in canonical list', () => {
     render(<LanguageField value="Klingon" onChange={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /Language, choose language/i })).toHaveTextContent(
+    expect(screen.getByRole('combobox', { name: /Language, choose language/i })).toHaveTextContent(
       'Klingon',
     );
   });
 
   it('displays canonical value with ISO code in trigger', () => {
     render(<LanguageField value="English" onChange={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /Language, choose language/i })).toHaveTextContent(
+    expect(screen.getByRole('combobox', { name: /Language, choose language/i })).toHaveTextContent(
       'English (en)',
     );
   });
@@ -35,7 +35,7 @@ describe('LanguageField', () => {
     const user = userEvent.setup();
     render(<LanguageField value="" onChange={vi.fn()} />);
 
-    await user.click(screen.getByRole('button', { name: /Language, choose language/i }));
+    await user.click(screen.getByRole('combobox'));
     const search = screen.getByPlaceholderText('Search by name or code…');
     await user.type(search, 'spa');
 
@@ -48,7 +48,7 @@ describe('LanguageField', () => {
     const user = userEvent.setup();
     render(<LanguageField value="" onChange={onChange} />);
 
-    await user.click(screen.getByRole('button', { name: /Language, choose language/i }));
+    await user.click(screen.getByRole('combobox'));
     const search = screen.getByPlaceholderText('Search by name or code…');
     await user.type(search, 'spanish');
     await user.click(screen.getByRole('option', { name: /Spanish/i }));
@@ -61,7 +61,7 @@ describe('LanguageField', () => {
     const user = userEvent.setup();
     render(<LanguageField value="" onChange={onChange} />);
 
-    await user.click(screen.getByRole('button', { name: /Language, choose language/i }));
+    await user.click(screen.getByRole('combobox'));
     const search = screen.getByPlaceholderText('Search by name or code…');
     await user.type(search, 'spanish');
 
@@ -77,7 +77,7 @@ describe('LanguageField', () => {
     const user = userEvent.setup();
     render(<LanguageField value="English" onChange={onChange} />);
 
-    await user.click(screen.getByRole('button', { name: /Language, choose language/i }));
+    await user.click(screen.getByRole('combobox'));
     expect(screen.getByPlaceholderText('Search by name or code…')).toBeInTheDocument();
 
     const combobox = screen.getByRole('combobox');
