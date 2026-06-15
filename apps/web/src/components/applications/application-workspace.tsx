@@ -264,7 +264,7 @@ export function ApplicationWorkspace({ id }: { id: string }) {
       <ApplicationUpdateDialog application={data} open={updateOpen} onOpenChange={setUpdateOpen} />
 
       <div className="surface-soft text-card-foreground p-4">
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <TabsList>
               <TabsTrigger value="summary">Job summary</TabsTrigger>

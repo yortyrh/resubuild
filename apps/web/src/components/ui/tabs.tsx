@@ -2,7 +2,23 @@ import * as TabsPrimitive from '@radix-ui/react-tabs';
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
-const Tabs = TabsPrimitive.Root;
+/**
+ * Tabs is built on Radix's `TabsPrimitive.Root` but adds a grid-stacking
+ * layout so every `TabsContent` panel overlaps in the same cell.
+ *
+ * Without this, switching between tabs (for example, the Password / Email
+ * code / Email link tabs on the login page) changes the card height and
+ * causes the centered card to jump vertically. With the grid pattern, the
+ * row reserves the tallest panel's height, so the surrounding card stays
+ * pinned to its centered position.
+ */
+const Tabs = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.Root ref={ref} className={cn('grid grid-cols-1', className)} {...props} />
+));
+Tabs.displayName = TabsPrimitive.Root.displayName;
 
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
@@ -34,14 +50,26 @@ const TabsTrigger = React.forwardRef<
 ));
 TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 
+/**
+ * TabsContent is pinned to row 2 / column 1 of the Tabs grid so every panel
+ * overlaps in the same cell. Inactive panels stay mounted (so the cell sizes
+ * to the tallest one) but are visually hidden and non-interactive.
+ *
+ * `forceMount` defaults to `true`; pass `forceMount={false}` to fall back to
+ * Radix's default unmount-on-inactive behaviour, which would break the
+ * grid-stacking layout.
+ */
 const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
->(({ className, ...props }, ref) => (
+>(({ className, forceMount = true, ...props }, ref) => (
   <TabsPrimitive.Content
     ref={ref}
+    forceMount={forceMount}
     className={cn(
       'ring-offset-background focus-visible:ring-ring mt-4 focus-visible:outline-none focus-visible:ring-2',
+      'col-start-1 row-start-2',
+      'data-[state=inactive]:pointer-events-none data-[state=inactive]:invisible',
       className,
     )}
     {...props}

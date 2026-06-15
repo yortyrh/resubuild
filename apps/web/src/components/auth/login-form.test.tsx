@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryWrapper } from '@/lib/queries/test-utils';
@@ -275,9 +275,13 @@ describe('LoginForm', () => {
 
     renderLoginForm();
 
+    // All three tab panels are mounted (the grid-stacking layout reserves
+    // the tallest panel's height so the centered card does not jump), so we
+    // scope the queries to the active panel.
     await userEvent.click(screen.getByRole('tab', { name: /email code/i }));
-    await userEvent.type(screen.getByLabelText('Email'), 'otp@example.com');
-    await userEvent.click(screen.getByRole('button', { name: /send code/i }));
+    const otpPanel = await screen.findByRole('tabpanel', { name: /email code/i });
+    await userEvent.type(within(otpPanel).getByLabelText('Email'), 'otp@example.com');
+    await userEvent.click(within(otpPanel).getByRole('button', { name: /send code/i }));
 
     await waitFor(() => {
       expect(mockRequestOtpMutate).toHaveBeenCalledWith('otp@example.com', expect.any(Object));
@@ -293,9 +297,13 @@ describe('LoginForm', () => {
 
     renderLoginForm();
 
+    // All three tab panels are mounted (the grid-stacking layout reserves
+    // the tallest panel's height so the centered card does not jump), so we
+    // scope the queries to the active panel.
     await userEvent.click(screen.getByRole('tab', { name: /email link/i }));
-    await userEvent.type(screen.getByLabelText('Email'), 'link@example.com');
-    await userEvent.click(screen.getByRole('button', { name: /send sign-in link/i }));
+    const linkPanel = await screen.findByRole('tabpanel', { name: /email link/i });
+    await userEvent.type(within(linkPanel).getByLabelText('Email'), 'link@example.com');
+    await userEvent.click(within(linkPanel).getByRole('button', { name: /send sign-in link/i }));
 
     await waitFor(() => {
       expect(mockSendMagicLinkMutate).toHaveBeenCalledWith('link@example.com', expect.any(Object));
