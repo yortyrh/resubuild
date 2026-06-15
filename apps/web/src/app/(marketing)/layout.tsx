@@ -1,13 +1,5 @@
 import type { Metadata } from 'next';
-import { Instrument_Serif } from 'next/font/google';
 import './globals.css';
-
-const instrumentSerif = Instrument_Serif({
-  subsets: ['latin'],
-  weight: ['400'],
-  variable: '--font-display',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'Resubuild — Drop in a PDF. Get a clean MIT-format CV in seconds.',
@@ -15,10 +7,11 @@ export const metadata: Metadata = {
     'Upload any PDF CV and Resubuild extracts the structured data, ready to edit in the clean MIT-format editor and export as a polished PDF. No watermarks.',
 };
 
+// The root `app/layout.tsx` owns the <html> and <body> wrappers, the global
+// font stack, and the marketing display font (`--font-display` is registered
+// there as well). This route-group layout only exists to override metadata
+// and load the marketing CSS; the rendered tree is `children` as-is so the
+// marketing surface sits inside the root document without nested <html>/<body>.
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en" className={instrumentSerif.variable}>
-      <body className="font-sans antialiased">{children}</body>
-    </html>
-  );
+  return <>{children}</>;
 }

@@ -7,11 +7,11 @@ export default function MarketingPage() {
     <>
       {/*
         Mounted as a sibling so signed-in visitors still get redirected to
-        /dashboard (or to /login if their session has expired) without the
-        page first having to call a client-only function. HomeRedirect runs
-        in useEffect on the client and returns null, so it has no visual
-        presence; the marketing surface below is the only thing the visitor
-        sees during the one-tick hydration window.
+        /dashboard without the page first having to call a client-only
+        function. Anonymous visitors stay on the landing page. HomeRedirect
+        runs in useEffect on the client and returns null, so it has no
+        visual presence; the marketing surface below is the only thing the
+        visitor sees during the one-tick hydration window.
       */}
       <HomeRedirect />
       <div className="bg-background text-foreground min-h-screen">
