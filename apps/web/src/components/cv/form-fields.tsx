@@ -126,6 +126,9 @@ export function StringListField({
     }
   };
 
+  // `values` is an intentional trigger: focus must run after the list
+  // re-renders with a newly added item.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: values triggers focus after re-render
   useEffect(() => {
     if (markdown) {
       return undefined;
