@@ -3,109 +3,65 @@ import { HomeRedirect } from '@/components/auth/home-redirect';
 import { MarketingFaq } from '@/components/landing/faq';
 import { MarketingFeatures } from '@/components/landing/features';
 import { MarketingFooter } from '@/components/landing/footer';
+import { MarketingHeader } from '@/components/landing/header';
+import { HeroVisual } from '@/components/landing/hero-visual';
 import { MarketingHowItWorks } from '@/components/landing/how-it-works';
 import { MarketingOpenStandard } from '@/components/landing/open-standard';
 
-// The marketing surface. Server-rendered, with one small client island:
-//   - <HomeRedirect />         (signed-in fast path)
-//
-// All animations live in `landing-animations.css` (loaded by the
-// (marketing) layout) and respect `prefers-reduced-motion: reduce`.
 export default function MarketingPage() {
   return (
     <>
       <HomeRedirect />
-      <div
-        className="min-h-screen"
-        style={{
-          backgroundColor: 'hsl(var(--marketing-paper))',
-          color: 'hsl(var(--marketing-ink))',
-        }}
-      >
-        {/* Header */}
-        <header
-          className="sticky top-0 z-50 border-b backdrop-blur"
-          style={{ borderColor: 'hsl(var(--marketing-rule))' }}
-        >
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-            <Link
-              href="/"
-              className="text-xl"
-              style={{ fontFamily: 'var(--marketing-display-font)' }}
-            >
-              Resubuild
-            </Link>
-            <nav className="flex items-center gap-6 text-sm">
-              <Link
-                href="/login"
-                className="hover:opacity-80"
-                style={{ color: 'hsl(var(--marketing-ink) / 0.7)' }}
-              >
-                Log in
-              </Link>
-              <Link
-                href="/register"
-                className="bg-primary text-primary-foreground rounded-full px-4 py-2 font-medium hover:opacity-90"
-              >
-                Get Started Free
-              </Link>
-            </nav>
-          </div>
-        </header>
+      <div className="landing-page landing-grid-bg min-h-screen">
+        <MarketingHeader />
 
-        {/* Hero */}
-        <section
-          className="landing-section border-b"
-          style={{ borderColor: 'hsl(var(--marketing-rule))' }}
-        >
-          <div className="mx-auto max-w-5xl px-6 py-20 text-center">
-            <h1
-              className="text-5xl font-medium leading-tight sm:text-6xl"
-              style={{
-                fontFamily: 'var(--marketing-display-font)',
-                color: 'hsl(var(--marketing-ink))',
-              }}
-            >
-              <span className="landing-headline-word">Drop</span>{' '}
-              <span className="landing-headline-word">in</span>{' '}
-              <span className="landing-headline-word">a</span>{' '}
-              <span className="landing-headline-word">PDF.</span>
-              <br />
-              <span className="landing-headline-word">Get</span>{' '}
-              <span className="landing-headline-word">a</span>{' '}
-              <span className="landing-headline-word">clean</span>{' '}
-              <span className="landing-headline-word">CV</span>{' '}
-              <span className="landing-headline-word">in</span>{' '}
-              <span className="landing-headline-word">seconds.</span>
-            </h1>
-            <p
-              className="mx-auto mt-4 max-w-2xl text-lg"
-              style={{ color: 'hsl(var(--marketing-ink) / 0.75)' }}
-            >
-              Upload any existing CV as a PDF and Resubuild extracts the structured data — ready to
-              edit in the clean MIT-format editor and export as a polished PDF. No watermarks, no
-              formatting fights.
-            </p>
-            <div className="mt-10 flex items-center justify-center gap-4">
-              <Link
-                href="https://app.resubuild.dev"
-                className="bg-primary text-primary-foreground rounded-full px-8 py-3 text-base font-medium hover:opacity-90"
-              >
-                Try the live demo
-              </Link>
-              <Link
-                href="#how-it-works"
-                className="text-base hover:opacity-80"
-                style={{ color: 'hsl(var(--marketing-ink) / 0.7)' }}
-              >
-                See how it works →
-              </Link>
+        <section className="landing-hero landing-section border-b">
+          <div className="landing-hero-glow" aria-hidden="true" />
+          <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-6 py-16 md:grid-cols-2 md:gap-12 md:py-10 lg:gap-16 lg:py-24">
+            <div className="text-left">
+              <span className="landing-eyebrow">
+                <span className="landing-pulse-dot" aria-hidden="true" />
+                AI-powered CV builder
+              </span>
+
+              <h1 className="mt-6 font-sans text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
+                <span className="landing-headline-solid landing-headline-word">Drop in a PDF.</span>
+                <br />
+                <span className="landing-gradient-text landing-headline-word">
+                  Get a clean CV in seconds.
+                </span>
+              </h1>
+
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-[var(--landing-muted)]">
+                Upload any existing CV as a PDF and Resubuild extracts the structured data — ready
+                to edit in the clean MIT-format editor and export as a polished PDF. No watermarks,
+                no formatting fights.
+              </p>
+
+              <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+                <Link href="/login" className="landing-btn-primary px-8 py-3.5 text-base">
+                  Try the live demo
+                </Link>
+                <Link href="#how-it-works" className="landing-btn-secondary px-8 py-3.5 text-base">
+                  See how it works
+                </Link>
+              </div>
+
+              <div className="landing-trust-row mt-8 flex flex-wrap gap-x-6 gap-y-2">
+                <span>✓ Free during public beta</span>
+                <span>✓ No watermarks</span>
+                <span>✓ Open JSON Resume standard</span>
+              </div>
+            </div>
+
+            <div className="relative w-full">
+              <HeroVisual />
             </div>
           </div>
         </section>
 
-        <MarketingHowItWorks />
         <MarketingFeatures />
+        <MarketingHowItWorks />
         <MarketingOpenStandard />
         <MarketingFaq />
         <MarketingFooter />

@@ -1,5 +1,4 @@
-// Server component. FAQ using semantic <details>/<summary> elements per
-// the landing-page spec (WCAG-friendly, no JS required).
+import { SectionHeader } from '@/components/landing/section-header';
 
 const FAQ_ITEMS = [
   {
@@ -26,38 +25,19 @@ const FAQ_ITEMS = [
 
 export function MarketingFaq() {
   return (
-    <section
-      className="landing-section border-b py-20"
-      style={{ borderColor: 'hsl(var(--marketing-rule))' }}
-    >
+    <section id="faq" className="landing-section border-b py-20 lg:py-28">
       <div className="mx-auto max-w-3xl px-6">
-        <h2
-          className="text-center text-3xl font-medium"
-          style={{
-            fontFamily: 'var(--marketing-display-font)',
-            color: 'hsl(var(--marketing-ink))',
-          }}
-        >
-          Frequently asked
-        </h2>
-        <div className="mt-12 flex flex-col gap-4">
+        <SectionHeader
+          label="FAQ"
+          title="Frequently Asked Questions"
+          subtitle="Everything you need to know about Resubuild."
+        />
+
+        <div className="landing-faq-list mt-12">
           {FAQ_ITEMS.map(({ q, a }) => (
-            <details
-              key={q}
-              className="surface-soft text-card-foreground rounded-xl p-4 [&_summary]:cursor-pointer"
-            >
-              <summary
-                className="text-base font-semibold"
-                style={{ color: 'hsl(var(--marketing-ink))' }}
-              >
-                {q}
-              </summary>
-              <p
-                className="mt-3 text-sm leading-relaxed"
-                style={{ color: 'hsl(var(--marketing-ink) / 0.75)' }}
-              >
-                {a}
-              </p>
+            <details key={q} className="landing-faq-item">
+              <summary>{q}</summary>
+              <p className="landing-faq-answer">{a}</p>
             </details>
           ))}
         </div>

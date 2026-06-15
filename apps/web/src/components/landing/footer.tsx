@@ -1,29 +1,25 @@
-// Server component. Minimal footer with the Resubuild wordmark, three
-// links, and a copyright line.
+import Image from 'next/image';
+import Link from 'next/link';
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t py-12" style={{ borderColor: 'hsl(var(--marketing-rule))' }}>
-      <div className="mx-auto flex max-w-5xl flex-col items-start gap-6 px-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-2">
-          <span
-            className="text-base"
-            style={{
-              fontFamily: 'var(--marketing-display-font)',
-              color: 'hsl(var(--marketing-ink))',
-            }}
-          >
-            Resubuild
-          </span>
-          <span className="text-sm" style={{ color: 'hsl(var(--marketing-ink) / 0.6)' }}>
+    <footer className="border-t border-[var(--landing-border)] py-14">
+      <div className="mx-auto flex max-w-7xl flex-col items-start gap-8 px-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="landing-logo-mark h-7 w-7">
+              <Image src="/icon-2.png" alt="" width={28} height={28} className="h-7 w-7" />
+            </span>
+            <span className="landing-logo-wordmark text-base">Resubuild</span>
+          </div>
+          <span className="text-sm text-[var(--landing-muted)]">
             © {new Date().getFullYear()} Resubuild. Built on the open JSON Resume standard.
           </span>
         </div>
         <nav className="flex flex-wrap gap-6 text-sm">
           <a
             href="https://app.resubuild.dev"
-            className="hover:opacity-80"
-            style={{ color: 'hsl(var(--marketing-ink) / 0.75)' }}
+            className="text-[var(--landing-muted)] hover:text-[var(--landing-ink)]"
             rel="noreferrer noopener"
             target="_blank"
           >
@@ -31,20 +27,18 @@ export function MarketingFooter() {
           </a>
           <a
             href="https://github.com/yortyrh/resubuild"
-            className="hover:opacity-80"
-            style={{ color: 'hsl(var(--marketing-ink) / 0.75)' }}
+            className="text-[var(--landing-muted)] hover:text-[var(--landing-ink)]"
             rel="noreferrer noopener"
             target="_blank"
           >
             GitHub
           </a>
-          <a
+          <Link
             href="/login"
-            className="hover:opacity-80"
-            style={{ color: 'hsl(var(--marketing-ink) / 0.75)' }}
+            className="text-[var(--landing-muted)] hover:text-[var(--landing-ink)]"
           >
             Sign in
-          </a>
+          </Link>
         </nav>
       </div>
     </footer>

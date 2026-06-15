@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Instrument_Serif } from 'next/font/google';
+import './globals.css';
 import '@/components/landing/landing-animations.css';
 
 const instrumentSerif = Instrument_Serif({

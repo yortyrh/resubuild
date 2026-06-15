@@ -40,7 +40,7 @@ describe('MarketingPage', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the hero headline and the primary CTA to app.resubuild.dev for anonymous visitors', () => {
+  it('renders the hero headline and the primary CTA to /login for anonymous visitors', () => {
     render(<MarketingPage />);
 
     // Single h1 per the spec's accessibility requirement
@@ -48,24 +48,25 @@ describe('MarketingPage', () => {
     expect(headings).toHaveLength(1);
     expect(headings[0]).toHaveTextContent(/Drop in a PDF/i);
 
-    // Primary CTA must point at the live demo, not /login or /dashboard
-    const primaryCta = screen.getByRole('link', { name: /Try the live demo/i });
-    expect(primaryCta).toHaveAttribute('href', 'https://app.resubuild.dev');
+    const primaryCtas = screen.getAllByRole('link', { name: /Try the live demo/i });
+    expect(primaryCtas.length).toBeGreaterThanOrEqual(1);
+    for (const cta of primaryCtas) {
+      expect(cta).toHaveAttribute('href', '/login');
+    }
 
     // Anonymous visitors must see a "Log in" link
-    expect(screen.getByRole('link', { name: /Log in/i })).toHaveAttribute('href', '/login');
+    const loginLinks = screen.getAllByRole('link', { name: /Log in/i });
+    expect(loginLinks.some((link) => link.getAttribute('href') === '/login')).toBe(true);
   });
 
   it('renders the header "Get Started Free" CTA pointing to /register with the primary button style', () => {
     render(<MarketingPage />);
 
-    // The header CTA is the registration entry point and uses the same
-    // pill button styling as the original "Try live demo" link.
+    // The header CTA is the registration entry point and uses the primary
+    // pill button styling via the landing-btn-primary utility class.
     const registerCta = screen.getByRole('link', { name: /Get Started Free/i });
     expect(registerCta).toHaveAttribute('href', '/register');
-    expect(registerCta.className).toContain('rounded-full');
-    expect(registerCta.className).toContain('bg-primary');
-    expect(registerCta.className).toContain('text-primary-foreground');
+    expect(registerCta.className).toContain('landing-btn-primary');
   });
 
   it('mounts HomeRedirect as a client island so signed-in visitors get redirected after hydration', () => {
