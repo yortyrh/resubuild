@@ -49,8 +49,6 @@ Every foreground/background pairing introduced or modified by the accent palette
 - **WHEN** an accent-colored link renders on the default page background in either scheme
 - **THEN** the contrast ratio SHALL be at least 4.5:1
 
-## ADDED Requirements
-
 ### Requirement: Marketing-only tokens SHALL be defined as a separate token family
 
 The web app's `globals.css` SHALL define a marketing-only token family, namespaced under `--marketing-*`, that includes:
@@ -97,3 +95,32 @@ The `--marketing-*` token family MUST be used only inside the marketing route gr
 - **WHEN** a user navigates to `/login`, `/register`, or `/forgot-password`
 - **THEN** those pages SHALL continue to render with the existing auth styling
 - **AND** SHALL NOT consume the `--marketing-*` token family
+
+### Requirement: The marketing route group SHALL define a Finley-inspired `--landing-*` token family
+
+The marketing route group (`apps/web/src/app/(marketing)/`) SHALL define a Finley-inspired token family in `globals.css`, namespaced under `--landing-*`, including:
+
+- `--landing-primary-500`, `--landing-primary-600` — purple accent for buttons and highlights.
+- `--landing-accent-500` — teal accent for gradients.
+- `--landing-paper`, `--landing-ink`, `--landing-muted`, `--landing-border`, `--landing-surface` — neutrals for marketing chrome.
+- `--landing-gradient-text`, `--landing-gradient-brand`, `--landing-gradient-step` — linear gradients for headlines, CTAs, and step circles.
+
+Marketing utility classes (e.g. `landing-btn-primary`, `landing-feature-card`, `landing-section-title`, `landing-grid-bg`) MUST consume these tokens and MUST be scoped to marketing pages only. New marketing components MUST prefer `--landing-*` over `--marketing-*` where both exist.
+
+#### Scenario: Marketing tokens apply on the landing page
+
+- **WHEN** an anonymous visitor loads `/`
+- **THEN** the page background SHALL use `--landing-paper` via `landing-page` / `landing-grid-bg` classes
+- **AND** primary buttons SHALL use `--landing-gradient-brand` or equivalent Finley purple styling
+
+#### Scenario: Marketing tokens do not bleed into the dashboard
+
+- **WHEN** a signed-in user views `/dashboard`
+- **THEN** the dashboard background SHALL remain `--background`
+- **AND** `--landing-*` tokens MUST NOT appear in dashboard computed styles
+
+#### Scenario: Landing tokens drive feature illustration cards
+
+- **WHEN** the `/features` page renders a `FeatureCard`
+- **THEN** the illustration frame SHALL use `--landing-border`, `--landing-paper`, and `--landing-surface`
+- **AND** hover states SHALL use `--landing-primary-500` tints consistent with `landing-feature-card` on `/`

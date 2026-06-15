@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the public marketing surface for Resubuild: a single Next.js App Router page at `/` that demonstrates the product's signature capability (PDF → MIT-format CV) in the hero, walks the visitor through Import → Edit → Export, and ends with a soft path to the live demo at `app.resubuild.dev`. The page MUST respect `prefers-reduced-motion`, MUST NOT introduce third-party animation libraries, and MUST NOT pull Supabase or service-role keys into the client bundle.
+Define the public marketing surface for Resubuild: a single Next.js App Router page at `/` that demonstrates the product's signature capability (PDF → MIT-format CV) in the hero via a CSS product mock, walks the visitor through Import → Edit → Export, and routes anonymous visitors to `/login` through **Try the live demo** CTAs. The page MUST respect `prefers-reduced-motion`, MUST NOT introduce third-party animation libraries, and MUST NOT pull Supabase or service-role keys into the client bundle.
 
 ## Requirements
 
@@ -10,13 +10,15 @@ Define the public marketing surface for Resubuild: a single Next.js App Router p
 
 The App Router SHALL provide a public route at `/` that, for an anonymous visitor (no session in `sessionStorage`), renders a marketing landing page instead of redirecting to `/login`. The page MUST be reachable at exactly `/` and MUST NOT add a new URL segment (e.g. `/landing`). The page MUST be implemented inside a route group so the URL stays at `/`.
 
-The landing page MUST be a server component by default. Two small `"use client"` islands are allowed: an animated hero demo (uses `IntersectionObserver` to replay on scroll) and a session-aware header CTA (reads `hasSession()` to swap its target).
+The landing page MUST be a server component by default. Client islands are limited to `HomeRedirect` (session redirect) and any future scroll-reveal toggles; the hero visual (`HeroVisual`) MUST be a server component.
+
+The page MUST compose a sticky `MarketingHeader` with the Resubuild logo, anchor links to Features / How It Works / FAQ, a **Log in** link to `/login`, and a **Get Started Free** primary button to `/register`. Header anchor links MUST use root-absolute paths (`/#features`, `/#how-it-works`, `/#faq`) so they resolve from any marketing route.
 
 #### Scenario: Anonymous visitor loads the landing page
 
 - **WHEN** an anonymous visitor navigates to `/`
 - **THEN** the response SHALL be `200 OK` with HTML containing the hero headline copy
-- **AND** the page SHALL include a primary CTA linking to `https://app.resubuild.dev`
+- **AND** the page SHALL include a primary CTA **Try the live demo** linking to `/login`
 - **AND** the page SHALL include a secondary "Log in" link targeting `/login`
 - **AND** the page SHALL NOT redirect to `/login` automatically
 
@@ -33,63 +35,37 @@ The landing page MUST be a server component by default. Two small `"use client"`
 
 ### Requirement: The landing page SHALL demonstrate the PDF-to-MIT-format transform in the hero
 
-The hero section renders a real screen recording of the product performing the PDF-import transformation. The recording is a static asset at `/recordings/showcase.mp4` produced by `scripts/recordings/record-features.mjs`.
+The hero section renders a CSS product mock (`HeroVisual`) showing a Source PDF column and a Structured CV column with scan-line and reveal animations from `landing-animations.css`. The mock MUST NOT depend on `/recordings/showcase.mp4` or any `<video>` element on `/`.
 
-The hero MUST render:
+For `prefers-reduced-motion: reduce`, animation keyframes in `landing-animations.css` MUST be disabled and the hero MUST render the static two-column compare without motion.
 
-```tsx
-<video
-  src="/recordings/showcase.mp4"
-  poster="/recordings/showcase.png"
-  autoPlay
-  muted
-  loop
-  playsInline
-  aria-label="Resubuild demo: import a PDF, edit your CV, export a polished resume"
-/>
-```
-
-For `prefers-reduced-motion: reduce`, the hero renders only the poster image:
-
-```tsx
-<img
-  src="/recordings/showcase.png"
-  alt="Resubuild demo: import a PDF, edit your CV, export a polished resume"
-/>
-```
-
-The page MUST include the `Instrument Serif` typeface from Google Fonts for the hero display face, loaded via `next/font/google` with `display: 'swap'` and a system-serif fallback.
-
-**Deployment gate**: the landing page MUST NOT be deployed if the recording at `/recordings/showcase.mp4` is older than the most recent commit that modified any component in the hero's visual proximity (defined as `apps/web/src/components/landing/` or `apps/web/src/app/(marketing)/`). This is an assertion enforced by the operator, not a technical guard.
+The page MUST use Geist Sans for marketing headlines (via `font-sans` utilities) within the Finley token palette defined in `(marketing)/globals.css`.
 
 #### Scenario: Hero animation runs on first load
 
-- **WHEN** an anonymous visitor loads the landing page for the first time
-- **THEN** the hero demo SHALL play its 9-second animation cycle automatically
+- **WHEN** an anonymous visitor loads the landing page for the first time with default motion preferences
+- **THEN** the hero visual SHALL display the PDF-to-CV mock with CSS animation classes applied
 - **AND** the animation SHALL complete without blocking first paint
-
-#### Scenario: Hero animation replays on scroll
-
-- **WHEN** the user scrolls past the hero and then scrolls back into view
-- **THEN** the hero demo SHALL replay its animation exactly once per re-entry into the viewport
 
 #### Scenario: Reduced-motion users get the static fallback
 
 - **WHEN** the user's operating system has `prefers-reduced-motion: reduce` set
-- **THEN** the hero demo SHALL render a static two-column compare (scanned PDF on the left, MIT-format CV on the right) without any motion
-- **AND** the page MUST NOT call `IntersectionObserver` for animation replay in this state
+- **THEN** the hero demo SHALL render a static two-column compare without motion
+- **AND** landing animation classes MUST NOT animate
 
 ### Requirement: The landing page SHALL include the required marketing sections in a defined order
 
 The landing page MUST compose, in this exact order:
 
-1. **Header** — a sticky top bar with the Resubuild wordmark on the left, a "Log in" link, and the primary CTA (whose target depends on session state).
-2. **Hero** — display headline, one-line product line, primary CTA, secondary CTA, animated demo.
-3. **How it works** — three numbered steps (`01` Import PDF, `02` Edit in the MIT-format editor, `03` Export PDF). The numbered markers are used here because the content is genuinely a sequence (each step depends on the previous one); they MUST NOT be reused as decoration elsewhere on the page.
-4. **Features** — four feature cards (AI extraction, MIT-format editor, one-click PDF export, private to your account) styled with the existing `surface-soft` utility from the visual design system.
-5. **Open standard** — a short callout linking to `jsonresume.org` and naming the JSON Resume schema as the export format.
-6. **FAQ** — a minimum of five `<details>`/`<summary>` items covering data privacy, export format, account requirement, non-PDF imports, and pricing.
-7. **Footer** — wordmark, three links (`Live demo`, `GitHub`, `Sign in`), copyright line.
+1. **Header** — sticky `MarketingHeader` (logo, nav anchors, Log in, Get Started Free).
+2. **Hero** — display headline, product line, primary CTA (`Try the live demo` → `/login`), secondary CTA (`See how it works` → `#how-it-works`), `HeroVisual` mock.
+3. **Features** — four feature cards with Finley-style `landing-feature-card` chrome and link to `/features`.
+4. **How it works** — three Finley-pattern steps (numbered gradient circles on a shared connector track, icon box below circle, title, description) for Import PDF → Edit → Export PDF, plus bottom CTA to `/login`.
+5. **Open standard** — JSON Resume callout linking to `jsonresume.org`.
+6. **FAQ** — minimum five `<details>`/`<summary>` items.
+7. **Footer** — `MarketingFooter` with wordmark, Live demo / GitHub / Sign in links, copyright.
+
+Section titles MUST use concise copy (e.g. Features: "Everything for a Polished CV"; How It Works: "PDF to Polished CV") via `SectionHeader`.
 
 The page MUST contain exactly one `<h1>` (the hero headline) and a hierarchical `<h2>`/`<h3>` outline below it.
 
@@ -97,8 +73,14 @@ The page MUST contain exactly one `<h1>` (the hero headline) and a hierarchical 
 
 - **WHEN** the landing page loads
 - **THEN** the rendered DOM SHALL contain a single `<h1>` element
-- **AND** SHALL contain section landmarks for Header, Hero, How it works, Features, Open standard, FAQ, and Footer in that order
+- **AND** SHALL contain section landmarks for Header, Hero, Features, How it works, Open standard, FAQ, and Footer in that order
 - **AND** SHALL contain at least five `<details>` elements under the FAQ section
+
+#### Scenario: How it works steps stack vertically
+
+- **WHEN** the How it works section renders at `md` breakpoint or wider
+- **THEN** each step card SHALL stack number, icon, title, and description vertically (not on one row)
+- **AND** a horizontal connector track SHALL appear behind the numbered circles
 
 ### Requirement: The landing page SHALL honor accessibility and reduced-motion requirements
 
@@ -136,17 +118,17 @@ The existing `web-bundle-security.test.ts` guard MUST continue to pass after the
 
 ### Requirement: The landing page SHALL be unit-tested at the route level
 
-A colocated Vitest unit test MUST exist at `apps/web/src/app/(marketing)/page.test.tsx` (or equivalent). The test MUST assert, at minimum:
+A colocated Vitest unit test MUST exist at `apps/web/src/app/(marketing)/page.test.tsx`. The test MUST assert, at minimum:
 
 - For an anonymous visitor, the page renders the hero headline copy.
-- For an anonymous visitor, the primary CTA renders with `href` equal to `https://app.resubuild.dev`.
-- For a signed-in visitor, the page short-circuits to a redirect to `/dashboard` (using the existing `HomeRedirect`).
-- The page does not import `SUPABASE_SERVICE_ROLE_KEY` or `service_role` anywhere in the rendered tree.
+- For an anonymous visitor, every **Try the live demo** CTA renders with `href` equal to `/login`.
+- The page does not import `hasSession` from a server context (static source guard).
+- The header **Get Started Free** CTA points to `/register` with `landing-btn-primary` styling.
 
 #### Scenario: Anonymous visitor sees the hero CTA
 
 - **WHEN** the test renders the landing page with `hasSession()` returning `false`
-- **THEN** the test SHALL find a primary CTA element with `href` equal to `https://app.resubuild.dev`
+- **THEN** the test SHALL find a primary CTA element with `href` equal to `/login`
 
 #### Scenario: Signed-in visitor is redirected
 
