@@ -38,7 +38,11 @@ Authenticated requests to Nest CV endpoints SHALL send the short-lived **access 
 
 ### Requirement: The SPA routes SHALL expose landing, auth, and dashboard CV workflows
 
-The App Router under `src/app/` MUST provide public entry and auth pages (`/`, `/login`, `/register`), a public features page at `/features`, a dashboard shell, CV list, new CV (`/dashboard/cv/new`), and per-CV view/edit (`/dashboard/cv/[id]`) backed by shared CV UI components. The root route `/` MUST render a marketing landing page for anonymous visitors and MUST redirect signed-in visitors to `/dashboard`. The landing page MUST be implemented inside a route group (e.g. `src/app/(marketing)/page.tsx`) so the URL stays at `/`. The features page MUST be implemented at `src/app/(marketing)/features/page.tsx` so it inherits the marketing layout and styles while keeping the URL at `/features`. The per-CV editor SHALL organize authoring tabs per `cv-editor-ui`, use item-level persistence for resume content, and SHALL continue to upload profile photos through authenticated Nest **`POST /media/upload`** via `uploadResumeMedia`. Rich-text editors SHALL NOT expose separate image-upload tooling.
+The App Router under `src/app/` MUST provide public entry and auth pages (`/`, `/login`, `/register`, `/forgot-password`, `/reset-password`), a public features page at `/features`, a dashboard shell, CV list, new CV (`/dashboard/cv/new`), and per-CV view/edit (`/dashboard/cv/[id]`) backed by shared CV UI components. Credential auth pages (`/login`, `/register`, `/forgot-password`, `/reset-password`) MUST be implemented under the `(auth)/` route group (e.g. `src/app/(auth)/login/page.tsx`) so URLs remain unchanged while sharing an auth layout. The `(auth)/layout.tsx` and `src/app/auth/layout.tsx` (check-email, callback) MUST wrap children in `AuthenticatedProviders` and MUST export `robots` metadata with `index: false` and `follow: false`.
+
+The root route `/` MUST render a marketing landing page for anonymous visitors and MUST redirect signed-in visitors to `/dashboard`. The landing page MUST be implemented inside a route group (e.g. `src/app/(marketing)/page.tsx`) so the URL stays at `/`. The features page MUST be implemented at `src/app/(marketing)/features/page.tsx` so it inherits the marketing layout and styles while keeping the URL at `/features`. The per-CV editor SHALL organize authoring tabs per `cv-editor-ui`, use item-level persistence for resume content, and SHALL continue to upload profile photos through authenticated Nest **`POST /media/upload`** via `uploadResumeMedia`. Rich-text editors SHALL NOT expose separate image-upload tooling.
+
+The root `AppProviders` component MUST NOT mount React Query or Supabase session listeners. `AuthenticatedProviders` (Query + Supabase listener) MUST mount only in `(auth)/layout.tsx`, `auth/layout.tsx`, and `dashboard/layout.tsx`. The dashboard layout MUST export `robots` metadata with `index: false` and `follow: false`.
 
 The new CV route (`/dashboard/cv/new`) SHALL NOT call `POST /cv` on page load. It SHALL default to **Import from file** at `/dashboard/cv/new/import/file`. Manual create remains at `/dashboard/cv/new/create`.
 
@@ -107,6 +111,18 @@ The per-CV editor bootstrap (`GET /cv/:id`) SHALL merge slim `data.basics` into 
 
 - **WHEN** a visitor with a valid session in `sessionStorage` navigates to `/`
 - **THEN** the page SHALL redirect to `/dashboard` via the existing `HomeRedirect` component
+
+#### Scenario: Auth pages live under route group with noindex metadata
+
+- **WHEN** a visitor loads `/login` or `/register`
+- **THEN** the page SHALL render from `(auth)/` route group implementation
+- **AND** the layout SHALL set robots to noindex/nofollow
+
+#### Scenario: Marketing pages do not mount authenticated client providers at root
+
+- **WHEN** an anonymous visitor loads `/` or `/features`
+- **THEN** the root `AppProviders` SHALL NOT wrap the page in `QueryProvider` or `SupabaseListener`
+- **AND** authenticated providers SHALL mount only after navigating to dashboard or auth routes
 
 ### Requirement: Shared types and schema packages SHALL inform the client and server contract
 
