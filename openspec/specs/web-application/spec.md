@@ -38,7 +38,7 @@ Authenticated requests to Nest CV endpoints SHALL send the short-lived **access 
 
 ### Requirement: The SPA routes SHALL expose landing, auth, and dashboard CV workflows
 
-The App Router under `src/app/` MUST provide public entry and auth pages (`/`, `/login`, `/register`), a dashboard shell, CV list, new CV (`/dashboard/cv/new`), and per-CV view/edit (`/dashboard/cv/[id]`) backed by shared CV UI components. The per-CV editor SHALL organize authoring tabs per `cv-editor-ui`, use item-level persistence for resume content, and SHALL continue to upload profile photos through authenticated Nest **`POST /media/upload`** via `uploadResumeMedia`. Rich-text editors SHALL NOT expose separate image-upload tooling.
+The App Router under `src/app/` MUST provide public entry and auth pages (`/`, `/login`, `/register`), a dashboard shell, CV list, new CV (`/dashboard/cv/new`), and per-CV view/edit (`/dashboard/cv/[id]`) backed by shared CV UI components. The root route `/` MUST render a marketing landing page for anonymous visitors and MUST redirect signed-in visitors to `/dashboard`. The landing page MUST be implemented inside a route group (e.g. `src/app/(marketing)/page.tsx`) so the URL stays at `/`. The per-CV editor SHALL organize authoring tabs per `cv-editor-ui`, use item-level persistence for resume content, and SHALL continue to upload profile photos through authenticated Nest **`POST /media/upload`** via `uploadResumeMedia`. Rich-text editors SHALL NOT expose separate image-upload tooling.
 
 The new CV route (`/dashboard/cv/new`) SHALL NOT call `POST /cv` on page load. It SHALL default to **Import from file** at `/dashboard/cv/new/import/file`. Manual create remains at `/dashboard/cv/new/create`.
 
@@ -86,6 +86,18 @@ The per-CV editor bootstrap (`GET /cv/:id`) SHALL merge slim `data.basics` into 
 
 - **WHEN** a signed-in user selects a file in the Basics profile photo control and saves basics
 - **THEN** the client SHALL call `uploadResumeMedia` when uploading a file, assign the returned API URL to `basics.image`, persist basics via the basics patch helper, and surface descriptive errors on failure
+
+#### Scenario: Anonymous visitor lands on the marketing page
+
+- **WHEN** an anonymous visitor navigates to `/`
+- **THEN** the response SHALL be `200 OK` with HTML rendering the marketing landing page
+- **AND** the page SHALL include a primary CTA linking to `https://app.resubuild.dev`
+- **AND** the page SHALL NOT redirect to `/login`
+
+#### Scenario: Signed-in visitor is redirected to the dashboard
+
+- **WHEN** a visitor with a valid session in `sessionStorage` navigates to `/`
+- **THEN** the page SHALL redirect to `/dashboard` via the existing `HomeRedirect` component
 
 ### Requirement: Shared types and schema packages SHALL inform the client and server contract
 
