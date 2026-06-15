@@ -7,7 +7,7 @@ export const siteConfig = {
   title: 'Resubuild — Best AI Resume Builder & Templates',
   description:
     'Build the best resume with AI: import any PDF, edit resume skills and summary in MIT-format templates, and export a professional resume in seconds. Free during public beta.',
-  keywords: [...seoKeywords],
+  keywords: [...seoKeywords] as string[],
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://resubuild.dev',
   ogImage: '/resubuild-banner.jpg',
   twitterHandle: '@resubuild',
