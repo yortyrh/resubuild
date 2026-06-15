@@ -51,6 +51,11 @@ The tab group SHALL render only when `getAuthFeatures().passwordless` is
 `true` (resolved client-side from
 `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`).
 
+The tab group SHALL be rendered through the shared `Tabs` component
+(`apps/web/src/components/ui/tabs.tsx`), which reserves the height of the
+tallest panel so the centered auth card does not shift when the user
+switches between the Password, Email me a code, and Email me a link tabs.
+
 #### Scenario: User signs in with an OTP code
 
 - **WHEN** a user selects "Email me a code", enters their email, receives the code, and submits the 6 digits
@@ -68,3 +73,9 @@ The tab group SHALL render only when `getAuthFeatures().passwordless` is
   `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED` is not the literal string
   `true`)
 - **THEN** the `/login` page SHALL render only the password form (no tabs)
+
+#### Scenario: Switching between passwordless tabs does not shift the centered auth card
+
+- **WHEN** a signed-out user lands on `/login` with `getAuthFeatures().passwordless === true` and toggles between the Password, Email me a code, and Email me a link tabs
+- **THEN** the height of the auth card SHALL remain the height of the tallest of the three panels
+- **AND** the card's vertical position SHALL NOT change between switches
