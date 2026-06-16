@@ -1,64 +1,53 @@
-# Design: Resubuild website and authenticated workspace refresh
+# Design: UI-only Resubuild website and authenticated workspace refresh
 
 ## Context
 
-The existing product has the necessary building blocks: marketing pages, CV import/edit/export, application preparation, tailored CV, and cover-letter workflows. The redesign changes the experience architecture and presentation so those pieces feel like one premium SaaS workflow rather than separate screens.
+This change is now an initial **UI-only redesign phase**. Resubuild already has the core workflows: CV import, structured CV editing, CV preview/export, application preparation, tailored CV output, and cover-letter output. This phase improves visual quality, hierarchy, navigation clarity, and presentation of existing data without changing AI or persistence contracts.
 
-The attached brief calls for a calmer, more productized authenticated experience with richer application cards, an authenticated dashboard, a five-tab application workspace, a guided prepare flow, clearer CV editor modes, and stronger preview/export controls. This proposal also incorporates the updated two-color brand palette: purple `#6d49f4` and teal `#00978a`.
+Principal visual reference supplied by the requester:
+
+```text
+583f8df5-e2f5-4076-ada1-b649c459d557.png
+```
+
+The implementation should use that reference as the visual north star: white SaaS layout, purple/teal brand identity, new logo, polished hero, product mockups, dashboard preview, rounded cards, subtle gradients, light borders, and clean authenticated screens.
 
 ## Design Principles
 
-1. **Command center, not form generator**
-   - The authenticated app should help users understand state, evidence, gaps, and next actions.
-   - The application workspace is the core product surface.
+1. **Visual refresh before product expansion** — improve presentation first; do not add new AI outputs, new metadata contracts, or required schema changes.
+2. **Preserve existing workflows** — CV import/edit/export, application preparation, tailored CV, cover letter, and existing exports must keep working.
+3. **Dashboard is additive** — a dashboard may show recent CVs and applications, but `My CVs` navigation must still open the CV list.
+4. **One dominant action per screen** — destructive actions stay secondary and hidden behind menus or confirmations.
+5. **ATS-friendly restraint** — marketing can look premium, while CV preview/export stays clean and recruiter-friendly.
+6. **Consistent brand system** — primary purple `#6d49f4`, secondary teal `#00978a`, white surfaces, subtle borders, restrained shadows.
 
-2. **One primary action per screen**
-   - Avoid competing CTAs.
-   - Destructive actions are secondary and hidden behind menus.
+## Reference Design Requirements
 
-3. **Trust through explainability**
-   - AI output should show evidence, match rationale, and changes applied.
-   - Cover letters should expose evidence used.
+The attached reference image should be translated into reusable product assets and components.
 
-4. **ATS-friendly visual restraint**
-   - The marketing site can be polished, but exports and preview controls should remain clean, scannable, and recruiter-oriented.
+Required visual elements:
 
-5. **Consistent brand system**
-   - Use `#6d49f4` for primary actions, selected states, and key highlights.
-   - Use `#00978a` for success, progress, secondary accents, and trust cues.
-   - Avoid introducing additional dominant accent colors.
+- refreshed Resubuild logo with document/CV shape, rebuild/upward arrow, subtle AI/spark detail, and purple/teal palette;
+- compact square app-icon/favicon version;
+- coherent line-icon family for import, edit, AI/spark, export, shield, lock, check, table/list, CV card, and application workspace;
+- marketing header with logo, navigation, login, and primary CTA;
+- hero with `Import your PDF CV.` and `Get a polished CV in seconds.`;
+- hero product mockup of the CV editor/preview;
+- feature cards for AI PDF Import, Clean Editor, Job Tailoring, and One-Click Export;
+- three-step section: Import your CV, Review & edit, Tailor & export;
+- benefits row: No watermarks, Structured JSON Resume, Your data is private, ATS-friendly exports;
+- dashboard/workspace preview with My CVs, recent applications, status badges, Import PDF CV CTA, and Create new CV card;
+- purple/teal final CTA band and refreshed footer.
 
-## Brand and Logo System
-
-### Logo direction
-
-Create a reusable `ResubuildLogo` system with:
-
-- full horizontal lockup: icon + `Resubuild` wordmark;
-- compact mark for favicon/app icon/sidebar collapsed state;
-- monochrome/print-safe fallback if required.
-
-The icon should combine:
-
-- a document/CV sheet;
-- a rebuild/progress arrow or upward motion;
-- a subtle AI/spark accent.
-
-The icon should not look like a generic file-upload icon only; it must communicate rebuilding/improving a CV.
-
-### Color tokens
-
-Recommended semantic tokens:
+## Brand Tokens
 
 ```css
 --brand-primary: #6d49f4;
 --brand-primary-hover: #5f3ee6;
 --brand-primary-soft: color-mix(in srgb, #6d49f4 12%, white);
-
 --brand-secondary: #00978a;
 --brand-secondary-hover: #008075;
 --brand-secondary-soft: color-mix(in srgb, #00978a 12%, white);
-
 --background: #fbfbff;
 --surface: #ffffff;
 --surface-muted: #f7f7fb;
@@ -69,9 +58,7 @@ Recommended semantic tokens:
 
 ## Public Website
 
-### Information architecture
-
-The public homepage should keep the SEO-oriented content already present, but the visual hierarchy should be refreshed:
+Preserve existing SEO, metadata, FAQ, sitemap, robots, JSON-LD, public beta messaging, and public route behavior. Refresh the visual hierarchy in this order:
 
 1. Header
 2. Hero
@@ -85,341 +72,139 @@ The public homepage should keep the SEO-oriented content already present, but th
 10. Final CTA
 11. Footer
 
-### Hero
+The marketing mockups must not imply unbuilt advanced functionality. Do not show match analysis, evidence panels, compare mode, generation summaries, or AI recommendation queues unless those features already exist.
 
-Primary message:
+## Authenticated Shell and Routes
 
-```text
-Import your PDF CV.
-Get a polished CV in seconds.
-```
-
-Supporting message:
-
-```text
-Resubuild turns your existing resume into a clean, structured, ATS-ready CV. Tailor it to any role, write a cover letter, and manage your applications — all in one place.
-```
-
-Primary CTA: `Import my PDF CV` or `Get started free`.
-Secondary CTA: `Start from scratch` or `See how it works`.
-
-### Product mockup
-
-The hero mockup should show the real product promise:
-
-- left structured section navigation;
-- central CV preview/editor;
-- top actions: `Preview`, `Export PDF`;
-- subtle success state: `Saved`.
-
-### Features
-
-Feature cards:
-
-- AI PDF Import
-- Clean Editor
-- Job Tailoring
-- One-Click Export
-
-Each card should use a small purple/teal icon container, title, and short description.
-
-### Dashboard preview
-
-Marketing should preview the authenticated application workspace so users understand that Resubuild is more than a simple template generator.
-
-Preview content:
-
-- My CVs cards;
-- Recent applications;
-- Status badges;
-- Import PDF CV CTA;
-- Application tracking table.
-
-## Authenticated Shell
-
-### Navigation
-
-Recommended top-level routes:
+The authenticated shell should clearly expose the existing product areas:
 
 ```text
 Dashboard
 My CVs
 Applications
-Templates
-Settings
 ```
 
-The active route should use a soft purple or teal background, not only text color.
+`Templates` and `Settings` may appear only if they already exist or are safe placeholders.
 
-### Primary actions
+Route rules:
 
-- Dashboard: `Prepare application` and secondary `Import CV`.
-- My CVs: `Import CV`.
-- Applications: `Prepare application`.
-- Application workspace: `Regenerate` and `Export PDF`.
-- CV editor preview mode: `Export PDF`.
+- `/dashboard` may become the new dashboard landing surface.
+- `My CVs` must land on the CV list, not the new dashboard.
+- If `/dashboard` currently serves as the CV-list destination, update existing CV-list links to the repo’s CV-list route before introducing the dashboard.
+- `Applications` must land on the applications list.
 
 ## Authenticated Dashboard
 
-The dashboard should be the signed-in landing surface.
-
-Sections:
+Allowed as a lightweight aggregate view:
 
 - welcome header;
-- stats cards:
-  - CVs saved;
-  - Applications ready;
-  - Last export;
-  - Average match score;
-- recent applications;
 - recent CVs;
-- AI recommendations.
+- recent applications;
+- simple counts derivable from existing loaded data;
+- primary CTAs to existing routes: Import CV and Prepare application.
 
-AI recommendation examples:
+Avoid in this phase:
 
-- Add measurable impact to recent role bullets.
-- Tailor React CV for recent Software Engineer job.
-- Add missing QA wording before export.
+- AI recommendations;
+- average match score;
+- missing keyword warnings;
+- generated improvement queues;
+- any dashboard item requiring new AI/data contracts.
+
+## My CVs List
+
+Redesign My CVs as a polished grid/list of CV thumbnails or preview cards.
+
+Each card uses existing data only:
+
+- CV name/title;
+- headline/label if available;
+- updated date if available;
+- thumbnail or fallback placeholder;
+- existing open/edit/preview/export actions;
+- overflow menu for secondary/destructive actions.
+
+Thumbnail generation must be non-blocking and must fall back to a placeholder if unavailable.
 
 ## Applications List
 
-Replace plain rows with richer cards or table rows.
+Prefer a table or card/table hybrid for scanning applications.
 
-Each application item should show:
+Suggested fields using existing data:
 
-- role and company;
-- status badge;
-- last updated time;
-- base CV name;
-- match score if available;
-- output availability: Tailored CV, Cover letter, PDF;
-- primary action: `Open workspace`;
-- secondary action: `Export PDF`;
-- overflow menu for destructive actions.
+- Role
+- Company
+- Status, if available
+- Base CV, if available
+- Updated or created date, if available
+- Existing outputs/actions, if available
+- Open
+- More
 
-Search/filter controls:
-
-- text search;
-- status filter;
-- sort by updated/applied date;
-- optional company/role filters.
+Delete should move to `More` or a confirmation flow. Do not add required match scores or generated metadata.
 
 ## Application Workspace
 
-### Tabs
+This phase polishes the current workspace rather than replacing it.
 
-The workspace should expose five tabs:
+Allowed:
 
-```text
-Job details | Match analysis | Tailored CV | Cover letter | Exports
-```
+- new shell, cards, tabs, buttons, icons, and spacing;
+- clearer grouping of existing actions;
+- improved empty/loading states;
+- label renames only when behavior is unchanged.
 
-### Job details
+Avoid:
 
-Show extracted job information:
-
-- title;
-- company;
-- source type and source URL/file name;
-- location;
-- contract type;
-- seniority;
-- responsibilities;
-- requirements;
-- keywords;
-- raw source link or uploaded source metadata.
-
-### Match analysis
-
-Show a structured match report:
-
-- overall match score;
-- strong evidence;
-- weak or missing evidence;
+- `Evidence used` panel;
+- compare mode;
+- generation summary;
+- match analysis tab;
 - recommended edits;
-- keywords present/missing;
-- possible risk flags.
+- changes-applied summary;
+- new export-history surfaces;
+- new structured AI metadata.
 
-### Tailored CV
+## Prepare Application
 
-Show:
+Improve the layout while keeping the same data and submission behavior.
 
-- tailoring score;
-- tailored CV preview;
-- changes applied;
-- reinforced keywords;
-- actions:
-  - `Edit tailored CV`;
-  - `Compare with base CV`;
-  - `Export PDF`.
+Allowed:
 
-### Cover letter
+- cleaner source selector cards for existing source types;
+- better base CV selector presentation;
+- simpler optional-instructions visual treatment;
+- optional stepper-style presentation only if it does not add required fields or change the submission contract.
 
-Use a two-column layout at desktop widths:
+Avoid new generation stages, required review steps, new payload fields, or new AI outputs.
 
-- editor on the left;
-- `Evidence used` panel on the right.
+## CV Editor and Preview/Export
 
-Metadata controls:
+Keep existing editing and export behavior. Polish section navigation, cards, selected states, buttons, preview toolbar, template selector, and export controls. Add template thumbnails only where safe.
 
-- tone;
-- length;
-- focus areas;
-- regenerate action.
-
-### Exports
-
-Group export actions:
-
-- Tailored CV PDF;
-- Cover letter PDF;
-- JSON Resume;
-- copy cover letter;
-- print;
-- latest export metadata.
-
-Export history can be implemented as a later enhancement, but the UI should reserve a place for it.
-
-## Prepare Application Stepper
-
-Convert `/dashboard/applications/new` from a single form into a four-step flow:
-
-1. Job source
-2. Base CV
-3. Tailoring instructions
-4. Review
-
-### Step 1: Job source
-
-Use cards for:
-
-- URL
-- Paste text
-- Upload PDF or screenshot
-
-Each card should contain a short description.
-
-### Step 2: Base CV
-
-Options:
-
-- `Let Resubuild choose the best CV`
-- `Use a specific CV`
-
-Show a compact CV summary when a CV is selected.
-
-### Step 3: Tailoring instructions
-
-Replace the full rich-text editor with:
-
-- textarea;
-- quick chips:
-  - Emphasize React;
-  - Emphasize AWS;
-  - Keep it concise;
-  - Target Canadian employers;
-  - Focus on leadership.
-
-### Step 4: Review
-
-Show a read-only summary before generation:
-
-- source;
-- base CV;
-- instructions;
-- expected outputs.
-
-## CV Editor
-
-### Modes
-
-Replace the current mental model with:
-
-```text
-Edit | Improve with AI | Preview / Export
-```
-
-### Edit
-
-Keep structured JSON Resume editing and item-level persistence.
-
-### Improve with AI
-
-Suggested actions:
-
-- Improve summary;
-- Quantify bullet points;
-- Make ATS-friendly;
-- Strengthen leadership;
-- Add technical depth;
-- Shorten to one page.
-
-### Preview / Export
-
-Consolidate:
-
-- template selector;
-- layout controls;
-- section visibility;
-- header field toggles;
-- print;
-- PDF;
-- JSON Resume.
-
-## Preview and Templates
-
-Template selector should use visual thumbnails, not only a dropdown.
-
-Default optional-section visibility:
-
-- References: off
-- Interests: off
-- Awards: off unless present and user-enabled
-- Publications: off unless present and user-enabled
-
-Keep `Summary`, `Experience`, `Education`, and `Skills` on by default.
+Avoid a new `Improve with AI` mode, new AI action cards, new generated suggestions, or new data contracts.
 
 ## Data Model Considerations
 
-Application records may need additional structured fields:
-
-```ts
-type ApplicationAnalysis = {
-  overallMatchScore?: number;
-  strongEvidence: EvidenceItem[];
-  weakOrMissingEvidence: EvidenceItem[];
-  recommendedEdits: RecommendedEdit[];
-  keywords: {
-    present: string[];
-    missing: string[];
-    reinforced: string[];
-  };
-};
-
-type ApplicationOutputMetadata = {
-  tailoredCvAvailable: boolean;
-  coverLetterAvailable: boolean;
-  lastExportedAt?: string;
-  evidenceUsed?: EvidenceItem[];
-  changesApplied?: string[];
-};
-```
-
-Implementation should prefer additive fields and defensive UI rendering so existing applications continue to load.
+No required schema changes are part of this phase. Use existing data defensively, show placeholders when data is missing, and avoid migrations.
 
 ## Migration Strategy
 
-1. Add brand tokens and logo components first.
-2. Refresh public website and authenticated shell without changing data contracts.
-3. Add dashboard and application list UI using existing fields.
-4. Add structured match-analysis payloads to generation responses.
-5. Add workspace tabs and populate advanced panes progressively.
-6. Add stepper flow and keep current generation endpoint contract compatible.
-7. Improve preview/export controls.
+1. Add brand tokens and logo/icon components.
+2. Refresh public website using the reference design.
+3. Update authenticated shell styling while preserving current route intent.
+4. Add dashboard as an additive aggregate view.
+5. Ensure My CVs navigation lands on the CV-list route.
+6. Redesign My CVs as thumbnails/cards using existing data.
+7. Redesign Applications as a table/card-table using existing data.
+8. Polish current application workspace without advanced panes.
+9. Polish prepare application without changing payloads.
+10. Polish CV editor and preview/export controls.
 
 ## Risks and Trade-offs
 
-- **Scope size**: this spans marketing, shell, CV editor, applications, exports, and AI outputs. Implement behind incremental PRs.
-- **AI payload reliability**: match analysis requires structured generation outputs. UI must handle missing fields gracefully.
-- **Migration risk**: existing application records may not have analysis/export metadata. Treat all new fields as optional.
-- **Design drift**: enforce brand tokens and component reuse to avoid inconsistent purple/teal usage.
+- Scope creep into AI features.
+- Route regression if `/dashboard` changes without preserving My CVs behavior.
+- Design drift away from the reference image and purple/teal tokens.
+- Thumbnail performance; thumbnails must be lazy and non-blocking.
+- User surprise from hiding previously visible content; avoid changing default content visibility unless already supported.
