@@ -1,10 +1,14 @@
 ## MODIFIED Requirements
 
-### Requirement: The application preparation flow SHALL preserve existing generation behavior while improving presentation
+### Requirement: Preparation SHALL preserve generation behavior while improving UI
 
-The Prepare Application page MUST keep the existing job-source inputs, base-CV selection behavior, optional-instruction behavior, validation behavior, and generation submission contract.
+The Prepare Application page MUST keep the existing job-source inputs, base-CV selection
+behavior, optional-instruction behavior, validation behavior, and generation submission
+contract.
 
-The page MAY be restyled as source cards, a cleaner form, or a stepper-like presentation, but the visual layout MUST NOT introduce new required fields, new backend payload fields, new AI outputs, or new generation stages.
+The page MAY be restyled as source cards, a cleaner form, or a stepper-like presentation,
+but the visual layout MUST NOT introduce new required fields, new backend payload fields,
+new AI outputs, or new generation stages.
 
 #### Scenario: User prepares an application with the redesigned UI
 
@@ -17,11 +21,13 @@ The page MAY be restyled as source cards, a cleaner form, or a stepper-like pres
 
 - **WHEN** the UI uses a stepper-like presentation
 - **THEN** each step SHALL only organize existing inputs
-- **AND** the final generation request SHALL be equivalent to the previous generation request
+- **AND** the final generation request SHALL be equivalent to the previous generation
+  request
 
-### Requirement: The Applications view SHALL present existing applications as a polished table or card-table
+### Requirement: Applications SHALL render as a table or card-table
 
-The Applications view MUST present applications using a table or card/table hybrid optimized for scanning. It MUST use existing application data only.
+The Applications view MUST present applications using a table or card/table hybrid
+optimized for scanning. It MUST use existing application data only.
 
 Application rows/cards SHOULD show, when available:
 
@@ -34,7 +40,8 @@ Application rows/cards SHOULD show, when available:
 - primary open action;
 - secondary overflow menu.
 
-The view MUST NOT require match scores, evidence, recommendations, generated summaries, or new application metadata.
+The view MUST NOT require match scores, evidence, recommendations, generated summaries, or
+new application metadata.
 
 #### Scenario: Applications list shows useful existing context
 
@@ -47,13 +54,18 @@ The view MUST NOT require match scores, evidence, recommendations, generated sum
 
 - **WHEN** an application record has only the existing fields
 - **THEN** the redesigned Applications view SHALL still render it successfully
-- **AND** SHALL not show empty placeholders for unsupported match-analysis or evidence features
+- **AND** SHALL not show empty placeholders for unsupported match-analysis or evidence
+  features
 
-### Requirement: The application workspace SHALL keep existing outputs and polish the current UI
+### Requirement: The application workspace SHALL keep existing outputs
 
-The application workspace MUST keep the current functional tabs/sections and generated outputs available today. The redesign SHALL improve spacing, cards, tab styling, buttons, loading states, empty states, and responsive layout without replacing the workspace with new analysis-driven panes.
+The application workspace MUST keep the current functional tabs/sections and generated
+outputs available today. The redesign SHALL improve spacing, cards, tab styling, buttons,
+loading states, empty states, and responsive layout without replacing the workspace with
+new analysis-driven panes.
 
-Allowed label changes MUST be behavior-preserving. For example, `Update` MAY become `Regenerate` only when it reruns the same existing generation flow.
+Allowed label changes MUST be behavior-preserving. For example, `Update` MAY become
+`Regenerate` only when it reruns the same existing generation flow.
 
 The workspace MUST NOT add these features in this phase:
 
