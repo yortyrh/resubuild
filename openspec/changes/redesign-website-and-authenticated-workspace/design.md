@@ -1,8 +1,12 @@
-# Design: UI-only Resubuild website and authenticated workspace refresh
+# Design: UI-only Resubuild refresh
 
 ## Context
 
-This change is now an initial **UI-only redesign phase**. Resubuild already has the core workflows: CV import, structured CV editing, CV preview/export, application preparation, tailored CV output, and cover-letter output. This phase improves visual quality, hierarchy, navigation clarity, and presentation of existing data without changing AI or persistence contracts.
+This change is now an initial **UI-only redesign phase**. Resubuild already has the core
+workflows: CV import, structured CV editing, CV preview/export, application preparation,
+tailored CV output, and cover-letter output. This phase improves visual quality,
+hierarchy, navigation clarity, and presentation of existing data without changing AI or
+persistence contracts.
 
 Principal visual reference supplied by the requester:
 
@@ -10,33 +14,46 @@ Principal visual reference supplied by the requester:
 583f8df5-e2f5-4076-ada1-b649c459d557.png
 ```
 
-The implementation should use that reference as the visual north star: white SaaS layout, purple/teal brand identity, new logo, polished hero, product mockups, dashboard preview, rounded cards, subtle gradients, light borders, and clean authenticated screens.
+The implementation should use that reference as the visual north star: white SaaS
+layout, purple/teal brand identity, new logo, polished hero, product mockups, dashboard
+preview, rounded cards, subtle gradients, light borders, and clean authenticated screens.
 
 ## Design Principles
 
-1. **Visual refresh before product expansion** — improve presentation first; do not add new AI outputs, new metadata contracts, or required schema changes.
-2. **Preserve existing workflows** — CV import/edit/export, application preparation, tailored CV, cover letter, and existing exports must keep working.
-3. **Dashboard is additive** — a dashboard may show recent CVs and applications, but `My CVs` navigation must still open the CV list.
-4. **One dominant action per screen** — destructive actions stay secondary and hidden behind menus or confirmations.
-5. **ATS-friendly restraint** — marketing can look premium, while CV preview/export stays clean and recruiter-friendly.
-6. **Consistent brand system** — primary purple `#6d49f4`, secondary teal `#00978a`, white surfaces, subtle borders, restrained shadows.
+1. **Visual refresh before product expansion** — improve presentation first; do not add
+   new AI outputs, new metadata contracts, or required schema changes.
+2. **Preserve existing workflows** — CV import/edit/export, application preparation,
+   tailored CV, cover letter, and existing exports must keep working.
+3. **Dashboard is additive** — a dashboard may show recent CVs and applications, but
+   `My CVs` navigation must still open the CV list.
+4. **One dominant action per screen** — destructive actions stay secondary and hidden
+   behind menus or confirmations.
+5. **ATS-friendly restraint** — marketing can look premium, while CV preview/export stays
+   clean and recruiter-friendly.
+6. **Consistent brand system** — primary purple `#6d49f4`, secondary teal `#00978a`,
+   white surfaces, subtle borders, restrained shadows.
 
 ## Reference Design Requirements
 
-The attached reference image should be translated into reusable product assets and components.
+The attached reference image should be translated into reusable product assets and
+components.
 
 Required visual elements:
 
-- refreshed Resubuild logo with document/CV shape, rebuild/upward arrow, subtle AI/spark detail, and purple/teal palette;
+- refreshed Resubuild logo with document/CV shape, rebuild/upward arrow, subtle AI/spark
+  detail, and purple/teal palette;
 - compact square app-icon/favicon version;
-- coherent line-icon family for import, edit, AI/spark, export, shield, lock, check, table/list, CV card, and application workspace;
+- coherent line-icon family for import, edit, AI/spark, export, shield, lock, check,
+  table/list, CV card, and application workspace;
 - marketing header with logo, navigation, login, and primary CTA;
 - hero with `Import your PDF CV.` and `Get a polished CV in seconds.`;
 - hero product mockup of the CV editor/preview;
 - feature cards for AI PDF Import, Clean Editor, Job Tailoring, and One-Click Export;
 - three-step section: Import your CV, Review & edit, Tailor & export;
-- benefits row: No watermarks, Structured JSON Resume, Your data is private, ATS-friendly exports;
-- dashboard/workspace preview with My CVs, recent applications, status badges, Import PDF CV CTA, and Create new CV card;
+- benefits row: No watermarks, Structured JSON Resume, Your data is private,
+  ATS-friendly exports;
+- dashboard/workspace preview with My CVs, recent applications, status badges,
+  Import PDF CV CTA, and Create new CV card;
 - purple/teal final CTA band and refreshed footer.
 
 ## Brand Tokens
@@ -58,7 +75,8 @@ Required visual elements:
 
 ## Public Website
 
-Preserve existing SEO, metadata, FAQ, sitemap, robots, JSON-LD, public beta messaging, and public route behavior. Refresh the visual hierarchy in this order:
+Preserve existing SEO, metadata, FAQ, sitemap, robots, JSON-LD, public beta messaging,
+and public route behavior. Refresh the visual hierarchy in this order:
 
 1. Header
 2. Hero
@@ -72,7 +90,9 @@ Preserve existing SEO, metadata, FAQ, sitemap, robots, JSON-LD, public beta mess
 10. Final CTA
 11. Footer
 
-The marketing mockups must not imply unbuilt advanced functionality. Do not show match analysis, evidence panels, compare mode, generation summaries, or AI recommendation queues unless those features already exist.
+The marketing mockups must not imply unbuilt advanced functionality. Do not show match
+analysis, evidence panels, compare mode, generation summaries, or AI recommendation queues
+unless those features already exist.
 
 ## Authenticated Shell and Routes
 
@@ -90,7 +110,8 @@ Route rules:
 
 - `/dashboard` may become the new dashboard landing surface.
 - `My CVs` must land on the CV list, not the new dashboard.
-- If `/dashboard` currently serves as the CV-list destination, update existing CV-list links to the repo’s CV-list route before introducing the dashboard.
+- If `/dashboard` currently serves as the CV-list destination, update existing CV-list
+  links to the repo’s CV-list route before introducing the dashboard.
 - `Applications` must land on the applications list.
 
 ## Authenticated Dashboard
@@ -124,7 +145,8 @@ Each card uses existing data only:
 - existing open/edit/preview/export actions;
 - overflow menu for secondary/destructive actions.
 
-Thumbnail generation must be non-blocking and must fall back to a placeholder if unavailable.
+Thumbnail generation must be non-blocking and must fall back to a placeholder if
+unavailable.
 
 ## Applications List
 
@@ -141,7 +163,8 @@ Suggested fields using existing data:
 - Open
 - More
 
-Delete should move to `More` or a confirmation flow. Do not add required match scores or generated metadata.
+Delete should move to `More` or a confirmation flow. Do not add required match scores or
+generated metadata.
 
 ## Application Workspace
 
@@ -174,19 +197,24 @@ Allowed:
 - cleaner source selector cards for existing source types;
 - better base CV selector presentation;
 - simpler optional-instructions visual treatment;
-- optional stepper-style presentation only if it does not add required fields or change the submission contract.
+- optional stepper-style presentation only if it does not add required fields or change
+  the submission contract.
 
 Avoid new generation stages, required review steps, new payload fields, or new AI outputs.
 
 ## CV Editor and Preview/Export
 
-Keep existing editing and export behavior. Polish section navigation, cards, selected states, buttons, preview toolbar, template selector, and export controls. Add template thumbnails only where safe.
+Keep existing editing and export behavior. Polish section navigation, cards, selected
+states, buttons, preview toolbar, template selector, and export controls. Add template
+thumbnails only where safe.
 
-Avoid a new `Improve with AI` mode, new AI action cards, new generated suggestions, or new data contracts.
+Avoid a new `Improve with AI` mode, new AI action cards, new generated suggestions, or new
+data contracts.
 
 ## Data Model Considerations
 
-No required schema changes are part of this phase. Use existing data defensively, show placeholders when data is missing, and avoid migrations.
+No required schema changes are part of this phase. Use existing data defensively, show
+placeholders when data is missing, and avoid migrations.
 
 ## Migration Strategy
 
@@ -207,4 +235,5 @@ No required schema changes are part of this phase. Use existing data defensively
 - Route regression if `/dashboard` changes without preserving My CVs behavior.
 - Design drift away from the reference image and purple/teal tokens.
 - Thumbnail performance; thumbnails must be lazy and non-blocking.
-- User surprise from hiding previously visible content; avoid changing default content visibility unless already supported.
+- User surprise from hiding previously visible content; avoid changing default content
+  visibility unless already supported.
