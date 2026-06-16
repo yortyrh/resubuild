@@ -1,52 +1,58 @@
 ## MODIFIED Requirements
 
-### Requirement: The SPA routes SHALL expose landing, auth, and dashboard CV workflows
+### Requirement: The SPA routes SHALL preserve existing CV and application workflows while adding an optional dashboard
 
-The authenticated web app MUST add a dashboard landing surface for signed-in users and MUST organize the authenticated shell around these primary areas:
+The authenticated web app MAY add a dashboard landing surface. The dashboard MUST be additive and MUST NOT replace the `My CVs` destination behavior.
 
-- `Dashboard`
-- `My CVs`
-- `Applications`
-- `Templates`
-- `Settings`
+The authenticated shell MUST use the refreshed Resubuild logo system and the purple/teal brand tokens. It SHOULD expose the existing primary areas clearly:
 
-The authenticated shell MUST use the refreshed Resubuild logo system and the purple/teal brand tokens. It MUST expose exactly one dominant contextual primary action per route group:
+- `Dashboard`, if implemented;
+- `My CVs`;
+- `Applications`;
+- other existing areas only when already supported.
 
-- Dashboard: `Prepare application` as primary and `Import CV` as secondary.
-- My CVs: `Import CV` as primary.
-- Applications: `Prepare application` as primary.
-- Application workspace: `Regenerate` and export actions, with only one visually dominant primary at a time.
+If `/dashboard` currently opens the CV list, existing links whose intent is to open the CV list MUST be moved to the repo’s CV-list route before `/dashboard` becomes the dashboard. The `My CVs` navigation item MUST always land on the CV list.
 
-The dashboard landing surface MUST show a welcome header, key stats, recent CVs, recent applications, and AI recommendations. It MUST render defensively when any data source is empty, loading, or unavailable.
+The dashboard MAY show recent CVs, recent applications, simple counts, and existing CTAs using existing data. It MUST NOT require average match score, AI recommendations, missing-keyword analysis, or new metadata.
 
-#### Scenario: Signed-in user lands on authenticated dashboard
+#### Scenario: Signed-in user opens dashboard
 
-- **WHEN** a signed-in user navigates to `/dashboard`
-- **THEN** the app SHALL render a dashboard landing surface rather than an empty redirect-only shell
-- **AND** SHALL show cards for CV count, application count, last export, and average match score when data is available
-- **AND** SHALL show recent CVs, recent applications, and AI recommendations or empty states
+- **WHEN** a signed-in user navigates to the dashboard route
+- **THEN** the app SHALL render a lightweight dashboard with recent CVs and recent applications when data is available
+- **AND** SHALL link to existing CV and application workflows
 
-#### Scenario: Authenticated navigation exposes product areas
+#### Scenario: My CVs navigation opens CV list
 
 - **WHEN** the authenticated shell renders
-- **THEN** the primary navigation SHALL include Dashboard, My CVs, Applications, Templates, and Settings
-- **AND** the active route SHALL use a soft selected state from the purple/teal design tokens
+- **THEN** the `My CVs` navigation item SHALL navigate to the CV list
+- **AND** SHALL NOT navigate to the dashboard landing surface
 
-#### Scenario: Authenticated shell keeps one primary action
+### Requirement: The web app SHALL visually redesign CV and application management surfaces using existing data
 
-- **WHEN** the user views Dashboard, My CVs, Applications, Application workspace, or CV preview/export
-- **THEN** only one action SHALL be visually styled as the dominant primary CTA in the immediate page header
-- **AND** secondary actions SHALL use secondary/ghost/menu treatments
+The CV list, application list, application workspace, prepare application page, CV editor, and preview/export screens MUST follow the refreshed card, badge, button, icon, and empty-state system.
 
-### Requirement: The web app SHALL expose redesigned CV and application management surfaces
+The CV list SHOULD present CVs as thumbnail cards or a card/list hybrid. Thumbnail rendering MUST be non-blocking and MUST fall back to a placeholder when unavailable.
 
-The CV list, application list, application workspace, prepare application flow, CV editor, and preview/export screens MUST follow the refreshed card, badge, button, and empty-state system. Destructive actions SHALL be secondary and hidden behind menus or confirmation flows unless the user is already in a delete confirmation context.
+The Applications view SHOULD present applications as a table or card/table hybrid using existing fields only.
 
-#### Scenario: Empty states guide the next action
+Secondary and delete actions SHALL be visually quieter than the primary open/edit/prepare actions.
+
+#### Scenario: My CVs shows thumbnail cards
+
+- **WHEN** the user opens My CVs
+- **THEN** the page SHALL show CVs as polished cards or a grid/list with thumbnails or placeholders
+- **AND** existing open/edit/preview/export actions SHALL remain available
+
+#### Scenario: Applications show table-like scanability
+
+- **WHEN** the user opens Applications
+- **THEN** the page SHALL show existing applications in a table or card/table view
+- **AND** role and company SHALL be easy to scan
+
+#### Scenario: Empty states guide existing next actions
 
 - **WHEN** the user has no CVs
-- **THEN** the My CVs view SHALL show an empty state with `Import CV` and `Create CV` actions
+- **THEN** the My CVs view SHALL show an empty state with existing Import/Create CV actions
 
 - **WHEN** the user has no applications
-- **THEN** the Applications view SHALL show an empty state explaining that a job posting plus base CV produces a tailored CV and cover letter
-- **AND** SHALL expose a `Prepare application` CTA
+- **THEN** the Applications view SHALL show an empty state with the existing Prepare application CTA
