@@ -1,63 +1,51 @@
 ## MODIFIED Requirements
 
-### Requirement: The CV editor SHALL provide structured editing and preview/export workflows
+### Requirement: The CV editor SHALL preserve structured editing while improving visual presentation
 
-The CV editor MUST organize the primary CV workflow into three modes:
+The CV editor MUST keep the existing structured JSON Resume editing workflow and persistence behavior. This phase MUST focus on visual polish, layout clarity, navigation styling, spacing, cards, selected states, and existing action placement.
 
-- `Edit`
-- `Improve with AI`
-- `Preview / Export`
+The redesign MUST NOT introduce a new `Improve with AI` mode, new AI action cards, new generated recommendations, or new AI/data contracts.
 
-`Edit` MUST remain the structured JSON Resume editing surface with item-level persistence. `Improve with AI` MUST contain AI-assisted improvement actions and recommendations. `Preview / Export` MUST consolidate template selection, layout controls, section/header visibility, print, PDF export, and JSON Resume export.
-
-Ambiguous `Promote` wording MUST NOT be used for AI improvement actions. AI improvement actions SHOULD use `Improve with AI` and more specific labels such as `Improve summary`, `Quantify bullet points`, `Make ATS-friendly`, `Strengthen leadership`, `Add technical depth`, and `Shorten to one page`.
-
-#### Scenario: User switches between editor modes
+#### Scenario: User edits CV with redesigned UI
 
 - **WHEN** the user opens a CV editor
-- **THEN** the editor SHALL expose Edit, Improve with AI, and Preview / Export modes
-- **AND** structured section editing SHALL be located under Edit
-- **AND** export controls SHALL be located under Preview / Export
+- **THEN** the editor SHALL expose the same structured CV sections and editing behavior as before
+- **AND** the UI SHALL use the refreshed purple/teal visual system
+- **AND** existing save/persistence behavior SHALL remain unchanged
 
-#### Scenario: Improve with AI explains suggested actions
+### Requirement: CV list SHALL support thumbnail-oriented presentation
 
-- **WHEN** the user opens Improve with AI
-- **THEN** the UI SHALL show actionable AI improvement options
-- **AND** SHALL avoid using `Promote` as the primary label for these actions
+The My CVs view SHOULD present CVs as thumbnail cards or a card/list hybrid. Thumbnails MAY be generated from existing preview rendering or represented by placeholders.
+
+Thumbnail rendering MUST be non-blocking and MUST NOT prevent the CV list from loading.
+
+#### Scenario: CV thumbnail is available
+
+- **WHEN** a CV card renders and a thumbnail is available
+- **THEN** the card SHALL show the thumbnail preview with the CV title and existing actions
+
+#### Scenario: CV thumbnail is unavailable
+
+- **WHEN** thumbnail rendering fails or is not yet generated
+- **THEN** the card SHALL show a clean placeholder preview
+- **AND** existing open/edit/preview actions SHALL remain available
 
 ### Requirement: CV preview layout controls SHALL be clear and minimally intrusive
 
-The preview/export experience MUST reduce visual clutter while preserving control. Layout controls SHOULD be collapsed or secondary by default, and the control formerly labeled `Hide layout` MUST be renamed to `Layout settings` or equivalent.
+The preview/export experience MUST reduce visual clutter while preserving existing control behavior. Layout controls SHOULD be styled as secondary controls and MAY be collapsed if the existing implementation supports it safely.
 
-Template selection SHOULD show visual thumbnails for available templates in addition to or instead of a plain dropdown.
+Template selection SHOULD show visual thumbnails or preview cards for available templates where practical. If template thumbnails are not practical in this phase, the existing selector MUST remain available and be restyled consistently.
 
-Optional resume sections SHOULD be disabled by default unless explicitly enabled by the user or required by existing saved preferences:
+Default section visibility MUST NOT change globally unless the current product already supports safe saved preferences for that behavior.
 
-- References
-- Interests
-- Awards
-- Publications
-
-Core sections SHOULD remain enabled by default when data exists:
-
-- Summary
-- Experience
-- Education
-- Skills
-
-#### Scenario: Preview/export uses clear layout settings label
-
-- **WHEN** the user opens Preview / Export
-- **THEN** the layout control SHALL be labeled `Layout settings` or equivalent
-- **AND** SHALL NOT rely on `Hide layout` as the primary wording
-
-#### Scenario: Template selection is visual
+#### Scenario: Template selection is more visual when supported
 
 - **WHEN** the user changes resume template
-- **THEN** the UI SHOULD show template thumbnails or preview cards for Classic, Modern, Left aligned, Tabular, or supported templates
+- **THEN** the UI SHOULD show template thumbnails or preview cards for supported templates
+- **AND** the existing template selection behavior SHALL remain available
 
-#### Scenario: Optional sections default off
+#### Scenario: Existing preview settings remain safe
 
-- **WHEN** a new CV preview/export layout initializes without saved visibility preferences
-- **THEN** References and Interests SHALL be off by default
-- **AND** Awards and Publications SHALL be off by default unless the product explicitly decides to surface present award/publication data
+- **WHEN** the preview/export layout initializes
+- **THEN** it SHALL preserve existing user expectations and saved visibility preferences
+- **AND** SHALL NOT hide existing resume content unexpectedly
