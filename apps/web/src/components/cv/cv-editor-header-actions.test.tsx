@@ -104,7 +104,7 @@ describe('CvEditorHeaderActions', () => {
     });
   });
 
-  it('hides the visible Export and Preview labels below sm and keeps accessible names', () => {
+  it('hides the visible Export and Preview labels below lg and keeps accessible names', () => {
     const { container } = renderActions();
 
     const exportTrigger = screen.getByRole('button', { name: 'Export' });
@@ -113,7 +113,7 @@ describe('CvEditorHeaderActions', () => {
     const previewLink = screen.getByRole('link', { name: 'Preview' });
     expect(previewLink).toHaveAttribute('aria-label', 'Preview');
 
-    const hiddenSpans = container.querySelectorAll('span.hidden.sm\\:inline');
+    const hiddenSpans = container.querySelectorAll('span.hidden.lg\\:inline');
     expect(hiddenSpans.length).toBeGreaterThanOrEqual(2);
     const labels = Array.from(hiddenSpans).map((s) => s.textContent);
     expect(labels).toContain('Export');

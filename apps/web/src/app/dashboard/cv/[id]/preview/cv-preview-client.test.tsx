@@ -174,7 +174,6 @@ describe('CvPreviewClient', () => {
       { timeout: 10_000 },
     );
     expect(screen.queryByLabelText('Loading breadcrumb')).not.toBeInTheDocument();
-    expect(screen.getByTestId('cv-page-title')).toHaveTextContent('Preview');
 
     await waitFor(
       () => {

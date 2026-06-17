@@ -488,7 +488,7 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
         <SheetContent
           id="cv-layout-panel-drawer"
           side="left"
-          className="flex w-72 flex-col gap-3 overflow-y-auto px-2 py-4 sm:max-w-sm"
+          className="scrollbar-hidden flex w-72 flex-col gap-3 overflow-y-auto px-2 py-4 sm:max-w-sm"
         >
           <SheetHeader>
             <SheetTitle>Layout</SheetTitle>

@@ -19,9 +19,9 @@ describe('CvEditorBreadcrumb', () => {
 
     expect(screen.getByText('Jane Doe — Senior Software Engineer')).toHaveClass(
       'hidden',
-      'sm:inline',
+      'md:inline',
     );
-    expect(screen.getByText('Jane Doe')).toHaveClass('sm:hidden');
+    expect(screen.getByText('Jane Doe')).toHaveClass('md:hidden');
   });
 
   it('renders My CVs and the CV title on the basics section', () => {
@@ -38,7 +38,6 @@ describe('CvEditorBreadcrumb', () => {
     expect(screen.getByRole('link', { name: 'My CVs' })).toHaveAttribute('href', '/dashboard');
     expect(screen.getByText('Jane Doe — Senior Software Engineer')).toBeInTheDocument();
     expect(within(nav).queryByText('Basics')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('cv-page-title')).not.toBeInTheDocument();
   });
 
   it('renders the active section as the current page on section routes', () => {
@@ -57,7 +56,7 @@ describe('CvEditorBreadcrumb', () => {
     expect(within(nav).getByText('Projects')).toBeInTheDocument();
   });
 
-  it('shows the trail-end as a page title on three-level breadcrumbs', () => {
+  it('does not render a separate page title element', () => {
     render(
       <CvEditorBreadcrumb
         cvId="cv-1"
@@ -66,10 +65,7 @@ describe('CvEditorBreadcrumb', () => {
       />,
     );
 
-    const title = screen.getByTestId('cv-page-title');
-    expect(title.tagName).toBe('H1');
-    expect(title).toHaveTextContent('Volunteer');
-    expect(title).toHaveClass('text-2xl', 'font-semibold');
+    expect(screen.queryByTestId('cv-page-title')).not.toBeInTheDocument();
   });
 
   it('styles untitled CVs with muted text on the current page', () => {
@@ -94,6 +90,6 @@ describe('CvEditorBreadcrumb', () => {
     );
     const nav = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(within(nav).getByText('Preview')).toBeInTheDocument();
-    expect(screen.getByTestId('cv-page-title')).toHaveTextContent('Preview');
+    expect(screen.queryByTestId('cv-page-title')).not.toBeInTheDocument();
   });
 });

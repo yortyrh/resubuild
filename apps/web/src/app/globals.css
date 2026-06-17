@@ -433,3 +433,16 @@ html body[data-scroll-locked] {
 .markdown-view--inline pre {
   display: none;
 }
+
+/* Hide the scrollbar visually while keeping the element scrollable.
+   Used by the section nav drawer, where the scrollbar is chrome that
+   would crowd a narrow 288px surface. Keyboard scroll, trackpad, and
+   drag-to-scroll all still work; only the visual bar is suppressed. */
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
