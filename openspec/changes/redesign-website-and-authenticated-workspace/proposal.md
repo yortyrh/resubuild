@@ -1,5 +1,10 @@
 # Proposal: UI-only Resubuild redesign
 
+> This change retroactively documents work already implemented in the working tree.
+> It was committed through the `/opsx-retroactive-commit` flow as three separate commits
+> (proposal docs, implementation, archive docs). All tasks in `tasks.md` are marked
+> complete and describe work that has already landed in the repository.
+
 ## Why
 
 Resubuild already supports the core product workflow: CV import, structured CV editing,
