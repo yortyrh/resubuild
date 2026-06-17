@@ -12,13 +12,7 @@ import { TemplateConfigPanel } from '@/components/cv/template-config-panel';
 import { useApplicationForCv } from '@/components/cv/use-application-for-cv';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   type CvTemplateMeta,
   downloadCvJson,
@@ -31,7 +25,6 @@ import {
   updateCvTemplatePresentation,
 } from '@/lib/api';
 import { fetchCvResumeForPreview } from '@/lib/cv-preview-resume';
-import { useIsMobile } from '@/lib/use-is-mobile';
 import { CvPreviewBreadcrumbSkeleton, CvPreviewLoadingRow } from './cv-preview-skeleton';
 
 interface CvPreviewClientProps {
@@ -46,6 +39,50 @@ function getAutoLayoutExpanded(): boolean {
   return window.matchMedia('(min-width: 1024px)').matches;
 }
 
+const LG_BREAKPOINT_QUERY = '(min-width: 1024px)';
+
+function getInlinePanelDisplayable(): boolean {
+  if (typeof window.matchMedia !== 'function') {
+    return false;
+  }
+
+  return window.matchMedia(LG_BREAKPOINT_QUERY).matches;
+}
+
+/**
+ * Tracks whether the viewport is wide enough to host the inline layout panel
+ * (`>= lg` / 1024px). The desktop panel is hidden below this breakpoint via
+ * Tailwind's `lg:block`, so on narrower viewports the toggle must drive the
+ * mobile drawer instead — otherwise the button silently does nothing on
+ * tablet-sized screens (768–1023px).
+ */
+function useInlineLayoutPanelDisplayable(): boolean {
+  const [displayable, setDisplayable] = useState<boolean>(() => getInlinePanelDisplayable());
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') {
+      return;
+    }
+
+    const mql = window.matchMedia(LG_BREAKPOINT_QUERY);
+    const update = (event: MediaQueryList | MediaQueryListEvent) => {
+      setDisplayable(event.matches);
+    };
+
+    setDisplayable(mql.matches);
+
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', update);
+      return () => mql.removeEventListener('change', update);
+    }
+
+    mql.addListener(update);
+    return () => mql.removeListener(update);
+  }, []);
+
+  return displayable;
+}
+
 function renderPreviewHtml(
   resume: Resume,
   templateId: string,
@@ -56,7 +93,7 @@ function renderPreviewHtml(
 
 export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
   const application = useApplicationForCv(cvId);
-  const isMobile = useIsMobile();
+  const inlinePanelDisplayable = useInlineLayoutPanelDisplayable();
   const [desktopPanelCollapsed, setDesktopPanelCollapsed] = useState<boolean | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const desktopPanelExpanded =
@@ -233,7 +270,10 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
   );
 
   const toggleLayoutPanel = useCallback(() => {
-    if (isMobile) {
+    // Below the `lg` breakpoint the inline panel is hidden by Tailwind, so we
+    // must drive the mobile drawer — otherwise the button is a no-op on
+    // tablet-sized viewports (768–1023px).
+    if (!inlinePanelDisplayable) {
       setDrawerOpen((open) => !open);
       return;
     }
@@ -245,7 +285,7 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
 
       return !current;
     });
-  }, [isMobile]);
+  }, [inlinePanelDisplayable]);
 
   const handlePrint = useCallback(() => {
     const printWindow = previewFrameRef.current?.contentWindow;
@@ -330,15 +370,15 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
           className="shrink-0"
           onClick={toggleLayoutPanel}
           disabled={!layoutInitialConfig}
-          aria-expanded={isMobile ? drawerOpen : !desktopPanelCollapsed}
-          aria-controls={isMobile ? 'cv-layout-panel-drawer' : 'cv-layout-panel'}
+          aria-expanded={inlinePanelDisplayable ? !desktopPanelCollapsed : drawerOpen}
+          aria-controls={inlinePanelDisplayable ? 'cv-layout-panel' : 'cv-layout-panel-drawer'}
           aria-label={
-            (isMobile ? drawerOpen : !desktopPanelCollapsed)
+            (inlinePanelDisplayable ? !desktopPanelCollapsed : drawerOpen)
               ? 'Hide layout panel'
               : 'Show layout panel'
           }
         >
-          {(isMobile ? drawerOpen : !desktopPanelCollapsed) ? (
+          {(inlinePanelDisplayable ? !desktopPanelCollapsed : drawerOpen) ? (
             <>
               <PanelLeftClose className="size-4 shrink-0 sm:mr-1.5" aria-hidden="true" />
               <span className="hidden sm:inline">Hide layout</span>
@@ -431,6 +471,7 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
                     id="cv-layout-panel"
                     initialConfig={layoutInitialConfig}
                     onChange={handlePresentationChange}
+                    className="w-48 p-3"
                   />
                 </div>
               </div>
@@ -447,13 +488,12 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
         <SheetContent
           id="cv-layout-panel-drawer"
           side="left"
-          className="flex w-72 flex-col gap-3 overflow-y-auto sm:max-w-sm"
+          className="flex w-72 flex-col gap-3 overflow-y-auto px-2 py-4 sm:max-w-sm"
         >
           <SheetHeader>
             <SheetTitle>Layout</SheetTitle>
-            <SheetDescription>Configure which sections and fields appear.</SheetDescription>
           </SheetHeader>
-          <div className="-mx-2 flex-1 px-2">
+          <div className="flex-1">
             {layoutInitialConfig ? (
               <TemplateConfigPanel
                 key={selectedTemplateId}

@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@plugin 'tailwindcss-animate';
 
 :root {
   --background: 0 0% 100%;
@@ -132,6 +133,12 @@ html body[data-scroll-locked] {
   .cv-export-preview {
     overflow: hidden !important;
   }
+}
+
+/* Template config panel inside the mobile drawer — squarer corners than the
+   default surface-soft (12px) to match the dense, compact layout. */
+#cv-layout-panel-drawer-content {
+  border-radius: 4px;
 }
 
 /* MDXEditor — transparent background so the parent surface-soft card shows through.

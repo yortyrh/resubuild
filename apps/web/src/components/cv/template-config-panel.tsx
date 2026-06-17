@@ -222,11 +222,9 @@ export const TemplateConfigPanel = memo(function TemplateConfigPanel({
   return (
     <aside
       id={id}
-      className={cn('no-print surface-soft w-48 shrink-0 space-y-3 p-3 text-sm', className)}
+      className={cn('no-print surface-soft w-full shrink-0 space-y-3 px-2 py-1 text-sm', className)}
     >
-      <h2 className="text-base font-semibold">Layout</h2>
-
-      <div className="space-y-2">
+      <div className="space-y-2 px-2 pb-2 pt-2">
         <Label className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
           Sections
         </Label>
@@ -252,7 +250,7 @@ export const TemplateConfigPanel = memo(function TemplateConfigPanel({
         </DndContext>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 px-2 pb-2 pt-2">
         <Label className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
           Header fields
         </Label>
@@ -272,7 +270,7 @@ export const TemplateConfigPanel = memo(function TemplateConfigPanel({
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 px-2 pb-2 pt-2">
         <Label className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
           Experience fields
         </Label>

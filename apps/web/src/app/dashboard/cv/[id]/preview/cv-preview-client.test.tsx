@@ -27,10 +27,6 @@ vi.mock('@/lib/cv-preview-resume', () => ({
   fetchCvResumeForPreview: vi.fn(),
 }));
 
-vi.mock('@/lib/use-is-mobile', () => ({
-  useIsMobile: vi.fn(() => false),
-}));
-
 vi.mock('@resubuild/resume-template', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@resubuild/resume-template')>();
   return {
@@ -52,7 +48,6 @@ import {
   updateCvTemplatePresentation,
 } from '@/lib/api';
 import { fetchCvResumeForPreview } from '@/lib/cv-preview-resume';
-import { useIsMobile } from '@/lib/use-is-mobile';
 
 const templates = [
   {
@@ -294,7 +289,7 @@ describe('CvPreviewClient', () => {
   });
 
   it('opens the layout panel in a mobile drawer and keeps the toggle visible', async () => {
-    vi.mocked(useIsMobile).mockReturnValue(true);
+    mockViewport(false);
 
     render(<CvPreviewClient cvId="cv-1" />);
 
@@ -310,9 +305,6 @@ describe('CvPreviewClient', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(
-      within(dialog).getByText('Configure which sections and fields appear.'),
-    ).toBeInTheDocument();
-    expect(
       within(dialog).getByRole('checkbox', { name: 'Show Education section' }),
     ).toBeInTheDocument();
 
@@ -323,15 +315,42 @@ describe('CvPreviewClient', () => {
   });
 
   it('does not render the inline layout panel on mobile', () => {
-    vi.mocked(useIsMobile).mockReturnValue(true);
+    mockViewport(false);
 
     render(<CvPreviewClient cvId="cv-1" />);
 
     expect(document.getElementById('cv-layout-panel')).toBeNull();
   });
 
+  it('opens the layout panel in a drawer on tablet-sized viewports (768–1023px)', async () => {
+    mockViewport(false);
+
+    render(<CvPreviewClient cvId="cv-1" />);
+
+    // Below the `lg` breakpoint the inline panel is hidden by Tailwind, so the
+    // toggle must drive the drawer — otherwise the button is a silent no-op.
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Show layout panel' })).toBeInTheDocument();
+    });
+
+    const toggle = screen.getByRole('button', { name: 'Show layout panel' });
+    expect(toggle).toHaveAttribute('aria-controls', 'cv-layout-panel-drawer');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(document.getElementById('cv-layout-panel')).toBeNull();
+
+    fireEvent.click(toggle);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      within(dialog).getByRole('checkbox', { name: 'Show Education section' }),
+    ).toBeInTheDocument();
+
+    const expandedToggle = screen.getByLabelText('Hide layout panel');
+    expect(expandedToggle).toHaveAttribute('aria-controls', 'cv-layout-panel-drawer');
+    expect(expandedToggle).toHaveAttribute('aria-expanded', 'true');
+  });
+
   it('renders the inline layout panel on desktop and toggles via the visible button', async () => {
-    vi.mocked(useIsMobile).mockReturnValue(false);
     mockViewport(true);
 
     render(<CvPreviewClient cvId="cv-1" />);
@@ -356,7 +375,7 @@ describe('CvPreviewClient', () => {
   });
 
   it('hides the "Template" label below sm but keeps the select accessible', () => {
-    vi.mocked(useIsMobile).mockReturnValue(true);
+    mockViewport(false);
 
     render(<CvPreviewClient cvId="cv-1" />);
 
