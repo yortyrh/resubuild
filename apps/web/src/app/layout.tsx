@@ -84,9 +84,15 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: [{ url: '/icon-2.png', type: 'image/png' }],
-    apple: [{ url: '/icon-2.png', type: 'image/png' }],
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml', sizes: 'any' },
+      { url: '/icon-192x192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/icon-512x512.png', type: 'image/png', sizes: '512x512' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', type: 'image/png', sizes: '180x180' }],
+    shortcut: ['/icon-512x512.png'],
   },
+  manifest: '/manifest.webmanifest',
   alternates: {
     canonical: '/',
   },

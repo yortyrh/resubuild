@@ -10,12 +10,13 @@ describe('ApplicationListSkeleton', () => {
     expect(screen.getByText('Loading applications')).toBeInTheDocument();
   });
 
-  it('renders three placeholder list items matching the application list layout', () => {
+  it('renders three placeholder rows inside the surface-soft data table', () => {
     const { container } = render(<ApplicationListSkeleton />);
-    const list = container.querySelector('ul.space-y-3');
-    expect(list).toBeTruthy();
-    expect(list?.querySelectorAll('li')).toHaveLength(3);
-    // Each placeholder item uses the same surface-soft card as a real list row.
-    expect(list?.querySelectorAll('li.surface-soft')).toHaveLength(3);
+    const surface = container.querySelector('.surface-soft');
+    expect(surface).toBeTruthy();
+    const table = surface?.querySelector('table');
+    expect(table).toBeTruthy();
+    const rows = table?.querySelectorAll('tbody tr');
+    expect(rows).toHaveLength(3);
   });
 });

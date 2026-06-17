@@ -11,19 +11,16 @@ export function MarketingHeader() {
   return (
     <header className="landing-header sticky top-0 z-50 backdrop-blur-md">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
-        <Link href="/" className="flex items-center gap-3">
-          <span className="landing-logo-mark">
-            <Image
-              src="/icon-2.png"
-              alt="Resubuild"
-              width={40}
-              height={40}
-              className="h-10 w-10"
-              priority
-              sizes="40px"
-            />
-          </span>
-          <span className="landing-logo-wordmark">Resubuild</span>
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/logo-vectorized.svg"
+            alt="Resubuild"
+            width={2172}
+            height={724}
+            className="landing-logo-lockup"
+            priority
+            sizes="(max-width: 768px) 160px, 200px"
+          />
         </Link>
 
         <nav className="landing-header-nav hidden items-center gap-8 text-sm md:flex">

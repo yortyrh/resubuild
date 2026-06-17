@@ -772,6 +772,16 @@ export function updateApplicationLetter(id: string, coverLetter: string) {
   });
 }
 
+export function updateApplicationMetadata(
+  id: string,
+  payload: { jobTitle?: string; jobCompany?: string },
+) {
+  return apiFetch<JobApplicationSummary>(`/applications/${id}/metadata`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
 export function updateApplication(id: string, payload: { message?: string; sourceCvId?: string }) {
   return apiFetch<{
     applicationId: string;

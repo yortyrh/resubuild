@@ -318,7 +318,7 @@ export function ApplicationWorkspace({ id }: { id: string }) {
           <TabsContent value="summary" className="space-y-3">
             <dl className="space-y-2 text-sm">
               <div>
-                <dt className="text-muted-foreground">Title</dt>
+                <dt className="text-muted-foreground">Position</dt>
                 <dd>{data.jobTitle}</dd>
               </div>
               <div>

@@ -1,17 +1,24 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
-const cvListItemActionsClassName = 'divider-soft mt-4 flex gap-2 border-t pt-4';
+const cvListItemActionsClassName = 'divider-soft mt-auto flex justify-end border-t pt-3';
 
 function CvListItemSkeleton() {
   return (
-    <article className="surface-soft text-card-foreground p-4">
-      <div className="min-w-0 flex-1 space-y-2">
-        <Skeleton className="h-5 w-3/5" />
-        <Skeleton className="h-4 w-2/5" />
-      </div>
-      <div className={cvListItemActionsClassName}>
-        <Skeleton className="h-9 w-16" />
-        <Skeleton className="h-9 w-20" />
+    <article className="surface-soft text-card-foreground flex gap-4 p-4">
+      <Skeleton className="w-30 h-[155px] shrink-0 rounded-md" />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-6 w-3/5" />
+            <Skeleton className="h-4 w-2/5" />
+            <Skeleton className="h-3 w-4/5" />
+            <Skeleton className="h-3 w-1/4" />
+          </div>
+          <Skeleton className="size-9 shrink-0 rounded-md" />
+        </div>
+        <div className={cvListItemActionsClassName}>
+          <Skeleton className="h-9 w-20" />
+        </div>
       </div>
     </article>
   );

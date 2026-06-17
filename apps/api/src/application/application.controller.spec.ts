@@ -21,6 +21,7 @@ describe('ApplicationController', () => {
       | 'findAll'
       | 'findOne'
       | 'updateCoverLetter'
+      | 'patchApplicationMetadata'
       | 'promoteClone'
       | 'getCoverLetterMarkdown'
       | 'getCoverLetterPdfExport'
@@ -38,6 +39,7 @@ describe('ApplicationController', () => {
       findAll: jest.fn(),
       findOne: jest.fn(),
       updateCoverLetter: jest.fn(),
+      patchApplicationMetadata: jest.fn(),
       promoteClone: jest.fn(),
       getCoverLetterMarkdown: jest.fn(),
       getCoverLetterPdfExport: jest.fn(),
@@ -86,6 +88,39 @@ describe('ApplicationController', () => {
     await expect(
       controller.updateLetter(req, 'app-1', { coverLetter: 'Updated' }),
     ).resolves.toEqual({ id: 'app-1', coverLetter: 'Updated' });
+  });
+
+  it('patches application metadata', async () => {
+    service.patchApplicationMetadata.mockResolvedValue({
+      id: 'app-1',
+      jobTitle: 'Staff Engineer',
+      jobCompany: 'Acme',
+    } as never);
+
+    await expect(
+      controller.updateMetadata(req, 'app-1', {
+        jobTitle: 'Staff Engineer',
+        jobCompany: 'Acme',
+      }),
+    ).resolves.toEqual({ id: 'app-1', jobTitle: 'Staff Engineer', jobCompany: 'Acme' });
+
+    expect(service.patchApplicationMetadata).toHaveBeenCalledWith(user, 'app-1', {
+      jobTitle: 'Staff Engineer',
+      jobCompany: 'Acme',
+    });
+  });
+
+  it('forwards undefined metadata fields to the service', async () => {
+    service.patchApplicationMetadata.mockResolvedValue({ id: 'app-1' } as never);
+
+    await expect(
+      controller.updateMetadata(req, 'app-1', { jobTitle: 'Engineer' }),
+    ).resolves.toEqual({ id: 'app-1' });
+
+    expect(service.patchApplicationMetadata).toHaveBeenCalledWith(user, 'app-1', {
+      jobTitle: 'Engineer',
+      jobCompany: undefined,
+    });
   });
 
   it('renders letter HTML', async () => {

@@ -11,17 +11,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { downloadCvJson, downloadCvPdf } from '@/lib/api';
+import { triggerBrowserDownload } from '@/lib/download';
 import { useCv } from '@/lib/queries/cv-queries';
 import { cn } from '@/lib/utils';
-
-function triggerBrowserDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
 
 interface CvEditorHeaderActionsProps {
   cvId: string;

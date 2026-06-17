@@ -41,7 +41,7 @@ export function JsonLd({ path, title, description, faqItems }: JsonLdProps) {
         '@id': `${siteConfig.url}/#organization`,
         name: siteConfig.name,
         url: siteConfig.url,
-        logo: absoluteUrl('/icon-2.png'),
+        logo: absoluteUrl('/icon-512x512.png'),
       },
       {
         '@type': 'WebSite',

@@ -27,6 +27,7 @@ import {
   PrepareApplicationFieldsDto,
   UpdateApplicationDto,
   UpdateApplicationLetterDto,
+  UpdateApplicationMetadataDto,
 } from './dto/application.dto';
 
 @Controller('applications')
@@ -86,6 +87,18 @@ export class ApplicationController {
     @Body() dto: UpdateApplicationLetterDto,
   ) {
     return this.applicationService.updateCoverLetter(req.user, id, dto.coverLetter);
+  }
+
+  @Patch(':id/metadata')
+  updateMetadata(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: UpdateApplicationMetadataDto,
+  ) {
+    return this.applicationService.patchApplicationMetadata(req.user, id, {
+      jobTitle: dto.jobTitle,
+      jobCompany: dto.jobCompany,
+    });
   }
 
   @Delete(':id')

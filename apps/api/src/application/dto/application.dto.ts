@@ -6,6 +6,18 @@ export class UpdateApplicationLetterDto {
   coverLetter!: string;
 }
 
+export class UpdateApplicationMetadataDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  jobTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  jobCompany?: string;
+}
+
 export class UpdateApplicationDto {
   @IsOptional()
   @IsString()

@@ -4,7 +4,7 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { createContext, useContext, useState } from 'react';
 import { CvSectionNav } from '@/components/cv/cv-section-nav-links';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/lib/use-is-mobile';
 import { cn } from '@/lib/utils';
 
@@ -151,6 +151,9 @@ export function CvSectionLayout({ cvId, children }: CvSectionLayoutProps) {
           className="flex w-72 flex-col gap-2 px-0 py-2 sm:max-w-sm [&>button]:hidden"
         >
           <SheetTitle className="sr-only">CV sections</SheetTitle>
+          <SheetDescription className="sr-only">
+            Navigate between CV sections such as basics, work, education, and skills.
+          </SheetDescription>
           <div className="scrollbar-hidden flex-1 overflow-y-auto px-2">
             <CvSectionNav
               cvId={cvId}

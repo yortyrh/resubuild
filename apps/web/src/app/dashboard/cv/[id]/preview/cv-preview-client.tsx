@@ -12,7 +12,13 @@ import { TemplateConfigPanel } from '@/components/cv/template-config-panel';
 import { useApplicationForCv } from '@/components/cv/use-application-for-cv';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   type CvTemplateMeta,
   downloadCvJson,
@@ -492,6 +498,9 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
         >
           <SheetHeader>
             <SheetTitle>Layout</SheetTitle>
+            <SheetDescription>
+              Adjust template-specific options such as margins, density, and accents.
+            </SheetDescription>
           </SheetHeader>
           <div className="flex-1">
             {layoutInitialConfig ? (

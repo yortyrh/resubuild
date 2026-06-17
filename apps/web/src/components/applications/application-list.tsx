@@ -3,25 +3,35 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FilePlus2 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { DataTable } from '@/components/applications/application-data-table';
+import {
+  type ApplicationRow,
+  getApplicationColumns,
+  toApplicationRow,
+} from '@/components/applications/application-data-table-columns';
 import { ApplicationListSkeleton } from '@/components/applications/application-list-skeleton';
+import { ApplicationUpdateDialog } from '@/components/applications/application-update-dialog';
 import { DeleteItemDialog } from '@/components/cv/cv-item-ui';
 import { Button } from '@/components/ui/button';
-import { deleteApplication, type JobApplicationSummary, listApplications } from '@/lib/api';
-
-function formatStatus(status: JobApplicationSummary['status']) {
-  return status.replace('_', ' ');
-}
-
-function formatApplicationLabel(app: JobApplicationSummary) {
-  const title = app.jobTitle ?? 'Preparing…';
-  return app.jobCompany ? `${title} · ${app.jobCompany}` : title;
-}
+import {
+  deleteApplication,
+  downloadApplicationLetterPdf,
+  downloadCvPdf,
+  type JobApplicationSummary,
+  listApplications,
+} from '@/lib/api';
+import { triggerBrowserDownload } from '@/lib/download';
 
 export function ApplicationList() {
   const queryClient = useQueryClient();
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const router = useRouter();
+  const [deleteRow, setDeleteRow] = useState<ApplicationRow | null>(null);
+  const [updateRow, setUpdateRow] = useState<ApplicationRow | null>(null);
+  const [exportingCvPdfFor, setExportingCvPdfFor] = useState<string | null>(null);
+  const [exportingLetterPdfFor, setExportingLetterPdfFor] = useState<string | null>(null);
 
   const {
     data = [],
@@ -30,6 +40,11 @@ export function ApplicationList() {
   } = useQuery({
     queryKey: ['applications'],
     queryFn: listApplications,
+    refetchInterval: (query) => {
+      const list = query.state.data;
+      if (!list) return false;
+      return list.some((app) => app.status === 'queued' || app.status === 'running') ? 2500 : false;
+    },
   });
 
   const deleteMutation = useMutation({
@@ -37,21 +52,75 @@ export function ApplicationList() {
     onSuccess: () => {
       toast.success('Application deleted');
       void queryClient.invalidateQueries({ queryKey: ['applications'] });
-      setDeleteId(null);
+      setDeleteRow(null);
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : 'Failed to delete application');
     },
   });
 
-  const pendingDelete = deleteId ? data.find((app) => app.id === deleteId) : undefined;
-
-  const confirmDelete = async () => {
-    if (!deleteId) {
+  async function handleExportCvPdf(row: ApplicationRow) {
+    const tailoredCvId = row.raw.tailoredCvId;
+    if (!tailoredCvId || exportingCvPdfFor || exportingLetterPdfFor) {
       return;
     }
 
-    await deleteMutation.mutateAsync(deleteId);
+    setExportingCvPdfFor(row.id);
+    try {
+      const { blob, filename } = await downloadCvPdf(tailoredCvId);
+      triggerBrowserDownload(blob, filename);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export CV as PDF');
+    } finally {
+      setExportingCvPdfFor(null);
+    }
+  }
+
+  async function handleExportLetterPdf(row: ApplicationRow) {
+    if (exportingCvPdfFor || exportingLetterPdfFor) {
+      return;
+    }
+
+    setExportingLetterPdfFor(row.id);
+    try {
+      const { blob, filename } = await downloadApplicationLetterPdf(row.id);
+      triggerBrowserDownload(blob, filename);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export cover letter as PDF');
+    } finally {
+      setExportingLetterPdfFor(null);
+    }
+  }
+
+  function handlePreviewCv(row: ApplicationRow) {
+    const tailoredCvId = row.raw.tailoredCvId;
+    if (!tailoredCvId) {
+      return;
+    }
+    router.push(`/dashboard/cv/${tailoredCvId}/preview?applicationId=${row.id}`);
+  }
+
+  const rows = useMemo(() => data.map(toApplicationRow), [data]);
+  const columns = useMemo(
+    () =>
+      getApplicationColumns({
+        onUpdate: setUpdateRow,
+        onDelete: setDeleteRow,
+        onExportCvPdf: handleExportCvPdf,
+        onExportLetterPdf: handleExportLetterPdf,
+        onPreviewCv: handlePreviewCv,
+        exportingCvPdfFor,
+        exportingLetterPdfFor,
+      }),
+    [exportingCvPdfFor, exportingLetterPdfFor],
+  );
+
+  const confirmDelete = async () => {
+    if (!deleteRow) {
+      return;
+    }
+
+    await deleteMutation.mutateAsync(deleteRow.id);
   };
 
   if (isLoading) {
@@ -78,48 +147,44 @@ export function ApplicationList() {
         </Button>
       </div>
 
-      {data.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No applications yet.</p>
-      ) : (
-        <ul className="space-y-3">
-          {data.map((app) => (
-            <li
-              key={app.id}
-              className="surface-soft text-card-foreground flex items-center justify-between gap-4 p-4"
-            >
-              <Link
-                href={`/dashboard/applications/${app.id}`}
-                className="min-w-0 flex-1 hover:underline"
-              >
-                <div className="font-medium">{formatApplicationLabel(app)}</div>
-                <div className="text-muted-foreground text-sm capitalize">
-                  {formatStatus(app.status)}
-                </div>
-              </Link>
-              <Button size="sm" variant="destructive" onClick={() => setDeleteId(app.id)}>
-                Delete
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <DataTable columns={columns} data={rows} caption="Applications" />
 
       <DeleteItemDialog
-        open={deleteId !== null}
+        open={deleteRow !== null}
         title="Delete application?"
         description={
-          pendingDelete
-            ? `"${formatApplicationLabel(pendingDelete)}" will be permanently removed. This cannot be undone.`
+          deleteRow
+            ? formatDeleteDescription(deleteRow.raw)
             : 'This application will be permanently removed. This cannot be undone.'
         }
         confirming={deleteMutation.isPending}
         onConfirm={confirmDelete}
         onCancel={() => {
           if (!deleteMutation.isPending) {
-            setDeleteId(null);
+            setDeleteRow(null);
           }
         }}
       />
+
+      {updateRow ? (
+        <ApplicationUpdateDialog
+          application={updateRow.raw}
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setUpdateRow(null);
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
+}
+
+function formatDeleteDescription(application: JobApplicationSummary): string {
+  const parts = [application.jobTitle ?? 'Untitled application'];
+  if (application.jobCompany) {
+    parts.push(application.jobCompany);
+  }
+  return `"${parts.join(' · ')}" will be permanently removed. This cannot be undone.`;
 }

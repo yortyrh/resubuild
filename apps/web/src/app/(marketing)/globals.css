@@ -113,6 +113,29 @@
   color: var(--landing-ink);
 }
 
+.landing-logo-lockup {
+  display: block;
+  height: 3.125rem;
+  width: 7.5rem;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .landing-logo-lockup {
+    height: 3.125rem;
+    width: 7.5rem;
+  }
+}
+
+.landing-logo-lockup-sm {
+  display: block;
+  height: 3.125rem;
+  width: 7.5rem;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
 /* Buttons */
 .landing-btn-primary {
   display: inline-flex;
