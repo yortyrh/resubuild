@@ -191,19 +191,33 @@ export function detectSvgBackground(svg) {
   if (parts.length !== 4) return null;
   const [, , vbW, vbH] = parts;
 
-  const rectRe = new RegExp(
-    String.raw`<rect\b([^>]*?width\s*=\s*"\s*${vbW}\s*"[^>]*?height\s*=\s*"\s*${vbH}\s*"[^>]*?/?)>`,
-    'i',
-  );
-  const rectMatch = rectRe.exec(text);
-  if (!rectMatch) return null;
+  // Find the first <rect> with viewBox dimensions that has a fill attribute.
+  // The SVG may have multiple rects (e.g., in clipPath defs), so we scan sequentially
+  // and pick the first one with a fill (ignoring clipPath rects that lack fills).
+  let searchIdx = 0;
+  while (searchIdx < text.length) {
+    const rectStart = text.indexOf('<rect', searchIdx);
+    if (rectStart === -1) return null;
 
-  const attrs = rectMatch[1];
-  const fillMatch = attrs.match(/\bfill\s*=\s*"([^"]+)"/i);
-  const styleFillMatch = attrs.match(/\bfill\s*:\s*([^;"]+)/i);
-  const raw = fillMatch ? fillMatch[1] : styleFillMatch ? styleFillMatch[1].trim() : null;
-  if (!raw) return null;
-  return parseSvgColor(raw);
+    const tagEnd = text.indexOf('>', rectStart);
+    if (tagEnd === -1) return null;
+
+    const tagContent = text.slice(rectStart, tagEnd + 1);
+
+    // Check if this rect matches our viewBox dimensions
+    if (tagContent.includes(`width="${vbW}"`) && tagContent.includes(`height="${vbH}"`)) {
+      // Extract fill value
+      const fillMatch = tagContent.match(/fill="([^"]+)"/);
+      const styleFillMatch = tagContent.match(/fill:\s*([^;"]+)/);
+      const raw = fillMatch ? fillMatch[1] : styleFillMatch ? styleFillMatch[1].trim() : null;
+      if (raw) {
+        return parseSvgColor(raw);
+      }
+    }
+
+    searchIdx = rectStart + 5;
+  }
+  return null;
 }
 
 /**
