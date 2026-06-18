@@ -338,7 +338,7 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start gap-x-2 gap-y-2">
+      <div className="no-print flex flex-wrap items-start gap-x-2 gap-y-2">
         <div className="min-w-0 flex-1">
           {breadcrumbReady ? (
             application ? (

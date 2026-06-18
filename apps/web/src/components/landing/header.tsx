@@ -9,7 +9,7 @@ const NAV_LINKS = [
 
 export function MarketingHeader() {
   return (
-    <header className="landing-header sticky top-0 z-50 backdrop-blur-md">
+    <header className="no-print landing-header sticky top-0 z-50 backdrop-blur-md">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex items-center">
           <Image
