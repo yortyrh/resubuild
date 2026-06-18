@@ -32,9 +32,9 @@ not require manually re-exporting icons in a design tool.
   standard icons; `0.10` margin for `maskable-icon` (PWA spec requires ~10%
   safe area); `0.0` margin for `favicon.ico` (browsers pad favicons
   themselves).
-- Add a `pnpm icons:generate` script at the repo root that runs the generator
-  and wire it into a Turbo task so it runs as part of `pnpm build` for
-  `apps/web`.
+- Add a `pnpm icons:generate` script at the repo root that runs the generator,
+  and chain it from the root `pnpm build` script so it always runs before
+  `turbo build` orchestrates the workspace builds.
 - Update `apps/web/src/app/layout.tsx` `metadata.icons` so the canonical icon
   is the new `icon.png` (not `icon.svg`), and stop relying on `icon.svg` as the
   favicon source — the favicon now resolves to the generated `favicon.ico`
@@ -61,9 +61,9 @@ not require manually re-exporting icons in a design tool.
   generated `icon.png` and `favicon.ico`, not the raw `icon.svg`, so users
   receive margin-padded icons on browser tabs, home screens, and Android
   launchers.
-- `monorepo-and-toolchain`: A new Turbo task `icons` (and the matching root
-  `pnpm icons:generate` script) must be wired so the icon pipeline runs
-  before `apps/web#build`.
+- `monorepo-and-toolchain`: The root `pnpm build` script must chain
+  `pnpm icons:generate` before `turbo build` so the icon pipeline always
+  runs before the workspace builds.
 
 ## Impact
 
@@ -80,8 +80,8 @@ not require manually re-exporting icons in a design tool.
   - `apps/web/src/app/favicon.ico`
 - Modified files:
   - `apps/web/src/app/layout.tsx` (`metadata.icons`)
-  - `package.json` (root): new `icons:generate` script
-  - `turbo.json`: new `icons` task with `apps/web#build` depending on it
+  - `package.json` (root): new `icons:generate` script and `build` script
+    chains `icons:generate && turbo build`
 - New runtime dependency (dev-only): `sharp` (pinned, declared under
   `devDependencies` in the root `package.json` — not in `apps/web` runtime).
 - No backend, schema, or DB impact.

@@ -37,24 +37,38 @@ margins on every side. The script MUST clamp `innerSize` to a minimum of 1
 pixel. The margin value MUST be configurable per output, with a default of
 `0.05` for standard icons and `0.10` for `maskable-icon` outputs.
 
-#### Scenario: A 512×512 icon at 5% margin centers a 461×461 artwork
+When an output declares `transparent: true`, the script MUST strip the
+SVG's full-bleed background `<rect>` (any `<rect>` whose `width` and
+`height` equal the SVG's `viewBox` dimensions) before rasterizing so the
+glyph alone survives into the inner square and the configured margin is
+visibly transparent in the final bitmap. When an output declares
+`transparent: false`, the script MUST keep the SVG's background rect and
+MUST fill the outer margin band (the area outside the inner rasterized
+square) with the SVG's detected background fill color so the bitmap has a
+solid backdrop with no transparent pixels. The script MUST detect the
+background color by parsing the `fill` attribute (or `style="fill:..."`
+declaration) on the full-bleed `<rect>`; if no full-bleed rect exists or
+its fill cannot be parsed, the margin MUST fall back to transparent.
 
-- **WHEN** the config declares an output with `size: 512` and `margin: 0.05`
+#### Scenario: A 512×512 icon at 5% margin centers a 461×461 artwork (transparent)
+
+- **WHEN** the config declares `size: 512`, `margin: 0.05`, and `transparent: true`
 - **THEN** the script writes a 512×512 PNG
 - **AND** the colored artwork occupies a 461×461 area centered in the bitmap
-- **AND** the 26-pixel-wide border on every side is fully transparent
+- **AND** the 26-pixel-wide border on every side has an alpha value of `0`
 
-#### Scenario: A 192×192 icon at 10% margin centers a 154×154 artwork (maskable)
+#### Scenario: A 512×512 icon at 10% margin centers a 410×410 artwork on a solid backdrop (non-transparent)
 
-- **WHEN** the config declares a `maskable-icon` output with `size: 512` and `margin: 0.10`
+- **WHEN** the config declares `size: 512`, `margin: 0.10`, and `transparent: false` and the source SVG contains a full-bleed `<rect fill="#fdfdfd">`
 - **THEN** the script writes a 512×512 PNG
 - **AND** the colored artwork occupies a 410×410 area centered in the bitmap
-- **AND** the 51-pixel-wide border on every side is fully transparent
+- **AND** every pixel in the outer 51-pixel border on every side has the fill color `#fdfdfd` (alpha = 1)
 
-#### Scenario: Edge pixels are transparent for any margin greater than zero
+#### Scenario: A `transparent: true` output strips the SVG's full-bleed background
 
-- **WHEN** the script writes any PNG output whose configured `margin` is strictly greater than `0`
-- **THEN** every pixel in the outermost `round(size * margin)` rows and columns of the bitmap has an alpha value of `0`
+- **WHEN** the config declares `transparent: true` and the source SVG contains a full-bleed `<rect>` matching the viewBox
+- **THEN** the script writes a PNG whose glyph-only inner region contains the logo paths but no background fill
+- **AND** the outer margin band remains fully transparent
 
 ### Requirement: The favicon output SHALL be a multi-resolution `.ico` containing 16, 32, and 48 pixel variants
 
@@ -69,14 +83,13 @@ density.
 - **THEN** the file is a valid `.ico` container
 - **AND** it contains exactly three sub-images at 16×16, 32×32, and 48×48
 
-### Requirement: The icon pipeline SHALL be wired into the root pnpm scripts and the Turborepo build graph
+### Requirement: The icon pipeline SHALL be wired into the root pnpm scripts
 
 The repository MUST expose a root-level `pnpm icons:generate` script that
-runs `node scripts/generate-icons.mjs`, and `turbo.json` MUST declare a
-top-level `icons` task whose `outputs` include the regenerated files under
-`apps/web/public/` and `apps/web/src/app/favicon.ico`. The `apps/web#build`
-Turbo task MUST declare `"dependsOn": ["^icons"]` so that icon regeneration
-runs before the web build.
+runs `node scripts/generate-icons.mjs`, and the root `pnpm build` script
+MUST invoke `pnpm icons:generate` before delegating to `turbo build` so the
+icon pipeline runs to completion before Turborepo orchestrates the
+workspace builds.
 
 #### Scenario: `pnpm icons:generate` works from any cwd
 
@@ -85,9 +98,9 @@ runs before the web build.
 
 #### Scenario: `pnpm build` regenerates icons before building the web app
 
-- **WHEN** a developer runs `pnpm build` and the SVG or config has changed since the last icon generation
-- **THEN** Turborepo runs the `icons` task before `apps/web#build`
-- **AND** the Next.js build picks up the freshly generated PNG/ICO artifacts
+- **WHEN** a developer runs `pnpm build` after editing `apps/web/public/icon.svg` or `scripts/generate-icons.config.mjs`
+- **THEN** the root `build` script invokes `pnpm icons:generate` first
+- **AND** Turborepo then orchestrates the workspace builds with the regenerated PNG/ICO artifacts already in place
 
 ### Requirement: The icon pipeline SHALL be unit-tested with colocated Vitest specs
 

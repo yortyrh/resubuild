@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "dev": "turbo dev",
-    "build": "turbo build",
+    "build": "pnpm icons:generate && turbo build",
+    "icons:generate": "node scripts/generate-icons.mjs",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "prettier --write .",
