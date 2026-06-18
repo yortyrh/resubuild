@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import logoSvg from '@/components/landing/logo-vectorized.svg';
 
 export function MarketingFooter() {
   return (
@@ -7,7 +8,7 @@ export function MarketingFooter() {
       <div className="mx-auto flex max-w-7xl flex-col items-start gap-8 px-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-3">
           <Image
-            src="/logo-vectorized.svg"
+            src={logoSvg}
             alt="Resubuild"
             width={2172}
             height={724}

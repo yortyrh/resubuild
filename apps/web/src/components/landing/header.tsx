@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import logoSvg from '@/components/landing/logo-vectorized.svg';
 
 const NAV_LINKS = [
   { href: '/#features', label: 'Features' },
@@ -13,7 +14,7 @@ export function MarketingHeader() {
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex items-center">
           <Image
-            src="/logo-vectorized.svg"
+            src={logoSvg}
             alt="Resubuild"
             width={2172}
             height={724}
