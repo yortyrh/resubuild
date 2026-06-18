@@ -1,5 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1254" height="1254" viewBox="0 0 5016 5016">
-<rect width="5016" height="5016" fill="#fdfdfd" data-index="0"></rect>
+<defs>
+  <clipPath id="rounded-frame"><rect width="5016" height="5016" rx="500" ry="500"></rect></clipPath>
+</defs>
+<rect width="5016" height="5016" rx="500" ry="500" fill="#fdfdfd" data-index="0"></rect>
+<g clip-path="url(#rounded-frame)" transform="translate(752.4 752.4) scale(0.7)">
 <path fill="#5518e0" stroke="#5518e0" stroke-width="0.80" stroke-linejoin="round" fill-rule="evenodd" d="M621.5 14.19 c-4.4 .38 -13.62 1.17 -20.5 1.75 -21.16 1.79 -26.83 2.6 -61
 8.67 -10.91 1.94 -37.62 8.45 -55.31 13.47 -14.59 4.15 -38.19 12.72 -55.69
 20.23 -5.77 2.48 -16.68 7.47 -24.23 11.1 -7.55 3.62 -14.02 6.59 -14.38 6.59
@@ -225,4 +229,5 @@ c325.69 .09 599.13 -.14 607.66 -.52 8.53 -.37 20.22 -1.37 26 -2.22 16.58
 8.73 16.51 30.31 57.16 35.05 66 5.14 9.58 30.06 58.28 48.46 94.68 6.72 13.3
 12.39 24.01 12.59 23.81 .2 -.2 -11.76 -24.36 -26.6 -53.68 -40.55 -80.16
 -105.25 -200.97 -105.25 -196.54z" data-index="7"></path>
+</g>
 </svg>
