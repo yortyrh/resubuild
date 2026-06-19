@@ -10,7 +10,7 @@ import {
 
 function ApplicationRowSkeleton() {
   return (
-    <TableRow className="border-[#E3E3E3] hover:bg-transparent">
+    <TableRow className="divider-soft hover:bg-transparent">
       <TableCell className="py-3">
         <Skeleton className="h-5 w-3/5" />
       </TableCell>
@@ -43,7 +43,7 @@ export function ApplicationListSkeleton() {
       <div className="surface-soft text-card-foreground overflow-hidden">
         <Table aria-label="Applications">
           <TableHeader>
-            <TableRow className="border-[#E3E3E3] hover:bg-transparent">
+            <TableRow className="divider-soft hover:bg-transparent">
               <TableHead className="text-muted-foreground bg-muted/30 h-10 text-xs font-medium uppercase tracking-wide">
                 Company
               </TableHead>

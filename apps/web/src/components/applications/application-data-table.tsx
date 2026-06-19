@@ -32,7 +32,7 @@ export function DataTable<TData, TValue>({
       <Table aria-label={caption}>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="border-[#E3E3E3] hover:bg-transparent">
+            <TableRow key={headerGroup.id} className="divider-soft hover:bg-transparent">
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
@@ -49,7 +49,11 @@ export function DataTable<TData, TValue>({
         <TableBody>
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} data-state={row.getIsSelected() ? 'selected' : undefined}>
+              <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() ? 'selected' : undefined}
+                className="divider-soft"
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id} className="py-3">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
