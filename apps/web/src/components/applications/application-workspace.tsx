@@ -5,15 +5,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, Eye, FileDown, PenLine, Printer, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { ApplicationLetterEditDialog } from '@/components/applications/application-letter-edit-dialog';
 import { ApplicationPrepareActions } from '@/components/applications/application-prepare-actions';
 import { ApplicationPrepareProgressBar } from '@/components/applications/application-prepare-progress-bar';
 import { ApplicationUpdateDialog } from '@/components/applications/application-update-dialog';
 import { ApplicationWorkspaceBreadcrumb } from '@/components/applications/application-workspace-breadcrumb';
 import { ApplicationWorkspaceSkeleton } from '@/components/applications/application-workspace-skeleton';
 import { BasicsSectionView } from '@/components/cv/basics-section-view';
-import { MarkdownEditor, type MarkdownEditorHandle } from '@/components/cv/markdown-editor';
+import { MarkdownView } from '@/components/cv/markdown-view';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -22,7 +23,6 @@ import {
   getApplicationLetterHtml,
   getCv,
   type JobApplicationSummary,
-  updateApplicationLetter,
 } from '@/lib/api';
 import {
   formatCoverLetterHtmlForClipboard,
@@ -96,12 +96,10 @@ export function ApplicationWorkspace({ id }: { id: string }) {
     void queryClient.invalidateQueries({ queryKey: ['applications'] });
     router.replace(`/dashboard/applications/${updateDraftId}`);
   }, [updateDraft?.status, updateDraftId, queryClient, router]);
-  const [letterDraft, setLetterDraft] = useState('');
-  const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
+  const [letterEditOpen, setLetterEditOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<WorkspaceTabId>(() => readStoredWorkspaceTab());
-  const markdownEditorRef = useRef<MarkdownEditorHandle>(null);
 
   const handleTabChange = (value: string) => {
     if ((WORKSPACE_TAB_IDS as readonly string[]).includes(value)) {
@@ -111,13 +109,6 @@ export function ApplicationWorkspace({ id }: { id: string }) {
     }
   };
 
-  useEffect(() => {
-    if (data?.coverLetter != null) {
-      setLetterDraft(data.coverLetter);
-      markdownEditorRef.current?.setMarkdown(data.coverLetter);
-    }
-  }, [data?.coverLetter]);
-
   const copyRichText = async () => {
     if (!data) return;
 
@@ -126,7 +117,8 @@ export function ApplicationWorkspace({ id }: { id: string }) {
       data.jobTitle,
       data.jobCompany,
     );
-    const plain = formatCoverLetterPlainText(emailSubject, letterDraft);
+    const letter = data.coverLetter ?? '';
+    const plain = formatCoverLetterPlainText(emailSubject, letter);
 
     try {
       const html = await getApplicationLetterHtml(id);
@@ -141,19 +133,6 @@ export function ApplicationWorkspace({ id }: { id: string }) {
     } catch {
       await navigator.clipboard.writeText(plain);
       toast.success('Cover letter copied as plain text');
-    }
-  };
-
-  const saveLetter = async () => {
-    setSaving(true);
-    try {
-      await updateApplicationLetter(id, letterDraft);
-      await queryClient.invalidateQueries({ queryKey: ['application', id] });
-      toast.success('Letter saved');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Save failed');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -176,11 +155,6 @@ export function ApplicationWorkspace({ id }: { id: string }) {
 
     setPrinting(true);
     try {
-      if (letterDraft !== data.coverLetter) {
-        await updateApplicationLetter(id, letterDraft);
-        await queryClient.invalidateQueries({ queryKey: ['application', id] });
-      }
-
       const html = await getApplicationLetterHtml(id);
       printHtmlDocument(html);
     } catch (error) {
@@ -264,6 +238,13 @@ export function ApplicationWorkspace({ id }: { id: string }) {
 
       <ApplicationUpdateDialog application={data} open={updateOpen} onOpenChange={setUpdateOpen} />
 
+      <ApplicationLetterEditDialog
+        applicationId={id}
+        open={letterEditOpen}
+        onOpenChange={setLetterEditOpen}
+        initialValue={data.coverLetter ?? ''}
+      />
+
       <div className="surface-soft text-card-foreground p-4">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -294,6 +275,15 @@ export function ApplicationWorkspace({ id }: { id: string }) {
               ) : null}
               {activeTab === 'cover-letter' ? (
                 <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={data.updateInProgress}
+                    onClick={() => setLetterEditOpen(true)}
+                  >
+                    <PenLine className="h-4 w-4" />
+                    Edit
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => void copyRichText()}>
                     <Copy className="h-4 w-4" />
                     Copy letter
@@ -342,17 +332,9 @@ export function ApplicationWorkspace({ id }: { id: string }) {
           </TabsContent>
 
           <TabsContent value="cover-letter" className="space-y-3">
-            <MarkdownEditor
-              ref={markdownEditorRef}
-              value={letterDraft}
-              onChange={setLetterDraft}
-              variant="block"
-              placeholder="Cover letter markdown…"
-              className="cover-letter-editor"
-            />
-            <Button size="sm" disabled={saving} onClick={() => void saveLetter()}>
-              {saving ? 'Saving…' : 'Save letter'}
-            </Button>
+            <div className="max-h-[60vh] overflow-y-auto pr-1">
+              <MarkdownView value={data.coverLetter} variant="block" />
+            </div>
           </TabsContent>
         </Tabs>
       </div>

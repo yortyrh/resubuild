@@ -9,7 +9,6 @@ import { ApplicationWorkspace } from './application-workspace';
 const mockGetApplication = vi.fn();
 const mockGetCv = vi.fn();
 const mockGetApplicationLetterHtml = vi.fn();
-const mockUpdateApplicationLetter = vi.fn();
 const mockDownloadApplicationLetterPdf = vi.fn();
 
 vi.mock('@/lib/api', async (importOriginal) => {
@@ -19,14 +18,14 @@ vi.mock('@/lib/api', async (importOriginal) => {
     getApplication: (...args: unknown[]) => mockGetApplication(...args),
     getCv: (...args: unknown[]) => mockGetCv(...args),
     getApplicationLetterHtml: (...args: unknown[]) => mockGetApplicationLetterHtml(...args),
-    updateApplicationLetter: (...args: unknown[]) => mockUpdateApplicationLetter(...args),
     downloadApplicationLetterPdf: (...args: unknown[]) => mockDownloadApplicationLetterPdf(...args),
   };
 });
 
-vi.mock('@/components/cv/markdown-editor', () => ({
-  MarkdownEditor: () => <div data-testid="mock-markdown-editor" />,
-  MarkdownEditorHandle: class {},
+vi.mock('@/components/cv/markdown-view', () => ({
+  MarkdownView: ({ value }: { value?: string | null }) => (
+    <div data-testid="mock-markdown-view">{value ?? ''}</div>
+  ),
 }));
 
 vi.mock('@/components/cv/basics-section-view', () => ({
@@ -35,6 +34,10 @@ vi.mock('@/components/cv/basics-section-view', () => ({
 
 vi.mock('@/components/applications/application-update-dialog', () => ({
   ApplicationUpdateDialog: () => null,
+}));
+
+vi.mock('@/components/applications/application-letter-edit-dialog', () => ({
+  ApplicationLetterEditDialog: () => null,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -177,5 +180,64 @@ describe('ApplicationWorkspace tabs', () => {
     const updateButton = await screen.findByRole('button', { name: /Update/ });
     expect(updateButton).toHaveAttribute('aria-label', 'Update application');
     expect(within(updateButton).getByText('Update')).toHaveClass('hidden', 'sm:inline');
+  });
+});
+
+describe('ApplicationWorkspace cover letter tab', () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+    window.sessionStorage.setItem(STORAGE_KEY, 'cover-letter');
+    mockGetApplication.mockResolvedValue(readyApplication);
+    mockGetCv.mockResolvedValue({ data: { basics: { name: 'Test User' } } });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('renders the cover letter through the read-only MarkdownView', async () => {
+    renderWorkspace();
+
+    const view = await screen.findByTestId('mock-markdown-view');
+    expect(view).toHaveTextContent('Hello world');
+  });
+
+  it('caps the cover letter preview at a scrollable max height', async () => {
+    renderWorkspace();
+
+    const view = await screen.findByTestId('mock-markdown-view');
+    // The view is wrapped in a constrained container so long letters
+    // don't dominate the workspace tab — the wrapper carries the
+    // `overflow-y-auto` so the inner MarkdownView scrolls instead of
+    // pushing the rest of the page down.
+    const wrapper = view.parentElement;
+    expect(wrapper).not.toBeNull();
+    expect(wrapper).toHaveClass('overflow-y-auto');
+    expect(wrapper?.className).toMatch(/max-h-/);
+  });
+
+  it('exposes the Edit button before Copy letter in the action bar', async () => {
+    renderWorkspace();
+
+    const editButton = await screen.findByRole('button', { name: 'Edit' });
+    const copyButton = screen.getByRole('button', { name: /Copy letter/ });
+
+    expect(
+      editButton.compareDocumentPosition(copyButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('disables Edit while an update is in progress', async () => {
+    mockGetApplication.mockResolvedValue({
+      ...readyApplication,
+      updateInProgress: true,
+      updateDraftId: 'draft-1',
+    });
+
+    renderWorkspace();
+
+    const editButton = await screen.findByRole('button', { name: 'Edit' });
+    expect(editButton).toBeDisabled();
   });
 });
