@@ -332,9 +332,7 @@ export function ApplicationWorkspace({ id }: { id: string }) {
           </TabsContent>
 
           <TabsContent value="cover-letter" className="space-y-3">
-            <div className="max-h-[60vh] overflow-y-auto pr-1">
-              <MarkdownView value={data.coverLetter} variant="block" />
-            </div>
+            <MarkdownView value={data.coverLetter} variant="block" />
           </TabsContent>
         </Tabs>
       </div>

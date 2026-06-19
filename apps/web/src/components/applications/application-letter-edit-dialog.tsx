@@ -32,6 +32,7 @@ export function ApplicationLetterEditDialog({
 }: ApplicationLetterEditDialogProps) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState(initialValue);
+  const [renderMarkdown, setRenderMarkdown] = useState(open);
 
   // Re-seed the draft whenever the dialog reopens with fresh server data.
   // Closing the dialog discards any unsaved edits — this is intentional, the
@@ -39,6 +40,9 @@ export function ApplicationLetterEditDialog({
   useEffect(() => {
     if (open) {
       setDraft(initialValue);
+      setRenderMarkdown(true);
+    } else {
+      setRenderMarkdown(false);
     }
   }, [open, initialValue]);
 
@@ -73,13 +77,15 @@ export function ApplicationLetterEditDialog({
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <MarkdownEditor
-            value={draft}
-            onChange={setDraft}
-            variant="block"
-            placeholder="Cover letter markdown…"
-            className="cover-letter-editor"
-          />
+          {renderMarkdown && initialValue.trim().length > 0 && (
+            <MarkdownEditor
+              value={draft}
+              onChange={setDraft}
+              variant="block"
+              placeholder="Cover letter markdown…"
+              className="cover-letter-editor"
+            />
+          )}
         </div>
 
         <DialogFooter>

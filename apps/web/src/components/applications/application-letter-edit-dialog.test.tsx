@@ -109,8 +109,55 @@ describe('ApplicationLetterEditDialog', () => {
     renderDialog({ open: false });
 
     expect(mockUpdateApplicationLetter).not.toHaveBeenCalled();
-    // The mock editor still mounts (it isn't gated by open), but the Save
-    // button is inside the Radix portal and is only rendered when open is true.
+    // The mock editor is gated by `open` (via `renderMarkdown`), and the Save
+    // button is inside the Radix portal which only mounts when open is true.
+    expect(screen.queryByTestId('mock-editor')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+  });
+
+  it('does not render the markdown editor when initialValue is an empty string', () => {
+    renderDialog({ initialValue: '' });
+
+    expect(screen.queryByTestId('mock-editor')).not.toBeInTheDocument();
+    expect(editorValueHistory).not.toContain('');
+  });
+
+  it('does not render the markdown editor when initialValue is only whitespace', () => {
+    renderDialog({ initialValue: '   \n\t  ' });
+
+    expect(screen.queryByTestId('mock-editor')).not.toBeInTheDocument();
+  });
+
+  it('renders the markdown editor again once initialValue becomes non-empty', () => {
+    const { rerender } = render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <ApplicationLetterEditDialog
+          applicationId="app-1"
+          open
+          onOpenChange={vi.fn()}
+          initialValue=""
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.queryByTestId('mock-editor')).not.toBeInTheDocument();
+
+    rerender(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <ApplicationLetterEditDialog
+          applicationId="app-1"
+          open
+          onOpenChange={vi.fn()}
+          initialValue="Now we have a body"
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByTestId('mock-editor')).toBeInTheDocument();
+    expect(screen.getByTestId('editor-value')).toHaveTextContent('Now we have a body');
   });
 });
