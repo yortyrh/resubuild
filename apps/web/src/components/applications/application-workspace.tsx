@@ -11,6 +11,7 @@ import { ApplicationPrepareActions } from '@/components/applications/application
 import { ApplicationPrepareProgressBar } from '@/components/applications/application-prepare-progress-bar';
 import { ApplicationUpdateDialog } from '@/components/applications/application-update-dialog';
 import { ApplicationWorkspaceBreadcrumb } from '@/components/applications/application-workspace-breadcrumb';
+import { ApplicationWorkspaceSkeleton } from '@/components/applications/application-workspace-skeleton';
 import { BasicsSectionView } from '@/components/cv/basics-section-view';
 import { MarkdownEditor, type MarkdownEditorHandle } from '@/components/cv/markdown-editor';
 import { Button } from '@/components/ui/button';
@@ -190,7 +191,7 @@ export function ApplicationWorkspace({ id }: { id: string }) {
   };
 
   if (!data) {
-    return <p className="text-muted-foreground text-sm">Loading application…</p>;
+    return <ApplicationWorkspaceSkeleton />;
   }
 
   if (data.status === 'failed') {
