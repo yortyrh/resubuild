@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-### Requirement: Cover letter tab SHALL show a read-only preview, expose an Edit action, and persist edits through a dedicated dialog
+### Requirement: Cover letter tab SHALL preserve editor actions and Save
 
 The Cover letter tab SHALL render the saved cover letter markdown through the read-only `MarkdownView` component (sanitized via `rehypeSanitize`) instead of the inline `MarkdownEditor`. The tab SHALL expose an **Edit** action in its action bar before **Copy letter**. Activating the Edit action SHALL open a dedicated `ApplicationLetterEditDialog` that hosts the `MarkdownEditor` (block variant), seeds its draft from the current server value on every open, and persists changes exclusively through the `updateApplicationLetter` mutation. The mutation's `JobApplicationSummary` response SHALL be written into the react-query cache for the workspace via `queryClient.setQueryData`, after which the Cover letter tab SHALL re-render the new content without an extra GET. The workspace SHALL NOT maintain a local `letterDraft` mirror of the cover letter or an imperative editor ref bridge. The previous inline **Save letter** button SHALL NOT be rendered.
 
@@ -37,6 +37,8 @@ The Cover letter tab SHALL render the saved cover letter markdown through the re
 - **THEN** the workspace SHALL NOT call `updateApplicationLetter`
 - **AND** SHALL NOT mutate the `['application', applicationId]` cache entry
 - **AND** the Cover letter tab SHALL continue to render the previous server value
+
+## ADDED Requirements
 
 ### Requirement: Cover letter preview SHALL be capped at a scrollable max height
 
