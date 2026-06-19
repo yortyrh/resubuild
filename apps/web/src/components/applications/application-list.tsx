@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FilePlus2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/applications/application-data-table';
 import {
@@ -59,46 +59,55 @@ export function ApplicationList() {
     },
   });
 
-  async function handleExportCvPdf(row: ApplicationRow) {
-    const tailoredCvId = row.raw.tailoredCvId;
-    if (!tailoredCvId || exportingCvPdfFor || exportingLetterPdfFor) {
-      return;
-    }
+  const handleExportCvPdf = useCallback(
+    async (row: ApplicationRow) => {
+      const tailoredCvId = row.raw.tailoredCvId;
+      if (!tailoredCvId || exportingCvPdfFor || exportingLetterPdfFor) {
+        return;
+      }
 
-    setExportingCvPdfFor(row.id);
-    try {
-      const { blob, filename } = await downloadCvPdf(tailoredCvId);
-      triggerBrowserDownload(blob, filename);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to export CV as PDF');
-    } finally {
-      setExportingCvPdfFor(null);
-    }
-  }
+      setExportingCvPdfFor(row.id);
+      try {
+        const { blob, filename } = await downloadCvPdf(tailoredCvId);
+        triggerBrowserDownload(blob, filename);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to export CV as PDF');
+      } finally {
+        setExportingCvPdfFor(null);
+      }
+    },
+    [exportingCvPdfFor, exportingLetterPdfFor],
+  );
 
-  async function handleExportLetterPdf(row: ApplicationRow) {
-    if (exportingCvPdfFor || exportingLetterPdfFor) {
-      return;
-    }
+  const handleExportLetterPdf = useCallback(
+    async (row: ApplicationRow) => {
+      if (exportingCvPdfFor || exportingLetterPdfFor) {
+        return;
+      }
 
-    setExportingLetterPdfFor(row.id);
-    try {
-      const { blob, filename } = await downloadApplicationLetterPdf(row.id);
-      triggerBrowserDownload(blob, filename);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to export cover letter as PDF');
-    } finally {
-      setExportingLetterPdfFor(null);
-    }
-  }
+      setExportingLetterPdfFor(row.id);
+      try {
+        const { blob, filename } = await downloadApplicationLetterPdf(row.id);
+        triggerBrowserDownload(blob, filename);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to export cover letter as PDF');
+      } finally {
+        setExportingLetterPdfFor(null);
+      }
+    },
+    [exportingCvPdfFor, exportingLetterPdfFor],
+  );
 
-  function handlePreviewCv(row: ApplicationRow) {
-    const tailoredCvId = row.raw.tailoredCvId;
-    if (!tailoredCvId) {
-      return;
-    }
-    router.push(`/dashboard/cv/${tailoredCvId}/preview?applicationId=${row.id}`);
-  }
+  const handlePreviewCv = useCallback(
+    (row: ApplicationRow) => {
+      const tailoredCvId = row.raw.tailoredCvId;
+      if (!tailoredCvId) {
+        return;
+      }
+      router.push(`/dashboard/cv/${tailoredCvId}/preview?applicationId=${row.id}`);
+    },
+    [router],
+  );
 
   const rows = useMemo(() => data.map(toApplicationRow), [data]);
   const columns = useMemo(
@@ -112,7 +121,13 @@ export function ApplicationList() {
         exportingCvPdfFor,
         exportingLetterPdfFor,
       }),
-    [exportingCvPdfFor, exportingLetterPdfFor],
+    [
+      exportingCvPdfFor,
+      exportingLetterPdfFor,
+      handleExportCvPdf,
+      handleExportLetterPdf,
+      handlePreviewCv,
+    ],
   );
 
   const confirmDelete = async () => {

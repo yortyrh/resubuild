@@ -289,7 +289,6 @@ describe('renderPngWithMargin — non-transparent margin (transparent: false)', 
     const { data, info } = await sharp(buf).raw().toBuffer({ resolveWithObject: true });
     const channels = info.channels;
     const size = info.width;
-    const marginPx = Math.round(size * 0.2);
 
     // Sample a point in the corner of the margin band — it must match
     // the detected background color (#fdfdfd -> r=g=b=253, a=255).

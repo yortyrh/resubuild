@@ -14,6 +14,10 @@ export default defineConfig({
     testTimeout: 10_000,
     retry: 1,
     pool: 'forks',
+    // Node 25+ ships a built-in `localStorage` stub whose methods are
+    // undefined and shadow jsdom's own Storage. Disable it so jsdom wins.
+    // See https://github.com/vitest-dev/vitest/issues/8757.
+    execArgv: ['--no-webstorage'],
     // memory-budget: singleFork=true keeps all files in one fork to avoid RAM exhaustion
     // see openspec/specs/toolchain-parallelism-budget/spec.md
     // @ts-expect-error -- singleFork requires Vitest 5+; present in apps/web as a future upgrade
