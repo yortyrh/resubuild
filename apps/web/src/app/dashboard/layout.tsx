@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { SessionGate } from '@/components/auth/session-gate';
 import { DashboardTopNav } from '@/components/dashboard/dashboard-top-nav';
 import { UserMenu } from '@/components/dashboard/user-menu';
+import logoSvg from '@/components/landing/logo-vectorized.svg';
 import { AuthenticatedProviders } from '@/components/providers/authenticated-providers';
 
 export const metadata: Metadata = {
@@ -23,7 +24,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="flex min-w-0 items-center gap-3 sm:gap-6">
                 <Link href="/dashboard" className="shrink-0">
                   <Image
-                    src="/logo-vectorized.svg"
+                    src={logoSvg}
                     alt="Resubuild"
                     width={140}
                     height={50}
