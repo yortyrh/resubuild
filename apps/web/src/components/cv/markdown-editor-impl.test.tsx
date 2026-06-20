@@ -22,7 +22,7 @@ const InlineToolbar = () => (
   </>
 );
 
-const BlockToolbar = () => (
+const BlockToolbar = ({ withInsertCodeBlock = false }: { withInsertCodeBlock?: boolean }) => (
   <>
     <button type="button" data-testid="undo-redo">
       UndoRedo
@@ -45,6 +45,11 @@ const BlockToolbar = () => (
     <button type="button" data-testid="lists-toggle">
       Lists
     </button>
+    {withInsertCodeBlock ? (
+      <button type="button" data-testid="insert-code-block">
+        CodeBlock
+      </button>
+    ) : null}
   </>
 );
 
@@ -87,6 +92,7 @@ vi.mock('@mdxeditor/editor', () => {
       }
       const hasToolbar = plugins?.some((p) => p === 'toolbarPlugin');
       const isInline = contentEditableClassName?.includes('inline');
+      const hasCodeBlock = plugins?.some((p) => p === 'codeBlockPlugin');
       return (
         <div
           data-testid="mdx-editor"
@@ -94,7 +100,8 @@ vi.mock('@mdxeditor/editor', () => {
           data-content-class={contentEditableClassName ?? ''}
           data-markdown={markdown ?? ''}
         >
-          {hasToolbar && (isInline ? <InlineToolbar /> : <BlockToolbar />)}
+          {hasToolbar &&
+            (isInline ? <InlineToolbar /> : <BlockToolbar withInsertCodeBlock={hasCodeBlock} />)}
         </div>
       );
     },
@@ -105,6 +112,8 @@ vi.mock('@mdxeditor/editor', () => {
     linkDialogPlugin: vi.fn(() => 'linkDialogPlugin'),
     tablePlugin: vi.fn(() => 'tablePlugin'),
     markdownShortcutPlugin: vi.fn(() => 'markdownShortcutPlugin'),
+    headingsPlugin: vi.fn(() => 'headingsPlugin'),
+    codeBlockPlugin: vi.fn(() => 'codeBlockPlugin'),
     BoldItalicUnderlineToggles: () => (
       <button type="button" data-testid="bold-italic-underline">
         BIU
@@ -133,6 +142,11 @@ vi.mock('@mdxeditor/editor', () => {
     ListsToggle: () => (
       <button type="button" data-testid="lists-toggle">
         Lists
+      </button>
+    ),
+    InsertCodeBlock: () => (
+      <button type="button" data-testid="insert-code-block">
+        CodeBlock
       </button>
     ),
     UndoRedo: () => (
@@ -249,5 +263,39 @@ describe('MarkdownEditorImpl', () => {
     // The recorder must contain the initial value as the last
     // recorded entry (no imperative setter was ever called).
     expect(markdownHistory[markdownHistory.length - 1]).toBe('initial');
+  });
+
+  describe('freeForm mode (cover letter, job description)', () => {
+    it('registers 10 plugins when freeForm is true (adds headings + codeBlock)', () => {
+      const { getByTestId } = render(
+        <MarkdownEditorImpl value="" onChange={vi.fn()} variant="block" freeForm />,
+      );
+      const editor = getByTestId('mdx-editor');
+      // 10 plugins: headings, lists, quote, thematicBreak, link, linkDialog, table,
+      // codeBlock, toolbar, markdownShortcut
+      expect(editor).toHaveAttribute('data-plugins', '10');
+    });
+
+    it('renders the InsertCodeBlock toolbar item when freeForm is true', () => {
+      render(<MarkdownEditorImpl value="" onChange={vi.fn()} variant="block" freeForm />);
+      expect(screen.getByTestId('insert-code-block')).toBeInTheDocument();
+    });
+
+    it('still omits InsertCodeBlock when freeForm is false', () => {
+      render(<MarkdownEditorImpl value="" onChange={vi.fn()} variant="block" />);
+      expect(screen.queryByTestId('insert-code-block')).not.toBeInTheDocument();
+    });
+
+    it('does not change the inline toolbar when freeForm is true', () => {
+      render(<MarkdownEditorImpl value="" onChange={vi.fn()} variant="inline" freeForm />);
+      // Inline variant toolbar is intentionally identical with or without freeForm
+      expect(screen.getByTestId('undo-redo')).toBeInTheDocument();
+      expect(screen.getByTestId('bold-italic-underline')).toBeInTheDocument();
+      expect(screen.getByTestId('strike-through')).toBeInTheDocument();
+      expect(screen.getByTestId('code-toggle')).toBeInTheDocument();
+      expect(screen.getByTestId('create-link')).toBeInTheDocument();
+      expect(screen.queryByTestId('block-type-select')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('insert-code-block')).not.toBeInTheDocument();
+    });
   });
 });

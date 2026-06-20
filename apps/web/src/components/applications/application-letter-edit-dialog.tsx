@@ -82,6 +82,7 @@ export function ApplicationLetterEditDialog({
               value={draft}
               onChange={setDraft}
               variant="block"
+              freeForm
               placeholder="Cover letter markdown…"
               className="cover-letter-editor"
             />

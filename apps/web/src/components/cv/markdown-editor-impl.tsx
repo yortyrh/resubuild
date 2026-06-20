@@ -7,6 +7,9 @@ import {
   BoldItalicUnderlineToggles,
   CodeToggle,
   CreateLink,
+  codeBlockPlugin,
+  headingsPlugin,
+  InsertCodeBlock,
   ListsToggle,
   linkDialogPlugin,
   linkPlugin,
@@ -21,7 +24,7 @@ import {
   toolbarPlugin,
   UndoRedo,
 } from '@mdxeditor/editor';
-import { type FC, forwardRef, useImperativeHandle, useRef } from 'react';
+import { type FC, forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 export interface MarkdownEditorProps {
@@ -30,15 +33,21 @@ export interface MarkdownEditorProps {
   variant?: 'inline' | 'block';
   placeholder?: string;
   className?: string;
+  /**
+   * Opt into the full markdown grammar (headings, code blocks). Off by default so
+   * CV section fields keep their constrained grammar; enable on long-form
+   * authoring surfaces like the cover letter or job description.
+   */
+  freeForm?: boolean;
 }
 
 export interface MarkdownEditorHandle {
   setMarkdown: (value: string) => void;
 }
 
-type ToolbarContentsProps = Pick<MarkdownEditorProps, 'variant'>;
+type ToolbarContentsProps = Pick<MarkdownEditorProps, 'variant' | 'freeForm'>;
 
-const ToolbarContents: FC<ToolbarContentsProps> = ({ variant }) => {
+const ToolbarContents: FC<ToolbarContentsProps> = ({ variant, freeForm = false }) => {
   if (variant === 'inline') {
     return (
       <>
@@ -59,16 +68,33 @@ const ToolbarContents: FC<ToolbarContentsProps> = ({ variant }) => {
       <CodeToggle />
       <CreateLink />
       <ListsToggle options={['bullet', 'number']} />
+      {freeForm ? <InsertCodeBlock /> : null}
     </>
   );
 };
 
 export const MarkdownEditorImpl = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
   function MarkdownEditorImpl(
-    { value = '', onChange, variant = 'block', placeholder, className },
+    { value = '', onChange, variant = 'block', placeholder, className, freeForm = false },
     ref,
   ) {
     const editorRef = useRef<MDXEditorMethods>(null);
+
+    const plugins = useMemo(() => {
+      const basePlugins = [
+        listsPlugin(),
+        quotePlugin(),
+        thematicBreakPlugin(),
+        linkPlugin(),
+        linkDialogPlugin(),
+        tablePlugin(),
+        toolbarPlugin({
+          toolbarContents: () => <ToolbarContents variant={variant} freeForm={freeForm} />,
+        }),
+        markdownShortcutPlugin(),
+      ];
+      return freeForm ? [headingsPlugin(), codeBlockPlugin(), ...basePlugins] : basePlugins;
+    }, [variant, freeForm]);
 
     useImperativeHandle(
       ref,
@@ -94,16 +120,7 @@ export const MarkdownEditorImpl = forwardRef<MarkdownEditorHandle, MarkdownEdito
           onChange={onChange}
           placeholder={placeholder}
           contentEditableClassName={cn(variant === 'inline' && 'mdxeditor-content--inline')}
-          plugins={[
-            listsPlugin(),
-            quotePlugin(),
-            thematicBreakPlugin(),
-            linkPlugin(),
-            linkDialogPlugin(),
-            tablePlugin(),
-            toolbarPlugin({ toolbarContents: () => <ToolbarContents variant={variant} /> }),
-            markdownShortcutPlugin(),
-          ]}
+          plugins={plugins}
         />
       </div>
     );

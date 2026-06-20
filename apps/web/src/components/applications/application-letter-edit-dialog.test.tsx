@@ -17,12 +17,22 @@ vi.mock('@/lib/api', async (importOriginal) => {
 });
 
 const editorValueHistory: string[] = [];
+const editorPropsHistory: { freeForm?: boolean }[] = [];
 
 vi.mock('@/components/cv/markdown-editor', () => ({
-  MarkdownEditor: ({ value, onChange }: { value: string; onChange: (next: string) => void }) => {
+  MarkdownEditor: ({
+    value,
+    onChange,
+    freeForm,
+  }: {
+    value: string;
+    onChange: (next: string) => void;
+    freeForm?: boolean;
+  }) => {
     editorValueHistory.push(value);
+    editorPropsHistory.push({ freeForm });
     return (
-      <div data-testid="mock-editor">
+      <div data-testid="mock-editor" data-free-form={freeForm ? 'true' : 'false'}>
         <span data-testid="editor-value">{value}</span>
         <button type="button" data-testid="simulate-edit" onClick={() => onChange('Edited body')}>
           edit
@@ -71,6 +81,7 @@ function renderDialog(props: {
 describe('ApplicationLetterEditDialog', () => {
   beforeEach(() => {
     editorValueHistory.length = 0;
+    editorPropsHistory.length = 0;
     mockUpdateApplicationLetter.mockResolvedValue({
       ...readyApplication,
       coverLetter: 'Edited body',
@@ -159,5 +170,28 @@ describe('ApplicationLetterEditDialog', () => {
 
     expect(screen.getByTestId('mock-editor')).toBeInTheDocument();
     expect(screen.getByTestId('editor-value')).toHaveTextContent('Now we have a body');
+  });
+
+  it('seeds the editor with markdown containing headings without mangling it', () => {
+    const initialValue = '## Some heading\nSome text';
+    renderDialog({ initialValue });
+
+    // The dialog passes the value through unchanged so MDXEditor's `markdown`
+    // prop receives the full `## ` prefix; the headings plugin (registered via
+    // `freeForm`) is what turns that prefix into an <h2> at render time.
+    expect(editorValueHistory).toContain(initialValue);
+    // Strip the newline so we can match against the DOM-normalized text node.
+    expect(screen.getByTestId('editor-value')).toHaveTextContent('## Some heading Some text');
+  });
+
+  it('opens the editor in free-form mode so headings render as headings', () => {
+    renderDialog({});
+
+    // The cover letter surface accepts the full markdown grammar (headings,
+    // code blocks), distinct from the CV section editor which keeps its
+    // constrained plugin list. Asserting `freeForm=true` here pins the choice
+    // so a future regression that drops the prop would fail this test.
+    expect(screen.getByTestId('mock-editor')).toHaveAttribute('data-free-form', 'true');
+    expect(editorPropsHistory.at(-1)?.freeForm).toBe(true);
   });
 });
