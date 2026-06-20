@@ -223,8 +223,8 @@ pnpm --filter @resubuild/api start:debug
 ### Notes
 
 - The inspector port (`9229`) binds to all interfaces (`0.0.0.0`). Do not expose port 9229 publicly.
-- `DevtoolsModule` is gated on `NODE_ENV !== 'production'` — running `pnpm start:prod` or `NODE_ENV=production node dist/main` will **not** mount `/_devtools/`.
+- `DevtoolsModule` is gated on `NODE_ENV !== 'production'` — running `pnpm start` or `NODE_ENV=production node dist/main` will **not** mount `/_devtools/`.
 
 ## Scripts
 
-See `package.json`: `pnpm dev`, `pnpm build`, `pnpm test`.
+See `package.json`: `pnpm dev`, `pnpm build`, `pnpm start`, `pnpm test`.

@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "pnpm icons:generate && turbo build",
+    "start": "pnpm -r --parallel run start",
     "icons:generate": "node scripts/generate-icons.mjs",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
