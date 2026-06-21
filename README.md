@@ -1,6 +1,5 @@
 # Resubuild
 
-
 [![GitHub stars](https://img.shields.io/github/stars/yortyrh/resubuild)](https://github.com/yortyrh/resubuild)
 [![License](https://img.shields.io/github/license/yortyrh/resubuild)](./LICENSE)
 
