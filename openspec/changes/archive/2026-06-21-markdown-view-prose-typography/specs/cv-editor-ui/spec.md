@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Block-variant MarkdownView SHALL layer `@tailwindcss/typography` so headings and other elements size correctly
 

@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Cover letter preview SHALL render headings at prose-sm typography scale
 
