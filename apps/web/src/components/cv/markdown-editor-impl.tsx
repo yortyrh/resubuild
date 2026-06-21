@@ -119,7 +119,10 @@ export const MarkdownEditorImpl = forwardRef<MarkdownEditorHandle, MarkdownEdito
           markdown={value}
           onChange={onChange}
           placeholder={placeholder}
-          contentEditableClassName={cn(variant === 'inline' && 'mdxeditor-content--inline')}
+          contentEditableClassName={cn(
+            variant === 'inline' && 'mdxeditor-content--inline',
+            variant === 'block' && 'prose prose-sm max-w-none',
+          )}
           plugins={plugins}
         />
       </div>

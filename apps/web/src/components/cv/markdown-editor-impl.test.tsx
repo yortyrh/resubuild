@@ -229,11 +229,14 @@ describe('MarkdownEditorImpl', () => {
     );
   });
 
-  it('applies empty contentEditable class for block variant', () => {
+  it('applies tailwind typography to the block variant contentEditable so headings, lists, etc. render with prose defaults', () => {
     const { getByTestId } = render(
       <MarkdownEditorImpl value="" onChange={vi.fn()} variant="block" />,
     );
-    expect(getByTestId('mdx-editor')).toHaveAttribute('data-content-class', '');
+    expect(getByTestId('mdx-editor')).toHaveAttribute(
+      'data-content-class',
+      'prose prose-sm max-w-none',
+    );
   });
 
   it('exposes a setMarkdown ref that pushes new content into the editor', () => {
