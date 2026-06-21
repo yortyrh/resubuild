@@ -21,8 +21,8 @@ The dashboard user-menu button always renders a generic `UserRound` icon, even w
 
 ## Impact
 
-- **API**: `apps/api/src/auth/auth.controller.ts` (`me` handler), `apps/api/src/auth/session.types.ts` (`AuthMeResponse.user` gains `picture?: string | null`), and the `SupabaseAuthGuard` / `AuthenticatedRequest` plumbing to expose the metadata avatar URL.
-- **API unit tests**: extend `apps/api/src/auth/auth.controller.spec.ts` (or equivalent) with a scenario asserting `picture` is populated from `user_metadata.avatar_url` and `null` when missing.
-- **Web**: `apps/web/src/lib/api.ts` (`AuthMe` interface + `fetchAuthMe` typing), `apps/web/src/lib/queries/auth-queries.ts` (re-export type if needed), and `apps/web/src/components/dashboard/user-menu.tsx` (avatar rendering + fallback).
-- **Web tests**: extend `apps/web/src/components/dashboard/user-menu.test.tsx` to cover both branches (picture present vs absent).
-- **No schema, storage, or new dependencies** — purely additive fields and a UI swap.
+- **API**: `apps/api/src/auth/auth.controller.ts` (`me` handler), `apps/api/src/auth/session.types.ts` (`AuthMeResponse.user` gains `picture?: string | null`), `apps/api/src/auth/auth-user.types.ts` (`AuthUser` gains `userMetadata?`), and `apps/api/src/auth/supabase-auth.guard.ts` (attach `userMetadata` after `supabase.auth.getUser`).
+- **API unit tests**: `apps/api/src/auth/auth.controller.spec.ts` gains 4 scenarios (avatar_url, legacy picture, missing metadata, empty string); `apps/api/src/auth/supabase-auth.guard.spec.ts` "Valid token" scenario updated to assert `userMetadata` is attached.
+- **Web**: `apps/web/src/lib/api.ts` (`AuthMe.user.picture?`), `apps/web/src/lib/queries/auth-queries.ts` (consolidate duplicate `AuthMe` by re-exporting from `@/lib/api`), and `apps/web/src/components/dashboard/user-menu.tsx` (read `useAuthMe()`, render avatar `<img>` with `onError` fallback to `UserRound` icon).
+- **Web tests**: `apps/web/src/components/dashboard/user-menu.test.tsx` gains 2 scenarios (avatar renders, fallback renders) and adds `afterEach(cleanup)`.
+- **No schema, storage, or new dependencies** — purely additive fields, a guard attachment, and a UI swap.

@@ -87,6 +87,79 @@ describe('AuthController', () => {
       user: {
         id: 'user-uuid',
         email: 'me@test.dev',
+        picture: null,
+      },
+    });
+  });
+
+  it('Scenario: me with avatar_url user_metadata THEN exposes picture from avatar_url', () => {
+    const req = {
+      user: {
+        id: 'user-uuid',
+        email: 'me@test.dev',
+        userMetadata: { avatar_url: 'https://cdn.example.com/avatar.png' },
+      },
+    } as unknown as AuthenticatedRequest;
+
+    expect(controller.me(req)).toEqual({
+      user: {
+        id: 'user-uuid',
+        email: 'me@test.dev',
+        picture: 'https://cdn.example.com/avatar.png',
+      },
+    });
+  });
+
+  it('Scenario: me with legacy picture metadata but no avatar_url THEN falls back to picture', () => {
+    const req = {
+      user: {
+        id: 'user-uuid',
+        email: 'me@test.dev',
+        userMetadata: { picture: 'https://cdn.example.com/legacy.png' },
+      },
+    } as unknown as AuthenticatedRequest;
+
+    expect(controller.me(req)).toEqual({
+      user: {
+        id: 'user-uuid',
+        email: 'me@test.dev',
+        picture: 'https://cdn.example.com/legacy.png',
+      },
+    });
+  });
+
+  it('Scenario: me with no avatar metadata THEN picture is null', () => {
+    const req = {
+      user: {
+        id: 'user-uuid',
+        email: 'me@test.dev',
+        userMetadata: { full_name: 'Test User' },
+      },
+    } as unknown as AuthenticatedRequest;
+
+    expect(controller.me(req)).toEqual({
+      user: {
+        id: 'user-uuid',
+        email: 'me@test.dev',
+        picture: null,
+      },
+    });
+  });
+
+  it('Scenario: me with empty-string avatar_url THEN picture is null', () => {
+    const req = {
+      user: {
+        id: 'user-uuid',
+        email: 'me@test.dev',
+        userMetadata: { avatar_url: '   ' },
+      },
+    } as unknown as AuthenticatedRequest;
+
+    expect(controller.me(req)).toEqual({
+      user: {
+        id: 'user-uuid',
+        email: 'me@test.dev',
+        picture: null,
       },
     });
   });

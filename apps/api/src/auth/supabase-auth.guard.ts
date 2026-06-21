@@ -45,6 +45,7 @@ export class SupabaseAuthGuard implements CanActivate {
       email: user.email,
       accessToken: token,
       authMethod: 'jwt',
+      userMetadata: (user.user_metadata ?? {}) as Record<string, unknown>,
     };
 
     return true;

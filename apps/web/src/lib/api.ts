@@ -31,7 +31,16 @@ export interface CvRecord {
 export type { AuthFeatures } from '@/lib/auth/features';
 
 export interface AuthMe {
-  user: { id: string; email?: string };
+  user: {
+    id: string;
+    email?: string;
+    /**
+     * Optional profile picture URL sourced from the authenticated Supabase
+     * user's `user_metadata.avatar_url` (falling back to `user_metadata.picture`).
+     * `null` when neither metadata key is present or both are empty strings.
+     */
+    picture?: string | null;
+  };
   has_password: boolean;
 }
 

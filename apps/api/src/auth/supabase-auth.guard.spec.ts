@@ -84,7 +84,7 @@ describe('SupabaseAuthGuard', () => {
 
   it('Scenario: Valid token THEN attaches user.id, email, accessToken', async () => {
     const getUser = jest.fn().mockResolvedValue({
-      data: { user: { id: 'uuid-123', email: 'me@test.com' } },
+      data: { user: { id: 'uuid-123', email: 'me@test.com', user_metadata: {} } },
       error: null,
     });
     mockedCreateClient.mockReturnValue({ auth: { getUser } } as never);
@@ -104,6 +104,7 @@ describe('SupabaseAuthGuard', () => {
       email: 'me@test.com',
       accessToken: 'good.token.part',
       authMethod: 'jwt',
+      userMetadata: {},
     });
   });
 });

@@ -35,8 +35,17 @@ export class AuthController {
   @Get('me')
   @UseGuards(SupabaseAuthGuard)
   me(@Req() req: AuthenticatedRequest): AuthMeResponse {
+    const metadata = req.user.userMetadata ?? {};
+    const candidate = (metadata.avatar_url ?? metadata.picture) as unknown;
+    const picture =
+      typeof candidate === 'string' && candidate.trim().length > 0 ? candidate.trim() : null;
+
     return {
-      user: { id: req.user.id, email: req.user.email },
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        picture,
+      },
     };
   }
 }

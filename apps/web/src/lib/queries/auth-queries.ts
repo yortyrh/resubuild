@@ -1,9 +1,12 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import type { AuthMe } from '@/lib/api';
 import { fetchAuthMe } from '@/lib/api';
 import { getAuthFeatures } from '@/lib/auth/features';
 import { getSupabaseClient } from '@/lib/supabase/client';
+
+export type { AuthMe } from '@/lib/api';
 
 export type { AuthFeatures } from '@/lib/auth/features';
 
@@ -68,11 +71,6 @@ export function useAuthSession() {
     },
     staleTime: Infinity,
   });
-}
-
-export interface AuthMe {
-  user: { id: string; email?: string };
-  has_password: boolean;
 }
 
 /**
