@@ -1,10 +1,6 @@
 ## Why
 
-`apps/web/src/components/cv/markdown-editor-impl.tsx` (`MarkdownEditorImpl`, the shared wrapper around `@mdxeditor/editor`) currently passes an empty `contentEditableClassName` for the block variant. As a result, the inner editable region (rendered as the element with `aria-label="editable markdown"`) receives no typography rules: headings, ordered/unordered lists, links, blockquotes, code blocks, and tables authored inside a block editor render at body-text size with no list markers, no heading scale, and no blockquote rule, even though the corresponding read-only `MarkdownView` (just layered with `@tailwindcss/typography` in the prior `markdown-view-prose-typography` change) renders the same content correctly.
-
-This is a parity gap inside the same capability: the editor and its preview disagree on what a heading or a bullet list looks like, even though both consume the same markdown. The fix is local and idempotent: layer the same `prose prose-sm max-w-none` classes onto the editor's `contentEditableClassName` for the block variant so the editing experience and the read-only preview share the same typography scale.
-
-This change retroactively documents work already implemented in the working tree that adopts the project’s already-installed `@tailwindcss/typography` plugin for the block variant of the shared markdown editor.
+`apps/web/src/components/cv/markdown-editor-impl.tsx` (the shared wrapper around `@mdxeditor/editor`) passes an empty `contentEditableClassName` for the block variant, so the editable region with `aria-label="editable markdown"` receives no typography rules: headings, lists, links, blockquotes, code blocks, and tables render at body-text size even though the corresponding read-only `MarkdownView` (just layered with `@tailwindcss/typography` by the prior `markdown-view-prose-typography` change) renders the same content correctly. This change layers the same `prose prose-sm max-w-none` classes onto the editor's block variant so the editor and its preview share a typography scale. The inline variant stays prose-free to preserve highlight-bullet layout. This change retroactively documents work already implemented in the working tree.
 
 ## What Changes
 
