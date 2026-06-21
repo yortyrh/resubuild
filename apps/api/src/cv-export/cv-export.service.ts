@@ -160,6 +160,12 @@ export class CvExportService {
     body { font-family: Georgia, 'Times New Roman', serif; max-width: 700px; margin: 2rem auto; line-height: 1.6; color: #111; }
     p { margin: 0 0 1rem; }
     strong, b { font-weight: 700; }
+    h1 { font-size: 1.5rem; font-weight: 700; margin: 1.5rem 0 0.75rem; }
+    h2 { font-size: 1.25rem; font-weight: 700; margin: 1.25rem 0 0.5rem; }
+    h3 { font-size: 1.125rem; font-weight: 700; margin: 1rem 0 0.5rem; }
+    h4 { font-size: 1rem; font-weight: 700; margin: 0.875rem 0 0.5rem; }
+    h5 { font-size: 0.9375rem; font-weight: 700; margin: 0.75rem 0 0.5rem; }
+    h6 { font-size: 0.875rem; font-weight: 700; margin: 0.75rem 0 0.5rem; }
   </style>
 </head>
 <body>${body}</body>

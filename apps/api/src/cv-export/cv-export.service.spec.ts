@@ -396,6 +396,18 @@ describe('CvExportService', () => {
     expect(html).toContain('<strong>Excited</strong>');
   });
 
+  it('renderLetterHtml preserves markdown headings in the body', () => {
+    const html = service.renderLetterHtml('# Heading\n\nbody');
+    expect(html).toContain('<h1>Heading</h1>');
+  });
+
+  it('renderLetterHtml includes heading typography in its inline style block', () => {
+    const html = service.renderLetterHtml('body');
+    expect(html).toMatch(/<style>[\s\S]*h1\s*\{/);
+    expect(html).toMatch(/h2\s*\{/);
+    expect(html).toMatch(/h6\s*\{/);
+  });
+
   it('renderLetterPdf wraps html rendering', async () => {
     jest.spyOn(service, 'renderPdfFromHtml').mockResolvedValue(Buffer.from('%PDF'));
     const result = await service.renderLetterPdf('Hello', { title: 'Cover letter' });

@@ -37,4 +37,20 @@ describe('cover-letter-clipboard', () => {
     expect(result).not.toContain('Cover letter');
     expect(result).not.toContain('<title>');
   });
+
+  it('preserves heading tags present in the source body when wrapping for the clipboard', () => {
+    const html =
+      '<!DOCTYPE html><html><head><title>Cover letter</title></head><body><h1>Section</h1><h2>Sub</h2><p>Body</p></body></html>';
+    const result = formatCoverLetterHtmlForClipboard('Apply for Dev', html);
+    expect(result).toContain('<h1>Section</h1>');
+    expect(result).toContain('<h2>Sub</h2>');
+    expect(result).toContain('<p>Body</p>');
+    expect(result).not.toContain('<title>');
+  });
+
+  it('formatCoverLetterPlainText keeps the subject-then-body contract', () => {
+    const md = '# Title\n\nHello';
+    const result = formatCoverLetterPlainText('Apply for Dev', md);
+    expect(result).toBe('Email subject: Apply for Dev\n\n# Title\n\nHello');
+  });
 });

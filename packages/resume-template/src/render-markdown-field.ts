@@ -2,7 +2,25 @@ import { marked } from 'marked';
 import sanitizeHtml from 'sanitize-html';
 
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
-  allowedTags: ['p', 'br', 'strong', 'em', 'b', 'i', 'ul', 'ol', 'li', 'a', 'code'],
+  allowedTags: [
+    'p',
+    'br',
+    'strong',
+    'em',
+    'b',
+    'i',
+    'ul',
+    'ol',
+    'li',
+    'a',
+    'code',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+  ],
   allowedAttributes: {
     a: ['href', 'title', 'rel'],
   },
