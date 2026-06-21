@@ -1,6 +1,5 @@
 # Resubuild
 
-> **Drop in a PDF. Get a clean, beautifully formatted CV in seconds.**
 
 [![GitHub stars](https://img.shields.io/github/stars/yortyrh/resubuild)](https://github.com/yortyrh/resubuild)
 [![License](https://img.shields.io/github/license/yortyrh/resubuild)](./LICENSE)
