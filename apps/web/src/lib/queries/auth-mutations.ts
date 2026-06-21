@@ -205,7 +205,10 @@ export function useResetPassword() {
 export function useRequestOtp() {
   return useMutation({
     mutationFn: async (email: string) => {
-      const { error } = await getSupabaseClient().auth.signInWithOtp({ email });
+      const { error } = await getSupabaseClient().auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: authCallbackUrl() },
+      });
       if (error) {
         throw new Error(error.message);
       }
