@@ -240,7 +240,10 @@ describe('auth mutation hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockSignInWithOtp).toHaveBeenCalledWith({ email: 'test@example.com' });
+      expect(mockSignInWithOtp).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        options: { emailRedirectTo: expect.stringContaining('/auth/callback') },
+      });
     });
   });
 
