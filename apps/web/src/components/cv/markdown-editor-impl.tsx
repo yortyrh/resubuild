@@ -123,6 +123,12 @@ export const MarkdownEditorImpl = forwardRef<MarkdownEditorHandle, MarkdownEdito
             variant === 'inline' && 'mdxeditor-content--inline',
             variant === 'block' && 'prose prose-sm max-w-none',
           )}
+          // `mdxeditor-theme` is also applied to the dynamically-appended
+          // `.mdxeditor-popup-container` (a sibling of this editor under
+          // `document.body`), so it doubles as a stable hook for raising the
+          // popup's stacking context above any ancestor overlay (e.g. the
+          // Radix dialog at `z-50`).
+          className="mdxeditor-theme"
           plugins={plugins}
         />
       </div>

@@ -67,6 +67,7 @@ vi.mock('@mdxeditor/editor', () => {
       plugins,
       contentEditableClassName,
       markdown,
+      className,
     }: {
       ref?:
         | { current: { setMarkdown: (v: string) => void } | null }
@@ -78,6 +79,7 @@ vi.mock('@mdxeditor/editor', () => {
       plugins?: unknown[];
       contentEditableClassName?: string;
       markdown?: string;
+      className?: string;
     }) => {
       if (typeof markdown === 'string') {
         markdownHistory.push(markdown);
@@ -99,6 +101,7 @@ vi.mock('@mdxeditor/editor', () => {
           data-plugins={plugins?.length ?? 0}
           data-content-class={contentEditableClassName ?? ''}
           data-markdown={markdown ?? ''}
+          data-class-name={className ?? ''}
         >
           {hasToolbar &&
             (isInline ? <InlineToolbar /> : <BlockToolbar withInsertCodeBlock={hasCodeBlock} />)}
@@ -266,6 +269,20 @@ describe('MarkdownEditorImpl', () => {
     // The recorder must contain the initial value as the last
     // recorded entry (no imperative setter was ever called).
     expect(markdownHistory[markdownHistory.length - 1]).toBe('initial');
+  });
+
+  it('passes the mdxeditor-theme class to MDXEditor so it can hoist the popup container z-index above ancestor overlays', () => {
+    // MDXEditor copies the `className` prop onto the dynamically-appended
+    // `.mdxeditor-popup-container` (which lives under `document.body`, not as
+    // a child of the editor). When the editor is rendered inside an overlay
+    // like the cover-letter dialog (z-50), the Block-type dropdown portal
+    // would otherwise be clipped/covered. Tagging the editor with
+    // `mdxeditor-theme` gives the popup container a stable selector that the
+    // global stylesheet uses to raise its z-index above the dialog.
+    const { getByTestId } = render(
+      <MarkdownEditorImpl value="" onChange={vi.fn()} variant="block" />,
+    );
+    expect(getByTestId('mdx-editor')).toHaveAttribute('data-class-name', 'mdxeditor-theme');
   });
 
   describe('freeForm mode (cover letter, job description)', () => {

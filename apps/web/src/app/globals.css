@@ -346,6 +346,19 @@ html body[data-scroll-locked] {
   background-color: white !important;
 }
 
+/* MDXEditor popup container — MDXEditor appends a `.mdxeditor-popup-container`
+   div to `document.body` (not as a child of the editor) and portals every
+   floating surface into it: the Block-type dropdown, the Link dialog, the
+   table grid picker, etc. When the editor lives inside a Radix dialog
+   (`z-50`) the portal lands at stacking-context zero and gets clipped/covered
+   by the overlay. The `MDXEditor` `className` prop is also applied to that
+   portal div, so we tag it with `mdxeditor-theme` and use a compound
+   selector. The compound selector (not a descendant) is required because the
+   popup container is a sibling of the editor, not a descendant. */
+.mdxeditor-popup-container.mdxeditor-theme {
+  z-index: 200 !important;
+}
+
 /* Content area — markdown element styles. Tailwind preflight (and MDXEditor's own
    `._nestedListItem_*` class which sets `list-style: none` + hides `::before/::after`
    pseudo-elements) strips the default browser markers. The quote node has no theme
