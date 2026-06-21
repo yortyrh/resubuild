@@ -88,6 +88,24 @@ describe('MarkdownView', () => {
     expect(el?.classList.contains('markdown-view--inline')).toBe(false);
   });
 
+  it('layers @tailwindcss/typography prose classes on the block variant so headings size correctly', () => {
+    const { container } = render(<MarkdownView value="hello" variant="block" />);
+    const el = container.firstElementChild;
+    expect(el?.classList.contains('prose')).toBe(true);
+    expect(el?.classList.contains('prose-sm')).toBe(true);
+    // `max-w-none` strips the default `prose` 65ch cap so the cover letter
+    // preview uses the full width of the scrollable tab wrapper.
+    expect(el?.classList.contains('max-w-none')).toBe(true);
+  });
+
+  it('does not layer prose classes on the inline variant (highlight bullets)', () => {
+    const { container } = render(<MarkdownView value="hello" variant="inline" />);
+    const el = container.firstElementChild;
+    expect(el?.classList.contains('prose')).toBe(false);
+    expect(el?.classList.contains('prose-sm')).toBe(false);
+    expect(el?.classList.contains('max-w-none')).toBe(false);
+  });
+
   it('applies markdown-view--inline class in inline mode', () => {
     const { container } = render(<MarkdownView value="hello" variant="inline" />);
     const el = container.firstElementChild;

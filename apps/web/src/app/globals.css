@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @plugin 'tailwindcss-animate';
+@plugin '@tailwindcss/typography';
 
 :root {
   --background: 0 0% 100%;
@@ -92,6 +93,57 @@ body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* `@tailwindcss/typography` ships with hardcoded light-mode colors and only
+   adapts to dark mode when used with the `prose-invert` variant. This app
+   drives dark mode via `prefers-color-scheme: dark` rather than a `dark:`
+   variant, so `prose-invert` is never applied and the body / headings /
+   links stay light-grey on a dark surface. Remap the prose color tokens
+   inside the `.markdown-view` wrapper so block-mode previews (cover letter,
+   CV summaries) follow the project's design tokens in both color schemes. */
+.markdown-view {
+  --tw-prose-body: hsl(var(--foreground));
+  --tw-prose-headings: hsl(var(--foreground));
+  --tw-prose-lead: hsl(var(--muted-foreground));
+  --tw-prose-links: hsl(var(--primary));
+  --tw-prose-bold: hsl(var(--foreground));
+  --tw-prose-counters: hsl(var(--muted-foreground));
+  --tw-prose-bullets: hsl(var(--muted-foreground));
+  --tw-prose-hr: hsl(var(--border));
+  --tw-prose-quotes: hsl(var(--foreground));
+  --tw-prose-quote-borders: hsl(var(--border));
+  --tw-prose-captions: hsl(var(--muted-foreground));
+  --tw-prose-kbd: hsl(var(--foreground));
+  --tw-prose-kbd-shadows: hsl(var(--foreground) / 10%);
+  --tw-prose-code: hsl(var(--foreground));
+  --tw-prose-pre-code: hsl(var(--foreground));
+  --tw-prose-pre-bg: hsl(var(--muted));
+  --tw-prose-th-borders: hsl(var(--border));
+  --tw-prose-td-borders: hsl(var(--border));
+}
+
+@media (prefers-color-scheme: dark) {
+  .markdown-view {
+    --tw-prose-invert-body: hsl(var(--foreground));
+    --tw-prose-invert-headings: hsl(var(--foreground));
+    --tw-prose-invert-lead: hsl(var(--muted-foreground));
+    --tw-prose-invert-links: hsl(var(--primary));
+    --tw-prose-invert-bold: hsl(var(--foreground));
+    --tw-prose-invert-counters: hsl(var(--muted-foreground));
+    --tw-prose-invert-bullets: hsl(var(--muted-foreground));
+    --tw-prose-invert-hr: hsl(var(--border));
+    --tw-prose-invert-quotes: hsl(var(--foreground));
+    --tw-prose-invert-quote-borders: hsl(var(--border));
+    --tw-prose-invert-captions: hsl(var(--muted-foreground));
+    --tw-prose-invert-kbd: hsl(var(--foreground));
+    --tw-prose-invert-kbd-shadows: hsl(var(--foreground) / 20%);
+    --tw-prose-invert-code: hsl(var(--foreground));
+    --tw-prose-invert-pre-code: hsl(var(--foreground));
+    --tw-prose-invert-pre-bg: hsl(var(--muted));
+    --tw-prose-invert-th-borders: hsl(var(--border));
+    --tw-prose-invert-td-borders: hsl(var(--border));
+  }
 }
 
 /* Radix scroll lock (via react-remove-scroll-bar, used by Radix Select/Dialog) sets
