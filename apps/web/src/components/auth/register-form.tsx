@@ -12,6 +12,7 @@ import { DevMailpitHint } from '@/components/auth/dev-mailpit-hint';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Separator } from '@/components/ui/separator';
 import { useRegister } from '@/lib/queries/auth-mutations';
 import { useAuthFeatures } from '@/lib/queries/auth-queries';
@@ -71,9 +72,8 @@ export function RegisterForm() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={6}

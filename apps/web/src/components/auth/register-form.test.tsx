@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryWrapper } from '@/lib/queries/test-utils';
 import { RegisterForm } from './register-form';
@@ -111,5 +112,48 @@ describe('RegisterForm', () => {
     renderRegisterForm();
 
     expect(screen.queryByRole('button', { name: /continue with google/i })).not.toBeInTheDocument();
+  });
+
+  it('renders the password input masked by default with a "Show password" toggle', () => {
+    setFeatures({});
+
+    renderRegisterForm();
+
+    const passwordInput = screen.getByLabelText('Password');
+    expect(passwordInput).toHaveAttribute('type', 'password');
+    expect(screen.getByRole('button', { name: /show password/i })).toBeInTheDocument();
+  });
+
+  it('reveals the password when the toggle is clicked and preserves the typed value', async () => {
+    const user = userEvent.setup();
+    setFeatures({});
+
+    renderRegisterForm();
+
+    await user.type(screen.getByLabelText('Email'), 'user@example.com');
+    await user.type(screen.getByLabelText('Password'), 'supersecret');
+
+    await user.click(screen.getByRole('button', { name: /show password/i }));
+
+    const passwordInput = screen.getByLabelText('Password');
+    expect(passwordInput).toHaveAttribute('type', 'text');
+    expect(passwordInput).toHaveValue('supersecret');
+  });
+
+  it('submits the typed password unchanged even when the toggle is left on', async () => {
+    const user = userEvent.setup();
+    setFeatures({});
+
+    renderRegisterForm();
+
+    await user.type(screen.getByLabelText('Email'), 'user@example.com');
+    await user.type(screen.getByLabelText('Password'), 'supersecret');
+    await user.click(screen.getByRole('button', { name: /show password/i }));
+    await user.click(screen.getByRole('button', { name: /register/i }));
+
+    expect(mockRegisterMutate).toHaveBeenCalledWith({
+      email: 'user@example.com',
+      password: 'supersecret',
+    });
   });
 });
