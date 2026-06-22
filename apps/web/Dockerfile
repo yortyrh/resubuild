@@ -39,7 +39,7 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 RUN apk add --no-cache git
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.26.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
 
 # Copy workspace manifests and turbo config
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
@@ -63,7 +63,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Install pnpm and curl (for healthcheck)
-RUN corepack enable && corepack prepare pnpm@10.26.0 --activate && \
+RUN corepack enable && corepack prepare pnpm@11.8.0 --activate && \
     apk add --no-cache curl
 
 # Copy all workspace manifests needed for pnpm to resolve workspace protocol

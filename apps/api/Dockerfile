@@ -7,7 +7,7 @@ WORKDIR /app
 RUN apk add --no-cache git
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.26.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
 
 # Copy workspace manifests and turbo config
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
@@ -44,7 +44,7 @@ ENV CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-headless-shell
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.26.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
 
 # Copy all workspace manifests needed for pnpm to resolve workspace protocol
 COPY --from=builder /app/package.json ./package.json

@@ -43,19 +43,8 @@
     "turbo": "^2.5.4",
     "vitest": "^4.1.8"
   },
-  "packageManager": "pnpm@10.26.0",
+  "packageManager": "pnpm@11.8.0",
   "engines": {
     "node": "22.x"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@nestjs/core",
-      "esbuild",
-      "lefthook",
-      "protobufjs",
-      "puppeteer",
-      "sharp",
-      "unrs-resolver"
-    ]
   }
 }
