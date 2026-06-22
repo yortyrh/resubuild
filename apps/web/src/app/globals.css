@@ -433,6 +433,41 @@ html body[data-scroll-locked] {
   padding-right: 1.75rem !important;
 }
 
+/* MDXEditor code block (CodeMirror wrapper) — soften the chrome so the block
+   reads as a distinct surface without dominating the page:
+   - thinner, lower-contrast border (vs. the bundled `var(--baseLine)` 1px)
+   - tighter radius (0.25rem vs. the bundled `var(--radius-medium)` ≈ 0.375rem)
+   - gray (muted-tinted) code area instead of the bundled pure white. */
+.rich-text-editor .mdxeditor [class*='_codeMirrorWrapper'] {
+  border: 1px solid hsl(var(--border) / 0.4) !important;
+  border-radius: 0.25rem !important;
+  padding: 0 !important;
+  margin-bottom: 0.75rem !important;
+  overflow: hidden !important;
+}
+
+.rich-text-editor .mdxeditor .cm-editor,
+.rich-text-editor .mdxeditor .cm-content {
+  background-color: hsl(var(--muted) / 0.45) !important;
+}
+
+/* Line-number gutter — transparent so the gray code area shows through, with
+   a thin right divider to separate the numbers from the code. CodeMirror's
+   default puts the digit at `flex-start` of the row; recenter it vertically
+   so the number sits in the middle of the line height. */
+.rich-text-editor .mdxeditor .cm-gutters {
+  background-color: transparent !important;
+  border-right: 1px solid hsl(var(--border) / 0.35) !important;
+  padding-right: 0.5rem !important;
+  min-width: 2rem !important;
+}
+
+.rich-text-editor .mdxeditor .cm-lineNumbers .cm-gutterElement {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+}
+
 /* Markdown view – read-only rendered markdown in resume-preview rows */
 .markdown-view {
   font-size: 0.875rem;
