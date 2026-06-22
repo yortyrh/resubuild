@@ -39,21 +39,21 @@
 
 /** @type {Array<IconOutput | FaviconOutput>} */
 export const outputs = [
-  { file: 'apps/web/public/icon.png', size: 512, margin: 0, transparent: false },
-  { file: 'apps/web/public/icon-192x192.png', size: 192, margin: 0, transparent: false },
-  { file: 'apps/web/public/icon-512x512.png', size: 512, margin: 0, transparent: false },
+  { file: 'apps/web/public/icon.png', size: 512, margin: 0, transparent: true },
+  { file: 'apps/web/public/icon-192x192.png', size: 192, margin: 0, transparent: true },
+  { file: 'apps/web/public/icon-512x512.png', size: 512, margin: 0, transparent: true },
   {
     file: 'apps/web/public/maskable-icon-512x512.png',
     size: 512,
     margin: 0,
-    transparent: false,
+    transparent: true,
   },
-  { file: 'apps/web/public/apple-touch-icon.png', size: 180, margin: 0, transparent: false },
+  { file: 'apps/web/public/apple-touch-icon.png', size: 180, margin: 0, transparent: true },
   {
     file: 'apps/web/src/app/favicon.ico',
     sizes: [16, 32, 48],
     margin: 0,
-    transparent: false,
+    transparent: true,
   },
 ];
 
