@@ -146,14 +146,17 @@ body {
   }
 }
 
-/* Radix scroll lock (via react-remove-scroll-bar, used by Radix Select/Dialog) sets
-   `body { overflow: hidden; position: relative; margin-right: 15px; padding-right: 15px; }`
-   so the page doesn't shift when the scrollbar disappears. The runtime-injected
-   `<style>` tag is appended AFTER our stylesheet, so its `!important` rules win
-   over ours at the same specificity. Bump our selector to `html body[...]` so we
-   have higher specificity and force margin/padding to 0 — the body must NOT resize
-   while a popover is open, otherwise the form below the markdown editor reflows
-   (the "layout switch" the user reported when the Block type dropdown opens). */
+/* Radix scroll lock (via react-remove-scroll-bar, used by Radix Select/Dialog and
+   therefore by MDXEditor's BlockTypeSelect) injects `body { overflow: hidden; ... }`
+   so the page can't scroll behind the dropdown. With `overflow: hidden` the
+   scrollbar disappears, which would normally shift the page right by the scrollbar
+   width — react-remove-scroll-bar adds `padding-right: <scrollbar-width>px` to
+   compensate. We reserve the scrollbar gutter permanently via `scrollbar-gutter:
+   stable` so the layout is stable regardless of whether the scrollbar is shown,
+   and zero out the runtime padding/margin so we don't double-compensate. */
+html {
+  scrollbar-gutter: stable;
+}
 html body[data-scroll-locked] {
   margin: 0 !important;
   padding: 0 !important;
