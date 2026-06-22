@@ -8,6 +8,7 @@ import {
   CodeToggle,
   CreateLink,
   codeBlockPlugin,
+  codeMirrorPlugin,
   headingsPlugin,
   InsertCodeBlock,
   ListsToggle,
@@ -93,7 +94,21 @@ export const MarkdownEditorImpl = forwardRef<MarkdownEditorHandle, MarkdownEdito
         }),
         markdownShortcutPlugin(),
       ];
-      return freeForm ? [headingsPlugin(), codeBlockPlugin(), ...basePlugins] : basePlugins;
+      return freeForm
+        ? [
+            headingsPlugin(),
+            codeBlockPlugin({ defaultCodeBlockLanguage: 'txt' }),
+            codeMirrorPlugin({
+              codeBlockLanguages: {
+                js: 'JavaScript',
+                css: 'CSS',
+                txt: 'text',
+                tsx: 'TypeScript',
+              },
+            }),
+            ...basePlugins,
+          ]
+        : basePlugins;
     }, [variant, freeForm]);
 
     useImperativeHandle(

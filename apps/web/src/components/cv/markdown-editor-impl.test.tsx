@@ -117,6 +117,7 @@ vi.mock('@mdxeditor/editor', () => {
     markdownShortcutPlugin: vi.fn(() => 'markdownShortcutPlugin'),
     headingsPlugin: vi.fn(() => 'headingsPlugin'),
     codeBlockPlugin: vi.fn(() => 'codeBlockPlugin'),
+    codeMirrorPlugin: vi.fn(() => 'codeMirrorPlugin'),
     BoldItalicUnderlineToggles: () => (
       <button type="button" data-testid="bold-italic-underline">
         BIU
@@ -286,14 +287,14 @@ describe('MarkdownEditorImpl', () => {
   });
 
   describe('freeForm mode (cover letter, job description)', () => {
-    it('registers 10 plugins when freeForm is true (adds headings + codeBlock)', () => {
+    it('registers 11 plugins when freeForm is true (adds headings + codeBlock + codeMirror)', () => {
       const { getByTestId } = render(
         <MarkdownEditorImpl value="" onChange={vi.fn()} variant="block" freeForm />,
       );
       const editor = getByTestId('mdx-editor');
-      // 10 plugins: headings, lists, quote, thematicBreak, link, linkDialog, table,
-      // codeBlock, toolbar, markdownShortcut
-      expect(editor).toHaveAttribute('data-plugins', '10');
+      // 11 plugins: headings, codeBlock, codeMirror, lists, quote, thematicBreak,
+      // link, linkDialog, table, toolbar, markdownShortcut
+      expect(editor).toHaveAttribute('data-plugins', '11');
     });
 
     it('renders the InsertCodeBlock toolbar item when freeForm is true', () => {
