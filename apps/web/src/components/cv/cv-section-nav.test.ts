@@ -13,7 +13,7 @@ describe('CV_SECTIONS', () => {
   });
 
   it('starts with basics', () => {
-    expect(CV_SECTIONS[0]).toEqual({ slug: 'basics', label: 'Basics' });
+    expect(CV_SECTIONS[0]).toEqual({ slug: 'basics', label: 'Summary' });
   });
 
   it('contains all slugs from CV_SECTION_SLUGS', () => {

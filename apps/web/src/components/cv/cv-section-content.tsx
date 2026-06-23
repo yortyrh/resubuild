@@ -6,5 +6,5 @@ interface CvSectionContentProps {
 }
 
 export function CvSectionContent({ children, className }: CvSectionContentProps) {
-  return <div className={cn('pl-4', className)}>{children}</div>;
+  return <div className={className}>{children}</div>;
 }

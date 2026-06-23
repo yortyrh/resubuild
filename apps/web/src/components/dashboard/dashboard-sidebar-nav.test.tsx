@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DashboardTopNav } from './dashboard-top-nav';
+import { DashboardSidebarNav } from './dashboard-sidebar-nav';
 
-const mockPathname = vi.fn<(href?: string) => string | null>(() => '/dashboard');
+const mockPathname = vi.fn<() => string | null>(() => '/dashboard');
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname(),
 }));
 
-describe('DashboardTopNav', () => {
+describe('DashboardSidebarNav', () => {
   afterEach(() => {
     cleanup();
     mockPathname.mockReset();
@@ -17,7 +17,7 @@ describe('DashboardTopNav', () => {
   });
 
   function renderNav() {
-    return render(<DashboardTopNav />);
+    return render(<DashboardSidebarNav />);
   }
 
   it('renders both top-level entries with icons and accessible names', () => {

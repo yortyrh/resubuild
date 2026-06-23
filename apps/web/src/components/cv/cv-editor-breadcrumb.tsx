@@ -28,7 +28,7 @@ interface CvEditorBreadcrumbProps {
 }
 
 function sectionLabel(slug: CvSectionSlug): string {
-  return CV_SECTIONS.find((section) => section.slug === slug)?.label ?? 'Basics';
+  return CV_SECTIONS.find((section) => section.slug === slug)?.label ?? 'Summary';
 }
 
 export function CvTitleDisplay({

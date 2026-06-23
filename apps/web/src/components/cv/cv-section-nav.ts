@@ -17,7 +17,7 @@ export const CV_SECTION_SLUGS = [
 export type CvSectionSlug = (typeof CV_SECTION_SLUGS)[number];
 
 export const CV_SECTIONS: { slug: CvSectionSlug; label: string }[] = [
-  { slug: 'basics', label: 'Basics' },
+  { slug: 'basics', label: 'Summary' },
   { slug: 'profiles', label: 'Social profiles' },
   { slug: 'work', label: 'Work' },
   { slug: 'volunteer', label: 'Volunteer' },
@@ -53,7 +53,7 @@ export function getSectionHref(cvId: string, slug: CvSectionSlug): string {
 }
 
 export function getSectionLabel(slug: CvSectionSlug): string {
-  return CV_SECTIONS.find((section) => section.slug === slug)?.label ?? 'Basics';
+  return CV_SECTIONS.find((section) => section.slug === slug)?.label ?? 'Summary';
 }
 
 export function resolveActiveSectionFromPathname(pathname: string): CvSectionSlug {

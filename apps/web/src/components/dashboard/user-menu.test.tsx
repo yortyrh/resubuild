@@ -23,18 +23,32 @@ vi.mock('@/lib/queries/auth-queries', () => ({
 }));
 
 describe('UserMenu', () => {
-  afterEach(() => cleanup());
-
-  it('includes MCP settings link', async () => {
-    mockUseAuthMe.mockReturnValue({ data: undefined });
-    const user = userEvent.setup({ pointerEventsCheck: 0 });
-    render(<UserMenu />, { wrapper: createQueryWrapper() });
-    await user.click(screen.getByRole('button', { name: 'User menu' }));
-    const link = await screen.findByRole('menuitem', { name: /MCP settings/i });
-    expect(link).toHaveAttribute('href', '/dashboard/settings/mcp');
+  afterEach(() => {
+    cleanup();
+    mockLogoutMutate.mockClear();
   });
 
-  it('renders the avatar image when useAuthMe returns a picture URL', () => {
+  function renderMenu() {
+    return render(<UserMenu />, { wrapper: createQueryWrapper() });
+  }
+
+  it('shows the user name, email, and avatar initials in the trigger', () => {
+    mockUseAuthMe.mockReturnValue({
+      data: {
+        user: { id: 'u-1', email: 'jane.doe@example.com', picture: null },
+        has_password: true,
+      },
+    });
+
+    renderMenu();
+
+    const trigger = screen.getByRole('button', { name: 'User menu' });
+    expect(trigger).toHaveTextContent('jane');
+    expect(trigger).toHaveTextContent('jane.doe@example.com');
+    expect(trigger.querySelector('[class*="rounded-full"]')).toHaveTextContent('J');
+  });
+
+  it('renders the avatar image in the trigger when a picture URL is available', () => {
     mockUseAuthMe.mockReturnValue({
       data: {
         user: { id: 'u-1', email: 'a@b.com', picture: 'https://cdn.example.com/avatar.png' },
@@ -42,26 +56,38 @@ describe('UserMenu', () => {
       },
     });
 
-    const { container } = render(<UserMenu />, { wrapper: createQueryWrapper() });
+    renderMenu();
 
     const trigger = screen.getByRole('button', { name: 'User menu' });
     const img = trigger.querySelector('img');
     expect(img).not.toBeNull();
     expect(img).toHaveAttribute('src', 'https://cdn.example.com/avatar.png');
-    // No UserRound svg in the trigger when avatar is shown
-    expect(container.querySelector('.lucide-user-round')).toBeNull();
   });
 
-  it('falls back to the UserRound icon when picture is null', () => {
-    mockUseAuthMe.mockReturnValue({
-      data: { user: { id: 'u-1', email: 'a@b.com', picture: null }, has_password: true },
-    });
+  it('exposes AI agent and MCP config links with distinct icons in the dropdown', async () => {
+    mockUseAuthMe.mockReturnValue({ data: undefined });
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderMenu();
 
-    const { container } = render(<UserMenu />, { wrapper: createQueryWrapper() });
+    await user.click(screen.getByRole('button', { name: 'User menu' }));
 
-    const trigger = screen.getByRole('button', { name: 'User menu' });
-    expect(trigger.querySelector('img')).toBeNull();
-    // lucide-react UserRound renders an <svg> with class containing "lucide-user-round"
-    expect(container.querySelector('.lucide-user-round')).not.toBeNull();
+    expect(await screen.findByRole('menuitem', { name: /AI agent/i })).toHaveAttribute(
+      'href',
+      '/dashboard/settings/ai-agent',
+    );
+    expect(screen.getByRole('menuitem', { name: /MCP/i })).toHaveAttribute(
+      'href',
+      '/dashboard/settings/mcp',
+    );
+  });
+
+  it('calls sign out when the menu item is selected', async () => {
+    mockUseAuthMe.mockReturnValue({ data: undefined });
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderMenu();
+    await user.click(screen.getByRole('button', { name: 'User menu' }));
+    const signOut = await screen.findByRole('menuitem', { name: /Sign out/i });
+    await user.click(signOut);
+    expect(mockLogoutMutate).toHaveBeenCalled();
   });
 });

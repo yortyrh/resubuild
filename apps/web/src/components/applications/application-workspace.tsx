@@ -15,6 +15,7 @@ import { ApplicationWorkspaceBreadcrumb } from '@/components/applications/applic
 import { ApplicationWorkspaceSkeleton } from '@/components/applications/application-workspace-skeleton';
 import { BasicsSectionView } from '@/components/cv/basics-section-view';
 import { MarkdownView } from '@/components/cv/markdown-view';
+import { useDashboardBreadcrumb } from '@/components/dashboard/dashboard-breadcrumb-context';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -88,6 +89,8 @@ export function ApplicationWorkspace({ id }: { id: string }) {
     },
   });
 
+  const { setBreadcrumb, reset: resetBreadcrumb } = useDashboardBreadcrumb();
+
   useEffect(() => {
     if (updateDraft?.status !== 'ready' || !updateDraftId) {
       return;
@@ -96,6 +99,15 @@ export function ApplicationWorkspace({ id }: { id: string }) {
     void queryClient.invalidateQueries({ queryKey: ['applications'] });
     router.replace(`/dashboard/applications/${updateDraftId}`);
   }, [updateDraft?.status, updateDraftId, queryClient, router]);
+
+  useEffect(() => {
+    if (!data) {
+      resetBreadcrumb();
+      return;
+    }
+    setBreadcrumb({ variant: 'application', application: data });
+    return () => resetBreadcrumb();
+  }, [data, setBreadcrumb, resetBreadcrumb]);
   const [printing, setPrinting] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
   const [letterEditOpen, setLetterEditOpen] = useState(false);
@@ -213,14 +225,11 @@ export function ApplicationWorkspace({ id }: { id: string }) {
         </div>
       ) : null}
 
-      <div className="space-y-2 px-2">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <ApplicationWorkspaceBreadcrumb
-            jobTitle={data.jobTitle}
-            jobCompany={data.jobCompany}
-            hideTrail
-            className="min-w-0 flex-1"
-          />
+      <div className="px-2">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h1 className="min-w-0 flex-1 text-2xl font-semibold tracking-tight">
+            {[data.jobTitle, data.jobCompany].filter(Boolean).join(' · ') || 'Application'}
+          </h1>
           <Button
             variant="outline"
             disabled={data.updateInProgress}
@@ -231,9 +240,6 @@ export function ApplicationWorkspace({ id }: { id: string }) {
             <span className="hidden sm:inline">Update</span>
           </Button>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {[data.jobTitle, data.jobCompany].filter(Boolean).join(' · ') || 'Application'}
-        </h1>
       </div>
 
       <ApplicationUpdateDialog application={data} open={updateOpen} onOpenChange={setUpdateOpen} />

@@ -8,10 +8,9 @@ describe('CvSectionContent', () => {
     cleanup();
   });
 
-  it('applies default content padding', () => {
-    const { container } = render(<CvSectionContent>Section body</CvSectionContent>);
+  it('renders children', () => {
+    render(<CvSectionContent>Section body</CvSectionContent>);
 
-    expect(container.firstElementChild).toHaveClass('pl-4');
     expect(screen.getByText('Section body')).toBeInTheDocument();
   });
 
@@ -20,7 +19,6 @@ describe('CvSectionContent', () => {
       <CvSectionContent className="space-y-4">Section body</CvSectionContent>,
     );
 
-    expect(container.firstElementChild).toHaveClass('pl-4');
     expect(container.firstElementChild).toHaveClass('space-y-4');
   });
 });

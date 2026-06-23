@@ -5,11 +5,10 @@ import type { CvTitleBasics, Resume } from '@resubuild/types';
 import { ArrowLeft, Braces, FileDown, PanelLeftClose, PanelLeftOpen, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CvApplicationEditorBreadcrumb } from '@/components/cv/cv-application-editor-breadcrumb';
-import { CvEditorBreadcrumb } from '@/components/cv/cv-editor-breadcrumb';
 import { CvPreviewIframe } from '@/components/cv/cv-preview-iframe';
 import { TemplateConfigPanel } from '@/components/cv/template-config-panel';
 import { useApplicationForCv } from '@/components/cv/use-application-for-cv';
+import { useDashboardBreadcrumb } from '@/components/dashboard/dashboard-breadcrumb-context';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -31,27 +30,21 @@ import {
   updateCvTemplatePresentation,
 } from '@/lib/api';
 import { fetchCvResumeForPreview } from '@/lib/cv-preview-resume';
-import { CvPreviewBreadcrumbSkeleton, CvPreviewLoadingRow } from './cv-preview-skeleton';
+import { CvPreviewLoadingRow } from './cv-preview-skeleton';
 
 interface CvPreviewClientProps {
   cvId: string;
 }
 
 function getAutoLayoutExpanded(): boolean {
-  if (typeof window.matchMedia !== 'function') {
-    return false;
-  }
-
+  if (typeof window.matchMedia !== 'function') return false;
   return window.matchMedia('(min-width: 1024px)').matches;
 }
 
 const LG_BREAKPOINT_QUERY = '(min-width: 1024px)';
 
 function getInlinePanelDisplayable(): boolean {
-  if (typeof window.matchMedia !== 'function') {
-    return false;
-  }
-
+  if (typeof window.matchMedia !== 'function') return false;
   return window.matchMedia(LG_BREAKPOINT_QUERY).matches;
 }
 
@@ -99,6 +92,7 @@ function renderPreviewHtml(
 
 export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
   const application = useApplicationForCv(cvId);
+  const { setBreadcrumb, reset } = useDashboardBreadcrumb();
   const inlinePanelDisplayable = useInlineLayoutPanelDisplayable();
   const [desktopPanelCollapsed, setDesktopPanelCollapsed] = useState<boolean | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -114,7 +108,6 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
   const [templates, setTemplates] = useState<CvTemplateMeta[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('classic');
   const [basics, setBasics] = useState<CvTitleBasics | null>(null);
-  const [breadcrumbReady, setBreadcrumbReady] = useState(false);
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [layoutInitialConfig, setLayoutInitialConfig] =
     useState<CvTemplatePresentationConfig | null>(null);
@@ -130,7 +123,6 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
 
   useEffect(() => {
     let cancelled = false;
-    setBreadcrumbReady(false);
 
     Promise.all([getCv(cvId), listCvTemplates()])
       .then(([cv, catalog]) => {
@@ -142,9 +134,6 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
       })
       .catch((err: Error) => {
         if (!cancelled) setTemplateError(err.message);
-      })
-      .finally(() => {
-        if (!cancelled) setBreadcrumbReady(true);
       });
 
     return () => {
@@ -230,8 +219,6 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
     };
   }, [cvId, selectedTemplateId, loadPresentation, loadHtmlFromServer]);
 
-  const templateOptions = useMemo(() => templates, [templates]);
-
   const handleTemplateChange = useCallback(
     async (nextTemplateId: string) => {
       setTemplateError(null);
@@ -274,6 +261,17 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
     },
     [],
   );
+
+  useEffect(() => {
+    setBreadcrumb({
+      variant: 'cv',
+      cvId,
+      basics,
+      pageLabel: 'Preview',
+      application,
+    });
+    return () => reset();
+  }, [setBreadcrumb, reset, cvId, basics, application]);
 
   const toggleLayoutPanel = useCallback(() => {
     // Below the `lg` breakpoint the inline panel is hidden by Tailwind, so we
@@ -336,38 +334,10 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
     }
   }, [cvId]);
 
+  const templateOptions = useMemo(() => templates, [templates]);
+
   return (
     <div className="space-y-4">
-      <div className="no-print flex flex-wrap items-start gap-x-2 gap-y-2">
-        <div className="min-w-0 flex-1">
-          {breadcrumbReady ? (
-            application ? (
-              <CvApplicationEditorBreadcrumb
-                application={application}
-                cvId={cvId}
-                pageLabel="Preview"
-                className="mt-0"
-              />
-            ) : (
-              <CvEditorBreadcrumb
-                cvId={cvId}
-                basics={basics}
-                pageLabel="Preview"
-                className="mt-0"
-              />
-            )
-          ) : (
-            <CvPreviewBreadcrumbSkeleton />
-          )}
-        </div>
-        <Button type="button" variant="outline" size="sm" className="no-print shrink-0" asChild>
-          <Link href={backHref} aria-label={backAriaLabel}>
-            <ArrowLeft className="size-4 shrink-0 sm:mr-1.5" aria-hidden />
-            <span className="hidden sm:inline">Back</span>
-          </Link>
-        </Button>
-      </div>
-
       <div className="no-print flex flex-wrap items-start gap-x-2 gap-y-2">
         <Button
           type="button"
@@ -456,6 +426,18 @@ export function CvPreviewClient({ cvId }: CvPreviewClientProps) {
             <span className="hidden sm:inline">{downloading ? 'Downloading…' : 'PDF'}</span>
           </Button>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="no-print shrink-0 sm:ml-auto"
+          asChild
+        >
+          <Link href={backHref} aria-label={backAriaLabel}>
+            <ArrowLeft className="size-4 shrink-0 sm:mr-1.5" aria-hidden />
+            <span className="hidden sm:inline">Back</span>
+          </Link>
+        </Button>
       </div>
 
       {templateError ? <p className="no-print text-destructive text-sm">{templateError}</p> : null}

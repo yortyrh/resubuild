@@ -2,6 +2,7 @@
 import type { CvTemplatePresentationConfig } from '@resubuild/resume-template';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DashboardBreadcrumbProvider } from '@/components/dashboard/dashboard-breadcrumb-context';
 import { CvPreviewClient } from './cv-preview-client';
 
 vi.mock('next/navigation', () => ({
@@ -161,19 +162,17 @@ describe('CvPreviewClient', () => {
     vi.clearAllMocks();
   });
 
+  function renderPreview(cvId = 'cv-1') {
+    return render(
+      <DashboardBreadcrumbProvider>
+        <CvPreviewClient cvId={cvId} />
+      </DashboardBreadcrumbProvider>,
+    );
+  }
+
   it('loads export html and wires toolbar actions', async () => {
     const iframePrint = vi.fn();
-    render(<CvPreviewClient cvId="cv-1" />);
-
-    expect(screen.getByLabelText('Loading breadcrumb')).toBeInTheDocument();
-
-    await waitFor(
-      () => {
-        expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
-      },
-      { timeout: 10_000 },
-    );
-    expect(screen.queryByLabelText('Loading breadcrumb')).not.toBeInTheDocument();
+    renderPreview();
 
     await waitFor(
       () => {
@@ -224,7 +223,7 @@ describe('CvPreviewClient', () => {
       updatedAt: '2026-01-01T00:00:00.000Z',
     });
 
-    render(<CvPreviewClient cvId="cv-1" />);
+    renderPreview();
 
     await waitFor(() => {
       expect(screen.getByRole('link', { name: 'Back to application' })).toHaveAttribute(
@@ -235,7 +234,7 @@ describe('CvPreviewClient', () => {
   });
 
   it('template change triggers refetch with new query param', async () => {
-    render(<CvPreviewClient cvId="cv-1" />);
+    renderPreview();
 
     await waitFor(() => {
       expect(fetchCvResumeForPreview).toHaveBeenCalledWith('cv-1');
@@ -255,7 +254,7 @@ describe('CvPreviewClient', () => {
 
   it('shows user-visible message when JSON export fails', async () => {
     vi.mocked(downloadCvJson).mockRejectedValue(new Error('Request failed (500)'));
-    render(<CvPreviewClient cvId="cv-1" />);
+    renderPreview();
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'JSON Resume' })).toBeEnabled();
@@ -272,7 +271,7 @@ describe('CvPreviewClient', () => {
     vi.mocked(downloadCvPdf).mockRejectedValue(
       new Error('PDF export is temporarily unavailable. Try Print instead.'),
     );
-    render(<CvPreviewClient cvId="cv-1" />);
+    renderPreview();
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'PDF' })).toBeEnabled();
@@ -290,7 +289,7 @@ describe('CvPreviewClient', () => {
   it('opens the layout panel in a mobile drawer and keeps the toggle visible', async () => {
     mockViewport(false);
 
-    render(<CvPreviewClient cvId="cv-1" />);
+    renderPreview();
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Show layout panel' })).toBeInTheDocument();
@@ -316,7 +315,7 @@ describe('CvPreviewClient', () => {
   it('does not render the inline layout panel on mobile', () => {
     mockViewport(false);
 
-    render(<CvPreviewClient cvId="cv-1" />);
+    renderPreview();
 
     expect(document.getElementById('cv-layout-panel')).toBeNull();
   });
@@ -324,7 +323,7 @@ describe('CvPreviewClient', () => {
   it('opens the layout panel in a drawer on tablet-sized viewports (768–1023px)', async () => {
     mockViewport(false);
 
-    render(<CvPreviewClient cvId="cv-1" />);
+    renderPreview();
 
     // Below the `lg` breakpoint the inline panel is hidden by Tailwind, so the
     // toggle must drive the drawer — otherwise the button is a silent no-op.
@@ -352,7 +351,7 @@ describe('CvPreviewClient', () => {
   it('renders the inline layout panel on desktop and toggles via the visible button', async () => {
     mockViewport(true);
 
-    render(<CvPreviewClient cvId="cv-1" />);
+    renderPreview();
 
     await waitFor(() => {
       expect(document.getElementById('cv-layout-panel')).toBeInTheDocument();
@@ -376,7 +375,7 @@ describe('CvPreviewClient', () => {
   it('hides the "Template" label below sm but keeps the select accessible', () => {
     mockViewport(false);
 
-    render(<CvPreviewClient cvId="cv-1" />);
+    renderPreview();
 
     const label = screen.getByText('Template');
     expect(label).toHaveClass('hidden');

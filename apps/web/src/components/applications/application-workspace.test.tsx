@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DashboardBreadcrumbProvider } from '@/components/dashboard/dashboard-breadcrumb-context';
 import { ApplicationWorkspace } from './application-workspace';
 
 const mockGetApplication = vi.fn();
@@ -67,7 +68,9 @@ function renderWorkspace() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <ApplicationWorkspace id="app-1" />
+      <DashboardBreadcrumbProvider>
+        <ApplicationWorkspace id="app-1" />
+      </DashboardBreadcrumbProvider>
     </QueryClientProvider>,
   );
 }
@@ -145,7 +148,7 @@ describe('ApplicationWorkspace tabs', () => {
     });
   });
 
-  it('shows the job title as a visible heading below the breadcrumb row with the Update button', async () => {
+  it('shows the job title as a visible heading on the same row as the Update button', async () => {
     renderWorkspace();
 
     const heading = await screen.findByRole('heading', {
@@ -154,24 +157,46 @@ describe('ApplicationWorkspace tabs', () => {
     });
     expect(heading).toHaveClass('text-2xl', 'font-semibold');
 
-    // The Update button sits on the breadcrumb row, above the heading.
+    // The Update button shares the heading row, not a breadcrumb row above it.
     const updateButton = screen.getByRole('button', { name: /Update/ });
     expect(
-      updateButton.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
+      updateButton.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_PRECEDING,
     ).toBeTruthy();
   });
 
-  it('keeps the breadcrumb to a single Applications link', async () => {
+  it('does not render the inner workspace breadcrumb above the title', async () => {
     renderWorkspace();
 
-    const nav = await screen.findByRole('navigation', { name: 'Breadcrumb' });
-    expect(within(nav).getByRole('link', { name: 'Applications' })).toHaveAttribute(
-      'href',
-      '/dashboard/applications',
+    // No Applications back-link lives inside the workspace anymore — the
+    // top-bar breadcrumb owns the trail.
+    expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
+  });
+
+  it('publishes the application to the dashboard breadcrumb context', async () => {
+    let captured: { variant?: string; jobCompany?: string | null } = {};
+    const { useDashboardBreadcrumb } =
+      await import('@/components/dashboard/dashboard-breadcrumb-context');
+
+    function Probe() {
+      const state = useDashboardBreadcrumb();
+      captured = { variant: state.variant, jobCompany: state.application?.jobCompany };
+      return null;
+    }
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <DashboardBreadcrumbProvider>
+          <ApplicationWorkspace id="app-1" />
+          <Probe />
+        </DashboardBreadcrumbProvider>
+      </QueryClientProvider>,
     );
-    // Trail end was moved to the page title, so the breadcrumb must not
-    // contain the job title/company segments anymore.
-    expect(within(nav).queryByText('Senior Engineer')).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(captured.variant).toBe('application');
+      expect(captured.jobCompany).toBe('Acme');
+    });
   });
 
   it('hides the Update button label on mobile only and exposes it via aria-label', async () => {

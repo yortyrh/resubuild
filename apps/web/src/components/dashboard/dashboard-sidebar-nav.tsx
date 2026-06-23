@@ -19,9 +19,6 @@ const NAV_ITEMS: NavItem[] = [
 function isActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
   if (href === '/dashboard') {
-    // The dashboard root is the "My CVs" landing, and the CV editor and
-    // applications sub-trees (cv/*, cv/new/*) also belong to the CVs area
-    // — the Applications entry owns /dashboard/applications/* instead.
     if (pathname === '/dashboard' || pathname === '/dashboard/') return true;
     if (pathname.startsWith('/dashboard/applications')) return false;
     return pathname.startsWith('/dashboard');
@@ -29,13 +26,18 @@ function isActive(pathname: string | null, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function DashboardTopNav({ className }: { className?: string }) {
+interface DashboardSidebarNavProps {
+  onNavClick?: () => void;
+  collapsed?: boolean;
+}
+
+export function DashboardSidebarNav({ onNavClick, collapsed = false }: DashboardSidebarNavProps) {
   const pathname = usePathname();
 
   return (
     <nav
       aria-label="Primary"
-      className={cn('text-muted-foreground flex min-w-0 gap-1 text-sm sm:gap-2', className)}
+      className={cn('flex w-full flex-col gap-1', collapsed && 'items-center')}
     >
       {NAV_ITEMS.map(({ href, label, Icon }) => {
         const active = isActive(pathname, href);
@@ -44,17 +46,29 @@ export function DashboardTopNav({ className }: { className?: string }) {
             key={href}
             href={href}
             aria-current={active ? 'page' : undefined}
+            aria-label={collapsed ? label : undefined}
+            title={collapsed ? label : undefined}
+            onClick={onNavClick}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors sm:gap-2 sm:px-3',
-              'hover:text-foreground hover:bg-muted/50',
+              'flex items-center rounded-md text-sm transition-colors',
               'focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2',
-              active &&
-                'bg-accent text-accent-foreground hover:bg-accent hover:text-accent-foreground',
+              collapsed
+                ? cn(
+                    'mx-auto size-10 justify-center px-0',
+                    active
+                      ? 'bg-accent text-accent-foreground font-medium'
+                      : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground',
+                  )
+                : cn(
+                    'w-full gap-3 px-3 py-2',
+                    active
+                      ? 'bg-accent text-accent-foreground font-medium'
+                      : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground',
+                  ),
             )}
           >
-            <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span className="hidden sm:inline">{label}</span>
-            <span className="sr-only sm:hidden">{label}</span>
+            <Icon className="size-4 shrink-0" aria-hidden="true" />
+            {!collapsed ? <span className="truncate">{label}</span> : null}
           </Link>
         );
       })}

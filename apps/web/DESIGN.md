@@ -74,9 +74,31 @@ When adding or refactoring UI in `apps/web`:
 5. Before shipping applications UI, read the **Applications** table in this doc — do not use bare `rounded-lg border` on dashboard panels
 6. For long-form text inputs on the dashboard (Text job description, Optional instruction) → use the project `MarkdownEditor`, not a bare `<Textarea>`. The intake's segmented Job source row is the only authoring surface that owns the "Text" mode; the workspace's cover letter editor already follows this rule.
 
+## Dashboard sidebar
+
+The authenticated dashboard uses a persistent left sidebar instead of a top header.
+
+| Element                 | Rules                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sidebar rail            | `surface-soft text-card-foreground` with a right-edge `chrome-divider`; `md:grid-cols-[auto_1fr]` so the rail shrinks to `4rem` when collapsed                                                                                                                                                                                                          |
+| Active nav item         | `bg-accent text-accent-foreground`                                                                                                                                                                                                                                                                                                                      |
+| Primary nav             | `DashboardSidebarNav`, `aria-label="Primary"`, links for **My CVs** and **Applications** with `aria-current="page"`                                                                                                                                                                                                                                     |
+| Contextual middle group | **Mobile-only** CV section nav (`CvSectionNav`) inside the `Sheet` for `/dashboard/cv/[id]/*` (desktop renders its own left panel inside the editor instead)                                                                                                                                                                                            |
+| Settings group          | _Removed_ — AI agent + MCP settings live inside the `UserMenu` dropdown; Security and Import LLM settings are no longer linked from the sidebar.                                                                                                                                                                                                        |
+| User footer             | `UserMenu` trigger with avatar, name, and email; dropdown header repeats the avatar/name/email, followed by AI agent + MCP config links and a destructive Sign out.                                                                                                                                                                                     |
+| Top bar (all viewports) | `DashboardTopBar` renders a `sticky` `h-14` chrome with the sidebar toggle + route-based breadcrumbs (and a mobile-only "Show menu" button below `md`).                                                                                                                                                                                                 |
+| Mobile (< `md`)         | The top bar shows only the "Show menu" button (no logo). Tapping it opens a left `Sheet` containing the same `DashboardSidebar` (always expanded inside the sheet).                                                                                                                                                                                     |
+| Content background      | `<main>` uses `bg-muted/30` so pages sit on a light gray surface; inner column is `max-w-6xl mx-auto` with `px-4 py-4`.                                                                                                                                                                                                                                 |
+| CV editor inner panel   | On `lg+`, the CV editor renders its own left section nav (`CvSectionNav` expanded/comfortable, sticky, `lg:w-56`) next to the editor. Below `lg` (tablet/mobile, ≤1024px) the same nav is rendered inside a left `Sheet` drawer, toggled by a "Sections" button (`PanelLeftOpen` icon, `lg:hidden`) anchored at the top-left of the editor actions row. |
+
+The dashboard layout is `md:grid md:grid-cols-[auto_1fr]`. The rail width is driven by `DashboardSidebarContext` (`DashboardSidebarProvider`) — `4rem` when collapsed (icon-only) and `16rem` when expanded. The collapsed flag defaults to `true` on tablets (`md`–`lg`) and `false` on desktop (`lg+`); the user's choice persists in `localStorage` under `dashboard-sidebar-collapsed`. The top-bar toggle button flips the flag on `md+`, and opens the mobile Sheet below `md`.
+
 ## Related files
 
 - Tokens and utilities: `src/app/globals.css`
+- Sidebar primitives: `src/components/dashboard/dashboard-sidebar.tsx`, `dashboard-sidebar-nav.tsx`, `dashboard-sidebar-sections.tsx`, `dashboard-sidebar-shell.tsx`
+- Sidebar state: `src/components/dashboard/dashboard-sidebar-context.tsx`
+- Top bar: `src/components/dashboard/dashboard-top-bar.tsx`, `use-route-breadcrumbs.ts`
 - Preview implementation: `src/app/dashboard/cv/[id]/preview/cv-preview-client.tsx`, `cv-preview-skeleton.tsx`
 - Reference panel: `src/components/cv/template-config-panel.tsx`
 - Applications workspace: `src/components/applications/application-workspace.tsx`

@@ -8,22 +8,19 @@ describe('CvEditorSkeleton', () => {
     cleanup();
   });
 
-  it('renders a responsive sidebar and basics card placeholders', () => {
+  it('renders a main content placeholder without a section rail', () => {
     render(<CvEditorSkeleton />);
 
     expect(screen.getByRole('status', { name: 'Loading CV' })).toBeInTheDocument();
 
-    const aside = screen.getByRole('status').querySelector('aside');
-    expect(aside).toHaveClass('w-12');
-    expect(aside).toHaveClass('md:w-48');
-
-    const navItems = aside?.querySelectorAll('nav > div');
-    expect(navItems).toHaveLength(13);
+    const aside = document.querySelector('aside');
+    expect(aside).toBeNull();
+    expect(document.querySelector('nav')).toBeNull();
   });
 
   it('renders a generic section card for non-basics routes', () => {
     const { container } = render(<CvEditorSkeleton section="projects" />);
 
-    expect(container.querySelector('.pl-4 .surface-soft')).toBeInTheDocument();
+    expect(container.querySelector('.surface-soft')).toBeInTheDocument();
   });
 });
