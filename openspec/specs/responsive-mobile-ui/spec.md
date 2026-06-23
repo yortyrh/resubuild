@@ -14,12 +14,8 @@ The login, register, dashboard (My CVs), Applications, CV editor (every section)
 
 - **WHEN** a user opens `/dashboard` on a 375px-wide viewport
 - **THEN** the document SHALL NOT overflow horizontally
-- **AND** all header navigation items and the primary action button SHALL be fully visible and tappable
-
-#### Scenario: CV editor section content uses full width on mobile
-
-- **WHEN** a user opens any CV editor section on a viewport below the `md` breakpoint
-- **THEN** the section content pane SHALL span the full available content width with no persistent navigation rail consuming horizontal space
+- **AND** the mobile top-bar menu button and the primary page action (e.g. "New CV") SHALL be fully visible and tappable
+- **AND** opening the mobile sidebar Sheet SHALL NOT cause horizontal overflow
 
 ### Requirement: Auth pages SHALL center their card on mobile without a top dead band
 
@@ -65,9 +61,11 @@ The "New CV" action on the My CVs page, the "Prepare application" action on the 
 
 ### Requirement: Dashboard header SHALL fit a 375px viewport on a single row
 
-The dashboard header (brand wordmark, My CVs link, Applications link, user menu) SHALL fit on one row at 375px width without wrapping, truncation of link labels, or overlapping the user menu. Spacing and font sizes MAY compress below the `sm` breakpoint to achieve this.
+The dashboard chrome SHALL present a slim top bar on mobile viewports (below `md`) containing the brand wordmark and a menu toggle. On desktop (at or above `md`) the brand and navigation SHALL live inside the persistent left sidebar, not in a horizontal header row.
 
 #### Scenario: Header intact on small phone
 
 - **WHEN** a user views any dashboard page at 375px width
-- **THEN** the brand, both navigation links, and the user menu SHALL be visible on one row and individually tappable
+- **THEN** a slim top bar SHALL show the brand and a tappable "Open menu" button
+- **AND** the persistent sidebar SHALL be hidden
+- **AND** activating the menu button SHALL open the sidebar Sheet

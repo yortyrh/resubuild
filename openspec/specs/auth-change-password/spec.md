@@ -57,7 +57,7 @@ The dashboard SHALL expose a Security settings page at `/dashboard/settings/secu
 - **WHEN** the API returns `401` from `POST /auth/password`
 - **THEN** the form SHALL display the inline error "Current password is incorrect" and SHALL NOT clear the form
 
-#### Scenario: User sees Security settings in the menu
+#### Scenario: User sees Security settings in the sidebar
 
-- **WHEN** a signed-in user opens the dashboard user menu
-- **THEN** a "Security" link to `/dashboard/settings/security` SHALL appear
+- **WHEN** a signed-in user opens the dashboard sidebar
+- **THEN** a "Security" link to `/dashboard/settings/security` SHALL appear in the settings group at the bottom of the sidebar

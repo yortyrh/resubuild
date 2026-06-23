@@ -338,50 +338,39 @@ When view mode renders links produced from Markdown-authored fields (summaries, 
 
 ### Requirement: CV section navigation SHALL use a left sidebar on desktop and tablet
 
-On viewports at or above the application `md` breakpoint, the CV editor SHALL render section navigation as a vertical list in a fixed left panel with text labels and section icons. The active section's content SHALL occupy the remaining horizontal space to the right. The horizontal wrapping tab strip MUST NOT be the primary navigation pattern on md+ viewports. Authors SHALL be able to collapse the sidebar to icon-only mode and expand it again via an explicit toggle control. The collapse/expand toggle SHALL render in the breadcrumb chrome row (adjacent to the breadcrumb trail), NOT inside the sidebar sticky header.
+On viewports at or above the application `md` breakpoint, the CV editor SHALL render section navigation as a vertical list inside the global dashboard sidebar's contextual middle group, with text labels and section icons. The active section's content SHALL occupy the remaining horizontal space to the right. Authors SHALL NOT be able to collapse the section nav to icon-only mode because the global sidebar has a fixed width; there SHALL be no section-nav toggle in the breadcrumb chrome row.
 
 #### Scenario: Desktop layout shows sidebar and content
 
 - **WHEN** a user opens the CV editor on a viewport at or above the `md` breakpoint
-- **THEN** section links SHALL appear in a left sidebar with icons and labels and the selected section's editor content SHALL render in the adjacent main pane
+- **THEN** section links SHALL appear inside the global dashboard sidebar with icons and labels
+- **AND** the selected section's editor content SHALL render in the adjacent main pane
 
 #### Scenario: All sections reachable from sidebar
 
-- **WHEN** a user scans the left sidebar on desktop
+- **WHEN** a user scans the global dashboard sidebar on desktop while editing a CV
 - **THEN** links for Basics, Social profiles, Work, Volunteer, Education, Skills, Projects, Awards, Certificates, Publications, Languages, Interests, and References SHALL be visible without using horizontal tab scrolling
-
-#### Scenario: Sidebar collapses to icons
-
-- **WHEN** a user activates the collapse control in the breadcrumb row on desktop
-- **THEN** the sidebar SHALL shrink to icon-only links with accessible labels
-- **AND** selecting a section SHALL still update the URL and main content pane
-
-#### Scenario: Toggle lives beside breadcrumb
-
-- **WHEN** a user views any CV editor section
-- **THEN** the section-nav toggle button SHALL appear in the same horizontal row as the breadcrumb trail
-- **AND** SHALL NOT appear as the first item inside the sidebar sticky column
 
 ### Requirement: CV section navigation SHALL use a left drawer on mobile
 
-Below the `md` breakpoint, the CV editor SHALL NOT render a persistent navigation rail. Section navigation SHALL be presented in an off-canvas left drawer (Sheet overlay) opened from the section-nav toggle button in the breadcrumb row. The drawer SHALL list all sections with icons and text labels, SHALL mark the active section, and SHALL close after a section is selected. While the drawer is closed, the section content pane SHALL occupy the full available content width.
+Below the `md` breakpoint, the CV editor SHALL NOT render a persistent navigation rail or its own section drawer. Section navigation SHALL be presented inside the global dashboard sidebar Sheet opened from the top-bar hamburger menu. The Sheet SHALL list all sections with icons and text labels, SHALL mark the active section, and SHALL close after a section is selected. While the Sheet is closed, the section content pane SHALL occupy the full available content width.
 
-#### Scenario: Mobile shows drawer on demand
+#### Scenario: Mobile shows dashboard Sheet on demand
 
-- **WHEN** a user opens the CV editor on a viewport below `md` and activates the section-nav toggle in the breadcrumb row
-- **THEN** a left drawer overlay SHALL open listing Basics, Social profiles, Work, Volunteer, Education, Skills, Projects, Awards, Certificates, Publications, Languages, Interests, and References with icons and labels
+- **WHEN** a user opens the CV editor on a viewport below `md` and activates the top-bar menu button
+- **THEN** the global dashboard sidebar Sheet SHALL open listing the primary nav, CV sections, and settings
 
-#### Scenario: Mobile section selection updates content and closes drawer
+#### Scenario: Mobile section selection updates content and closes Sheet
 
-- **WHEN** a user selects a section from the mobile drawer
+- **WHEN** a user selects a section from the dashboard sidebar Sheet
 - **THEN** the main pane SHALL show the chosen section's content
 - **AND** the URL SHALL reflect the selected section slug
-- **AND** the drawer SHALL close
+- **AND** the Sheet SHALL close
 
-#### Scenario: Content uses full width when drawer closed
+#### Scenario: Content uses full width when Sheet closed
 
-- **WHEN** a user views any CV editor section below `md` with the drawer closed
-- **THEN** no navigation rail SHALL consume horizontal space beside the section content
+- **WHEN** a user views any CV editor section below `md` with the Sheet closed
+- **THEN** no persistent navigation rail SHALL consume horizontal space beside the section content
 
 ### Requirement: Active CV section SHALL be reflected in the URL path
 
@@ -418,17 +407,17 @@ The CV editor SHALL derive the active section from the current URL on initial lo
 
 ### Requirement: Section navigation links SHALL indicate the active section
 
-The navigation list (sidebar on `md+` viewports, drawer below `md`) SHALL visually distinguish the active section with icons and labels (or icon-only with accessible name) and SHALL expose `aria-current="page"` (or equivalent) on the active link for assistive technologies.
+The navigation list in the global dashboard sidebar SHALL visually distinguish the active CV section with icons and labels and SHALL expose `aria-current="page"` on the active link for assistive technologies.
 
 #### Scenario: Active item styling in sidebar
 
 - **WHEN** a user views `/dashboard/cv/[id]/education`
-- **THEN** the Education navigation link SHALL be styled as active and other section links SHALL appear inactive
+- **THEN** the Education navigation link in the global dashboard sidebar SHALL be styled as active and other section links SHALL appear inactive
 
-#### Scenario: Active item styling in mobile drawer
+#### Scenario: Active item styling in mobile Sheet
 
-- **WHEN** a user opens the section drawer below `md` while viewing `/dashboard/cv/[id]/education`
-- **THEN** the Education link inside the drawer SHALL be styled as active and SHALL expose `aria-current="page"`
+- **WHEN** a user opens the dashboard sidebar Sheet below `md` while viewing `/dashboard/cv/[id]/education`
+- **THEN** the Education link inside the Sheet SHALL be styled as active and SHALL expose `aria-current="page"`
 
 ### Requirement: View mode SHALL expose every form-backed JSON Resume field per section
 
