@@ -148,20 +148,56 @@ describe('ApplicationWorkspace tabs', () => {
     });
   });
 
-  it('shows the job title as a visible heading on the same row as the Update button', async () => {
+  it('shows the company as the heading and the position as a subtitle on the same row as the Update button', async () => {
     renderWorkspace();
 
     const heading = await screen.findByRole('heading', {
       level: 1,
-      name: 'Senior Engineer · Acme',
+      name: 'Acme',
     });
     expect(heading).toHaveClass('text-2xl', 'font-semibold');
+
+    // The position is rendered as a muted subtitle beneath the heading. Scope
+    // to the heading row so we don't match the Job summary tab's Position dd.
+    const headingRow = heading.parentElement;
+    expect(headingRow).not.toBeNull();
+    const subtitle = within(headingRow!).getByText('Senior Engineer');
+    expect(subtitle).toHaveClass('text-muted-foreground');
+    expect(subtitle.tagName).toBe('P');
 
     // The Update button shares the heading row, not a breadcrumb row above it.
     const updateButton = screen.getByRole('button', { name: /Update/ });
     expect(
       updateButton.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_PRECEDING,
     ).toBeTruthy();
+  });
+
+  it('falls back to "Application" as the heading when the company is missing', async () => {
+    mockGetApplication.mockResolvedValue({
+      ...readyApplication,
+      jobTitle: 'Senior Engineer',
+      jobCompany: null,
+    });
+
+    renderWorkspace();
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Application' });
+    const headingRow = heading.parentElement;
+    expect(within(headingRow!).getByText('Senior Engineer')).toBeInTheDocument();
+  });
+
+  it('omits the subtitle when the position is missing', async () => {
+    mockGetApplication.mockResolvedValue({
+      ...readyApplication,
+      jobTitle: null,
+      jobCompany: 'Acme',
+    });
+
+    renderWorkspace();
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Acme' });
+    const headingRow = heading.parentElement;
+    expect(within(headingRow!).queryByText('Senior Engineer')).not.toBeInTheDocument();
   });
 
   it('does not render the inner workspace breadcrumb above the title', async () => {
