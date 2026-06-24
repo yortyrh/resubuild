@@ -225,7 +225,7 @@ export function ApplicationWorkspace({ id }: { id: string }) {
         </div>
       ) : null}
 
-      <div className="px-2">
+      <div className="no-print px-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h1 className="min-w-0 flex-1 text-2xl font-semibold tracking-tight">
             {[data.jobTitle, data.jobCompany].filter(Boolean).join(' · ') || 'Application'}
@@ -253,7 +253,7 @@ export function ApplicationWorkspace({ id }: { id: string }) {
 
       <div className="surface-soft text-card-foreground p-4">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="no-print flex flex-wrap items-center justify-between gap-3">
             <TabsList>
               <TabsTrigger value="summary">Job summary</TabsTrigger>
               <TabsTrigger value="tailored-cv">Tailored CV</TabsTrigger>
