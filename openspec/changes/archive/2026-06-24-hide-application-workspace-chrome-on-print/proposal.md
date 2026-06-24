@@ -1,23 +1,21 @@
 ## Why
 
 This change **retroactively documents work already implemented** in the
-working tree. The application workspace component
-(`apps/web/src/components/applications/application-workspace.tsx`) — the
-page rendered at `/dashboard/applications/[id]` — now wraps two
-in-page chrome regions with the `no-print` utility class: the workspace
-header row (job title + Update button) and the tab strip header row
-(`TabsList` plus per-tab action buttons). The existing
-`@media print { .no-print { display: none !important; } }` rule in
-`apps/web/src/app/globals.css` then hides both regions whenever a user
-prints an application workspace page.
+working tree. The application workspace page
+(`/dashboard/applications/[id]`) now wraps two in-page chrome regions
+with the `no-print` utility class — the workspace header row (job title
 
-The dashboard chrome (sidebar + top bar) and the landing/CV-editor
-chrome already use `no-print`. The application workspace page is the
-last authenticated page whose workspace-level chrome (header + tab
-strip) still leaked into a printout. Without `no-print`, printing an
-application workspace page (e.g. to take a printed copy of a tailored
-CV or cover letter) included the in-page header and tab strip alongside
-the actual CV/letter content, wasting paper and obscuring the content.
+- Update button) and the tab strip header row (`TabsList` plus per-tab
+  action buttons) — so the existing
+  `@media print { .no-print { display: none !important; } }` rule in
+  `apps/web/src/app/globals.css` hides them on print.
+
+Dashboard chrome (sidebar + top bar) and landing/CV-editor chrome
+already use `no-print`. The application workspace was the last
+authenticated page whose workspace-level chrome still leaked into a
+printout. Without `no-print`, printing an application workspace page
+included the in-page header and tab strip alongside the CV/letter
+content, wasting paper and obscuring the actual content.
 
 ## What Changes
 
