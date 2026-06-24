@@ -38,12 +38,12 @@ export function CvEditorChrome({ cvId, children }: CvEditorChromeProps) {
     setBreadcrumb({
       variant: 'cv',
       cvId,
-      basics: resume?.basics ?? null,
+      basics: loading ? null : (resume?.basics ?? null),
       activeSection,
       application,
     });
     return () => reset();
-  }, [setBreadcrumb, reset, cvId, resume?.basics, activeSection, application]);
+  }, [setBreadcrumb, reset, cvId, resume?.basics, activeSection, application, loading]);
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">

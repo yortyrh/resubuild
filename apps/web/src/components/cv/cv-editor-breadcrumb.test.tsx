@@ -75,6 +75,16 @@ describe('CvEditorBreadcrumb', () => {
     expect(current).toHaveClass('text-muted-foreground');
   });
 
+  it('renders a skeleton placeholder for the CV title while loading', () => {
+    render(<CvEditorBreadcrumb cvId="cv-1" basics={null} activeSection="basics" />);
+
+    expect(screen.queryByText('Untitled CV')).not.toBeInTheDocument();
+    const skeleton = document.querySelector('[data-slot="skeleton"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' }).contains(skeleton)).toBe(true);
+  });
+
   it('renders preview trail with linked CV title', () => {
     render(
       <CvEditorBreadcrumb

@@ -15,6 +15,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 interface CvEditorBreadcrumbProps {
@@ -61,8 +62,9 @@ export function CvEditorBreadcrumb({
   pageLabel,
   className,
 }: CvEditorBreadcrumbProps) {
+  const isLoading = basics === null;
   const title = deriveCvTitleFromBasics(basics);
-  const isUntitled = title === 'Untitled CV';
+  const isUntitled = !isLoading && title === 'Untitled CV';
   const onBasics = !pageLabel && activeSection === 'basics';
   const showTrailEnd =
     pageLabel ?? (activeSection && !onBasics ? sectionLabel(activeSection) : null);
@@ -78,7 +80,9 @@ export function CvEditorBreadcrumb({
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          {onBasics ? (
+          {isLoading ? (
+            <Skeleton aria-hidden="true" className="h-4 w-36 max-w-[45vw] sm:w-56" />
+          ) : onBasics ? (
             <BreadcrumbPage>
               <CvTitleDisplay basics={basics} muted={isUntitled} />
             </BreadcrumbPage>
