@@ -7,7 +7,7 @@ export function DashboardSidebarShell() {
   const { collapsed, ready } = useDashboardSidebar();
   return (
     <aside
-      className="surface-soft text-card-foreground chrome-divider sticky top-0 hidden h-screen shrink-0 overflow-y-auto border-r transition-[width] duration-200 md:block"
+      className="surface-soft text-card-foreground chrome-divider no-print sticky top-0 hidden h-screen shrink-0 overflow-y-auto border-r transition-[width] duration-200 md:block"
       data-collapsed={ready && collapsed ? 'true' : 'false'}
       style={{
         width: ready && collapsed ? '4rem' : '16rem',

@@ -38,7 +38,7 @@ export function DashboardTopBar({ actions }: { actions?: ReactNode }) {
     return (
       <header
         className={cn(
-          'chrome-divider bg-background sticky top-0 z-30 flex h-14 items-center gap-1 border-b px-2',
+          'chrome-divider bg-background no-print sticky top-0 z-30 flex h-14 items-center gap-1 border-b px-2',
         )}
       >
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -64,7 +64,7 @@ export function DashboardTopBar({ actions }: { actions?: ReactNode }) {
   return (
     <header
       className={cn(
-        'chrome-divider bg-background sticky top-0 z-30 flex h-14 items-center gap-1 border-b px-2',
+        'chrome-divider bg-background no-print sticky top-0 z-30 flex h-14 items-center gap-1 border-b px-2',
       )}
     >
       <Button
