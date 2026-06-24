@@ -1,16 +1,16 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import { Eye, FileDown, FileText, Loader2, MoreVertical, Sparkles, Trash2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import type { JobApplicationStatus, JobApplicationSummary } from '@/lib/api';
+import {
+  ApplicationActionsMenu,
+  actionLabel,
+  StatusBadge,
+  UpdatingIndicator,
+} from './application-row-display';
 
 /**
  * Row data shape consumed by the applications data table. Decoupled from
@@ -26,45 +26,6 @@ export interface ApplicationRow {
   raw: JobApplicationSummary;
 }
 
-const STATUS_LABEL: Record<JobApplicationStatus, string> = {
-  queued: 'Queued',
-  running: 'Running',
-  ready: 'Ready',
-  failed: 'Failed',
-};
-
-const STATUS_DOT_CLASS: Record<JobApplicationStatus, string> = {
-  queued: 'bg-muted-foreground/60',
-  running: 'bg-amber-500',
-  ready: 'bg-emerald-500',
-  failed: 'bg-destructive',
-};
-
-function StatusBadge({ status }: { status: JobApplicationStatus }) {
-  return (
-    <span className="inline-flex items-center gap-2 text-sm capitalize">
-      <span
-        aria-hidden="true"
-        className={`inline-block size-2 shrink-0 rounded-full ${STATUS_DOT_CLASS[status]}`}
-      />
-      {STATUS_LABEL[status]}
-    </span>
-  );
-}
-
-function UpdatingIndicator() {
-  return (
-    <span
-      role="status"
-      className="inline-flex items-center gap-2 text-sm text-amber-600"
-      aria-label="Update in progress"
-    >
-      <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-      Updating…
-    </span>
-  );
-}
-
 export interface ApplicationRowActions {
   onUpdate: (row: ApplicationRow) => void;
   onDelete: (row: ApplicationRow) => void;
@@ -73,17 +34,6 @@ export interface ApplicationRowActions {
   onPreviewCv: (row: ApplicationRow) => void;
   exportingCvPdfFor: string | null;
   exportingLetterPdfFor: string | null;
-}
-
-function actionLabel(application: ApplicationRow, verb: 'Update' | 'Delete' | 'Open') {
-  if (application.position) {
-    return `${verb} ${application.position} application`;
-  }
-  return `${verb} application`;
-}
-
-function menuTriggerLabel(application: ApplicationRow) {
-  return actionLabel(application, 'Open');
 }
 
 export function getApplicationColumns(actions: ApplicationRowActions): ColumnDef<ApplicationRow>[] {
@@ -134,16 +84,13 @@ export function getApplicationColumns(actions: ApplicationRowActions): ColumnDef
       header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => {
         const app = row.original;
-        const hasTailoredCv = Boolean(app.raw.tailoredCvId);
-        const isExportingCvPdf = actions.exportingCvPdfFor === app.id;
-        const isExportingLetterPdf = actions.exportingLetterPdfFor === app.id;
-        const anyExportInFlight = isExportingCvPdf || isExportingLetterPdf;
         return (
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-nowrap items-center justify-end gap-2">
             <Button
               type="button"
               size="sm"
               variant="outline"
+              className="shrink-0"
               disabled={app.updateInProgress}
               onClick={() => actions.onUpdate(app)}
               aria-label={actionLabel(app, 'Update')}
@@ -155,62 +102,7 @@ export function getApplicationColumns(actions: ApplicationRowActions): ColumnDef
               )}
               {app.updateInProgress ? 'Updating…' : 'Update'}
             </Button>
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  aria-label={menuTriggerLabel(app)}
-                  className="text-muted-foreground shrink-0"
-                >
-                  <MoreVertical className="size-4" aria-hidden="true" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  disabled={!hasTailoredCv || anyExportInFlight}
-                  onClick={() => actions.onExportCvPdf(app)}
-                  className="flex items-center gap-2"
-                >
-                  {isExportingCvPdf ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <FileText className="size-4" aria-hidden="true" />
-                  )}
-                  {isExportingCvPdf ? 'Exporting CV PDF…' : 'Export CV as PDF'}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={anyExportInFlight}
-                  onClick={() => actions.onExportLetterPdf(app)}
-                  className="flex items-center gap-2"
-                >
-                  {isExportingLetterPdf ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <FileDown className="size-4" aria-hidden="true" />
-                  )}
-                  {isExportingLetterPdf
-                    ? 'Exporting cover letter PDF…'
-                    : 'Export cover letter as PDF'}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={!hasTailoredCv}
-                  onClick={() => actions.onPreviewCv(app)}
-                  className="flex items-center gap-2"
-                >
-                  <Eye className="size-4" aria-hidden="true" />
-                  Preview CV
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => actions.onDelete(app)}
-                  className="text-destructive focus:text-destructive flex items-center gap-2"
-                >
-                  <Trash2 className="size-4" aria-hidden="true" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ApplicationActionsMenu row={app} actions={actions} />
           </div>
         );
       },

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApplicationList } from './application-list';
@@ -80,28 +80,36 @@ describe('ApplicationList', () => {
 
     renderList();
 
-    // The table exposes accessible column headers. Use waitFor to assert
-    // the full set so we don't race the skeleton → data-table swap.
+    // The desktop data table is identified by data-testid so it can be
+    // distinguished from the skeleton's table while the query is in flight.
+    const tableRegion = await screen.findByTestId('applications-data-table');
+    const table = within(tableRegion).getByRole('table');
     await waitFor(() => {
-      const headers = screen.getAllByRole('columnheader').map((h) => h.textContent);
+      const headers = within(table)
+        .getAllByRole('columnheader')
+        .map((h) => h.textContent);
       expect(headers).toEqual(['Company', 'Position', 'Application status', 'Actions']);
     });
 
     // Company and Position are each links to the application workspace.
-    const companyLink = await screen.findByRole('link', { name: 'Acme' });
+    const companyLink = within(table).getByRole('link', { name: 'Acme' });
     expect(companyLink).toHaveAttribute('href', '/dashboard/applications/app-1');
 
-    expect(screen.getByRole('link', { name: 'Engineer' })).toHaveAttribute(
+    expect(within(table).getByRole('link', { name: 'Engineer' })).toHaveAttribute(
       'href',
       '/dashboard/applications/app-1',
     );
 
     // The status cell shows the human-readable status label.
-    expect(screen.getByText('Ready')).toBeInTheDocument();
+    expect(within(table).getByText('Ready')).toBeInTheDocument();
 
     // The Update button stays inline; the row's other actions live in a 3-dots menu.
-    expect(screen.getByRole('button', { name: 'Update Engineer application' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open Engineer application' })).toBeInTheDocument();
+    expect(
+      within(table).getByRole('button', { name: 'Update Engineer application' }),
+    ).toBeInTheDocument();
+    expect(
+      within(table).getByRole('button', { name: 'Open Engineer application' }),
+    ).toBeInTheDocument();
   });
 
   it('opens a 3-dots menu with Export CV as PDF, Export cover letter as PDF, Preview CV, and Delete', async () => {
@@ -120,7 +128,9 @@ describe('ApplicationList', () => {
 
     renderList();
 
-    const trigger = await screen.findByRole('button', { name: 'Open Engineer application' });
+    const tableRegion = await screen.findByTestId('applications-data-table');
+    const table = within(tableRegion).getByRole('table');
+    const trigger = within(table).getByRole('button', { name: 'Open Engineer application' });
     await user.click(trigger);
 
     expect(await screen.findByRole('menuitem', { name: /Export CV as PDF/ })).toBeInTheDocument();
@@ -149,7 +159,9 @@ describe('ApplicationList', () => {
 
     renderList();
 
-    const trigger = await screen.findByRole('button', { name: 'Open Engineer application' });
+    const tableRegion = await screen.findByTestId('applications-data-table');
+    const table = within(tableRegion).getByRole('table');
+    const trigger = within(table).getByRole('button', { name: 'Open Engineer application' });
     await user.click(trigger);
 
     await user.click(await screen.findByRole('menuitem', { name: /Export CV as PDF/ }));
@@ -181,7 +193,9 @@ describe('ApplicationList', () => {
 
     renderList();
 
-    const trigger = await screen.findByRole('button', { name: 'Open Engineer application' });
+    const tableRegion = await screen.findByTestId('applications-data-table');
+    const table = within(tableRegion).getByRole('table');
+    const trigger = within(table).getByRole('button', { name: 'Open Engineer application' });
     await user.click(trigger);
 
     await user.click(await screen.findByRole('menuitem', { name: /Export cover letter as PDF/ }));
@@ -210,7 +224,9 @@ describe('ApplicationList', () => {
 
     renderList();
 
-    const trigger = await screen.findByRole('button', { name: 'Open Engineer application' });
+    const tableRegion = await screen.findByTestId('applications-data-table');
+    const table = within(tableRegion).getByRole('table');
+    const trigger = within(table).getByRole('button', { name: 'Open Engineer application' });
     await user.click(trigger);
 
     await user.click(await screen.findByRole('menuitem', { name: /Export CV as PDF/ }));
@@ -238,7 +254,9 @@ describe('ApplicationList', () => {
     renderList();
 
     // Open the row's actions menu and click the Delete entry.
-    const trigger = await screen.findByRole('button', { name: 'Open Engineer application' });
+    const tableRegion = await screen.findByTestId('applications-data-table');
+    const table = within(tableRegion).getByRole('table');
+    const trigger = within(table).getByRole('button', { name: 'Open Engineer application' });
     await user.click(trigger);
     await user.click(await screen.findByRole('menuitem', { name: /^Delete$/ }));
     // Then the confirm button inside the modal (no aria-label, accessible name = "Delete").
@@ -264,14 +282,16 @@ describe('ApplicationList', () => {
 
     renderList();
 
-    const updateButton = await screen.findByRole('button', {
+    const tableRegion = await screen.findByTestId('applications-data-table');
+    const table = within(tableRegion).getByRole('table');
+    const updateButton = within(table).getByRole('button', {
       name: 'Update Engineer application',
     });
     expect(updateButton).toBeDisabled();
     expect(updateButton).toHaveTextContent('Updating…');
 
     // The status cell also surfaces the in-progress state via the dedicated region.
-    expect(screen.getByLabelText('Update in progress')).toBeInTheDocument();
+    expect(within(table).getByLabelText('Update in progress')).toBeInTheDocument();
   });
 
   it('hides the "Prepare application" visible label below sm and exposes it via aria-label', async () => {
@@ -286,5 +306,38 @@ describe('ApplicationList', () => {
     const visibleLabel = container.querySelector('span.hidden.sm\\:inline');
     expect(visibleLabel).not.toBeNull();
     expect(visibleLabel).toHaveTextContent('Prepare application');
+  });
+
+  it('renders a mobile card view alongside the data table for each application', async () => {
+    mockListApplications.mockResolvedValue([
+      {
+        id: 'app-1',
+        status: 'ready',
+        jobTitle: 'Engineer',
+        jobCompany: 'Acme',
+        tailoredCvId: 'cv-1',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+
+    renderList();
+
+    const cards = await screen.findAllByTestId('application-row-card');
+    expect(cards).toHaveLength(1);
+    const card = cards[0];
+    expect(card.className).toContain('surface-soft');
+    // The card surfaces the same primary identifier (company link) and the
+    // status pill, so the mobile layout doesn't drop information.
+    expect(within(card).getByRole('link', { name: 'Acme' })).toHaveAttribute(
+      'href',
+      '/dashboard/applications/app-1',
+    );
+    expect(within(card).getByText('Ready')).toBeInTheDocument();
+    // The card reuses the same 3-dots trigger as the table row so the menu
+    // wiring (export / preview / delete) is reachable on mobile too.
+    expect(
+      within(card).getByRole('button', { name: 'Open Engineer application' }),
+    ).toBeInTheDocument();
   });
 });

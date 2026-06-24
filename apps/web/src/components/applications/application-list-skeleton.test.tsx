@@ -19,4 +19,13 @@ describe('ApplicationListSkeleton', () => {
     const rows = table?.querySelectorAll('tbody tr');
     expect(rows).toHaveLength(3);
   });
+
+  it('renders three mobile card placeholders so the loading state is consistent below md', () => {
+    const { container } = render(<ApplicationListSkeleton />);
+    const cardSurfaces = container.querySelectorAll('.md\\:hidden .surface-soft');
+    expect(cardSurfaces).toHaveLength(3);
+    for (const card of cardSurfaces) {
+      expect(card.className).toContain('text-card-foreground');
+    }
+  });
 });

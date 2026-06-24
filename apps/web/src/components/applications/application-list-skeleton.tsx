@@ -30,6 +30,24 @@ function ApplicationRowSkeleton() {
   );
 }
 
+function ApplicationCardSkeleton() {
+  return (
+    <div className="surface-soft text-card-foreground p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-5 w-3/5" />
+          <Skeleton className="h-4 w-4/5" />
+        </div>
+        <Skeleton className="size-9 shrink-0 rounded-md" />
+      </div>
+      <div className="divider-soft mt-4 flex items-center justify-between gap-3 border-t pt-3">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-9 w-20" />
+      </div>
+    </div>
+  );
+}
+
 export function ApplicationListSkeleton() {
   return (
     <div className="space-y-4" aria-busy="true" aria-live="polite">
@@ -40,7 +58,7 @@ export function ApplicationListSkeleton() {
         <Skeleton className="h-10 w-44" />
       </div>
 
-      <div className="surface-soft text-card-foreground overflow-hidden">
+      <div className="surface-soft text-card-foreground hidden overflow-hidden md:block">
         <Table aria-label="Applications">
           <TableHeader>
             <TableRow className="divider-soft hover:bg-transparent">
@@ -64,6 +82,16 @@ export function ApplicationListSkeleton() {
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="md:hidden">
+        <ul className="m-0 flex list-none flex-col gap-3 p-0">
+          {Array.from({ length: 3 }, (_, index) => (
+            <li key={index}>
+              <ApplicationCardSkeleton />
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

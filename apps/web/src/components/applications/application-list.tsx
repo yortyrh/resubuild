@@ -9,10 +9,12 @@ import { toast } from 'sonner';
 import { DataTable } from '@/components/applications/application-data-table';
 import {
   type ApplicationRow,
+  type ApplicationRowActions,
   getApplicationColumns,
   toApplicationRow,
 } from '@/components/applications/application-data-table-columns';
 import { ApplicationListSkeleton } from '@/components/applications/application-list-skeleton';
+import { ApplicationRowCard } from '@/components/applications/application-row-card';
 import { ApplicationUpdateDialog } from '@/components/applications/application-update-dialog';
 import { DeleteItemDialog } from '@/components/cv/cv-item-ui';
 import { Button } from '@/components/ui/button';
@@ -109,26 +111,32 @@ export function ApplicationList() {
     [router],
   );
 
-  const rows = useMemo(() => data.map(toApplicationRow), [data]);
-  const columns = useMemo(
-    () =>
-      getApplicationColumns({
-        onUpdate: setUpdateRow,
-        onDelete: setDeleteRow,
-        onExportCvPdf: handleExportCvPdf,
-        onExportLetterPdf: handleExportLetterPdf,
-        onPreviewCv: handlePreviewCv,
-        exportingCvPdfFor,
-        exportingLetterPdfFor,
-      }),
-    [
+  const actions = useMemo<ApplicationRowActions>(
+    () => ({
+      onUpdate: setUpdateRow,
+      onDelete: setDeleteRow,
+      onExportCvPdf: handleExportCvPdf,
+      onExportLetterPdf: handleExportLetterPdf,
+      onPreviewCv: handlePreviewCv,
       exportingCvPdfFor,
       exportingLetterPdfFor,
+    }),
+    [
       handleExportCvPdf,
       handleExportLetterPdf,
       handlePreviewCv,
+      exportingCvPdfFor,
+      exportingLetterPdfFor,
     ],
   );
+
+  const rows = useMemo(() => data.map(toApplicationRow), [data]);
+  const columns = useMemo(() => getApplicationColumns(actions), [actions]);
+  const renderCard = useCallback(
+    (row: ApplicationRow) => <ApplicationRowCard row={row} actions={actions} />,
+    [actions],
+  );
+  const getRowKey = useCallback((row: ApplicationRow) => row.id, []);
 
   const confirmDelete = async () => {
     if (!deleteRow) {
@@ -162,7 +170,13 @@ export function ApplicationList() {
         </Button>
       </div>
 
-      <DataTable columns={columns} data={rows} caption="Applications" />
+      <DataTable
+        columns={columns}
+        data={rows}
+        caption="Applications"
+        renderCard={renderCard}
+        getRowKey={getRowKey}
+      />
 
       <DeleteItemDialog
         open={deleteRow !== null}
