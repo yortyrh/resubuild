@@ -315,9 +315,19 @@ compose_api_json() {
   IMPORT_LLM_CONFIG_ENCRYPTION_KEY="$import_llm_config_encryption_key" \
   PDF_IMPORT_MAX_BYTES="$pdf_import_max_bytes" \
   PDF_IMPORT_ENABLED="$pdf_import_enabled" \
+  DB_URL="${DB_URL:-}" \
+  STORAGE_S3_URL="${STORAGE_S3_URL:-}" \
+  S3_PROTOCOL_REGION="${S3_PROTOCOL_REGION:-}" \
+  S3_PROTOCOL_ACCESS_KEY_ID="${S3_PROTOCOL_ACCESS_KEY_ID:-}" \
+  S3_PROTOCOL_ACCESS_KEY_SECRET="${S3_PROTOCOL_ACCESS_KEY_SECRET:-}" \
   PREVIOUS_ENV_PATH="$API_ENV" \
   node -e '
     const data = {
+      databaseUrl: process.env.DB_URL,
+      s3Endpoint: process.env.STORAGE_S3_URL,
+      s3Region: process.env.S3_PROTOCOL_REGION,
+      s3AccessKeyId: process.env.S3_PROTOCOL_ACCESS_KEY_ID,
+      s3SecretAccessKey: process.env.S3_PROTOCOL_ACCESS_KEY_SECRET,
       apiUrl: process.env.API_URL,
       anonKey: process.env.ANON_KEY,
       serviceRoleKey: process.env.SERVICE_ROLE_KEY,

@@ -4,7 +4,12 @@ import type { CvNormalizedRepository } from './cv-normalized.repository';
 export function createMockNormalizedRepo(): jest.Mocked<
   Pick<
     CvNormalizedRepository,
-    | 'createClientForUser'
+    | 'scopeFor'
+    | 'inTransaction'
+    | 'listHeaders'
+    | 'insertHeader'
+    | 'updateHeaderFields'
+    | 'deleteHeader'
     | 'fetchHeader'
     | 'fetchSections'
     | 'listSectionRows'
@@ -21,7 +26,15 @@ export function createMockNormalizedRepo(): jest.Mocked<
   >
 > {
   return {
-    createClientForUser: jest.fn().mockReturnValue({}),
+    scopeFor: jest.fn().mockImplementation((user: { id: string }) => ({
+      db: {} as never,
+      userId: user?.id,
+    })),
+    inTransaction: jest.fn().mockImplementation((scope, fn) => fn(scope)) as never,
+    listHeaders: jest.fn().mockResolvedValue([]),
+    insertHeader: jest.fn(),
+    updateHeaderFields: jest.fn().mockResolvedValue(true),
+    deleteHeader: jest.fn().mockResolvedValue(true),
     fetchHeader: jest.fn(),
     fetchSections: jest.fn().mockResolvedValue({
       profiles: [],

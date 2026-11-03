@@ -114,7 +114,7 @@ describe('ApplicationService', () => {
     getCatalog: jest.fn().mockReturnValue(testCatalog),
   };
   const normalizedRepo = {
-    createClientForUser: jest.fn(),
+    scopeFor: jest.fn(),
     fetchHeader: jest.fn(),
     fetchSections: jest.fn(),
     assembleFullResume: jest.fn(),
@@ -129,17 +129,13 @@ describe('ApplicationService', () => {
     cloneFromResume: jest.fn(),
     promoteClone: jest.fn(),
   };
-  const supabase = {
-    auth: {
-      getUser: jest.fn().mockResolvedValue({ data: { user: { user_metadata: {} } } }),
-    },
-  };
+  const scope = { db: {}, userId: 'user-1' };
 
   beforeEach(async () => {
     jest.clearAllMocks();
     repository.findDanglingUpdateDrafts.mockResolvedValue([]);
     repository.findActiveUpdateDraft.mockResolvedValue(null);
-    normalizedRepo.createClientForUser.mockReturnValue(supabase);
+    normalizedRepo.scopeFor.mockReturnValue(scope);
     normalizedRepo.fetchHeader.mockResolvedValue(null);
     normalizedRepo.fetchSections.mockResolvedValue({
       profiles: [],
@@ -825,7 +821,7 @@ describe('ApplicationService', () => {
 
     await service.applyTailorPatch(user, 'clone-1', {});
 
-    expect(normalizedRepo.replaceNormalizedCv).toHaveBeenCalledWith(supabase, 'clone-1', {
+    expect(normalizedRepo.replaceNormalizedCv).toHaveBeenCalledWith(scope, 'clone-1', {
       basics: {
         name: 'Thomas Davis',
         summary: 'Full stack developer - generative AI',
@@ -947,7 +943,7 @@ describe('ApplicationService', () => {
     });
 
     expect(normalizedRepo.replaceNormalizedCv).toHaveBeenCalledWith(
-      supabase,
+      scope,
       'clone-1',
       expect.objectContaining({
         basics: expect.objectContaining({ label: 'Lead Engineer' }),
@@ -968,7 +964,7 @@ describe('ApplicationService', () => {
     });
 
     expect(normalizedRepo.replaceNormalizedCv).toHaveBeenCalledWith(
-      supabase,
+      scope,
       'clone-1',
       expect.objectContaining({
         work: [{ summary: 'Built APIs' }],
@@ -986,7 +982,7 @@ describe('ApplicationService', () => {
     await service.applyTailorPatch(user, 'clone-1', { work: [] });
 
     expect(normalizedRepo.replaceNormalizedCv).toHaveBeenCalledWith(
-      supabase,
+      scope,
       'clone-1',
       expect.objectContaining({
         work: [{ summary: 'Built APIs' }],
@@ -1097,11 +1093,10 @@ describe('ApplicationService', () => {
       source_cv_id: null,
       tailored_cv_id: null,
     });
-    supabase.auth.getUser.mockResolvedValue({
-      data: { user: { user_metadata: { full_name: 'Thomas Davis' } } },
-    });
-
-    const result = await service.getCoverLetterPdfExport(user, 'app-1');
+    const result = await service.getCoverLetterPdfExport(
+      { ...(user as object), userMetadata: { full_name: 'Thomas Davis' } } as never,
+      'app-1',
+    );
 
     expect(result.filename).toBe('acme-corp-thomas-davis-engineering-manager.pdf');
   });
@@ -1123,7 +1118,6 @@ describe('ApplicationService', () => {
       source_cv_id: null,
       source_cv_snapshot: null,
     });
-    supabase.auth.getUser.mockResolvedValue({ data: { user: { user_metadata: {} } } });
 
     await expect(service.getCoverLetterMarkdown(user, 'app-1')).resolves.toContain('[Your Name]');
   });
@@ -1194,7 +1188,6 @@ describe('ApplicationService', () => {
       source_cv_id: 'cv-1',
     });
     normalizedRepo.fetchHeader.mockResolvedValue({ name: '   ' });
-    supabase.auth.getUser.mockResolvedValue({ data: { user: { user_metadata: {} } } });
 
     await expect(service.getCoverLetterMarkdown(user, 'app-1')).resolves.toContain('[Your Name]');
   });
@@ -1842,11 +1835,12 @@ describe('ApplicationService', () => {
       source_cv_id: 'cv-1',
     });
     normalizedRepo.fetchHeader.mockResolvedValue({ name: '   ' });
-    supabase.auth.getUser.mockResolvedValue({
-      data: { user: { user_metadata: { display_name: 'Display Name' } } },
-    });
-
-    await expect(service.getCoverLetterMarkdown(user, 'app-1')).resolves.toContain('Display Name');
+    await expect(
+      service.getCoverLetterMarkdown(
+        { ...(user as object), userMetadata: { display_name: 'Display Name' } } as never,
+        'app-1',
+      ),
+    ).resolves.toContain('Display Name');
   });
 
   it('scopes provider API keys during prepare when catalog defines an env var', async () => {

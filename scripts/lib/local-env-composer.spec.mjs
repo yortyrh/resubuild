@@ -164,6 +164,27 @@ describe('readOperatorControlledWebValues', () => {
 // ---------------------------------------------------------------------------
 
 describe('composeApiEnv — regression: re-running setup:env must not clobber operator config', () => {
+  it('writes DATABASE_URL and the S3 storage settings', () => {
+    const body = composeApiEnv(
+      makeBaseInput({
+        databaseUrl: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+        s3Endpoint: 'http://127.0.0.1:54321/storage/v1/s3',
+        s3Region: 'local',
+        s3AccessKeyId: 'ak',
+        s3SecretAccessKey: 'sk',
+      }),
+    );
+    expect(read(body, 'DATABASE_URL')).toBe(
+      'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+    );
+    expect(read(body, 'S3_ENDPOINT')).toBe('http://127.0.0.1:54321/storage/v1/s3');
+    expect(read(body, 'S3_PUBLIC_ENDPOINT')).toBe('http://127.0.0.1:54321/storage/v1/s3');
+    expect(read(body, 'S3_REGION')).toBe('local');
+    expect(read(body, 'S3_ACCESS_KEY_ID')).toBe('ak');
+    expect(read(body, 'S3_SECRET_ACCESS_KEY')).toBe('sk');
+    expect(read(body, 'S3_FORCE_PATH_STYLE')).toBe('true');
+  });
+
   it('reproduces the BEFORE state: AUTH_FORGOT_PASSWORD_ENABLED is present and settable to true on first run', () => {
     const previousEnv = {
       AUTH_FORGOT_PASSWORD_ENABLED: 'true',

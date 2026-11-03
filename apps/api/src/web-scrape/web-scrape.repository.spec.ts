@@ -1,264 +1,87 @@
 import { BadRequestException } from '@nestjs/common';
+import { webScrapeConfig } from '@resubuild/db';
 import { encryptSecret } from '../ai-agent/ai-agent-crypto.util';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthUser } from '../auth/auth-user.types';
+import { useTestDb } from '../database/test-db.helpers';
 import { WebScrapeRepository } from './web-scrape.repository';
 
 describe('WebScrapeRepository', () => {
-  const user = {
-    id: 'u1',
-    email: 'u@test.dev',
-    accessToken: 'tok',
-  } as AuthenticatedRequest['user'];
-
+  const ctx = useTestDb();
   const encryptionKey = 'encryption-key-at-least-32-characters-long';
 
   let repository: WebScrapeRepository;
-  let normalizedRepo: { createClientForUser: jest.Mock };
   let configService: { get: jest.Mock };
+  let user: AuthUser;
 
-  beforeEach(() => {
-    normalizedRepo = { createClientForUser: jest.fn() };
-    configService = {
-      get: jest.fn().mockReturnValue(encryptionKey),
-    };
-    repository = new WebScrapeRepository(configService as never, normalizedRepo as never);
+  beforeEach(async () => {
+    configService = { get: jest.fn().mockReturnValue(encryptionKey) };
+    repository = new WebScrapeRepository(configService as never, ctx.db);
+    user = await ctx.createUser();
   });
 
-  it('returns unconfigured status when row is missing', async () => {
-    normalizedRepo.createClientForUser.mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-          }),
-        }),
-      }),
+  async function insertRaw(apiKeyEncrypted: string) {
+    await ctx.db.insert(webScrapeConfig).values({
+      user_id: user.id,
+      provider: 'firecrawl',
+      api_key_encrypted: apiKeyEncrypted,
     });
+  }
 
+  it('returns unconfigured status when no row exists', async () => {
     await expect(repository.getStatus(user)).resolves.toEqual({ configured: false });
-  });
-
-  it('returns configured status when api key decrypts', async () => {
-    const encrypted = encryptSecret('fc-test-key', encryptionKey);
-
-    normalizedRepo.createClientForUser.mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            maybeSingle: jest.fn().mockResolvedValue({
-              data: {
-                provider: 'firecrawl',
-                api_key_encrypted: encrypted,
-                updated_at: '2026-01-01T00:00:00.000Z',
-              },
-              error: null,
-            }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(repository.getStatus(user)).resolves.toEqual({
-      configured: true,
-      provider: 'firecrawl',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-    });
-  });
-
-  it('marks reconfiguration required when api key cannot decrypt', async () => {
-    normalizedRepo.createClientForUser.mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            maybeSingle: jest.fn().mockResolvedValue({
-              data: {
-                provider: 'tavily',
-                api_key_encrypted: 'invalid.payload.here',
-                updated_at: '2026-01-01T00:00:00.000Z',
-              },
-              error: null,
-            }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(repository.getStatus(user)).resolves.toEqual({
-      configured: false,
-      provider: 'tavily',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-      reconfigurationRequired: true,
-    });
-  });
-
-  it('throws when getStatus query fails', async () => {
-    normalizedRepo.createClientForUser.mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            maybeSingle: jest
-              .fn()
-              .mockResolvedValue({ data: null, error: { message: 'db error' } }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(repository.getStatus(user)).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('throws when encryption key is missing', async () => {
-    configService.get.mockReturnValue(undefined);
-
-    normalizedRepo.createClientForUser.mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            maybeSingle: jest.fn().mockResolvedValue({
-              data: {
-                provider: 'firecrawl',
-                api_key_encrypted: encryptSecret('fc-test-key', encryptionKey),
-                updated_at: '2026-01-01T00:00:00.000Z',
-              },
-              error: null,
-            }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(repository.getStatus(user)).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('saves encrypted config', async () => {
-    normalizedRepo.createClientForUser.mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        upsert: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: { provider: 'firecrawl', updated_at: '2026-01-02T00:00:00.000Z' },
-              error: null,
-            }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(repository.save(user, 'firecrawl', 'fc-test-key')).resolves.toEqual({
-      configured: true,
-      provider: 'firecrawl',
-      updatedAt: '2026-01-02T00:00:00.000Z',
-    });
-  });
-
-  it('throws when save fails', async () => {
-    normalizedRepo.createClientForUser.mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        upsert: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            single: jest
-              .fn()
-              .mockResolvedValue({ data: null, error: { message: 'upsert failed' } }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(repository.save(user, 'tavily', 'tv-test-key')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-  });
-
-  it('clears config', async () => {
-    normalizedRepo.createClientForUser.mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        delete: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ error: null }),
-        }),
-      }),
-    });
-
-    await expect(repository.clear(user)).resolves.toEqual({ configured: false });
-  });
-
-  it('throws when clear fails', async () => {
-    normalizedRepo.createClientForUser.mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        delete: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ error: { message: 'delete failed' } }),
-        }),
-      }),
-    });
-
-    await expect(repository.clear(user)).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('returns null when decrypted config row is missing', async () => {
-    normalizedRepo.createClientForUser.mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-          }),
-        }),
-      }),
-    });
-
     await expect(repository.getDecryptedConfig(user)).resolves.toBeNull();
   });
 
-  it('returns decrypted config when row decrypts', async () => {
-    const encrypted = encryptSecret('tv-test-key', encryptionKey);
+  it('saves an encrypted config and reports it as configured', async () => {
+    const saved = await repository.save(user, 'firecrawl', 'fc-test-key');
+    expect(saved).toMatchObject({ configured: true, provider: 'firecrawl' });
 
-    normalizedRepo.createClientForUser.mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            maybeSingle: jest.fn().mockResolvedValue({
-              data: { provider: 'tavily', api_key_encrypted: encrypted },
-              error: null,
-            }),
-          }),
-        }),
-      }),
+    const [row] = await ctx.db.select().from(webScrapeConfig);
+    expect(row.api_key_encrypted).not.toContain('fc-test-key');
+
+    await expect(repository.getStatus(user)).resolves.toMatchObject({
+      configured: true,
+      provider: 'firecrawl',
+      updatedAt: expect.stringMatching(/Z$/),
     });
+    await expect(repository.getDecryptedConfig(user)).resolves.toEqual({
+      provider: 'firecrawl',
+      apiKey: 'fc-test-key',
+    });
+  });
 
+  it('save overwrites the previous provider and key (one row per user)', async () => {
+    await repository.save(user, 'firecrawl', 'fc-1');
+    await repository.save(user, 'tavily', 'tv-2');
     await expect(repository.getDecryptedConfig(user)).resolves.toEqual({
       provider: 'tavily',
-      apiKey: 'tv-test-key',
+      apiKey: 'tv-2',
     });
+    expect(await ctx.db.select().from(webScrapeConfig)).toHaveLength(1);
   });
 
-  it('returns null when decrypted config cannot decrypt', async () => {
-    normalizedRepo.createClientForUser.mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            maybeSingle: jest.fn().mockResolvedValue({
-              data: { provider: 'firecrawl', api_key_encrypted: 'invalid.payload.here' },
-              error: null,
-            }),
-          }),
-        }),
-      }),
+  it('marks reconfiguration required when the key cannot be decrypted', async () => {
+    await insertRaw(encryptSecret('fc-test-key', 'another-key-that-is-at-least-32-chars'));
+    await expect(repository.getStatus(user)).resolves.toMatchObject({
+      configured: false,
+      reconfigurationRequired: true,
     });
-
     await expect(repository.getDecryptedConfig(user)).resolves.toBeNull();
   });
 
-  it('throws when getDecryptedConfig query fails', async () => {
-    normalizedRepo.createClientForUser.mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            maybeSingle: jest
-              .fn()
-              .mockResolvedValue({ data: null, error: { message: 'db error' } }),
-          }),
-        }),
-      }),
-    });
+  it('throws when the encryption key is missing', async () => {
+    await insertRaw(encryptSecret('fc-test-key', encryptionKey));
+    configService.get.mockReturnValue(undefined);
+    await expect(repository.getStatus(user)).rejects.toBeInstanceOf(BadRequestException);
+  });
 
-    await expect(repository.getDecryptedConfig(user)).rejects.toBeInstanceOf(BadRequestException);
+  it('clears only the user’s config', async () => {
+    const other = await ctx.createUser();
+    await repository.save(user, 'firecrawl', 'fc-1');
+    await repository.save(other, 'tavily', 'tv-2');
+
+    await expect(repository.clear(user)).resolves.toEqual({ configured: false });
+    await expect(repository.getStatus(user)).resolves.toEqual({ configured: false });
+    await expect(repository.getStatus(other)).resolves.toMatchObject({ configured: true });
   });
 });

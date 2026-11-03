@@ -1,7 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { and, type Database, desc, eq, inArray, jobApplication } from '@resubuild/db';
 import type { JobApplicationRow, JobApplicationStatus, JobSourceType } from '@resubuild/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
-import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
+import { DATABASE } from '../database/database.tokens';
+import { pickColumns } from '../database/db-scope';
 
 export interface CreateJobApplicationInput {
   status: JobApplicationStatus;
@@ -42,20 +44,19 @@ export type UpdateJobApplicationInput = Partial<
 
 @Injectable()
 export class ApplicationRepository {
-  constructor(private readonly normalizedRepo: CvNormalizedRepository) {}
+  constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  private createClient(user: AuthenticatedRequest['user']) {
-    return this.normalizedRepo.createClientForUser(user);
+  private owned(user: AuthenticatedRequest['user']) {
+    return eq(jobApplication.user_id, user.id);
   }
 
   async create(
     user: AuthenticatedRequest['user'],
     input: CreateJobApplicationInput,
   ): Promise<JobApplicationRow> {
-    const supabase = this.createClient(user);
-    const { data, error } = await supabase
-      .from('job_application')
-      .insert({
+    const [row] = await this.db
+      .insert(jobApplication)
+      .values({
         user_id: user.id,
         status: input.status,
         job_source_type: input.job_source_type,
@@ -72,88 +73,68 @@ export class ApplicationRepository {
         cover_letter_email_subject: input.cover_letter_email_subject ?? null,
         selection_rationale: input.selection_rationale ?? null,
       })
-      .select('*')
-      .single();
+      .returning();
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return data as JobApplicationRow;
+    return row as JobApplicationRow;
   }
 
   async findAll(user: AuthenticatedRequest['user']): Promise<JobApplicationRow[]> {
-    const supabase = this.createClient(user);
-    let query = supabase.from('job_application').select('*').eq('is_list_visible', true);
+    const rows = await this.db
+      .select()
+      .from(jobApplication)
+      .where(and(this.owned(user), eq(jobApplication.is_list_visible, true)))
+      .orderBy(desc(jobApplication.updated_at));
 
-    // When using service-role client (MCP auth path), no RLS token scopes the query,
-    // so we must filter explicitly by user_id to avoid returning all users' applications.
-    if (user.authMethod === 'mcp') {
-      query = query.eq('user_id', user.id);
-    }
-
-    const { data, error } = await query.order('updated_at', { ascending: false });
-
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return (data ?? []) as JobApplicationRow[];
+    return rows as JobApplicationRow[];
   }
 
   async findOne(user: AuthenticatedRequest['user'], id: string): Promise<JobApplicationRow | null> {
-    const supabase = this.createClient(user);
-    const { data, error } = await supabase
-      .from('job_application')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
+    const rows = await this.db
+      .select()
+      .from(jobApplication)
+      .where(and(this.owned(user), eq(jobApplication.id, id)))
+      .limit(1);
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return (data as JobApplicationRow | null) ?? null;
+    return (rows[0] as JobApplicationRow | undefined) ?? null;
   }
 
   async findActiveUpdateDraft(
     user: AuthenticatedRequest['user'],
     sourceApplicationId: string,
   ): Promise<JobApplicationRow | null> {
-    const supabase = this.createClient(user);
-    const { data, error } = await supabase
-      .from('job_application')
-      .select('*')
-      .eq('source_application_id', sourceApplicationId)
-      .eq('is_list_visible', false)
-      .in('status', ['queued', 'running'])
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const rows = await this.db
+      .select()
+      .from(jobApplication)
+      .where(
+        and(
+          this.owned(user),
+          eq(jobApplication.source_application_id, sourceApplicationId),
+          eq(jobApplication.is_list_visible, false),
+          inArray(jobApplication.status, ['queued', 'running']),
+        ),
+      )
+      .orderBy(desc(jobApplication.updated_at))
+      .limit(1);
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return (data as JobApplicationRow | null) ?? null;
+    return (rows[0] as JobApplicationRow | undefined) ?? null;
   }
 
   async findDanglingUpdateDrafts(
     user: AuthenticatedRequest['user'],
     sourceApplicationId: string,
   ): Promise<JobApplicationRow[]> {
-    const supabase = this.createClient(user);
-    const { data, error } = await supabase
-      .from('job_application')
-      .select('*')
-      .eq('source_application_id', sourceApplicationId)
-      .eq('is_list_visible', false);
+    const rows = await this.db
+      .select()
+      .from(jobApplication)
+      .where(
+        and(
+          this.owned(user),
+          eq(jobApplication.source_application_id, sourceApplicationId),
+          eq(jobApplication.is_list_visible, false),
+        ),
+      );
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return (data ?? []) as JobApplicationRow[];
+    return rows as JobApplicationRow[];
   }
 
   async update(
@@ -161,34 +142,26 @@ export class ApplicationRepository {
     id: string,
     patch: UpdateJobApplicationInput,
   ): Promise<JobApplicationRow | null> {
-    const supabase = this.createClient(user);
-    const { data, error } = await supabase
-      .from('job_application')
-      .update(patch)
-      .eq('id', id)
-      .select('*')
-      .maybeSingle();
-
-    if (error) {
-      throw new BadRequestException(error.message);
+    const set = pickColumns(jobApplication, patch as Record<string, unknown>, ['id', 'user_id']);
+    if (Object.keys(set).length === 0) {
+      return this.findOne(user, id);
     }
 
-    return (data as JobApplicationRow | null) ?? null;
+    const rows = await this.db
+      .update(jobApplication)
+      .set(set)
+      .where(and(this.owned(user), eq(jobApplication.id, id)))
+      .returning();
+
+    return (rows[0] as JobApplicationRow | undefined) ?? null;
   }
 
   async remove(user: AuthenticatedRequest['user'], id: string): Promise<boolean> {
-    const supabase = this.createClient(user);
-    const { data, error } = await supabase
-      .from('job_application')
-      .delete()
-      .eq('id', id)
-      .select('id')
-      .maybeSingle();
+    const rows = await this.db
+      .delete(jobApplication)
+      .where(and(this.owned(user), eq(jobApplication.id, id)))
+      .returning({ id: jobApplication.id });
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return data != null;
+    return rows.length > 0;
   }
 }

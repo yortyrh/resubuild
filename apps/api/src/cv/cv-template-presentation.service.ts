@@ -31,13 +31,13 @@ export class CvTemplatePresentationService {
     templateId: string,
   ): Promise<{ templateId: string; config: CvTemplatePresentationConfig }> {
     const canonical = this.resolveTemplate(templateId);
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, cvId, user.id);
+    const scope = this.normalizedRepo.scopeFor(user);
+    const header = await this.normalizedRepo.fetchHeader(scope, cvId);
     if (!header) {
       throw new NotFoundException('CV not found');
     }
 
-    const row = await this.presentationRepo.fetch(supabase, cvId, canonical);
+    const row = await this.presentationRepo.fetch(scope, cvId, canonical);
     const defaults = getDefaultPresentationConfig(canonical);
     const config = mergePresentationConfig(defaults, row?.config);
     return { templateId: canonical, config };
@@ -50,20 +50,20 @@ export class CvTemplatePresentationService {
     patch: Partial<CvTemplatePresentationConfig>,
   ): Promise<{ templateId: string; config: CvTemplatePresentationConfig }> {
     const canonical = this.resolveTemplate(templateId);
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, cvId, user.id);
+    const scope = this.normalizedRepo.scopeFor(user);
+    const header = await this.normalizedRepo.fetchHeader(scope, cvId);
     if (!header) {
       throw new NotFoundException('CV not found');
     }
 
-    const existing = await this.presentationRepo.fetch(supabase, cvId, canonical);
+    const existing = await this.presentationRepo.fetch(scope, cvId, canonical);
     const defaults = getDefaultPresentationConfig(canonical);
     const merged = mergePresentationConfig(
       existing ? mergePresentationConfig(defaults, existing.config) : defaults,
       patch,
     );
 
-    await this.presentationRepo.upsert(supabase, cvId, canonical, merged);
+    await this.presentationRepo.upsert(scope, cvId, canonical, merged);
     return { templateId: canonical, config: merged };
   }
 
@@ -73,8 +73,8 @@ export class CvTemplatePresentationService {
     templateId: string,
   ): Promise<CvTemplatePresentationConfig> {
     const canonical = this.resolveTemplate(templateId);
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const row = await this.presentationRepo.fetch(supabase, cvId, canonical);
+    const scope = this.normalizedRepo.scopeFor(user);
+    const row = await this.presentationRepo.fetch(scope, cvId, canonical);
     const defaults = getDefaultPresentationConfig(canonical);
     return mergePresentationConfig(defaults, row?.config);
   }

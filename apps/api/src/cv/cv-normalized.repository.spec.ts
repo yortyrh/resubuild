@@ -1,691 +1,279 @@
-import { BadRequestException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Test } from '@nestjs/testing';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { cvSkill, cvWork } from '@resubuild/db';
 import type { Resume } from '@resubuild/types';
-import { createClient } from '@supabase/supabase-js';
+import type { DbScope } from '../database/db-scope';
+import { useTestDb } from '../database/test-db.helpers';
 import { CvNormalizedRepository } from './cv-normalized.repository';
-import { mockCvHeader } from './cv-test.helpers';
 
-jest.mock('@supabase/supabase-js', () => ({
-  createClient: jest.fn(),
-}));
-
-const mockedCreateClient = jest.mocked(createClient);
-
-function createSupabaseMock(handlers: {
-  from?: (table: string) => object;
-}): ReturnType<typeof createClient> {
-  const defaultChain = {
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    order: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-    single: jest.fn().mockResolvedValue({ data: null, error: null }),
-    insert: jest.fn().mockResolvedValue({ data: null, error: null }),
-    update: jest.fn().mockReturnThis(),
-    delete: jest.fn().mockReturnThis(),
-  };
-
-  return {
-    from: jest.fn((table: string) => {
-      if (handlers.from) {
-        return handlers.from(table);
-      }
-      return { ...defaultChain };
-    }),
-  } as never;
-}
-
+/**
+ * Runs against PGlite (in-process Postgres) with the real migrations, so the
+ * ownership filters are exercised as real SQL.
+ */
 describe('CvNormalizedRepository', () => {
+  const testDb = useTestDb();
   let repo: CvNormalizedRepository;
+  let alice: DbScope;
+  let bob: DbScope;
 
   beforeEach(async () => {
-    const module = await Test.createTestingModule({
-      providers: [
-        CvNormalizedRepository,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: (key: string) =>
-              key === 'SUPABASE_URL'
-                ? 'https://supa.test'
-                : key === 'SUPABASE_ANON_KEY'
-                  ? 'key'
-                  : undefined,
-          },
-        },
-      ],
-    }).compile();
-
-    repo = module.get(CvNormalizedRepository);
-    mockedCreateClient.mockReset();
+    repo = new CvNormalizedRepository(testDb.db);
+    alice = repo.scopeFor(await testDb.createUser('alice@test.local'));
+    bob = repo.scopeFor(await testDb.createUser('bob@test.local'));
   });
 
-  it('creates user-scoped supabase client', () => {
-    mockedCreateClient.mockReturnValue({} as never);
-    const client = repo.createUserClient('token-123');
-    expect(client).toBeDefined();
-    expect(mockedCreateClient).toHaveBeenCalledWith(
-      'https://supa.test',
-      'key',
-      expect.objectContaining({
-        global: { headers: { Authorization: 'Bearer token-123' } },
-      }),
-    );
-  });
+  const resume: Resume = {
+    basics: { name: 'Alice', label: 'Engineer', location: { city: 'Madrid' } },
+    work: [
+      { name: 'Old Co', position: 'Dev', startDate: '2018-01' },
+      { name: 'New Co', position: 'Lead', startDate: '2022-01', highlights: ['Shipped'] },
+    ],
+    skills: [{ name: 'TypeScript', keywords: ['Node'] }, { name: 'SQL' }],
+  } as Resume;
 
-  it('createUserClient throws when Supabase is not configured', () => {
-    const bare = new CvNormalizedRepository({
-      get: () => undefined,
-    } as unknown as ConfigService);
-    expect(() => bare.createUserClient('token')).toThrow('Supabase is not configured');
-  });
+  async function createCv(scope: DbScope, data: Resume = resume) {
+    const header = await repo.insertHeader(scope);
+    return repo.insertNormalizedCv(scope, header.id, data);
+  }
 
-  it('createClientForUser delegates to createUserClient', () => {
-    mockedCreateClient.mockReturnValue({} as never);
-    const spy = jest.spyOn(repo, 'createUserClient');
-    repo.createClientForUser({ accessToken: 'tok' } as never);
-    expect(spy).toHaveBeenCalledWith('tok');
-  });
-
-  it('fetchHeader returns row or null', async () => {
-    const header = mockCvHeader();
-    const supabase = createSupabaseMock({
-      from: (table) => {
-        if (table !== 'cv') throw new Error(`unexpected table ${table}`);
-        return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              maybeSingle: jest.fn().mockResolvedValue({ data: header, error: null }),
-            }),
-          }),
-        };
-      },
+  describe('headers', () => {
+    it('inserts a header owned by the scope user with defaults', async () => {
+      const header = await repo.insertHeader(alice);
+      expect(header).toMatchObject({
+        user_id: alice.userId,
+        kind: 'primary',
+        template_id: 'classic',
+        location: {},
+      });
+      expect(header.created_at).toMatch(/Z$/);
     });
 
-    await expect(repo.fetchHeader(supabase, 'cv-1')).resolves.toEqual(header);
-  });
-
-  it('fetchHeader throws on supabase error', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            maybeSingle: jest.fn().mockResolvedValue({
-              data: null,
-              error: { message: 'db fail' },
-            }),
-          }),
-        }),
-      }),
+    it('fetchHeader only returns the owner’s CV', async () => {
+      const header = await createCv(alice);
+      expect((await repo.fetchHeader(alice, header.id))?.name).toBe('Alice');
+      expect(await repo.fetchHeader(bob, header.id)).toBeNull();
     });
 
-    await expect(repo.fetchHeader(supabase, 'cv-1')).rejects.toThrow(BadRequestException);
-  });
+    it('listHeaders filters by user and kind, newest first', async () => {
+      const first = await repo.insertHeader(alice);
+      const second = await repo.insertHeader(alice);
+      await repo.updateBasicsHeader(alice, first.id, { name: 'touched' });
+      await repo.insertHeader(alice, { kind: 'application_clone' });
+      await repo.insertHeader(bob);
 
-  it('assembleFullResume returns null when header missing', async () => {
-    jest.spyOn(repo, 'fetchHeader').mockResolvedValue(null);
-    const supabase = createSupabaseMock({});
-    await expect(repo.assembleFullResume(supabase, 'cv-1')).resolves.toBeNull();
-  });
-
-  it('assembleFullResume assembles header and sections', async () => {
-    const header = mockCvHeader({ name: 'Alex', label: 'Dev' });
-    jest.spyOn(repo, 'fetchHeader').mockResolvedValue(header);
-    jest.spyOn(repo, 'fetchSections').mockResolvedValue({
-      profiles: [],
-      work: [],
-      volunteer: [],
-      education: [],
-      awards: [],
-      certificates: [],
-      publications: [],
-      skills: [],
-      languages: [],
-      interests: [],
-      references: [],
-      projects: [],
+      const ids = (await repo.listHeaders(alice)).map((h) => h.id);
+      expect(ids).toEqual([first.id, second.id]);
     });
 
-    const supabase = createSupabaseMock({});
-    const resume = await repo.assembleFullResume(supabase, 'cv-1');
-    expect(resume?.basics?.name).toBe('Alex');
-    expect(resume?.basics?.label).toBe('Dev');
-  });
-
-  it('fetchSections loads and sorts all section tables', async () => {
-    const workRowOngoing = {
-      id: 'w-ongoing',
-      cv_id: 'cv-1',
-      name: 'Current Co',
-      start_date: '2022-01',
-      end_date: null,
-      highlights: [],
-    };
-    const workRowPast = {
-      id: 'w-past',
-      cv_id: 'cv-1',
-      name: 'Past Co',
-      start_date: '2018-01',
-      end_date: '2020-01',
-      highlights: [],
-    };
-    const skillRow = { id: 's1', cv_id: 'cv-1', sort: 0, name: 'TS', keywords: [] };
-
-    const supabase = createSupabaseMock({
-      from: (table) => ({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({
-            data:
-              table === 'cv_work'
-                ? [workRowPast, workRowOngoing]
-                : table === 'cv_skill'
-                  ? [skillRow]
-                  : [],
-            error: null,
-          }),
-        }),
-      }),
-    });
-
-    const sections = await repo.fetchSections(supabase, 'cv-1');
-    expect(sections.work.map((row) => row.id)).toEqual(['w-ongoing', 'w-past']);
-    expect(sections.skills).toHaveLength(1);
-    expect(sections.awards).toEqual([]);
-  });
-
-  it('getNextSort returns 0 for empty section', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-            }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(repo.getNextSort(supabase, 'cv-1', 'skills')).resolves.toBe(0);
-  });
-
-  it('getNextSort returns max sort + 1', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              limit: jest.fn().mockResolvedValue({ data: [{ sort: 2 }], error: null }),
-            }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(repo.getNextSort(supabase, 'cv-1', 'skills')).resolves.toBe(3);
-  });
-
-  it('listSectionRows returns sorted rows', async () => {
-    const rows = [
-      { id: 'a', cv_id: 'cv-1', sort: 1, name: 'B' },
-      { id: 'b', cv_id: 'cv-1', sort: 0, name: 'A' },
-    ];
-    const supabase = createSupabaseMock({
-      from: () => ({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ data: rows, error: null }),
-        }),
-      }),
-    });
-
-    const result = await repo.listSectionRows(supabase, 'cv-1', 'skills');
-    expect(result.map((r) => r.id)).toEqual(['b', 'a']);
-  });
-
-  it('getSectionRowById returns row by primary key', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'only' }, error: null }),
-            }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(repo.getSectionRowById(supabase, 'cv-1', 'skills', 'only')).resolves.toEqual({
-      id: 'only',
+    it('updateHeaderFields and deleteHeader are no-ops for another user', async () => {
+      const header = await repo.insertHeader(alice);
+      expect(await repo.updateHeaderFields(bob, header.id, { template_id: 'modern' })).toBe(false);
+      expect(await repo.deleteHeader(bob, header.id)).toBe(false);
+      expect(await repo.updateHeaderFields(alice, header.id, { template_id: 'modern' })).toBe(true);
+      expect((await repo.fetchHeader(alice, header.id))?.template_id).toBe('modern');
+      expect(await repo.deleteHeader(alice, header.id, 'application_clone')).toBe(false);
+      expect(await repo.deleteHeader(alice, header.id)).toBe(true);
+      expect(await repo.fetchHeader(alice, header.id)).toBeNull();
     });
   });
 
-  it('getSectionRowById returns null when row is missing', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-            }),
-          }),
-        }),
-      }),
+  describe('normalized resume', () => {
+    it('insertNormalizedCv writes header fields and sections; assembleFullResume rebuilds it', async () => {
+      const header = await createCv(alice);
+      expect(header.location).toEqual({ city: 'Madrid' });
+
+      const assembled = await repo.assembleFullResume(alice, header.id);
+      expect(assembled?.basics?.name).toBe('Alice');
+      expect(assembled?.work?.map((w) => w.name)).toEqual(['New Co', 'Old Co']);
+      expect(assembled?.skills?.map((s) => s.name)).toEqual(['TypeScript', 'SQL']);
     });
 
-    await expect(repo.getSectionRowById(supabase, 'cv-1', 'skills', 'missing')).resolves.toBeNull();
+    it('insertNormalizedCv refuses a CV owned by someone else and writes nothing', async () => {
+      const header = await repo.insertHeader(alice);
+      await expect(repo.insertNormalizedCv(bob, header.id, resume)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(await testDb.db.select().from(cvWork)).toEqual([]);
+    });
+
+    it('assembleFullResume returns null for missing or foreign CVs', async () => {
+      const header = await createCv(alice);
+      expect(await repo.assembleFullResume(bob, header.id)).toBeNull();
+      expect(
+        await repo.assembleFullResume(alice, '00000000-0000-0000-0000-000000000000'),
+      ).toBeNull();
+    });
+
+    it('replaceNormalizedCv swaps every section atomically', async () => {
+      const header = await createCv(alice);
+      await repo.replaceNormalizedCv(alice, header.id, {
+        basics: { name: 'Alice 2' },
+        work: [{ name: 'Only Co' }],
+      } as Resume);
+
+      const sections = await repo.fetchSections(alice, header.id);
+      expect(sections.work.map((w) => w.name)).toEqual(['Only Co']);
+      expect(sections.skills).toEqual([]);
+      expect((await repo.fetchHeader(alice, header.id))?.name).toBe('Alice 2');
+    });
+
+    it('replaceNormalizedCv leaves another user’s CV untouched', async () => {
+      const header = await createCv(alice);
+      await expect(
+        repo.replaceNormalizedCv(bob, header.id, { basics: {} } as Resume),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect((await repo.fetchSections(alice, header.id)).work).toHaveLength(2);
+    });
+
+    it('rolls back the whole replace when an insert fails', async () => {
+      const header = await createCv(alice);
+      const failing = {
+        basics: { name: 'x' },
+        skills: [{ name: 'ok' }],
+      } as Resume;
+      const spy = jest.spyOn(repo, 'insertNormalizedCv').mockRejectedValueOnce(new Error('boom'));
+
+      await expect(repo.replaceNormalizedCv(alice, header.id, failing)).rejects.toThrow('boom');
+      spy.mockRestore();
+      expect((await repo.fetchSections(alice, header.id)).work).toHaveLength(2);
+    });
   });
 
-  it('insertSectionRow assigns sort for sort-backed sections', async () => {
-    jest.spyOn(repo, 'getNextSort').mockResolvedValue(4);
-    const inserted = { id: 'new', cv_id: 'cv-1', sort: 4, name: 'Go' };
-    const supabase = createSupabaseMock({
-      from: () => ({
-        insert: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: inserted, error: null }),
-          }),
-        }),
-      }),
+  describe('section rows', () => {
+    it('getNextSort returns 0 for an empty section and max + 1 otherwise', async () => {
+      const header = await repo.insertHeader(alice);
+      expect(await repo.getNextSort(alice, header.id, 'skills')).toBe(0);
+      await repo.insertSectionRow(alice, header.id, 'skills', { name: 'A' });
+      await repo.insertSectionRow(alice, header.id, 'skills', { name: 'B' });
+      expect(await repo.getNextSort(alice, header.id, 'skills')).toBe(2);
+      expect(await repo.getNextSort(alice, header.id, 'work')).toBe(0);
     });
 
-    const result = await repo.insertSectionRow(supabase, 'cv-1', 'skills', { name: 'Go' });
-    expect(result).toEqual(inserted);
+    it('insertSectionRow assigns sort only for sort-backed sections', async () => {
+      const header = await repo.insertHeader(alice);
+      const skill = await repo.insertSectionRow(alice, header.id, 'skills', { name: 'A' });
+      const work = await repo.insertSectionRow(alice, header.id, 'work', {
+        name: 'Co',
+        startDate: '2020-01',
+        highlights: ['x'],
+      });
+
+      expect(skill).toMatchObject({ cv_id: header.id, sort: 0, name: 'A' });
+      expect(work).toMatchObject({ name: 'Co', start_date: '2020-01', highlights: ['x'] });
+      expect(work).not.toHaveProperty('sort');
+    });
+
+    it('insertSectionRow rejects a CV owned by someone else', async () => {
+      const header = await repo.insertHeader(alice);
+      await expect(
+        repo.insertSectionRow(bob, header.id, 'skills', { name: 'A' }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('get/update/delete only reach rows of the owner’s CV', async () => {
+      const header = await repo.insertHeader(alice);
+      const row = await repo.insertSectionRow(alice, header.id, 'work', { name: 'Co' });
+      const rowId = row.id as string;
+
+      expect(await repo.getSectionRowById(bob, header.id, 'work', rowId)).toBeNull();
+      await expect(
+        repo.updateSectionRow(bob, header.id, 'work', rowId, { name: 'hacked' }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      await repo.deleteSectionRow(bob, header.id, 'work', rowId);
+      expect(await testDb.db.select().from(cvWork)).toHaveLength(1);
+
+      const updated = await repo.updateSectionRow(alice, header.id, 'work', rowId, {
+        name: 'Renamed',
+      });
+      expect(updated.name).toBe('Renamed');
+      expect((await repo.getSectionRowById(alice, header.id, 'work', rowId))?.id).toBe(rowId);
+
+      await repo.deleteSectionRow(alice, header.id, 'work', rowId);
+      expect(await repo.getSectionRowById(alice, header.id, 'work', rowId)).toBeNull();
+    });
+
+    it('updateSectionRow ignores unknown keys and keeps cv_id/sort', async () => {
+      const header = await repo.insertHeader(alice);
+      const row = await repo.insertSectionRow(alice, header.id, 'skills', { name: 'A' });
+      const updated = await repo.updateSectionRow(alice, header.id, 'skills', row.id as string, {
+        name: 'B',
+        bogus: 'ignored',
+      });
+      expect(updated).toMatchObject({ name: 'B', sort: 0, cv_id: header.id });
+    });
+
+    it('listSectionRows returns rows sorted for the section', async () => {
+      const header = await repo.insertHeader(alice);
+      await repo.insertSectionRow(alice, header.id, 'skills', { name: 'first' });
+      await repo.insertSectionRow(alice, header.id, 'skills', { name: 'second' });
+      const rows = await repo.listSectionRows<{ id: string; name: string }>(
+        alice,
+        header.id,
+        'skills',
+      );
+      expect(rows.map((r) => r.name)).toEqual(['first', 'second']);
+      expect(await repo.listSectionRows(bob, header.id, 'skills')).toEqual([]);
+    });
   });
 
-  it('insertSectionRow omits sort for date-backed sections', async () => {
-    const getNextSort = jest.spyOn(repo, 'getNextSort');
-    const inserted = { id: 'w1', cv_id: 'cv-1', name: 'Job', highlights: [] };
-    const supabase = createSupabaseMock({
-      from: () => ({
-        insert: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: inserted, error: null }),
-          }),
-        }),
-      }),
+  describe('updateBasicsHeader', () => {
+    it('merges scalar and location fields', async () => {
+      const header = await createCv(alice);
+      const updated = await repo.updateBasicsHeader(alice, header.id, {
+        email: 'a@example.com',
+        location: { city: 'Lisbon' },
+      });
+      expect(updated).toMatchObject({
+        name: 'Alice',
+        email: 'a@example.com',
+        location: { city: 'Lisbon' },
+      });
     });
 
-    await repo.insertSectionRow(supabase, 'cv-1', 'work', {
-      name: 'Job',
-      startDate: '2024-01',
+    it('throws NotFound for another user’s CV', async () => {
+      const header = await createCv(alice);
+      await expect(repo.updateBasicsHeader(bob, header.id, { name: 'x' })).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
-    expect(getNextSort).not.toHaveBeenCalled();
-  });
-
-  it('updateSectionRow and deleteSectionRow call supabase', async () => {
-    const updated = { id: 's1', name: 'Rust' };
-    const updateSingle = jest.fn().mockResolvedValue({ data: updated, error: null });
-    const deleteEq = jest.fn().mockResolvedValue({ error: null });
-
-    const supabase = createSupabaseMock({
-      from: () => ({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              select: jest.fn().mockReturnValue({ single: updateSingle }),
-            }),
-          }),
-        }),
-        delete: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({ eq: deleteEq }),
-        }),
-      }),
-    });
-
-    await expect(
-      repo.updateSectionRow(supabase, 'cv-1', 'skills', 's1', { name: 'Rust' }),
-    ).resolves.toEqual(updated);
-    await expect(repo.deleteSectionRow(supabase, 'cv-1', 'skills', 's1')).resolves.toBeUndefined();
-    expect(deleteEq).toHaveBeenCalled();
-  });
-
-  it('updateBasicsHeader merges scalar and location fields', async () => {
-    const header = mockCvHeader({ name: 'Pat', location: { city: 'Paris' } });
-    const supabase = createSupabaseMock({
-      from: () => ({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({ data: header, error: null }),
-            }),
-          }),
-        }),
-      }),
-    });
-
-    const result = await repo.updateBasicsHeader(supabase, 'cv-1', {
-      name: 'Pat',
-      location: { city: 'Paris' },
-    });
-    expect(result.name).toBe('Pat');
-  });
-
-  it('insertNormalizedCv updates header and section rows', async () => {
-    const header = mockCvHeader();
-    const resume: Resume = {
-      basics: { name: 'Sam', label: 'Eng' },
-      work: [{ name: 'Acme', startDate: '2023-01', highlights: ['Shipped'] }],
-      skills: [{ name: 'TS', keywords: ['types'] }],
-    };
-
-    jest.spyOn(repo, 'fetchHeader').mockResolvedValue(header);
-
-    const insert = jest.fn().mockResolvedValue({ error: null });
-    const updateEq = jest.fn().mockResolvedValue({ error: null });
-    const supabase = createSupabaseMock({
-      from: (table) => {
-        if (table === 'cv') {
-          return { update: jest.fn().mockReturnValue({ eq: updateEq }) };
-        }
-        return { insert };
-      },
-    });
-
-    await expect(repo.insertNormalizedCv(supabase, 'cv-1', 'user-1', resume)).resolves.toEqual(
-      header,
-    );
-    expect(updateEq).toHaveBeenCalled();
-    expect(insert).toHaveBeenCalled();
-  });
-
-  it('insertNormalizedCv throws when header missing after insert', async () => {
-    jest.spyOn(repo, 'fetchHeader').mockResolvedValue(null);
-    const supabase = createSupabaseMock({
-      from: (table) =>
-        table === 'cv'
-          ? {
-              update: jest
-                .fn()
-                .mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
-            }
-          : { insert: jest.fn().mockResolvedValue({ error: null }) },
-    });
-
-    await expect(
-      repo.insertNormalizedCv(supabase, 'cv-1', 'user-1', { basics: { name: 'X' } }),
-    ).rejects.toThrow('CV not found after insert');
-  });
-
-  it('replaceNormalizedCv deletes all sections then inserts', async () => {
-    const header = mockCvHeader();
-    const deleteEq = jest.fn().mockResolvedValue({ error: null });
-    jest.spyOn(repo, 'insertNormalizedCv').mockResolvedValue(header);
-
-    const supabase = createSupabaseMock({
-      from: () => ({
-        delete: jest.fn().mockReturnValue({ eq: deleteEq }),
-      }),
-    });
-
-    await expect(
-      repo.replaceNormalizedCv(supabase, 'cv-1', { basics: { name: 'New' } }),
-    ).resolves.toEqual(header);
-    expect(deleteEq).toHaveBeenCalled();
-  });
-
-  it('fetchSections throws when a section query fails', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({
-            data: null,
-            error: { message: 'section fail' },
-          }),
-        }),
-      }),
-    });
-
-    await expect(repo.fetchSections(supabase, 'cv-1')).rejects.toThrow('section fail');
-  });
-
-  it('getNextSort throws on supabase error', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              limit: jest
-                .fn()
-                .mockResolvedValue({ data: null, error: { message: 'sort query fail' } }),
-            }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(repo.getNextSort(supabase, 'cv-1', 'skills')).rejects.toThrow('sort query fail');
-  });
-
-  it('insertSectionRow throws on supabase error', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        insert: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            single: jest
-              .fn()
-              .mockResolvedValue({ data: null, error: { message: 'insert row fail' } }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(
-      repo.insertSectionRow(supabase, 'cv-1', 'work', { name: 'X', startDate: '2024-01' }),
-    ).rejects.toThrow('insert row fail');
-  });
-
-  it('updateSectionRow throws on supabase error', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              select: jest.fn().mockReturnValue({
-                single: jest
-                  .fn()
-                  .mockResolvedValue({ data: null, error: { message: 'update row fail' } }),
-              }),
-            }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(
-      repo.updateSectionRow(supabase, 'cv-1', 'work', 'w1', { name: 'Y' }),
-    ).rejects.toThrow('update row fail');
-  });
-
-  it('deleteSectionRow throws on supabase error', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        delete: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ error: { message: 'delete row fail' } }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(repo.deleteSectionRow(supabase, 'cv-1', 'work', 'w1')).rejects.toThrow(
-      'delete row fail',
-    );
-  });
-
-  it('updateBasicsHeader throws on supabase error', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest
-                .fn()
-                .mockResolvedValue({ data: null, error: { message: 'basics fail' } }),
-            }),
-          }),
-        }),
-      }),
-    });
-
-    await expect(repo.updateBasicsHeader(supabase, 'cv-1', { name: 'Z' })).rejects.toThrow(
-      'basics fail',
-    );
-  });
-
-  it('listSectionRows throws on supabase error', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({
-            data: null,
-            error: { message: 'list fail' },
-          }),
-        }),
-      }),
-    });
-
-    await expect(repo.listSectionRows(supabase, 'cv-1', 'skills')).rejects.toThrow('list fail');
-  });
-
-  it('insertNormalizedCv throws on header or section insert errors', async () => {
-    const supabase = createSupabaseMock({
-      from: (table) => {
-        if (table === 'cv') {
-          return {
-            update: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: { message: 'header fail' } }),
-            }),
-          };
-        }
-        return { insert: jest.fn().mockResolvedValue({ error: null }) };
-      },
-    });
-
-    await expect(
-      repo.insertNormalizedCv(supabase, 'cv-1', 'user-1', { basics: { name: 'A' } }),
-    ).rejects.toThrow('header fail');
-
-    const supabaseInsert = createSupabaseMock({
-      from: (table) => {
-        if (table === 'cv') {
-          return {
-            update: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null }),
-            }),
-          };
-        }
-        return {
-          insert: jest.fn().mockResolvedValue({ error: { message: 'section insert fail' } }),
-        };
-      },
-    });
-
-    await expect(
-      repo.insertNormalizedCv(supabaseInsert, 'cv-1', 'user-1', {
-        basics: { name: 'A' },
-        work: [{ name: 'Job', startDate: '2024-01', highlights: [] }],
-      }),
-    ).rejects.toThrow('section insert fail');
-  });
-
-  it('replaceNormalizedCv throws when section delete fails', async () => {
-    const supabase = createSupabaseMock({
-      from: () => ({
-        delete: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ error: { message: 'delete fail' } }),
-        }),
-      }),
-    });
-
-    await expect(
-      repo.replaceNormalizedCv(supabase, 'cv-1', { basics: { name: 'N' } }),
-    ).rejects.toThrow('delete fail');
   });
 
   describe('reorderSection', () => {
+    async function withSkills() {
+      const header = await repo.insertHeader(alice);
+      const a = await repo.insertSectionRow(alice, header.id, 'skills', { name: 'A' });
+      const b = await repo.insertSectionRow(alice, header.id, 'skills', { name: 'B' });
+      return { cvId: header.id, a: a.id as string, b: b.id as string };
+    }
+
     it('rejects non sort-backed sections', async () => {
-      const supabase = createSupabaseMock({});
-      await expect(repo.reorderSection(supabase, 'cv-1', 'work', [])).rejects.toThrow(
-        'does not support reorder',
-      );
-    });
-
-    it('rejects unknown ids', async () => {
-      const supabase = createSupabaseMock({});
-      jest.spyOn(repo, 'listSectionRows').mockResolvedValue([
-        { id: 'a', sort: 0 },
-        { id: 'b', sort: 1 },
-      ] as never);
-
-      await expect(repo.reorderSection(supabase, 'cv-1', 'skills', ['a', 'c'])).rejects.toThrow(
+      const { cvId } = await withSkills();
+      await expect(repo.reorderSection(alice, cvId, 'work', [])).rejects.toBeInstanceOf(
         BadRequestException,
       );
     });
 
-    it('rejects wrong length and duplicate ids', async () => {
-      const supabase = createSupabaseMock({});
-      jest
-        .spyOn(repo, 'listSectionRows')
-        .mockResolvedValueOnce([{ id: 'a', sort: 0 }] as never)
-        .mockResolvedValueOnce([
-          { id: 'a', sort: 0 },
-          { id: 'b', sort: 1 },
-        ] as never);
-
-      await expect(repo.reorderSection(supabase, 'cv-1', 'skills', [])).rejects.toThrow(
-        'every row id exactly once',
-      );
-      await expect(repo.reorderSection(supabase, 'cv-1', 'skills', ['a', 'a'])).rejects.toThrow(
-        'duplicate ids',
-      );
+    it('rejects unknown, missing and duplicate ids', async () => {
+      const { cvId, a, b } = await withSkills();
+      await expect(
+        repo.reorderSection(alice, cvId, 'skills', [a, '00000000-0000-0000-0000-000000000000']),
+      ).rejects.toThrow('Unknown row id');
+      await expect(repo.reorderSection(alice, cvId, 'skills', [a])).rejects.toThrow('every row id');
+      await expect(repo.reorderSection(alice, cvId, 'skills', [a, a])).rejects.toThrow('duplicate');
+      expect(b).toBeDefined();
     });
 
-    it('throws when sort update fails', async () => {
-      const supabase = createSupabaseMock({
-        from: () => ({
-          update: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: { message: 'sort fail' } }),
-            }),
-          }),
-        }),
-      });
-
-      jest.spyOn(repo, 'listSectionRows').mockResolvedValue([{ id: 'a', sort: 0 }] as never);
-
-      await expect(repo.reorderSection(supabase, 'cv-1', 'skills', ['a'])).rejects.toThrow(
-        'sort fail',
-      );
+    it('rewrites sort and returns the reordered list', async () => {
+      const { cvId, a, b } = await withSkills();
+      const rows = await repo.reorderSection(alice, cvId, 'skills', [b, a]);
+      expect(rows.map((r) => r.name)).toEqual(['B', 'A']);
+      const stored = await testDb.db.select().from(cvSkill);
+      expect(stored.find((r: { id: string }) => r.id === b)?.sort).toBe(0);
     });
 
-    it('updates sort for each id and returns reordered list', async () => {
-      const supabase = createSupabaseMock({
-        from: () => ({
-          update: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null }),
-            }),
-          }),
-        }),
-      });
-
-      const finalRows = [
-        { id: 'b', sort: 0 },
-        { id: 'a', sort: 1 },
-      ];
-      jest
-        .spyOn(repo, 'listSectionRows')
-        .mockResolvedValueOnce([
-          { id: 'a', sort: 0 },
-          { id: 'b', sort: 1 },
-        ] as never)
-        .mockResolvedValueOnce(finalRows as never);
-
-      await expect(repo.reorderSection(supabase, 'cv-1', 'skills', ['b', 'a'])).resolves.toEqual(
-        finalRows,
+    it('cannot reorder another user’s rows', async () => {
+      const { cvId, a, b } = await withSkills();
+      await expect(repo.reorderSection(bob, cvId, 'skills', [b, a])).rejects.toThrow(
+        'every row id',
       );
     });
   });

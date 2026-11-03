@@ -87,15 +87,15 @@ export class CvExportService {
     cvId: string,
     queryTemplate?: string,
   ): Promise<CvExportContext> {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, cvId, user.id);
+    const scope = this.normalizedRepo.scopeFor(user);
+    const header = await this.normalizedRepo.fetchHeader(scope, cvId);
 
     if (!header) {
       throw new NotFoundException('CV not found');
     }
 
     const templateId = this.resolveTemplateId(header.template_id, queryTemplate);
-    const sections = await this.normalizedRepo.fetchSections(supabase, cvId);
+    const sections = await this.normalizedRepo.fetchSections(scope, cvId);
     const resume = assembleResume(header, sections);
 
     return { resume, templateId };
@@ -184,14 +184,14 @@ export class CvExportService {
   }
 
   async renderJson(user: AuthenticatedRequest['user'], cvId: string): Promise<CvExportJsonResult> {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, cvId, user.id);
+    const scope = this.normalizedRepo.scopeFor(user);
+    const header = await this.normalizedRepo.fetchHeader(scope, cvId);
 
     if (!header) {
       throw new NotFoundException('CV not found');
     }
 
-    const sections = await this.normalizedRepo.fetchSections(supabase, cvId);
+    const sections = await this.normalizedRepo.fetchSections(scope, cvId);
     const resume = assembleResume(header, sections);
     const exported = prepareExportedResume(resume, {
       updatedAt: header.updated_at ?? new Date(),

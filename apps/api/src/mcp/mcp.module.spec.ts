@@ -7,10 +7,10 @@
  *  - the static list of `@Tool` / `@Resource` provider classes exported by
  *    the module is non-empty and contains the expected minimum surface.
  *
- * It does not boot the full HTTP server or talk to Supabase — it just ensures
+ * It does not boot the full HTTP server or talk to the database — it just ensures
  * the module's wiring is consistent (no missing imports, no duplicate
  * providers, no syntactically broken decorators). The deep E2E coverage for
- * the wrapper lives in `apps/api/test/e2e/local-supabase.e2e-spec.ts`.
+ * the wrapper lives in the API e2e suite (`apps/api/test/e2e`).
  */
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -19,9 +19,11 @@ import { ApplicationModule } from '../application/application.module';
 import { AuthModule } from '../auth/auth.module';
 import { CvModule } from '../cv/cv.module';
 import { CvExportModule } from '../cv-export/cv-export.module';
+import { FakeDatabaseModule } from '../database/fake-database.module';
 import { ExportStorageModule } from '../export-storage/export-storage.module';
 import { ImportModelsCatalogModule } from '../import-models-catalog/import-models-catalog.module';
 import { MediaModule } from '../media/media.module';
+import { StorageModule } from '../storage/storage.module';
 import { McpModule } from './mcp.module';
 import { McpAuthModule } from './mcp-auth.module';
 
@@ -36,6 +38,8 @@ describe('McpModule', () => {
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
         NoopModule,
+        FakeDatabaseModule,
+        StorageModule,
         AuthModule,
         CvModule,
         CvExportModule,
@@ -59,6 +63,8 @@ describe('McpModule', () => {
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
         NoopModule,
+        FakeDatabaseModule,
+        StorageModule,
         AuthModule,
         CvModule,
         CvExportModule,

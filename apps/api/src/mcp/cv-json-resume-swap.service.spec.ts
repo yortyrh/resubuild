@@ -1,153 +1,101 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { cv } from '@resubuild/db';
+import type { Resume } from '@resubuild/types';
 import type { AuthUser } from '../auth/auth-user.types';
-import type { CvService } from '../cv/cv.service';
-import type { CvNormalizedRepository } from '../cv/cv-normalized.repository';
-import type { ResumeSchemaValidator } from '../validation/resume-schema.validator';
+import { CvService } from '../cv/cv.service';
+import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
+import { useTestDb } from '../database/test-db.helpers';
+import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 import { CvJsonResumeSwapService } from './cv-json-resume-swap.service';
 
-const user = { id: 'user-1', accessToken: 'tok', authMethod: 'jwt' as const } as AuthUser;
-
-const mockCvService = {
-  create: jest.fn(),
-  findOne: jest.fn(),
-};
-
-const mockNormalizedRepo = {
-  createClientForUser: jest.fn(),
-  fetchHeader: jest.fn(),
-  insertNormalizedCv: jest.fn(),
-};
-
-const mockSchemaValidator = {
-  validate: jest.fn(),
-};
-
-function createMockSupabaseClient() {
-  return {
-    from: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
-    update: jest.fn().mockReturnThis(),
-    delete: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    single: jest.fn(),
-    maybeSingle: jest.fn(),
-  };
-}
-
 describe('CvJsonResumeSwapService', () => {
+  const ctx = useTestDb();
+  let repo: CvNormalizedRepository;
   let service: CvJsonResumeSwapService;
-  let mockSupabase: ReturnType<typeof createMockSupabaseClient>;
+  let user: AuthUser;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-
-    mockSupabase = createMockSupabaseClient();
-    mockNormalizedRepo.createClientForUser.mockReturnValue(mockSupabase as never);
-
-    service = new CvJsonResumeSwapService(
-      mockCvService as unknown as CvService,
-      mockNormalizedRepo as unknown as CvNormalizedRepository,
-      mockSchemaValidator as unknown as ResumeSchemaValidator,
-    );
+  beforeEach(async () => {
+    repo = new CvNormalizedRepository(ctx.db);
+    const validator = new ResumeSchemaValidator();
+    service = new CvJsonResumeSwapService(new CvService(validator, repo), repo, validator);
+    user = await ctx.createUser();
   });
 
+  async function createPrimary(data: Resume) {
+    const scope = repo.scopeFor(user);
+    const header = await repo.insertHeader(scope);
+    await repo.insertNormalizedCv(scope, header.id, data);
+    return header.id;
+  }
+
   describe('createFromJsonResume', () => {
-    it('creates a CV from JSON Resume document', async () => {
-      const document = { basics: { name: 'John' } };
-      const prepared = { basics: { name: 'John' }, work: [] };
-      mockCvService.create.mockResolvedValue({ id: 'cv-new', ...prepared } as never);
-
-      (service as unknown as { prepare: (doc: unknown) => Record<string, unknown> }).prepare = jest
-        .fn()
-        .mockReturnValue(prepared);
-
-      const result = await service.createFromJsonResume(user, document);
-
-      expect(mockCvService.create).toHaveBeenCalledWith(user, { data: prepared });
-      expect(result).toEqual({ id: 'cv-new', ...prepared });
+    it('creates a CV from a JSON Resume document', async () => {
+      const result = await service.createFromJsonResume(user, { basics: { name: 'John' } });
+      expect(result.title).toBe('John');
     });
 
-    it('throws BadRequestException when prepare fails', async () => {
-      (service as unknown as { prepare: (doc: unknown) => Record<string, unknown> }).prepare = jest
-        .fn()
-        .mockImplementation(() => {
-          throw new BadRequestException('Invalid document');
-        });
-
-      await expect(service.createFromJsonResume(user, {})).rejects.toThrow(BadRequestException);
+    it('throws BadRequest for documents that are not JSON Resume objects', async () => {
+      await expect(service.createFromJsonResume(user, 'nope')).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('replaceFromJsonResume', () => {
-    const cvId = '11111111-1111-1111-1111-111111111111';
+    it('swaps the primary CV for the imported document', async () => {
+      const cvId = await createPrimary({
+        basics: { name: 'Old' },
+        work: [{ name: 'Old Co' }],
+      } as Resume);
 
-    it('throws NotFoundException when CV does not exist', async () => {
-      mockNormalizedRepo.fetchHeader.mockResolvedValue(null);
-
-      await expect(service.replaceFromJsonResume(user, cvId, {})).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('throws BadRequestException when CV is not primary', async () => {
-      mockNormalizedRepo.fetchHeader.mockResolvedValue({ kind: 'application_clone' } as never);
-
-      await expect(service.replaceFromJsonResume(user, cvId, {})).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
-    it('throws BadRequestException when staging insert fails', async () => {
-      (service as unknown as { prepare: (doc: unknown) => Record<string, unknown> }).prepare = jest
-        .fn()
-        .mockReturnValue({ basics: {} });
-      mockNormalizedRepo.fetchHeader.mockResolvedValue({ kind: 'primary' } as never);
-      mockSupabase.single.mockResolvedValue({ data: null, error: { message: 'Insert failed' } });
-
-      await expect(service.replaceFromJsonResume(user, cvId, {})).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
-    it('rolls back staging row when insertNormalizedCv fails', async () => {
-      const prepared = { basics: { name: 'Dave' } };
-      (service as unknown as { prepare: (doc: unknown) => Record<string, unknown> }).prepare = jest
-        .fn()
-        .mockReturnValue(prepared);
-      mockNormalizedRepo.fetchHeader.mockResolvedValue({ kind: 'primary' } as never);
-
-      mockSupabase.single.mockResolvedValue({ data: { id: 'staging-id' }, error: null });
-      mockNormalizedRepo.insertNormalizedCv.mockRejectedValue(new Error('DB error'));
-
-      await expect(service.replaceFromJsonResume(user, cvId, {})).rejects.toThrow('DB error');
-    });
-
-    it('rolls back staging CV when promote update fails', async () => {
-      const prepared = { basics: { name: 'Updated' } };
-      (service as unknown as { prepare: (doc: unknown) => Record<string, unknown> }).prepare = jest
-        .fn()
-        .mockReturnValue(prepared);
-      mockNormalizedRepo.fetchHeader.mockResolvedValue({ kind: 'primary' } as never);
-
-      // First single() returns staging-id (insert succeeded)
-      mockSupabase.single.mockResolvedValueOnce({ data: { id: 'staging-id' }, error: null });
-
-      // insertNormalizedCv succeeds
-      mockNormalizedRepo.insertNormalizedCv.mockResolvedValue(undefined);
-
-      // Mock for the update (promote to primary) - error
-      mockSupabase.single.mockResolvedValueOnce({
-        data: null,
-        error: { message: 'Update failed' },
+      const result = await service.replaceFromJsonResume(user, cvId, {
+        basics: { name: 'New' },
+        skills: [{ name: 'SQL' }],
       });
 
-      // Mock for the catch block delete of staging row
-      mockSupabase.single.mockResolvedValue({ data: null, error: null });
+      expect(result.title).toBe('New');
+      expect(result.id).not.toBe(cvId);
+      const rows = await ctx.db.select().from(cv);
+      expect(rows.map((r) => [r.id, r.kind])).toEqual([[result.id, 'primary']]);
+      const sections = await repo.fetchSections(repo.scopeFor(user), result.id);
+      expect(sections.skills.map((s) => s.name)).toEqual(['SQL']);
+      expect(sections.work).toEqual([]);
+    });
+
+    it('throws NotFound when the CV does not exist for the user', async () => {
+      const cvId = await createPrimary({ basics: { name: 'Mine' } } as Resume);
+      await expect(
+        service.replaceFromJsonResume(await ctx.createUser(), cvId, { basics: {} }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws BadRequest when the CV is not primary', async () => {
+      const header = await repo.insertHeader(repo.scopeFor(user), { kind: 'application_clone' });
+      await expect(service.replaceFromJsonResume(user, header.id, { basics: {} })).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('rolls everything back when writing the replacement fails', async () => {
+      const cvId = await createPrimary({ basics: { name: 'Keep' } } as Resume);
+      jest.spyOn(repo, 'insertNormalizedCv').mockRejectedValueOnce(new Error('DB error'));
 
       await expect(
-        service.replaceFromJsonResume(user, cvId, { basics: { name: 'Updated' } }),
+        service.replaceFromJsonResume(user, cvId, { basics: { name: 'X' } }),
+      ).rejects.toThrow('DB error');
+
+      const rows = await ctx.db.select().from(cv);
+      expect(rows.map((r) => [r.id, r.kind])).toEqual([[cvId, 'primary']]);
+    });
+
+    it('rolls back when promoting the staging CV fails', async () => {
+      const cvId = await createPrimary({ basics: { name: 'Keep' } } as Resume);
+      jest.spyOn(repo, 'updateHeaderFields').mockResolvedValueOnce(false);
+
+      await expect(
+        service.replaceFromJsonResume(user, cvId, { basics: { name: 'X' } }),
       ).rejects.toThrow(BadRequestException);
+
+      const rows = await ctx.db.select().from(cv);
+      expect(rows.map((r) => [r.id, r.kind])).toEqual([[cvId, 'primary']]);
     });
   });
 });

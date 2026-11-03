@@ -7,6 +7,7 @@ import {
   sanitizeResumeItemPayload,
 } from '@resubuild/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { DbScope } from '../database/db-scope';
 import { MediaService } from '../media/media.service';
 import { parseMediaIdFromViewerUrl } from '../media/media-url.util';
 import { CvService } from './cv.service';
@@ -36,13 +37,13 @@ export class CvItemService {
   ) {}
 
   private async requireSectionRow(
-    supabase: ReturnType<CvNormalizedRepository['createClientForUser']>,
+    scope: DbScope,
     cvId: string,
     section: CvSectionKey,
     itemId: string,
     label: string,
   ): Promise<Record<string, unknown>> {
-    const row = await this.normalizedRepo.getSectionRowById(supabase, cvId, section, itemId);
+    const row = await this.normalizedRepo.getSectionRowById(scope, cvId, section, itemId);
     if (!row) {
       throw new NotFoundException(`${label} not found`);
     }
@@ -56,13 +57,11 @@ export class CvItemService {
   private async mutateSection(
     user: AuthenticatedRequest['user'],
     cvId: string,
-    mutator: (
-      supabase: ReturnType<CvNormalizedRepository['createClientForUser']>,
-    ) => Promise<CvItemMutationResponse>,
+    mutator: (scope: DbScope) => Promise<CvItemMutationResponse>,
   ): Promise<CvItemMutationResponse> {
     await this.cvService.getHeader(user, cvId);
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    return mutator(supabase);
+    const scope = this.normalizedRepo.scopeFor(user);
+    return mutator(scope);
   }
 
   updateBasics(
@@ -70,8 +69,8 @@ export class CvItemService {
     cvId: string,
     basics: Record<string, unknown>,
   ): Promise<CvItemMutationResponse> {
-    return this.mutateSection(user, cvId, async (supabase) => {
-      const header = await this.normalizedRepo.updateBasicsHeader(supabase, cvId, basics);
+    return this.mutateSection(user, cvId, async (scope) => {
+      const header = await this.normalizedRepo.updateBasicsHeader(scope, cvId, basics);
       const mediaId = parseMediaIdFromViewerUrl(basics.image);
       if (mediaId) {
         await this.mediaService.ensureThumbnail(mediaId);
@@ -87,8 +86,8 @@ export class CvItemService {
     cvId: string,
     profile: Record<string, unknown>,
   ): Promise<CvItemMutationResponse> {
-    return this.mutateSection(user, cvId, async (supabase) => {
-      const row = await this.normalizedRepo.insertSectionRow(supabase, cvId, 'profiles', profile);
+    return this.mutateSection(user, cvId, async (scope) => {
+      const row = await this.normalizedRepo.insertSectionRow(scope, cvId, 'profiles', profile);
       return { item: this.rowToItem(row) };
     });
   }
@@ -99,11 +98,11 @@ export class CvItemService {
     itemId: string,
     profile: Record<string, unknown>,
   ): Promise<CvItemMutationResponse> {
-    return this.mutateSection(user, cvId, async (supabase) => {
-      const row = await this.requireSectionRow(supabase, cvId, 'profiles', itemId, 'Profile');
+    return this.mutateSection(user, cvId, async (scope) => {
+      const row = await this.requireSectionRow(scope, cvId, 'profiles', itemId, 'Profile');
       const current = this.rowToItem(row);
       const updated = await this.normalizedRepo.updateSectionRow(
-        supabase,
+        scope,
         cvId,
         'profiles',
         row.id as string,
@@ -119,9 +118,9 @@ export class CvItemService {
     cvId: string,
     itemId: string,
   ): Promise<CvItemMutationResponse> {
-    return this.mutateSection(user, cvId, async (supabase) => {
-      const row = await this.requireSectionRow(supabase, cvId, 'profiles', itemId, 'Profile');
-      await this.normalizedRepo.deleteSectionRow(supabase, cvId, 'profiles', row.id as string);
+    return this.mutateSection(user, cvId, async (scope) => {
+      const row = await this.requireSectionRow(scope, cvId, 'profiles', itemId, 'Profile');
+      await this.normalizedRepo.deleteSectionRow(scope, cvId, 'profiles', row.id as string);
       return {};
     });
   }
@@ -138,8 +137,8 @@ export class CvItemService {
     }
 
     const sanitized = sanitizeResumeItemPayload(item);
-    return this.mutateSection(user, cvId, async (supabase) => {
-      const row = await this.normalizedRepo.insertSectionRow(supabase, cvId, section, sanitized);
+    return this.mutateSection(user, cvId, async (scope) => {
+      const row = await this.normalizedRepo.insertSectionRow(scope, cvId, section, sanitized);
       return { item: this.rowToItem(row) };
     });
   }
@@ -157,11 +156,11 @@ export class CvItemService {
       throw new BadRequestException(`Unknown section: ${key}`);
     }
 
-    return this.mutateSection(user, cvId, async (supabase) => {
-      const row = await this.requireSectionRow(supabase, cvId, section, itemId, label);
+    return this.mutateSection(user, cvId, async (scope) => {
+      const row = await this.requireSectionRow(scope, cvId, section, itemId, label);
       const current = this.rowToItem(row);
       const updated = await this.normalizedRepo.updateSectionRow(
-        supabase,
+        scope,
         cvId,
         section,
         row.id as string,
@@ -184,9 +183,9 @@ export class CvItemService {
       throw new BadRequestException(`Unknown section: ${key}`);
     }
 
-    return this.mutateSection(user, cvId, async (supabase) => {
-      const row = await this.requireSectionRow(supabase, cvId, section, itemId, label);
-      await this.normalizedRepo.deleteSectionRow(supabase, cvId, section, row.id as string);
+    return this.mutateSection(user, cvId, async (scope) => {
+      const row = await this.requireSectionRow(scope, cvId, section, itemId, label);
+      await this.normalizedRepo.deleteSectionRow(scope, cvId, section, row.id as string);
       return {};
     });
   }
@@ -197,8 +196,8 @@ export class CvItemService {
     section: CvSectionKey,
   ): Promise<Record<string, unknown>[]> {
     await this.cvService.getHeader(user, cvId);
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const rows = await this.normalizedRepo.listSectionRows(supabase, cvId, section);
+    const scope = this.normalizedRepo.scopeFor(user);
+    const rows = await this.normalizedRepo.listSectionRows(scope, cvId, section);
     return rows.map((row) => this.rowToItem(row as Record<string, unknown>));
   }
 
@@ -221,8 +220,8 @@ export class CvItemService {
     }
 
     await this.cvService.getHeader(user, cvId);
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const rows = await this.normalizedRepo.reorderSection(supabase, cvId, section, order);
+    const scope = this.normalizedRepo.scopeFor(user);
+    const rows = await this.normalizedRepo.reorderSection(scope, cvId, section, order);
 
     return {
       items: rows.map((row) => this.rowToItem(row)),

@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { type Database, eq, mcpApiKey, userSettings } from '@resubuild/db';
 import { encryptSecret, tryDecryptSecret } from '../ai-agent/ai-agent-crypto.util';
 import type { AuthUser } from '../auth/auth-user.types';
-import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
+import { DATABASE } from '../database/database.tokens';
 import {
   generateMcpApiKeySecret,
   hashMcpApiKey,
@@ -29,8 +30,10 @@ export interface McpUserSettingsRow {
 
 @Injectable()
 export class McpKeyRepository {
+  private readonly logger = new Logger(McpKeyRepository.name);
+
   constructor(
-    private readonly normalizedRepo: CvNormalizedRepository,
+    @Inject(DATABASE) private readonly db: Database,
     private readonly configService: ConfigService,
   ) {}
 
@@ -55,122 +58,71 @@ export class McpKeyRepository {
     return key;
   }
 
-  private userClient(user: AuthUser) {
-    return this.normalizedRepo.createClientForUser(user);
-  }
-
-  private serviceClient() {
-    return this.normalizedRepo.createServiceRoleClient();
-  }
-
   async getOrCreateSettings(user: AuthUser): Promise<McpUserSettingsRow> {
-    const supabase = this.userClient(user);
-    const { data, error } = await supabase
-      .from('user_settings')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    await this.db
+      .insert(userSettings)
+      .values({ user_id: user.id, mcp_enabled: false })
+      .onConflictDoNothing({ target: userSettings.user_id });
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
+    const [row] = await this.db
+      .select()
+      .from(userSettings)
+      .where(eq(userSettings.user_id, user.id))
+      .limit(1);
 
-    if (data) {
-      return data as McpUserSettingsRow;
-    }
-
-    const { data: inserted, error: insertError } = await supabase
-      .from('user_settings')
-      .insert({ user_id: user.id, mcp_enabled: false })
-      .select('*')
-      .single();
-
-    if (insertError) {
-      throw new BadRequestException(insertError.message);
-    }
-
-    return inserted as McpUserSettingsRow;
+    return row;
   }
 
   async setMcpEnabled(user: AuthUser, enabled: boolean): Promise<McpUserSettingsRow> {
-    await this.getOrCreateSettings(user);
-    const supabase = this.userClient(user);
-    const { data, error } = await supabase
-      .from('user_settings')
-      .update({ mcp_enabled: enabled })
-      .eq('user_id', user.id)
-      .select('*')
-      .single();
+    const [row] = await this.db
+      .insert(userSettings)
+      .values({ user_id: user.id, mcp_enabled: enabled })
+      .onConflictDoUpdate({ target: userSettings.user_id, set: { mcp_enabled: enabled } })
+      .returning();
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return data as McpUserSettingsRow;
+    return row;
   }
 
   async isMcpEnabledForUser(userId: string): Promise<boolean> {
-    const supabase = this.serviceClient();
-    const { data, error } = await supabase
-      .from('user_settings')
-      .select('mcp_enabled')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const rows = await this.db
+      .select({ mcp_enabled: userSettings.mcp_enabled })
+      .from(userSettings)
+      .where(eq(userSettings.user_id, userId))
+      .limit(1);
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return Boolean(data?.mcp_enabled);
+    return Boolean(rows[0]?.mcp_enabled);
   }
 
   async getKey(user: AuthUser): Promise<McpApiKeyRow | null> {
-    const supabase = this.userClient(user);
-    const { data, error } = await supabase
-      .from('mcp_api_key')
-      .select('*')
-      .eq('user_id', user.id)
-      .limit(1)
-      .maybeSingle();
+    const rows = await this.db
+      .select()
+      .from(mcpApiKey)
+      .where(eq(mcpApiKey.user_id, user.id))
+      .limit(1);
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return (data ?? null) as McpApiKeyRow | null;
+    return (rows[0] as McpApiKeyRow | undefined) ?? null;
   }
 
   async createKey(user: AuthUser): Promise<{ row: McpApiKeyRow; secret: string }> {
-    const supabase = this.userClient(user);
-
     const secret = generateMcpApiKeySecret();
     const keyHash = hashMcpApiKey(secret, this.pepper());
     const keyPrefix = mcpKeyDisplayPrefix(secret);
     const encryptedSecret = encryptSecret(secret, this.encryptionKey());
 
     // The mcp_api_key.user_id primary key guarantees at most one row per
-    // user, so rotating is a single atomic upsert keyed on user_id — no
-    // application-layer delete-then-insert, no RLS gap to leak a
-    // unique-violation to the caller.
-    const { data, error } = await supabase
-      .from('mcp_api_key')
-      .upsert(
-        {
-          user_id: user.id,
-          key_prefix: keyPrefix,
-          key_hash: keyHash,
-          encrypted_secret: encryptedSecret,
-        },
-        { onConflict: 'user_id' },
-      )
-      .select('*')
-      .single();
+    // user, so rotating is a single atomic upsert keyed on user_id.
+    const values = {
+      key_prefix: keyPrefix,
+      key_hash: keyHash,
+      encrypted_secret: encryptedSecret,
+    };
+    const [row] = await this.db
+      .insert(mcpApiKey)
+      .values({ user_id: user.id, ...values })
+      .onConflictDoUpdate({ target: mcpApiKey.user_id, set: values })
+      .returning();
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return { row: data as McpApiKeyRow, secret };
+    return { row: row as McpApiKeyRow, secret };
   }
 
   async findActiveKeyBySecret(secret: string): Promise<McpApiKeyRow | null> {
@@ -179,36 +131,29 @@ export class McpKeyRepository {
     }
 
     const prefix = mcpKeyDisplayPrefix(secret);
-    const supabase = this.serviceClient();
-    const { data, error } = await supabase
-      .from('mcp_api_key')
-      .select('*')
-      .eq('key_prefix', prefix)
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
+    const rows = await this.db
+      .select()
+      .from(mcpApiKey)
+      .where(eq(mcpApiKey.key_prefix, prefix))
+      .limit(1);
+    const row = rows[0];
 
     const pepper = this.pepper();
-    if (data && verifyMcpApiKey(secret, pepper, data.key_hash)) {
-      return data as McpApiKeyRow;
+    if (row && verifyMcpApiKey(secret, pepper, row.key_hash)) {
+      return row as McpApiKeyRow;
     }
 
     return null;
   }
 
   touchLastUsedAt(userId: string): void {
-    const supabase = this.serviceClient();
-    void supabase
-      .from('mcp_api_key')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('user_id', userId)
-      .then(({ error }) => {
-        if (error) {
-          // non-blocking
-        }
+    void this.db
+      .update(mcpApiKey)
+      .set({ last_used_at: new Date().toISOString() })
+      .where(eq(mcpApiKey.user_id, userId))
+      .catch((error: unknown) => {
+        // Non-blocking: a failed timestamp update must not fail the MCP request.
+        this.logger.debug(`Failed to update MCP key last_used_at: ${String(error)}`);
       });
   }
 

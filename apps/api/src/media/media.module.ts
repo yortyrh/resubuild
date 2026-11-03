@@ -4,8 +4,8 @@ import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
 
 /**
- * Authenticated multipart uploads persisted to Supabase Storage (bucket from MEDIA_BUCKET).
- * {@link AuthModule} is imported so SupabaseAuthGuard stays available alongside CvModule parity.
+ * Authenticated multipart uploads persisted to S3-compatible object storage (bucket from MEDIA_BUCKET).
+ * {@link AuthModule} is imported so the auth guard stays available alongside CvModule parity.
  */
 @Module({
   imports: [AuthModule],

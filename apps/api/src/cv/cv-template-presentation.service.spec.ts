@@ -18,7 +18,7 @@ describe('CvTemplatePresentationService', () => {
 
   beforeEach(async () => {
     normalizedRepo = createMockNormalizedRepo();
-    normalizedRepo.createClientForUser.mockReturnValue(supabaseStub as never);
+    normalizedRepo.scopeFor.mockReturnValue(supabaseStub as never);
     presentationRepo = {
       fetch: jest.fn().mockResolvedValue(null),
       upsert: jest.fn().mockResolvedValue(undefined),

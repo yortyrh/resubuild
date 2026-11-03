@@ -27,7 +27,7 @@ const puppeteer = jest.requireMock('puppeteer') as {
 describe('CvExportService', () => {
   let service: CvExportService;
   let normalizedRepo: jest.Mocked<
-    Pick<CvNormalizedRepository, 'createClientForUser' | 'fetchHeader' | 'fetchSections'>
+    Pick<CvNormalizedRepository, 'scopeFor' | 'fetchHeader' | 'fetchSections'>
   >;
   let configService: jest.Mocked<Pick<ConfigService, 'get'>>;
   let presentationService: jest.Mocked<
@@ -45,7 +45,7 @@ describe('CvExportService', () => {
 
   beforeEach(() => {
     normalizedRepo = {
-      createClientForUser: jest.fn().mockReturnValue(supabase),
+      scopeFor: jest.fn().mockReturnValue(supabase),
       fetchHeader: jest.fn(),
       fetchSections: jest.fn(),
     };

@@ -21,9 +21,9 @@ export class CvJsonResumeSwapService {
 
   async replaceFromJsonResume(user: AuthUser, cvId: string, document: unknown) {
     const prepared = this.prepare(document);
-    const supabase = this.normalizedRepo.createClientForUser(user);
+    const scope = this.normalizedRepo.scopeFor(user);
 
-    const target = await this.normalizedRepo.fetchHeader(supabase, cvId, user.id);
+    const target = await this.normalizedRepo.fetchHeader(scope, cvId);
     if (!target) {
       throw new NotFoundException('CV not found');
     }
@@ -31,58 +31,32 @@ export class CvJsonResumeSwapService {
       throw new BadRequestException('Only primary CVs can be replaced');
     }
 
-    const { data: stagingInsert, error: stagingError } = await supabase
-      .from('cv')
-      .insert({
-        user_id: user.id,
+    // One transaction: build the replacement as a staging CV, drop the old
+    // primary, then promote the staging row. Any failure rolls everything back.
+    const promotedId = await this.normalizedRepo.inTransaction(scope, async (tx) => {
+      const staging = await this.normalizedRepo.insertHeader(tx, {
         kind: 'import_staging',
         location: {},
-      })
-      .select('*')
-      .single();
+      });
 
-    if (stagingError) {
-      throw new BadRequestException(stagingError.message);
-    }
+      await this.normalizedRepo.insertNormalizedCv(tx, staging.id, prepared as Resume);
 
-    const stagingId = stagingInsert.id as string;
-
-    try {
-      await this.normalizedRepo.insertNormalizedCv(
-        supabase,
-        stagingId,
-        user.id,
-        prepared as Resume,
-      );
-
-      const { error: deleteError } = await supabase
-        .from('cv')
-        .delete()
-        .eq('id', cvId)
-        .eq('user_id', user.id)
-        .eq('kind', 'primary');
-
-      if (deleteError) {
-        throw new BadRequestException(deleteError.message);
+      const deleted = await this.normalizedRepo.deleteHeader(tx, cvId, 'primary');
+      if (!deleted) {
+        throw new NotFoundException('CV not found');
       }
 
-      const { data: promoted, error: promoteError } = await supabase
-        .from('cv')
-        .update({ kind: 'primary' })
-        .eq('id', stagingId)
-        .eq('user_id', user.id)
-        .select('*')
-        .single();
-
-      if (promoteError) {
-        throw new BadRequestException(promoteError.message);
+      const promoted = await this.normalizedRepo.updateHeaderFields(tx, staging.id, {
+        kind: 'primary',
+      });
+      if (!promoted) {
+        throw new BadRequestException('Failed to promote the imported CV');
       }
 
-      return this.cvService.findOne(user, promoted.id as string);
-    } catch (error) {
-      await supabase.from('cv').delete().eq('id', stagingId);
-      throw error;
-    }
+      return staging.id;
+    });
+
+    return this.cvService.findOne(user, promotedId);
   }
 
   private prepare(document: unknown): Record<string, unknown> {

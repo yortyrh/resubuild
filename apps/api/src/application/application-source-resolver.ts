@@ -58,18 +58,18 @@ export async function resolveApplicationSource(
   row: JobApplicationRow,
   normalizedRepo: CvNormalizedRepository,
 ): Promise<ResolvedApplicationSource | null> {
-  const supabase = normalizedRepo.createClientForUser(user);
+  const scope = normalizedRepo.scopeFor(user);
   const candidateIds = [row.source_cv_id, row.intake_source_cv_id].filter((id): id is string =>
     Boolean(id),
   );
 
   for (const cvId of candidateIds) {
-    const header = await normalizedRepo.fetchHeader(supabase, cvId);
+    const header = await normalizedRepo.fetchHeader(scope, cvId);
     if (!header || header.kind !== 'primary') {
       continue;
     }
 
-    const resume = await normalizedRepo.assembleFullResume(supabase, cvId);
+    const resume = await normalizedRepo.assembleFullResume(scope, cvId);
     if (!resume) {
       continue;
     }
@@ -104,8 +104,8 @@ export async function buildSourceCvSnapshot(
   sourceCvId: string,
   normalizedRepo: CvNormalizedRepository,
 ): Promise<Resume | null> {
-  const supabase = normalizedRepo.createClientForUser(user);
-  return normalizedRepo.assembleFullResume(supabase, sourceCvId);
+  const scope = normalizedRepo.scopeFor(user);
+  return normalizedRepo.assembleFullResume(scope, sourceCvId);
 }
 
 export async function buildCvSummaryFromId(
@@ -113,13 +113,13 @@ export async function buildCvSummaryFromId(
   cvId: string,
   normalizedRepo: CvNormalizedRepository,
 ): Promise<CvSummaryForRanking | null> {
-  const supabase = normalizedRepo.createClientForUser(user);
-  const header = await normalizedRepo.fetchHeader(supabase, cvId);
+  const scope = normalizedRepo.scopeFor(user);
+  const header = await normalizedRepo.fetchHeader(scope, cvId);
   if (!header) {
     return null;
   }
 
-  const sections = await normalizedRepo.fetchSections(supabase, cvId);
+  const sections = await normalizedRepo.fetchSections(scope, cvId);
   const resume = assembleResume(header, sections);
   return resumeToCvSummary(resume, cvId);
 }

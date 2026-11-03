@@ -1,12 +1,13 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { type Database, eq, webScrapeConfig } from '@resubuild/db';
 import {
   encryptSecret,
   resolveAiAgentEncryptionKey,
   tryDecryptSecret,
 } from '../ai-agent/ai-agent-crypto.util';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
-import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
+import { DATABASE } from '../database/database.tokens';
 
 export type WebScrapeProvider = 'firecrawl' | 'tavily';
 
@@ -34,7 +35,7 @@ export interface DecryptedWebScrapeConfig {
 export class WebScrapeRepository {
   constructor(
     private readonly configService: ConfigService,
-    private readonly normalizedRepo: CvNormalizedRepository,
+    @Inject(DATABASE) private readonly db: Database,
   ) {}
 
   private getEncryptionKey(): string {
@@ -47,27 +48,21 @@ export class WebScrapeRepository {
     return key;
   }
 
-  private createClient(user: AuthenticatedRequest['user']) {
-    return this.normalizedRepo.createClientForUser(user);
+  private async findRow(user: AuthenticatedRequest['user']) {
+    const rows = await this.db
+      .select()
+      .from(webScrapeConfig)
+      .where(eq(webScrapeConfig.user_id, user.id))
+      .limit(1);
+    return rows[0] as WebScrapeConfigRow | undefined;
   }
 
   async getStatus(user: AuthenticatedRequest['user']): Promise<WebScrapeConfigStatus> {
-    const supabase = this.createClient(user);
-    const { data, error } = await supabase
-      .from('web_scrape_config')
-      .select('provider, api_key_encrypted, updated_at')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    if (!data) {
+    const row = await this.findRow(user);
+    if (!row) {
       return { configured: false };
     }
 
-    const row = data as Pick<WebScrapeConfigRow, 'provider' | 'api_key_encrypted' | 'updated_at'>;
     const apiKey = tryDecryptSecret(row.api_key_encrypted, this.getEncryptionKey());
 
     return {
@@ -83,25 +78,16 @@ export class WebScrapeRepository {
     provider: WebScrapeProvider,
     apiKey: string,
   ): Promise<WebScrapeConfigStatus> {
-    const supabase = this.createClient(user);
     const encrypted = encryptSecret(apiKey, this.getEncryptionKey());
 
-    const { data, error } = await supabase
-      .from('web_scrape_config')
-      .upsert(
-        {
-          user_id: user.id,
-          provider,
-          api_key_encrypted: encrypted,
-        },
-        { onConflict: 'user_id' },
-      )
-      .select('provider, updated_at')
-      .single();
-
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
+    const [data] = await this.db
+      .insert(webScrapeConfig)
+      .values({ user_id: user.id, provider, api_key_encrypted: encrypted })
+      .onConflictDoUpdate({
+        target: webScrapeConfig.user_id,
+        set: { provider, api_key_encrypted: encrypted },
+      })
+      .returning({ provider: webScrapeConfig.provider, updated_at: webScrapeConfig.updated_at });
 
     return {
       configured: true,
@@ -111,35 +97,18 @@ export class WebScrapeRepository {
   }
 
   async clear(user: AuthenticatedRequest['user']): Promise<WebScrapeConfigStatus> {
-    const supabase = this.createClient(user);
-    const { error } = await supabase.from('web_scrape_config').delete().eq('user_id', user.id);
-
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
+    await this.db.delete(webScrapeConfig).where(eq(webScrapeConfig.user_id, user.id));
     return { configured: false };
   }
 
   async getDecryptedConfig(
     user: AuthenticatedRequest['user'],
   ): Promise<DecryptedWebScrapeConfig | null> {
-    const supabase = this.createClient(user);
-    const { data, error } = await supabase
-      .from('web_scrape_config')
-      .select('provider, api_key_encrypted')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    if (!data) {
+    const row = await this.findRow(user);
+    if (!row) {
       return null;
     }
 
-    const row = data as Pick<WebScrapeConfigRow, 'provider' | 'api_key_encrypted'>;
     const apiKey = tryDecryptSecret(row.api_key_encrypted, this.getEncryptionKey());
     if (!apiKey) {
       return null;

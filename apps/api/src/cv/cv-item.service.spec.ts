@@ -48,7 +48,7 @@ describe('CvItemService', () => {
       getHeader: jest.fn().mockImplementation(async () => mockCvHeader()),
     };
     normalizedRepo = createMockNormalizedRepo();
-    normalizedRepo.createClientForUser.mockReturnValue(supabaseStub as never);
+    normalizedRepo.scopeFor.mockReturnValue(supabaseStub as never);
 
     normalizedRepo.getSectionRowById.mockImplementation(async (_sb, _cvId, section, rowId) => {
       const store =

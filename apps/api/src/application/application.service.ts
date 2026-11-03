@@ -259,8 +259,8 @@ export class ApplicationService {
     );
 
     if (row.source_cv_id) {
-      const supabase = this.normalizedRepo.createClientForUser(user);
-      const header = await this.normalizedRepo.fetchHeader(supabase, row.source_cv_id);
+      const scope = this.normalizedRepo.scopeFor(user);
+      const header = await this.normalizedRepo.fetchHeader(scope, row.source_cv_id);
       if (header) {
         detail.sourceCvTitle = deriveCvTitleFromBasics({
           name: header.name ?? undefined,
@@ -419,8 +419,8 @@ export class ApplicationService {
     const cvId = row.source_cv_id ?? row.tailored_cv_id;
 
     if (cvId) {
-      const supabase = this.normalizedRepo.createClientForUser(user);
-      const header = await this.normalizedRepo.fetchHeader(supabase, cvId);
+      const scope = this.normalizedRepo.scopeFor(user);
+      const header = await this.normalizedRepo.fetchHeader(scope, cvId);
       name = header?.name?.trim() || null;
     }
 
@@ -484,8 +484,8 @@ export class ApplicationService {
 
     let name: string | undefined;
     if (row.source_cv_id) {
-      const supabase = this.normalizedRepo.createClientForUser(user);
-      const header = await this.normalizedRepo.fetchHeader(supabase, row.source_cv_id);
+      const scope = this.normalizedRepo.scopeFor(user);
+      const header = await this.normalizedRepo.fetchHeader(scope, row.source_cv_id);
       name = header?.name?.trim() || undefined;
     }
 
@@ -528,13 +528,13 @@ export class ApplicationService {
     user: AuthenticatedRequest['user'],
     sourceCvId: string,
   ): Promise<ResolvedApplicationSource | null> {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, sourceCvId);
+    const scope = this.normalizedRepo.scopeFor(user);
+    const header = await this.normalizedRepo.fetchHeader(scope, sourceCvId);
     if (!header || header.kind !== 'primary') {
       return null;
     }
 
-    const resume = await this.normalizedRepo.assembleFullResume(supabase, sourceCvId);
+    const resume = await this.normalizedRepo.assembleFullResume(scope, sourceCvId);
     if (!resume) {
       return null;
     }
@@ -881,11 +881,8 @@ export class ApplicationService {
       return;
     }
 
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const currentResume = await this.normalizedRepo.assembleFullResume(
-      supabase,
-      sourceTailoredCvId,
-    );
+    const scope = this.normalizedRepo.scopeFor(user);
+    const currentResume = await this.normalizedRepo.assembleFullResume(scope, sourceTailoredCvId);
     if (!currentResume) {
       await this.repository.update(user, draftApplicationId, { status: 'failed' });
       this.prepareStore.update(draftApplicationId, { errors: ['Tailored CV not found'] });
@@ -998,12 +995,7 @@ export class ApplicationService {
   private async resolveAccountDisplayName(
     user: AuthenticatedRequest['user'],
   ): Promise<string | undefined> {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-
-    const metadata = authUser?.user_metadata as Record<string, unknown> | undefined;
+    const metadata = user.userMetadata;
     const candidates = [metadata?.full_name, metadata?.name, metadata?.display_name];
 
     for (const value of candidates) {
@@ -1019,12 +1011,12 @@ export class ApplicationService {
     user: AuthenticatedRequest['user'],
   ): Promise<CvSummaryForRanking[]> {
     const cvs = await this.cvService.findAll(user);
-    const supabase = this.normalizedRepo.createClientForUser(user);
+    const scope = this.normalizedRepo.scopeFor(user);
 
     return Promise.all(
       cvs.map(async (cv) => {
-        const header = await this.normalizedRepo.fetchHeader(supabase, cv.id);
-        const sections = await this.normalizedRepo.fetchSections(supabase, cv.id);
+        const header = await this.normalizedRepo.fetchHeader(scope, cv.id);
+        const sections = await this.normalizedRepo.fetchSections(scope, cv.id);
         const resume = assembleResume(header!, sections);
 
         return {
@@ -1048,8 +1040,8 @@ export class ApplicationService {
     cloneCvId: string,
     patch: TailorCvPatch,
   ): Promise<void> {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const resume = await this.normalizedRepo.assembleFullResume(supabase, cloneCvId);
+    const scope = this.normalizedRepo.scopeFor(user);
+    const resume = await this.normalizedRepo.assembleFullResume(scope, cloneCvId);
     if (!resume) {
       throw new NotFoundException('Clone CV not found');
     }
@@ -1065,7 +1057,7 @@ export class ApplicationService {
     applySectionPatches(next.projects, patch.projects);
 
     const sanitized = sanitizeAiTypographyDeep(next) as Resume;
-    await this.normalizedRepo.replaceNormalizedCv(supabase, cloneCvId, sanitized);
+    await this.normalizedRepo.replaceNormalizedCv(scope, cloneCvId, sanitized);
   }
 
   private resolveApiKeyEnvVar(modelId: string): string | null {

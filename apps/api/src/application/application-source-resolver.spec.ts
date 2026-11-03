@@ -83,7 +83,7 @@ describe('resolveApplicationSource', () => {
 
   it('returns live primary CV when available', async () => {
     const normalizedRepo = {
-      createClientForUser: jest.fn().mockReturnValue({}),
+      scopeFor: jest.fn().mockReturnValue({}),
       fetchHeader: jest.fn().mockResolvedValue({ id: 'cv-1', kind: 'primary' }),
       assembleFullResume: jest.fn().mockResolvedValue(sampleResume),
     };
@@ -105,7 +105,7 @@ describe('resolveApplicationSource', () => {
 
   it('skips non-primary headers before resolving a primary CV', async () => {
     const normalizedRepo = {
-      createClientForUser: jest.fn().mockReturnValue({}),
+      scopeFor: jest.fn().mockReturnValue({}),
       fetchHeader: jest
         .fn()
         .mockResolvedValueOnce({ id: 'cv-1', kind: 'application_clone' })
@@ -125,7 +125,7 @@ describe('resolveApplicationSource', () => {
 
   it('continues when assembleFullResume returns null for a primary CV', async () => {
     const normalizedRepo = {
-      createClientForUser: jest.fn().mockReturnValue({}),
+      scopeFor: jest.fn().mockReturnValue({}),
       fetchHeader: jest
         .fn()
         .mockResolvedValueOnce({ id: 'cv-1', kind: 'primary' })
@@ -144,7 +144,7 @@ describe('resolveApplicationSource', () => {
 
   it('falls back to intake source CV when primary source is not usable', async () => {
     const normalizedRepo = {
-      createClientForUser: jest.fn().mockReturnValue({}),
+      scopeFor: jest.fn().mockReturnValue({}),
       fetchHeader: jest
         .fn()
         .mockResolvedValueOnce(null)
@@ -163,7 +163,7 @@ describe('resolveApplicationSource', () => {
 
   it('returns snapshot-backed source when live CVs are unavailable', async () => {
     const normalizedRepo = {
-      createClientForUser: jest.fn().mockReturnValue({}),
+      scopeFor: jest.fn().mockReturnValue({}),
       fetchHeader: jest.fn().mockResolvedValue(null),
       assembleFullResume: jest.fn(),
     };
@@ -189,7 +189,7 @@ describe('resolveApplicationSource', () => {
 
   it('returns null when no source can be resolved', async () => {
     const normalizedRepo = {
-      createClientForUser: jest.fn().mockReturnValue({}),
+      scopeFor: jest.fn().mockReturnValue({}),
       fetchHeader: jest.fn().mockResolvedValue(null),
       assembleFullResume: jest.fn(),
     };
@@ -214,7 +214,7 @@ describe('buildSourceCvSnapshot', () => {
   it('assembles resume JSON for a source CV id', async () => {
     const resume = { basics: { name: 'Jane Doe' }, work: [], skills: [] };
     const normalizedRepo = {
-      createClientForUser: jest.fn().mockReturnValue({}),
+      scopeFor: jest.fn().mockReturnValue({}),
       assembleFullResume: jest.fn().mockResolvedValue(resume),
     };
 
@@ -229,7 +229,7 @@ describe('buildCvSummaryFromId', () => {
 
   it('returns null when CV header is missing', async () => {
     const normalizedRepo = {
-      createClientForUser: jest.fn().mockReturnValue({}),
+      scopeFor: jest.fn().mockReturnValue({}),
       fetchHeader: jest.fn().mockResolvedValue(null),
       fetchSections: jest.fn(),
     };
@@ -239,7 +239,7 @@ describe('buildCvSummaryFromId', () => {
 
   it('builds a CV summary from stored sections', async () => {
     const normalizedRepo = {
-      createClientForUser: jest.fn().mockReturnValue({}),
+      scopeFor: jest.fn().mockReturnValue({}),
       fetchHeader: jest.fn().mockResolvedValue({
         name: 'Jane Doe',
         label: 'Engineer',

@@ -44,28 +44,14 @@ export class CvService {
   }
 
   async findAll(user: AuthenticatedRequest['user']): Promise<CvRecord[]> {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    let query = supabase.from('cv').select('*').eq('kind', 'primary');
-
-    // When using service-role client (MCP auth path), no RLS token scopes the query,
-    // so we must filter explicitly by user_id to avoid returning all users' CVs.
-    if (user.authMethod === 'mcp') {
-      query = query.eq('user_id', user.id);
-    }
-
-    const { data, error } = await query.order('updated_at', { ascending: false });
-
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    const rows = data ?? [];
-    return rows.map((header) => this.toCvRecord(header as CvHeaderRow));
+    const scope = this.normalizedRepo.scopeFor(user);
+    const rows = await this.normalizedRepo.listHeaders(scope, 'primary');
+    return rows.map((header) => this.toCvRecord(header));
   }
 
   async findOne(user: AuthenticatedRequest['user'], id: string): Promise<CvRecord> {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, id, user.id);
+    const scope = this.normalizedRepo.scopeFor(user);
+    const header = await this.normalizedRepo.fetchHeader(scope, id);
 
     if (!header) {
       throw new NotFoundException('CV not found');
@@ -75,8 +61,8 @@ export class CvService {
   }
 
   async getHeader(user: AuthenticatedRequest['user'], id: string): Promise<CvHeaderRow> {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, id, user.id);
+    const scope = this.normalizedRepo.scopeFor(user);
+    const header = await this.normalizedRepo.fetchHeader(scope, id);
 
     if (!header) {
       throw new NotFoundException('CV not found');
@@ -88,27 +74,11 @@ export class CvService {
   async create(user: AuthenticatedRequest['user'], dto: CreateCvDto): Promise<CvRecord> {
     this.resumeValidator.validate(dto.data as unknown as Record<string, unknown>);
 
-    const supabase = this.normalizedRepo.createClientForUser(user);
-
-    const { data: inserted, error: insertError } = await supabase
-      .from('cv')
-      .insert({
-        user_id: user.id,
-        location: {},
-      })
-      .select('*')
-      .single();
-
-    if (insertError) {
-      throw new BadRequestException(insertError.message);
-    }
-
-    const header = await this.normalizedRepo.insertNormalizedCv(
-      supabase,
-      inserted.id,
-      user.id,
-      dto.data as unknown as Resume,
-    );
+    const scope = this.normalizedRepo.scopeFor(user);
+    const header = await this.normalizedRepo.inTransaction(scope, async (tx) => {
+      const inserted = await this.normalizedRepo.insertHeader(tx, { location: {} });
+      return this.normalizedRepo.insertNormalizedCv(tx, inserted.id, dto.data as unknown as Resume);
+    });
 
     return this.toCvRecord(header);
   }
@@ -118,28 +88,24 @@ export class CvService {
     id: string,
     dto: UpdateCvDto,
   ): Promise<CvRecord> {
-    const supabase = this.normalizedRepo.createClientForUser(user);
+    const scope = this.normalizedRepo.scopeFor(user);
 
     if (dto.templateId !== undefined) {
       if (!isValidTemplateId(dto.templateId)) {
         throw new BadRequestException(`Unknown template id: ${dto.templateId}`);
       }
       const canonicalTemplateId = resolveCanonicalTemplateId(dto.templateId);
-      const { error } = await supabase
-        .from('cv')
-        .update({ template_id: canonicalTemplateId })
-        .eq('id', id);
-      if (error) {
-        throw new BadRequestException(error.message);
-      }
+      await this.normalizedRepo.updateHeaderFields(scope, id, {
+        template_id: canonicalTemplateId,
+      });
     }
 
     if (dto.data !== undefined) {
       this.resumeValidator.validate(dto.data as unknown as Record<string, unknown>);
-      await this.normalizedRepo.replaceNormalizedCv(supabase, id, dto.data as unknown as Resume);
+      await this.normalizedRepo.replaceNormalizedCv(scope, id, dto.data as unknown as Resume);
     }
 
-    const header = await this.normalizedRepo.fetchHeader(supabase, id, user.id);
+    const header = await this.normalizedRepo.fetchHeader(scope, id);
     if (!header) {
       throw new NotFoundException('CV not found');
     }
@@ -153,9 +119,9 @@ export class CvService {
     data: Record<string, unknown>,
   ): Promise<CvRecord> {
     this.resumeValidator.validate(data);
-    const supabase = this.normalizedRepo.createClientForUser(user);
+    const scope = this.normalizedRepo.scopeFor(user);
     const header = await this.normalizedRepo.replaceNormalizedCv(
-      supabase,
+      scope,
       id,
       data as unknown as Resume,
     );
@@ -164,19 +130,10 @@ export class CvService {
   }
 
   async remove(user: AuthenticatedRequest['user'], id: string): Promise<void> {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const { data, error } = await supabase
-      .from('cv')
-      .delete()
-      .eq('id', id)
-      .select('id')
-      .maybeSingle();
+    const scope = this.normalizedRepo.scopeFor(user);
+    const deleted = await this.normalizedRepo.deleteHeader(scope, id);
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    if (!data) {
+    if (!deleted) {
       throw new NotFoundException('CV not found');
     }
   }

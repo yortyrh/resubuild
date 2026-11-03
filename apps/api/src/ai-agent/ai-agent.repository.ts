@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { aiAgentAccount, aiAgentPreference, and, asc, type Database, eq } from '@resubuild/db';
 import { parseMastraModelId, resolveProviderId } from '@resubuild/import-models';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
-import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
+import { DATABASE } from '../database/database.tokens';
 import {
   AiAgentDecryptionError,
   decryptSecret,
@@ -56,7 +57,7 @@ export interface DecryptedAiAgentAccount {
 export class AiAgentRepository {
   constructor(
     private readonly configService: ConfigService,
-    private readonly normalizedRepo: CvNormalizedRepository,
+    @Inject(DATABASE) private readonly db: Database,
   ) {}
 
   private getEncryptionKey(): string {
@@ -69,23 +70,14 @@ export class AiAgentRepository {
     return key;
   }
 
-  private createClient(user: AuthenticatedRequest['user']) {
-    return this.normalizedRepo.createClientForUser(user);
-  }
-
   private async getActiveAccountId(user: AuthenticatedRequest['user']): Promise<string | null> {
-    const supabase = this.createClient(user);
-    const { data, error } = await supabase
-      .from('ai_agent_preference')
-      .select('active_account_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const rows = await this.db
+      .select({ active_account_id: aiAgentPreference.active_account_id })
+      .from(aiAgentPreference)
+      .where(eq(aiAgentPreference.user_id, user.id))
+      .limit(1);
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return data?.active_account_id ?? null;
+    return rows[0]?.active_account_id ?? null;
   }
 
   private toSummary(row: AiAgentAccountRow, activeAccountId: string | null): AiAgentAccountSummary {
@@ -103,47 +95,32 @@ export class AiAgentRepository {
   }
 
   async listAccounts(user: AuthenticatedRequest['user']): Promise<AiAgentAccountSummary[]> {
-    const supabase = this.createClient(user);
     const activeAccountId = await this.getActiveAccountId(user);
 
-    const { data, error } = await supabase
-      .from('ai_agent_account')
-      .select(
-        'id, user_id, label, provider_id, model_id, api_key_encrypted, created_at, updated_at',
-      )
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: true });
+    const rows = await this.db
+      .select()
+      .from(aiAgentAccount)
+      .where(eq(aiAgentAccount.user_id, user.id))
+      .orderBy(asc(aiAgentAccount.created_at));
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return (data ?? []).map((row) => this.toSummary(row as AiAgentAccountRow, activeAccountId));
+    return rows.map((row) => this.toSummary(row, activeAccountId));
   }
 
   async getAccountRow(
     user: AuthenticatedRequest['user'],
     accountId: string,
   ): Promise<AiAgentAccountRow> {
-    const supabase = this.createClient(user);
-    const { data, error } = await supabase
-      .from('ai_agent_account')
-      .select(
-        'id, user_id, label, provider_id, model_id, api_key_encrypted, created_at, updated_at',
-      )
-      .eq('user_id', user.id)
-      .eq('id', accountId)
-      .maybeSingle();
+    const rows = await this.db
+      .select()
+      .from(aiAgentAccount)
+      .where(and(eq(aiAgentAccount.user_id, user.id), eq(aiAgentAccount.id, accountId)))
+      .limit(1);
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    if (!data) {
+    if (!rows[0]) {
       throw new NotFoundException(`AI agent account "${accountId}" was not found`);
     }
 
-    return data as AiAgentAccountRow;
+    return rows[0];
   }
 
   async createAccount(
@@ -152,26 +129,18 @@ export class AiAgentRepository {
   ): Promise<AiAgentAccountSummary> {
     const parsed = parseMastraModelId(input.modelId);
     const providerId = resolveProviderId(parsed);
-    const supabase = this.createClient(user);
     const encrypted = encryptSecret(input.apiKey, this.getEncryptionKey());
 
-    const { data, error } = await supabase
-      .from('ai_agent_account')
-      .insert({
+    const [data] = await this.db
+      .insert(aiAgentAccount)
+      .values({
         user_id: user.id,
         label: input.label?.trim() || null,
         provider_id: providerId,
         model_id: input.modelId,
         api_key_encrypted: encrypted,
       })
-      .select(
-        'id, user_id, label, provider_id, model_id, api_key_encrypted, created_at, updated_at',
-      )
-      .single();
-
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
+      .returning();
 
     const activeAccountId = await this.getActiveAccountId(user);
     if (!activeAccountId) {
@@ -188,7 +157,9 @@ export class AiAgentRepository {
     input: { label?: string | null; modelId?: string; apiKey?: string },
   ): Promise<AiAgentAccountSummary> {
     const existing = await this.getAccountRow(user, accountId);
-    const updates: Record<string, string | null> = {};
+    const updates: Partial<
+      Pick<AiAgentAccountRow, 'label' | 'model_id' | 'provider_id' | 'api_key_encrypted'>
+    > = {};
 
     if (input.label !== undefined) {
       updates.label = input.label?.trim() || null;
@@ -204,60 +175,42 @@ export class AiAgentRepository {
       updates.api_key_encrypted = encryptSecret(input.apiKey, this.getEncryptionKey());
     }
 
-    const supabase = this.createClient(user);
-    const { data, error } = await supabase
-      .from('ai_agent_account')
-      .update(updates)
-      .eq('user_id', user.id)
-      .eq('id', accountId)
-      .select(
-        'id, user_id, label, provider_id, model_id, api_key_encrypted, created_at, updated_at',
-      )
-      .single();
+    let row = existing;
+    if (Object.keys(updates).length > 0) {
+      const [data] = await this.db
+        .update(aiAgentAccount)
+        .set(updates)
+        .where(and(eq(aiAgentAccount.user_id, user.id), eq(aiAgentAccount.id, accountId)))
+        .returning();
 
-    if (error) {
-      throw new BadRequestException(error.message);
+      if (!data) {
+        throw new NotFoundException(`AI agent account "${accountId}" was not found`);
+      }
+      row = data;
     }
 
-    if (!data) {
-      throw new NotFoundException(`AI agent account "${accountId}" was not found`);
-    }
-
-    void existing;
     const activeAccountId = await this.getActiveAccountId(user);
-    return this.toSummary(data as AiAgentAccountRow, activeAccountId);
+    return this.toSummary(row, activeAccountId);
   }
 
   async deleteAccount(user: AuthenticatedRequest['user'], accountId: string): Promise<void> {
     await this.getAccountRow(user, accountId);
-    const supabase = this.createClient(user);
-    const { error } = await supabase
-      .from('ai_agent_account')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('id', accountId);
-
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
+    await this.db
+      .delete(aiAgentAccount)
+      .where(and(eq(aiAgentAccount.user_id, user.id), eq(aiAgentAccount.id, accountId)));
   }
 
   private async setActiveAccountId(
     user: AuthenticatedRequest['user'],
     accountId: string,
   ): Promise<void> {
-    const supabase = this.createClient(user);
-    const { error } = await supabase.from('ai_agent_preference').upsert(
-      {
-        user_id: user.id,
-        active_account_id: accountId,
-      },
-      { onConflict: 'user_id' },
-    );
-
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
+    await this.db
+      .insert(aiAgentPreference)
+      .values({ user_id: user.id, active_account_id: accountId })
+      .onConflictDoUpdate({
+        target: aiAgentPreference.user_id,
+        set: { active_account_id: accountId },
+      });
   }
 
   async setActiveAccount(

@@ -21,6 +21,8 @@ import { AppModule } from './app.module';
 
 describe('AppModule', () => {
   const originalNodeEnv = process.env.NODE_ENV;
+  // The pool connects lazily, so an unreachable URL is enough to compile the module.
+  process.env.DATABASE_URL ??= 'postgresql://test:test@127.0.0.1:1/test';
 
   afterEach(() => {
     process.env.NODE_ENV = originalNodeEnv;

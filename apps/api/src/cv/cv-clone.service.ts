@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Resume } from '@resubuild/types';
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { DbScope } from '../database/db-scope';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 import { CvNormalizedRepository } from './cv-normalized.repository';
 
@@ -23,46 +24,34 @@ export class CvCloneService {
       kind?: 'application_clone' | 'primary';
     } = {},
   ): Promise<CloneCvResult> {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const sourceHeader = await this.normalizedRepo.fetchHeader(supabase, sourceCvId);
+    const scope = this.normalizedRepo.scopeFor(user);
+    const sourceHeader = await this.normalizedRepo.fetchHeader(scope, sourceCvId);
 
     if (!sourceHeader) {
       throw new NotFoundException('Source CV not found');
     }
 
-    const resume = await this.normalizedRepo.assembleFullResume(supabase, sourceCvId);
+    const resume = await this.normalizedRepo.assembleFullResume(scope, sourceCvId);
     if (!resume) {
       throw new NotFoundException('Source CV not found');
     }
 
     const kind = options.kind ?? 'application_clone';
 
-    const { data: inserted, error: insertError } = await supabase
-      .from('cv')
-      .insert({
-        user_id: user.id,
+    const id = await this.normalizedRepo.inTransaction(scope, async (tx) => {
+      const inserted = await this.normalizedRepo.insertHeader(tx, {
         source_cv_id: sourceCvId,
         kind,
-        location: sourceHeader.location ?? {},
+        location: (sourceHeader.location ?? {}) as Record<string, unknown>,
         template_id: sourceHeader.template_id ?? 'classic',
-      })
-      .select('id')
-      .single();
+      });
 
-    if (insertError) {
-      throw new BadRequestException(insertError.message);
-    }
+      await this.normalizedRepo.insertNormalizedCv(tx, inserted.id, resume as Resume);
+      await this.assertAssembles(tx, inserted.id);
+      return inserted.id;
+    });
 
-    await this.normalizedRepo.insertNormalizedCv(supabase, inserted.id, user.id, resume as Resume);
-
-    const assembled = await this.normalizedRepo.assembleFullResume(supabase, inserted.id);
-    if (!assembled) {
-      throw new BadRequestException('Clone assembly failed');
-    }
-
-    this.resumeValidator.validate(assembled as unknown as Record<string, unknown>);
-
-    return { id: inserted.id, sourceCvId };
+    return { id, sourceCvId };
   }
 
   async cloneFromResume(
@@ -76,43 +65,41 @@ export class CvCloneService {
   ): Promise<CloneCvResult> {
     this.resumeValidator.validate(resume as unknown as Record<string, unknown>);
 
-    const supabase = this.normalizedRepo.createClientForUser(user);
+    const scope = this.normalizedRepo.scopeFor(user);
     const kind = options.kind ?? 'application_clone';
 
-    const { data: inserted, error: insertError } = await supabase
-      .from('cv')
-      .insert({
-        user_id: user.id,
+    const id = await this.normalizedRepo.inTransaction(scope, async (tx) => {
+      const inserted = await this.normalizedRepo.insertHeader(tx, {
         source_cv_id: options.sourceCvId ?? null,
         kind,
-        location: resume.basics?.location ?? {},
+        location: (resume.basics?.location ?? {}) as Record<string, unknown>,
         template_id: options.templateId ?? 'classic',
-      })
-      .select('id')
-      .single();
+      });
 
-    if (insertError) {
-      throw new BadRequestException(insertError.message);
-    }
+      await this.normalizedRepo.insertNormalizedCv(tx, inserted.id, resume);
+      await this.assertAssembles(tx, inserted.id);
+      return inserted.id;
+    });
 
-    await this.normalizedRepo.insertNormalizedCv(supabase, inserted.id, user.id, resume);
+    return { id, sourceCvId: options.sourceCvId ?? id };
+  }
 
-    const assembled = await this.normalizedRepo.assembleFullResume(supabase, inserted.id);
+  /** Re-assembles the new CV and validates it; throwing rolls the clone back. */
+  private async assertAssembles(scope: DbScope, cvId: string): Promise<void> {
+    const assembled = await this.normalizedRepo.assembleFullResume(scope, cvId);
     if (!assembled) {
       throw new BadRequestException('Clone assembly failed');
     }
 
     this.resumeValidator.validate(assembled as unknown as Record<string, unknown>);
-
-    return { id: inserted.id, sourceCvId: options.sourceCvId ?? inserted.id };
   }
 
   async promoteClone(
     user: AuthenticatedRequest['user'],
     cloneCvId: string,
   ): Promise<CloneCvResult> {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    const header = await this.normalizedRepo.fetchHeader(supabase, cloneCvId);
+    const scope = this.normalizedRepo.scopeFor(user);
+    const header = await this.normalizedRepo.fetchHeader(scope, cloneCvId);
 
     if (!header) {
       throw new NotFoundException('CV not found');
@@ -131,17 +118,17 @@ export class CvSourceLoaderService {
   constructor(private readonly normalizedRepo: CvNormalizedRepository) {}
 
   async loadWorkItems(user: AuthenticatedRequest['user'], sourceCvId: string) {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    return this.normalizedRepo.listSectionRows(supabase, sourceCvId, 'work');
+    const scope = this.normalizedRepo.scopeFor(user);
+    return this.normalizedRepo.listSectionRows(scope, sourceCvId, 'work');
   }
 
   async loadVolunteerItems(user: AuthenticatedRequest['user'], sourceCvId: string) {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    return this.normalizedRepo.listSectionRows(supabase, sourceCvId, 'volunteer');
+    const scope = this.normalizedRepo.scopeFor(user);
+    return this.normalizedRepo.listSectionRows(scope, sourceCvId, 'volunteer');
   }
 
   async loadProjectItems(user: AuthenticatedRequest['user'], sourceCvId: string) {
-    const supabase = this.normalizedRepo.createClientForUser(user);
-    return this.normalizedRepo.listSectionRows(supabase, sourceCvId, 'projects');
+    const scope = this.normalizedRepo.scopeFor(user);
+    return this.normalizedRepo.listSectionRows(scope, sourceCvId, 'projects');
   }
 }

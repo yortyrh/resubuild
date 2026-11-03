@@ -1,24 +1,6 @@
-jest.mock('@supabase/supabase-js');
 jest.mock('./media-remote-fetch.util', () => ({
   fetchRemoteImage: jest.fn(),
 }));
-jest.mock('node:crypto', () => ({
-  ...jest.requireActual<typeof import('node:crypto')>('node:crypto'),
-  randomUUID: jest.fn(() => 'aef8297a-2786-4575-9d6c-52d5c93c4c4c'),
-}));
-jest.mock('sharp', () => {
-  const extractFn = jest.fn().mockReturnThis();
-  const resizeFn = jest.fn().mockReturnThis();
-  const webpFn = jest.fn().mockReturnThis();
-  const toBufferFn = jest.fn().mockResolvedValue(Buffer.from([99]));
-  const mockSharp = jest.fn(() => ({
-    extract: extractFn,
-    resize: resizeFn,
-    webp: webpFn,
-    toBuffer: toBufferFn,
-  }));
-  return { __esModule: true, default: mockSharp };
-});
 
 import {
   BadRequestException,
@@ -27,1117 +9,391 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Test, type TestingModule } from '@nestjs/testing';
-import { createClient } from '@supabase/supabase-js';
+import type { ConfigService } from '@nestjs/config';
+import { media } from '@resubuild/db';
+import sharp from 'sharp';
+import type { AuthUser } from '../auth/auth-user.types';
+import { useTestDb } from '../database/test-db.helpers';
+import { InMemoryObjectStorage } from '../storage/in-memory-object-storage';
 import { MediaService } from './media.service';
 import { fetchRemoteImage } from './media-remote-fetch.util';
 
 const mockedFetchRemoteImage = jest.mocked(fetchRemoteImage);
+const BUCKET = 'media';
+const MISSING_ID = '00000000-0000-0000-0000-000000000000';
 
-const mockedCreateClient = jest.mocked(createClient);
-
-/** Valid v4 UUID used across upload + download mocks. */
-const FIXED_MEDIA_ID = 'aef8297a-2786-4575-9d6c-52d5c93c4c4c';
+function png(width = 40, height = 30): Promise<Buffer> {
+  return sharp({ create: { width, height, channels: 3, background: '#c33' } })
+    .png()
+    .toBuffer();
+}
 
 describe('MediaService', () => {
-  const uploadFn = jest.fn();
-  const insertFn = jest.fn();
-  const removeFn = jest.fn().mockResolvedValue({ error: null });
-  const downloadFn = jest.fn();
-  const maybeSingleFn = jest.fn();
-  const updateFn = jest.fn();
-  const deleteFn = jest.fn();
+  const ctx = useTestDb();
+  let storage: InMemoryObjectStorage;
+  let env: Record<string, string | undefined>;
+  let service: MediaService;
+  let user: AuthUser;
+  let other: AuthUser;
 
-  async function bootstrapModule(
-    mode: boolean | 'bucket-only',
-  ): Promise<{ service: MediaService; moduleRef: TestingModule }> {
-    uploadFn.mockReset();
-    uploadFn.mockResolvedValue({ error: null });
-    insertFn.mockReset();
-    insertFn.mockImplementation(() => Promise.resolve({ error: null }));
-    downloadFn.mockReset();
-    maybeSingleFn.mockReset();
-    updateFn.mockReset();
-    deleteFn.mockReset();
-    maybeSingleFn.mockResolvedValue({
-      data: {
-        storage_path: `user-123/${FIXED_MEDIA_ID}.png`,
-        content_type: 'image/png',
-        user_id: 'user-123',
-        crop: null,
-        cropped_storage_path: null,
-      },
-      error: null,
-    });
-    downloadFn.mockResolvedValue({
-      data: { arrayBuffer: async () => new Uint8Array([7, 8]) },
-      error: null,
-    });
-    updateFn.mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
-    deleteFn.mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
-
-    mockedCreateClient.mockReset();
-    if (mode === true) {
-      mockedCreateClient.mockReturnValue({
-        from: jest.fn((table: string) => {
-          if (table === 'media') {
-            return {
-              insert: insertFn,
-              update: updateFn,
-              delete: deleteFn,
-              select: jest.fn().mockReturnValue({
-                eq: jest.fn().mockReturnValue({
-                  maybeSingle: maybeSingleFn,
-                }),
-              }),
-            };
-          }
-          throw new Error(`unexpected table ${table}`);
-        }),
-        storage: {
-          from: jest.fn().mockReturnValue({
-            upload: uploadFn,
-            remove: removeFn,
-            download: downloadFn,
-          }),
-        },
-      } as unknown as ReturnType<typeof createClient>);
-    }
-
-    const configValues: Record<string, string | undefined> =
-      mode === true
-        ? {
-            SUPABASE_URL: 'https://x.supabase.co',
-            SUPABASE_SERVICE_ROLE_KEY: 'service-role-token',
-            MEDIA_BUCKET: 'media',
-            PORT: '3001',
-          }
-        : mode === 'bucket-only'
-          ? { MEDIA_BUCKET: 'media' }
-          : {};
-
-    const moduleRef = await Test.createTestingModule({
-      providers: [
-        MediaService,
-        {
-          provide: ConfigService,
-          useValue: { get: (key: string) => configValues[key] },
-        },
-      ],
-    }).compile();
-
-    const service = moduleRef.get(MediaService);
-    await moduleRef.init();
-    return { service, moduleRef };
+  function createService(): MediaService {
+    const config = { get: (key: string) => env[key] } as unknown as ConfigService;
+    return new MediaService(config, ctx.db, storage.asService());
   }
 
-  afterEach(() => {
-    delete process.env.MEDIA_MAX_BYTES;
-    jest.restoreAllMocks();
+  beforeEach(async () => {
+    mockedFetchRemoteImage.mockReset();
+    storage = new InMemoryObjectStorage();
+    env = { MEDIA_BUCKET: BUCKET };
+    service = createService();
+    user = await ctx.createUser();
+    other = await ctx.createUser();
   });
 
-  it('uploadObject stores PNG, inserts media row, returns API viewer URL', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    const file = {
-      mimetype: 'image/png',
-      buffer: Buffer.from([0]),
-      size: 1,
-    } as unknown as Express.Multer.File;
+  async function upload(owner = user) {
+    return service.uploadBuffer(owner.id, await png(), 'image/png');
+  }
 
-    await expect(service.uploadObject('user-123', file)).resolves.toEqual({
-      id: FIXED_MEDIA_ID,
-      url: `http://localhost:3001/media/${FIXED_MEDIA_ID}`,
-      contentType: 'image/png',
+  async function rowFor(id: string) {
+    const rows = await ctx.db.select().from(media);
+    return rows.find((r) => r.id === id);
+  }
+
+  describe('configuration', () => {
+    it('warns in development when uploads are not configured', () => {
+      const prevEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      env = {};
+
+      createService().onModuleInit();
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Media uploads disabled (dev)'));
+      warnSpy.mockRestore();
+      process.env.NODE_ENV = prevEnv;
     });
 
-    expect(uploadFn).toHaveBeenCalledWith(
-      `user-123/${FIXED_MEDIA_ID}.png`,
-      file.buffer,
-      expect.objectContaining({ contentType: 'image/png', upsert: false }),
-    );
-    expect(insertFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: FIXED_MEDIA_ID,
-        user_id: 'user-123',
-        storage_path: `user-123/${FIXED_MEDIA_ID}.png`,
+    it('throws from onModuleInit in production when storage is not configured', () => {
+      const prevEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      storage.configured = false;
+      expect(() => createService().onModuleInit()).toThrow(/uploads are required in production/);
+      process.env.NODE_ENV = prevEnv;
+    });
+
+    it('accepts a complete configuration silently', () => {
+      expect(() => service.onModuleInit()).not.toThrow();
+    });
+
+    it('rejects storage operations when MEDIA_BUCKET or storage is missing', async () => {
+      env = {};
+      await expect(createService().loadMediaPayload(MISSING_ID)).rejects.toThrow(
+        ServiceUnavailableException,
+      );
+      env = { MEDIA_BUCKET: BUCKET };
+      storage.configured = false;
+      await expect(upload()).rejects.toThrow(ServiceUnavailableException);
+    });
+
+    it('PUBLIC_API_URL overrides the default viewer URL host', () => {
+      expect(service.viewerUrlForId('x')).toBe('http://localhost:3001/media/x');
+      env.PUBLIC_API_URL = 'https://api.example.com/';
+      expect(service.viewerUrlForId('x')).toBe('https://api.example.com/media/x');
+      env = { MEDIA_BUCKET: BUCKET, PORT: '4000' };
+      expect(service.viewerBaseUrl()).toBe('http://localhost:4000');
+    });
+  });
+
+  describe('upload', () => {
+    it('stores the object and a thumbnail, inserts the media row, returns the API viewer URL', async () => {
+      const file = { mimetype: 'image/png', buffer: await png(), size: 10 } as Express.Multer.File;
+
+      const result = await service.uploadObject(user.id, file);
+
+      expect(result).toEqual({
+        id: expect.any(String),
+        url: `http://localhost:3001/media/${result.id}`,
+        contentType: 'image/png',
+      });
+      expect(storage.keys(BUCKET)).toEqual(
+        [`${user.id}/${result.id}.png`, `${user.id}/${result.id}_thumb.webp`].sort(),
+      );
+      expect(await rowFor(result.id)).toMatchObject({
+        user_id: user.id,
+        storage_path: `${user.id}/${result.id}.png`,
         content_type: 'image/png',
-        size_bytes: 1,
-      }),
-    );
-    expect(uploadFn).toHaveBeenCalledWith(
-      `user-123/${FIXED_MEDIA_ID}_thumb.webp`,
-      expect.any(Buffer),
-      expect.objectContaining({ contentType: 'image/webp', upsert: true }),
-    );
-    await moduleRef.close();
-  });
-
-  it('uploadBuffer rejects missing user id', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-
-    await expect(service.uploadBuffer('  ', Buffer.from([1]), 'image/png')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-
-    await moduleRef.close();
-  });
-
-  it('uploadBuffer rejects empty files and oversize uploads', async () => {
-    process.env.MEDIA_MAX_BYTES = '10';
-    const { service, moduleRef } = await bootstrapModule(true);
-
-    await expect(service.uploadBuffer('user-123', Buffer.alloc(0), 'image/png')).rejects.toThrow(
-      'Empty upload',
-    );
-    await expect(service.uploadBuffer('user-123', Buffer.alloc(11), 'image/png')).rejects.toThrow(
-      'File exceeds max size',
-    );
-
-    await moduleRef.close();
-  });
-
-  it('PUBLIC_API_URL overrides default viewer URL host', async () => {
-    uploadFn.mockResolvedValue({ error: null });
-    insertFn.mockImplementation(() => Promise.resolve({ error: null }));
-    maybeSingleFn.mockResolvedValue({
-      data: {
-        storage_path: `u1/${FIXED_MEDIA_ID}.png`,
-        content_type: 'image/png',
-        user_id: 'u1',
-        crop: null,
-        cropped_storage_path: null,
-      },
-      error: null,
-    });
-    downloadFn.mockResolvedValue({
-      data: { arrayBuffer: async () => new Uint8Array([7, 8]) },
-      error: null,
-    });
-    updateFn.mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
-
-    mockedCreateClient.mockReturnValue({
-      from: jest.fn(() => ({
-        insert: insertFn,
-        update: updateFn,
-        delete: deleteFn,
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({ maybeSingle: maybeSingleFn }),
-        }),
-      })),
-      storage: {
-        from: jest.fn().mockReturnValue({
-          upload: uploadFn,
-          remove: removeFn,
-          download: downloadFn,
-        }),
-      },
-    } as unknown as ReturnType<typeof createClient>);
-
-    const moduleRef = await Test.createTestingModule({
-      providers: [
-        MediaService,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: (key: string) =>
-              (
-                ({
-                  SUPABASE_URL: 'https://x.supabase.co',
-                  SUPABASE_SERVICE_ROLE_KEY: 'k',
-                  MEDIA_BUCKET: 'media',
-                  PUBLIC_API_URL: 'https://api.example.com',
-                }) as Record<string, string>
-              )[key],
-          },
-        },
-      ],
-    }).compile();
-    const service = moduleRef.get(MediaService);
-    await moduleRef.init();
-
-    const file = {
-      mimetype: 'image/png',
-      buffer: Buffer.from([1]),
-      size: 1,
-    } as unknown as Express.Multer.File;
-
-    await expect(service.uploadObject('u1', file)).resolves.toMatchObject({
-      url: `https://api.example.com/media/${FIXED_MEDIA_ID}`,
+        size_bytes: file.buffer.length,
+        thumbnail_storage_path: `${user.id}/${result.id}_thumb.webp`,
+      });
     });
 
-    await moduleRef.close();
-  });
-
-  it('rejects unsupported mime types before talking to Storage', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    const bad = {
-      mimetype: 'application/pdf',
-      buffer: Buffer.from([1]),
-      size: 1,
-    } as unknown as Express.Multer.File;
-
-    await expect(service.uploadObject('user-123', bad)).rejects.toBeInstanceOf(BadRequestException);
-    expect(uploadFn).not.toHaveBeenCalled();
-    await moduleRef.close();
-  });
-
-  it('rejects empty buffers', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    const empty = {
-      mimetype: 'image/png',
-      buffer: Buffer.alloc(0),
-      size: 0,
-    } as unknown as Express.Multer.File;
-
-    await expect(service.uploadObject('user-123', empty)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-    await moduleRef.close();
-  });
-
-  it('maps Storage quota errors into BadRequestException', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    uploadFn.mockResolvedValueOnce({ error: { message: 'quota exceeded' } });
-
-    const file = {
-      mimetype: 'image/jpeg',
-      buffer: Buffer.from([2]),
-      size: 1,
-    } as unknown as Express.Multer.File;
-
-    await expect(service.uploadObject('user-123', file)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-    expect(insertFn).not.toHaveBeenCalled();
-    await moduleRef.close();
-  });
-
-  it('removes Storage object when media insert fails', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    insertFn.mockImplementationOnce(() => Promise.resolve({ error: { message: 'rls denied' } }));
-
-    const file = {
-      mimetype: 'image/webp',
-      buffer: Buffer.from([3]),
-      size: 1,
-    } as unknown as Express.Multer.File;
-
-    await expect(service.uploadObject('user-123', file)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-    expect(removeFn).toHaveBeenCalledWith([`user-123/${FIXED_MEDIA_ID}.webp`]);
-    await moduleRef.close();
-  });
-
-  it('logs when rollback delete fails after media insert fails', async () => {
-    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    const { service, moduleRef } = await bootstrapModule(true);
-    insertFn.mockImplementationOnce(() => Promise.resolve({ error: { message: 'rls denied' } }));
-    removeFn.mockRejectedValueOnce(new Error('storage delete unavailable'));
-
-    const file = {
-      mimetype: 'image/webp',
-      buffer: Buffer.from([3]),
-      size: 1,
-    } as unknown as Express.Multer.File;
-
-    await expect(service.uploadObject('user-123', file)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-    expect(removeFn).toHaveBeenCalledWith([`user-123/${FIXED_MEDIA_ID}.webp`]);
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Rolling back orphaned object failed'),
-    );
-    warnSpy.mockRestore();
-    await moduleRef.close();
-  });
-
-  it('rejects uploads when uploads are disabled (missing configuration)', async () => {
-    const { service, moduleRef } = await bootstrapModule(false);
-    const file = {
-      mimetype: 'image/png',
-      buffer: Buffer.from([9]),
-      size: 1,
-    } as unknown as Express.Multer.File;
-
-    await expect(service.uploadObject('user-999', file)).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
-
-    await moduleRef.close();
-  });
-
-  it('blocks upload via ensureClient when bucket is set but Supabase credentials are missing', async () => {
-    const { service, moduleRef } = await bootstrapModule('bucket-only');
-    const file = {
-      mimetype: 'image/png',
-      buffer: Buffer.from([1]),
-      size: 1,
-    } as unknown as Express.Multer.File;
-
-    await expect(service.uploadObject('user-abc', file)).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
-    await moduleRef.close();
-  });
-
-  it('rejects whitespace-only user ids', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    const file = {
-      mimetype: 'image/png',
-      buffer: Buffer.from([1]),
-      size: 1,
-    } as unknown as Express.Multer.File;
-
-    await expect(service.uploadObject('   ', file)).rejects.toBeInstanceOf(BadRequestException);
-    await moduleRef.close();
-  });
-
-  it('rejects missing buffer payloads', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    const missingBuffer = {
-      mimetype: 'image/png',
-      size: 1,
-    } as unknown as Express.Multer.File;
-
-    await expect(service.uploadObject('user-z', missingBuffer)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-    await moduleRef.close();
-  });
-
-  it('importFromUrl returns null when remote image is missing', async () => {
-    mockedFetchRemoteImage.mockResolvedValueOnce(null);
-    const { service, moduleRef } = await bootstrapModule(true);
-
-    await expect(
-      service.importFromUrl('user-123', 'https://cdn.example.com/missing.png'),
-    ).resolves.toBeNull();
-
-    await moduleRef.close();
-  });
-
-  it('canImportImageFromUrl reflects remote fetch outcome', async () => {
-    mockedFetchRemoteImage.mockResolvedValueOnce({
-      buffer: Buffer.from([1]),
-      contentType: 'image/png',
-    });
-    const { service, moduleRef } = await bootstrapModule(true);
-
-    await expect(service.canImportImageFromUrl('https://cdn.example.com/ok.png')).resolves.toBe(
-      true,
-    );
-
-    mockedFetchRemoteImage.mockResolvedValueOnce(null);
-    await expect(
-      service.canImportImageFromUrl('https://cdn.example.com/missing.png'),
-    ).resolves.toBe(false);
-
-    await moduleRef.close();
-  });
-
-  it('importFromGravatarEmail returns null for invalid email', async () => {
-    mockedFetchRemoteImage.mockClear();
-    const { service, moduleRef } = await bootstrapModule(true);
-
-    await expect(service.importFromGravatarEmail('user-123', 'not-an-email')).resolves.toBeNull();
-    expect(mockedFetchRemoteImage).not.toHaveBeenCalled();
-
-    await moduleRef.close();
-  });
-
-  it('rolls back upload when thumbnail generation fails', async () => {
-    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    const { service, moduleRef } = await bootstrapModule(true);
-    uploadFn
-      .mockResolvedValueOnce({ error: null })
-      .mockResolvedValueOnce({ error: { message: 'thumb upload failed' } });
-
-    const file = {
-      mimetype: 'image/png',
-      buffer: Buffer.from([1]),
-      size: 1,
-    } as unknown as Express.Multer.File;
-
-    await expect(service.uploadObject('user-123', file)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-    expect(removeFn).toHaveBeenCalledWith([`user-123/${FIXED_MEDIA_ID}.png`]);
-    expect(deleteFn).toHaveBeenCalled();
-
-    warnSpy.mockRestore();
-    await moduleRef.close();
-  });
-
-  it('logs rollback warnings when thumbnail cleanup partially fails', async () => {
-    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    const { service, moduleRef } = await bootstrapModule(true);
-    uploadFn
-      .mockResolvedValueOnce({ error: null })
-      .mockResolvedValueOnce({ error: { message: 'thumb upload failed' } });
-    removeFn.mockRejectedValueOnce(new Error('storage delete unavailable'));
-    deleteFn.mockReturnValueOnce({
-      eq: jest.fn().mockResolvedValue({ error: { message: 'delete denied' } }),
+    it('rejects missing user ids, empty or oversize payloads and unsupported types', async () => {
+      const image = await png();
+      await expect(service.uploadBuffer('', image, 'image/png')).rejects.toThrow('User id missing');
+      await expect(service.uploadBuffer('   ', image, 'image/png')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.uploadBuffer(user.id, Buffer.alloc(0), 'image/png')).rejects.toThrow(
+        'Empty upload',
+      );
+      await expect(service.uploadBuffer(user.id, image, 'application/pdf')).rejects.toThrow(
+        'Unsupported file type',
+      );
+      await expect(
+        service.uploadObject(user.id, { buffer: undefined } as unknown as Express.Multer.File),
+      ).rejects.toThrow('Empty upload');
+      await expect(
+        service.uploadObject(user.id, {
+          buffer: image,
+          size: 999_999_999,
+        } as Express.Multer.File),
+      ).rejects.toThrow('exceeds max size');
+      expect(storage.objects.size).toBe(0);
     });
 
-    const file = {
-      mimetype: 'image/png',
-      buffer: Buffer.from([1]),
-      size: 1,
-    } as unknown as Express.Multer.File;
-
-    await expect(service.uploadObject('user-123', file)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Rolling back object after thumbnail failed'),
-    );
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Rolling back media row after thumbnail failed'),
-    );
-
-    warnSpy.mockRestore();
-    await moduleRef.close();
-  });
-
-  it('importFromGravatarEmail delegates to Gravatar URL import', async () => {
-    mockedFetchRemoteImage.mockResolvedValueOnce({
-      buffer: Buffer.from([0]),
-      contentType: 'image/png',
-    });
-    const { service, moduleRef } = await bootstrapModule(true);
-
-    await expect(
-      service.importFromGravatarEmail('user-123', 'MyEmail@Example.com'),
-    ).resolves.toMatchObject({
-      id: FIXED_MEDIA_ID,
-      contentType: 'image/png',
+    it('honours MEDIA_MAX_BYTES', async () => {
+      const prev = process.env.MEDIA_MAX_BYTES;
+      process.env.MEDIA_MAX_BYTES = '10';
+      const small = createService();
+      await expect(small.uploadBuffer(user.id, await png(), 'image/png')).rejects.toThrow(
+        'exceeds max size (10 bytes)',
+      );
+      process.env.MEDIA_MAX_BYTES = prev;
     });
 
-    expect(mockedFetchRemoteImage).toHaveBeenCalledWith(
-      'https://www.gravatar.com/avatar/60a6c20d49f49bc210ac98d7e47c74a0?s=512&d=404',
-      expect.objectContaining({ maxBytes: expect.any(Number) }),
-    );
-    await moduleRef.close();
-  });
-
-  it('importFromUrl uploads fetched image bytes', async () => {
-    mockedFetchRemoteImage.mockResolvedValueOnce({
-      buffer: Buffer.from([0]),
-      contentType: 'image/png',
-    });
-    const { service, moduleRef } = await bootstrapModule(true);
-
-    await expect(
-      service.importFromUrl('user-123', 'https://cdn.example.com/photo.png'),
-    ).resolves.toEqual({
-      id: FIXED_MEDIA_ID,
-      url: `http://localhost:3001/media/${FIXED_MEDIA_ID}`,
-      contentType: 'image/png',
+    it('maps storage failures to BadRequest and writes no row', async () => {
+      jest.spyOn(storage, 'put').mockRejectedValueOnce(new Error('quota exceeded'));
+      await expect(upload()).rejects.toThrow(new BadRequestException('quota exceeded'));
+      expect(await ctx.db.select().from(media)).toEqual([]);
     });
 
-    expect(uploadFn).toHaveBeenCalledWith(
-      `user-123/${FIXED_MEDIA_ID}.png`,
-      expect.any(Buffer),
-      expect.objectContaining({ contentType: 'image/png', upsert: false }),
-    );
-    expect(uploadFn).toHaveBeenCalledWith(
-      `user-123/${FIXED_MEDIA_ID}_thumb.webp`,
-      expect.any(Buffer),
-      expect.objectContaining({ contentType: 'image/webp', upsert: true }),
-    );
-    await moduleRef.close();
-  });
-
-  it('rejects payloads over MEDIA_MAX_BYTES', async () => {
-    process.env.MEDIA_MAX_BYTES = '10';
-    const { service, moduleRef } = await bootstrapModule(true);
-    const file = {
-      mimetype: 'image/gif',
-      buffer: Buffer.alloc(11),
-      size: 11,
-    } as unknown as Express.Multer.File;
-
-    await expect(service.uploadObject('user-big', file)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-    await moduleRef.close();
-  });
-
-  it('loadMediaPayload loads row and downloads bytes', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    const out = await service.loadMediaPayload(FIXED_MEDIA_ID);
-    expect(out.buffer.equals(Buffer.from([7, 8]))).toBe(true);
-    expect(out.contentType).toBe('image/png');
-    await moduleRef.close();
-  });
-
-  it('loadMediaPayload throws NotFound when row missing', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    maybeSingleFn.mockResolvedValueOnce({ data: null, error: null });
-    await expect(service.loadMediaPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
-    await moduleRef.close();
-  });
-
-  it('loadMediaPayload throws BadRequest when media lookup returns an error', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    maybeSingleFn.mockResolvedValueOnce({ data: null, error: { message: 'rpc failed' } });
-    await expect(service.loadMediaPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-    await moduleRef.close();
-  });
-
-  it('loadMediaPayload throws ServiceUnavailableException when MEDIA_BUCKET is not set', async () => {
-    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    const moduleRef = await Test.createTestingModule({
-      providers: [
-        MediaService,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: (key: string) =>
-              (
-                ({
-                  SUPABASE_URL: 'https://x.supabase.co',
-                  SUPABASE_SERVICE_ROLE_KEY: 'service-role-token',
-                  PORT: '3001',
-                }) as Record<string, string | undefined>
-              )[key],
-          },
-        },
-      ],
-    }).compile();
-    await moduleRef.init();
-
-    await expect(
-      moduleRef.get(MediaService).loadMediaPayload(FIXED_MEDIA_ID),
-    ).rejects.toBeInstanceOf(ServiceUnavailableException);
-
-    warnSpy.mockRestore();
-    await moduleRef.close();
-  });
-
-  it('loadMediaPayload throws NotFound when storage download fails', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    downloadFn.mockResolvedValueOnce({
-      data: null,
-      error: { message: 'object gone' },
-    });
-    await expect(service.loadMediaPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
-    await moduleRef.close();
-  });
-
-  it('loadMediaPayload throws NotFound when storage returns no blob without error', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    downloadFn.mockResolvedValueOnce({ data: null, error: null });
-    await expect(service.loadMediaPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
-    await moduleRef.close();
-  });
-
-  it('loadMediaPayload maps empty MIME to application/octet-stream', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    maybeSingleFn.mockResolvedValueOnce({
-      data: { storage_path: `user-x/${FIXED_MEDIA_ID}.png`, content_type: '   ' },
-      error: null,
+    it('removes the stored object when the media insert fails', async () => {
+      jest.spyOn(ctx.db, 'insert').mockImplementationOnce(() => {
+        throw new Error('insert failed');
+      });
+      await expect(upload()).rejects.toThrow('insert failed');
+      expect(storage.objects.size).toBe(0);
     });
 
-    await expect(service.loadMediaPayload(FIXED_MEDIA_ID).then((x) => x.contentType)).resolves.toBe(
-      'application/octet-stream',
-    );
-    await moduleRef.close();
-  });
-
-  it('warns when uploads are skipped in development (misconfiguration)', async () => {
-    const prevEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
-    const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-
-    const moduleRef = await Test.createTestingModule({
-      providers: [
-        MediaService,
-        {
-          provide: ConfigService,
-          useValue: { get: () => undefined },
-        },
-      ],
-    }).compile();
-
-    await moduleRef.init();
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Media uploads disabled (dev)'));
-
-    await moduleRef.close();
-    warnSpy.mockRestore();
-    process.env.NODE_ENV = prevEnv;
-  });
-
-  it('throws from onModuleInit in production when media env is incomplete', () => {
-    const prevEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'production';
-
-    const service = new MediaService({
-      get: () => undefined,
-    } as unknown as ConfigService);
-
-    expect(() => service.onModuleInit()).toThrow(/uploads are required in production/);
-
-    process.env.NODE_ENV = prevEnv;
-  });
-
-  it('loadMediaPayload prefers cropped_storage_path when set', async () => {
-    const { service, moduleRef } = await bootstrapModule(true);
-    maybeSingleFn.mockResolvedValueOnce({
-      data: {
-        storage_path: `user-123/${FIXED_MEDIA_ID}.png`,
-        cropped_storage_path: `user-123/${FIXED_MEDIA_ID}_cropped.webp`,
-        content_type: 'image/png',
-      },
-      error: null,
+    it('rolls back object, thumbnail and row when thumbnail generation fails', async () => {
+      await expect(
+        service.uploadBuffer(user.id, Buffer.from('not an image'), 'image/png'),
+      ).rejects.toThrow();
+      expect(storage.objects.size).toBe(0);
+      expect(await ctx.db.select().from(media)).toEqual([]);
     });
-    await service.loadMediaPayload(FIXED_MEDIA_ID);
-    expect(downloadFn).toHaveBeenCalledWith(`user-123/${FIXED_MEDIA_ID}_cropped.webp`);
-    await moduleRef.close();
+  });
+
+  describe('remote imports', () => {
+    it('importFromUrl uploads fetched bytes or returns null', async () => {
+      mockedFetchRemoteImage.mockResolvedValueOnce(null);
+      await expect(service.importFromUrl(user.id, 'https://x.test/a.png')).resolves.toBeNull();
+
+      mockedFetchRemoteImage.mockResolvedValueOnce({
+        buffer: await png(),
+        contentType: 'image/png',
+      });
+      const result = await service.importFromUrl(user.id, 'https://x.test/a.png');
+      expect(result?.contentType).toBe('image/png');
+    });
+
+    it('canImportImageFromUrl reflects the remote fetch outcome', async () => {
+      mockedFetchRemoteImage.mockResolvedValueOnce(null);
+      await expect(service.canImportImageFromUrl('https://x.test')).resolves.toBe(false);
+      mockedFetchRemoteImage.mockResolvedValueOnce({
+        buffer: Buffer.from([1]),
+        contentType: 'image/png',
+      });
+      await expect(service.canImportImageFromUrl('https://x.test')).resolves.toBe(true);
+    });
+
+    it('importFromGravatarEmail ignores invalid emails and delegates otherwise', async () => {
+      await expect(service.importFromGravatarEmail(user.id, 'not-an-email')).resolves.toBeNull();
+      mockedFetchRemoteImage.mockResolvedValueOnce(null);
+      await expect(service.importFromGravatarEmail(user.id, 'a@b.com')).resolves.toBeNull();
+      expect(mockedFetchRemoteImage).toHaveBeenCalledWith(
+        expect.stringContaining('gravatar.com'),
+        expect.anything(),
+      );
+    });
+  });
+
+  describe('payloads', () => {
+    it('loadMediaPayload returns the original until a crop exists, then the crop', async () => {
+      const { id } = await upload();
+      const original = await service.loadMediaPayload(id);
+      expect(original.contentType).toBe('image/png');
+
+      await service.cropMedia(user.id, id, { x: 0, y: 0, width: 10, height: 10 });
+      const cropped = await service.loadMediaPayload(id);
+      expect((await sharp(cropped.buffer).metadata()).width).toBe(10);
+
+      const stillOriginal = await service.loadOriginalPayload(id);
+      expect((await sharp(stillOriginal.buffer).metadata()).width).toBe(40);
+    });
+
+    it('throws NotFound for missing rows or missing objects', async () => {
+      await expect(service.loadMediaPayload(MISSING_ID)).rejects.toThrow(NotFoundException);
+      await expect(service.loadOriginalPayload(MISSING_ID)).rejects.toThrow(NotFoundException);
+      await expect(service.loadThumbnailPayload(MISSING_ID)).rejects.toThrow(
+        'Media thumbnail not found',
+      );
+
+      const { id } = await upload();
+      storage.objects.clear();
+      await expect(service.loadMediaPayload(id)).rejects.toThrow('Media file unavailable');
+      await expect(service.loadOriginalPayload(id)).rejects.toThrow('Media file unavailable');
+      await expect(service.loadThumbnailPayload(id)).rejects.toThrow('Media thumbnail unavailable');
+      await expect(service.ensureThumbnail(id)).rejects.toThrow('Media file unavailable');
+    });
+
+    it('maps an empty content type to application/octet-stream', async () => {
+      const { id } = await upload();
+      await ctx.db.update(media).set({ content_type: ' ' });
+      await expect(service.loadMediaPayload(id)).resolves.toMatchObject({
+        contentType: 'application/octet-stream',
+      });
+    });
+
+    it('loadThumbnailPayload returns the WebP thumbnail', async () => {
+      const { id } = await upload();
+      const thumb = await service.loadThumbnailPayload(id);
+      expect(thumb.contentType).toBe('image/webp');
+      expect((await sharp(thumb.buffer).metadata()).format).toBe('webp');
+    });
   });
 
   describe('cropMedia', () => {
-    const crop = { x: 10, y: 20, width: 100, height: 100 };
+    it('stores a cropped derivative, records the crop and refreshes the thumbnail', async () => {
+      const { id } = await upload();
+      const result = await service.cropMedia(user.id, id, { x: 1, y: 2, width: 20, height: 10 });
 
-    it('generates cropped derivative and updates row', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      const result = await service.cropMedia('user-123', FIXED_MEDIA_ID, crop);
-      expect(result).toEqual({
-        id: FIXED_MEDIA_ID,
-        url: `http://localhost:3001/media/${FIXED_MEDIA_ID}`,
-        contentType: 'image/webp',
+      expect(result).toEqual({ id, url: service.viewerUrlForId(id), contentType: 'image/webp' });
+      expect(await rowFor(id)).toMatchObject({
+        crop: { x: 1, y: 2, width: 20, height: 10 },
+        cropped_storage_path: `${user.id}/${id}_cropped.webp`,
       });
-      expect(uploadFn).toHaveBeenCalledWith(
-        `user-123/${FIXED_MEDIA_ID}_cropped.webp`,
-        expect.any(Buffer),
-        expect.objectContaining({ contentType: 'image/webp', upsert: true }),
+      expect(storage.keys(BUCKET)).toContain(`${user.id}/${id}_cropped.webp`);
+
+      // Re-cropping overwrites the same derivative.
+      await service.cropMedia(user.id, id, { x: 0, y: 0, width: 5, height: 5 });
+      expect(storage.keys(BUCKET)).toHaveLength(3);
+    });
+
+    it('rejects non-owners and missing media', async () => {
+      const { id } = await upload();
+      const crop = { x: 0, y: 0, width: 5, height: 5 };
+      await expect(service.cropMedia(other.id, id, crop)).rejects.toThrow(ForbiddenException);
+      await expect(service.cropMedia(user.id, MISSING_ID, crop)).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws NotFound when the original is gone and BadRequest when the upload fails', async () => {
+      const { id } = await upload();
+      const crop = { x: 0, y: 0, width: 5, height: 5 };
+      jest.spyOn(storage, 'put').mockRejectedValueOnce(new Error('upload failed'));
+      await expect(service.cropMedia(user.id, id, crop)).rejects.toThrow(
+        new BadRequestException('upload failed'),
       );
-      await moduleRef.close();
+
+      storage.objects.clear();
+      await expect(service.cropMedia(user.id, id, crop)).rejects.toThrow('Media file unavailable');
     });
 
-    it('rejects non-owner crop', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      await expect(service.cropMedia('other-user', FIXED_MEDIA_ID, crop)).rejects.toBeInstanceOf(
-        ForbiddenException,
-      );
-      await moduleRef.close();
-    });
+    it('removes a stale cropped object stored under a different path', async () => {
+      const { id } = await upload();
+      await storage.put(BUCKET, 'legacy/crop.webp', Buffer.from([1]), 'image/webp');
+      await ctx.db.update(media).set({ cropped_storage_path: 'legacy/crop.webp' });
 
-    it('throws NotFound for missing media', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({ data: null, error: null });
-      await expect(service.cropMedia('user-123', FIXED_MEDIA_ID, crop)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      await moduleRef.close();
-    });
+      await service.cropMedia(user.id, id, { x: 0, y: 0, width: 5, height: 5 });
 
-    it('throws BadRequest when media lookup returns an error', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({ data: null, error: { message: 'lookup failed' } });
-      await expect(service.cropMedia('user-123', FIXED_MEDIA_ID, crop)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
-      await moduleRef.close();
-    });
-
-    it('throws NotFound when original file download fails', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      downloadFn.mockResolvedValueOnce({ data: null, error: { message: 'missing object' } });
-      await expect(service.cropMedia('user-123', FIXED_MEDIA_ID, crop)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      await moduleRef.close();
-    });
-
-    it('removes previous cropped object before uploading replacement', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({
-        data: {
-          user_id: 'user-123',
-          storage_path: `user-123/${FIXED_MEDIA_ID}.png`,
-          content_type: 'image/png',
-          cropped_storage_path: `user-123/${FIXED_MEDIA_ID}_old.webp`,
-        },
-        error: null,
-      });
-      await service.cropMedia('user-123', FIXED_MEDIA_ID, crop);
-      expect(removeFn).toHaveBeenCalledWith([`user-123/${FIXED_MEDIA_ID}_old.webp`]);
-      await moduleRef.close();
-    });
-
-    it('throws BadRequest when cropped upload fails', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      uploadFn.mockResolvedValueOnce({ error: { message: 'upload rejected' } });
-      await expect(service.cropMedia('user-123', FIXED_MEDIA_ID, crop)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
-      await moduleRef.close();
-    });
-
-    it('throws BadRequest when crop metadata update fails', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      updateFn.mockReturnValueOnce({
-        eq: jest.fn().mockResolvedValue({ error: { message: 'update denied' } }),
-      });
-      await expect(service.cropMedia('user-123', FIXED_MEDIA_ID, crop)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
-      await moduleRef.close();
-    });
-
-    it('throws ServiceUnavailableException when MEDIA_BUCKET is not set', async () => {
-      const moduleRef = await Test.createTestingModule({
-        providers: [
-          MediaService,
-          {
-            provide: ConfigService,
-            useValue: {
-              get: (key: string) =>
-                (
-                  ({
-                    SUPABASE_URL: 'https://x.supabase.co',
-                    SUPABASE_SERVICE_ROLE_KEY: 'service-role-token',
-                    PORT: '3001',
-                  }) as Record<string, string | undefined>
-                )[key],
-            },
-          },
-        ],
-      }).compile();
-      await moduleRef.init();
-      await expect(
-        moduleRef.get(MediaService).cropMedia('user-123', FIXED_MEDIA_ID, crop),
-      ).rejects.toBeInstanceOf(ServiceUnavailableException);
-      await moduleRef.close();
-    });
-  });
-
-  describe('deleteMedia', () => {
-    it('removes storage objects and row', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      await service.deleteMedia('user-123', FIXED_MEDIA_ID);
-      expect(removeFn).toHaveBeenCalledWith([`user-123/${FIXED_MEDIA_ID}.png`]);
-      await moduleRef.close();
-    });
-
-    it('removes cropped object when present', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({
-        data: {
-          user_id: 'user-123',
-          storage_path: `user-123/${FIXED_MEDIA_ID}.png`,
-          cropped_storage_path: `user-123/${FIXED_MEDIA_ID}_cropped.webp`,
-        },
-        error: null,
-      });
-      await service.deleteMedia('user-123', FIXED_MEDIA_ID);
-      expect(removeFn).toHaveBeenCalledWith([
-        `user-123/${FIXED_MEDIA_ID}.png`,
-        `user-123/${FIXED_MEDIA_ID}_cropped.webp`,
-      ]);
-      await moduleRef.close();
-    });
-
-    it('removes thumbnail object when present', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({
-        data: {
-          user_id: 'user-123',
-          storage_path: `user-123/${FIXED_MEDIA_ID}.png`,
-          cropped_storage_path: null,
-          thumbnail_storage_path: `user-123/${FIXED_MEDIA_ID}_thumb.webp`,
-        },
-        error: null,
-      });
-      await service.deleteMedia('user-123', FIXED_MEDIA_ID);
-      expect(removeFn).toHaveBeenCalledWith([
-        `user-123/${FIXED_MEDIA_ID}.png`,
-        `user-123/${FIXED_MEDIA_ID}_thumb.webp`,
-      ]);
-      await moduleRef.close();
-    });
-
-    it('rejects non-owner delete', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      await expect(service.deleteMedia('other-user', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        ForbiddenException,
-      );
-      await moduleRef.close();
-    });
-
-    it('throws BadRequest when media lookup returns an error', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({ data: null, error: { message: 'lookup failed' } });
-      await expect(service.deleteMedia('user-123', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
-      await moduleRef.close();
-    });
-
-    it('throws NotFound for missing media', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({ data: null, error: null });
-      await expect(service.deleteMedia('user-123', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      await moduleRef.close();
-    });
-
-    it('logs when storage cleanup fails but still deletes row', async () => {
-      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-      const { service, moduleRef } = await bootstrapModule(true);
-      removeFn.mockRejectedValueOnce(new Error('storage unavailable'));
-      await service.deleteMedia('user-123', FIXED_MEDIA_ID);
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Storage cleanup failed'));
-      warnSpy.mockRestore();
-      await moduleRef.close();
-    });
-
-    it('throws BadRequest when media row delete fails', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      deleteFn.mockReturnValueOnce({
-        eq: jest.fn().mockResolvedValue({ error: { message: 'delete denied' } }),
-      });
-      await expect(service.deleteMedia('user-123', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
-      await moduleRef.close();
-    });
-
-    it('throws ServiceUnavailableException when MEDIA_BUCKET is not set', async () => {
-      const moduleRef = await Test.createTestingModule({
-        providers: [
-          MediaService,
-          {
-            provide: ConfigService,
-            useValue: {
-              get: (key: string) =>
-                (
-                  ({
-                    SUPABASE_URL: 'https://x.supabase.co',
-                    SUPABASE_SERVICE_ROLE_KEY: 'service-role-token',
-                    PORT: '3001',
-                  }) as Record<string, string | undefined>
-                )[key],
-            },
-          },
-        ],
-      }).compile();
-      await moduleRef.init();
-      await expect(
-        moduleRef.get(MediaService).deleteMedia('user-123', FIXED_MEDIA_ID),
-      ).rejects.toBeInstanceOf(ServiceUnavailableException);
-      await moduleRef.close();
-    });
-  });
-
-  describe('loadOriginalPayload', () => {
-    it('always downloads storage_path even when cropped exists', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({
-        data: {
-          storage_path: `user-123/${FIXED_MEDIA_ID}.png`,
-          content_type: 'image/png',
-        },
-        error: null,
-      });
-      const payload = await service.loadOriginalPayload(FIXED_MEDIA_ID);
-      expect(payload.contentType).toBe('image/png');
-      expect(downloadFn).toHaveBeenCalled();
-      await moduleRef.close();
-    });
-
-    it('throws NotFound when original object is missing', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({ data: null, error: null });
-      await expect(service.loadOriginalPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      await moduleRef.close();
-    });
-
-    it('throws NotFound when original download fails', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      downloadFn.mockResolvedValueOnce({ data: null, error: { message: 'missing' } });
-      await expect(service.loadOriginalPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      await moduleRef.close();
-    });
-
-    it('throws BadRequestException when original lookup fails', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({ data: null, error: { message: 'lookup failed' } });
-      await expect(service.loadOriginalPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
-      await moduleRef.close();
-    });
-
-    it('throws ServiceUnavailableException when MEDIA_BUCKET is missing', async () => {
-      const { service, moduleRef } = await bootstrapModule(false);
-      await expect(service.loadOriginalPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        ServiceUnavailableException,
-      );
-      await moduleRef.close();
+      expect(storage.keys(BUCKET)).not.toContain('legacy/crop.webp');
     });
   });
 
   describe('ensureThumbnail', () => {
-    it('throws ServiceUnavailableException when MEDIA_BUCKET is missing', async () => {
-      const { service, moduleRef } = await bootstrapModule(false);
-      await expect(service.ensureThumbnail(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        ServiceUnavailableException,
+    it('throws NotFound for missing media and BadRequest when the upload fails', async () => {
+      await expect(service.ensureThumbnail(MISSING_ID)).rejects.toThrow(NotFoundException);
+      const { id } = await upload();
+      jest.spyOn(storage, 'put').mockRejectedValueOnce(new Error('thumb failed'));
+      await expect(service.ensureThumbnail(id)).rejects.toThrow(
+        new BadRequestException('thumb failed'),
       );
-      await moduleRef.close();
     });
 
-    it('uploads thumbnail and updates registry without touching original path', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      await service.ensureThumbnail(FIXED_MEDIA_ID);
-      expect(uploadFn).toHaveBeenCalledWith(
-        `user-123/${FIXED_MEDIA_ID}_thumb.webp`,
-        expect.any(Buffer),
-        expect.objectContaining({ contentType: 'image/webp', upsert: true }),
-      );
-      const updatePayload = updateFn.mock.calls.find((call) =>
-        call[0]?.thumbnail_storage_path?.includes('_thumb.webp'),
-      );
-      expect(updatePayload).toBeDefined();
-      expect(updatePayload?.[0]).not.toHaveProperty('storage_path');
-      await moduleRef.close();
-    });
+    it('replaces a thumbnail stored under a legacy path without touching the original', async () => {
+      const { id } = await upload();
+      await storage.put(BUCKET, 'legacy/thumb.webp', Buffer.from([1]), 'image/webp');
+      await ctx.db.update(media).set({ thumbnail_storage_path: 'legacy/thumb.webp' });
 
-    it('throws NotFound when media row is missing', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({ data: null, error: null });
-      await expect(service.ensureThumbnail(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      await moduleRef.close();
-    });
+      await service.ensureThumbnail(id);
 
-    it('throws BadRequest when thumbnail upload fails', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      uploadFn.mockResolvedValueOnce({ error: { message: 'thumb upload failed' } });
-      await expect(service.ensureThumbnail(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
-      await moduleRef.close();
-    });
-
-    it('throws NotFound when source bytes are unavailable', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      downloadFn.mockResolvedValueOnce({ data: null, error: { message: 'missing' } });
-      await expect(service.ensureThumbnail(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      await moduleRef.close();
+      const row = await rowFor(id);
+      expect(row?.thumbnail_storage_path).toBe(`${user.id}/${id}_thumb.webp`);
+      expect(row?.storage_path).toBe(`${user.id}/${id}.png`);
+      expect(storage.keys(BUCKET)).not.toContain('legacy/thumb.webp');
     });
   });
 
-  describe('loadThumbnailPayload', () => {
-    it('returns thumbnail bytes when path is set', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({
-        data: { thumbnail_storage_path: `user-123/${FIXED_MEDIA_ID}_thumb.webp` },
-        error: null,
-      });
-      const payload = await service.loadThumbnailPayload(FIXED_MEDIA_ID);
-      expect(payload.contentType).toBe('image/webp');
-      expect(payload.buffer).toEqual(Buffer.from([7, 8]));
-      await moduleRef.close();
+  describe('deleteMedia', () => {
+    it('removes original, cropped and thumbnail objects plus the row', async () => {
+      const { id } = await upload();
+      await service.cropMedia(user.id, id, { x: 0, y: 0, width: 5, height: 5 });
+
+      await service.deleteMedia(user.id, id);
+
+      expect(storage.objects.size).toBe(0);
+      expect(await rowFor(id)).toBeUndefined();
     });
 
-    it('throws NotFound when thumbnail path is missing', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({ data: { thumbnail_storage_path: null }, error: null });
-      await expect(service.loadThumbnailPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      await moduleRef.close();
+    it('still deletes the row when storage cleanup fails', async () => {
+      const { id } = await upload();
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      jest.spyOn(storage, 'remove').mockRejectedValueOnce(new Error('storage down'));
+
+      await service.deleteMedia(user.id, id);
+
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('storage down'));
+      expect(await rowFor(id)).toBeUndefined();
+      warn.mockRestore();
     });
 
-    it('throws NotFound when thumbnail download fails', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({
-        data: { thumbnail_storage_path: `user-123/${FIXED_MEDIA_ID}_thumb.webp` },
-        error: null,
-      });
-      downloadFn.mockResolvedValueOnce({ data: null, error: { message: 'gone' } });
-      await expect(service.loadThumbnailPayload(FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      await moduleRef.close();
+    it('rejects non-owners and missing media', async () => {
+      const { id } = await upload();
+      await expect(service.deleteMedia(other.id, id)).rejects.toThrow(ForbiddenException);
+      await expect(service.deleteMedia(user.id, MISSING_ID)).rejects.toThrow(NotFoundException);
+      expect(await rowFor(id)).toBeDefined();
     });
   });
 
-  describe('getMediaMeta', () => {
-    it('returns crop metadata for owner', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({
-        data: {
-          user_id: 'user-123',
-          content_type: 'image/png',
-          crop: { x: 0, y: 0, width: 50, height: 50 },
-          cropped_storage_path: `user-123/${FIXED_MEDIA_ID}_cropped.webp`,
-        },
-        error: null,
-      });
-      const meta = await service.getMediaMeta('user-123', FIXED_MEDIA_ID);
-      expect(meta).toEqual({
-        id: FIXED_MEDIA_ID,
+  describe('getMediaMeta / listMediaForUser', () => {
+    it('returns crop metadata for the owner only', async () => {
+      const { id } = await upload();
+      await expect(service.getMediaMeta(user.id, id)).resolves.toEqual({
+        id,
         contentType: 'image/png',
-        crop: { x: 0, y: 0, width: 50, height: 50 },
+        crop: null,
+        hasCropped: false,
+      });
+
+      await service.cropMedia(user.id, id, { x: 0, y: 0, width: 5, height: 5 });
+      await expect(service.getMediaMeta(user.id, id)).resolves.toMatchObject({
+        crop: { x: 0, y: 0, width: 5, height: 5 },
         hasCropped: true,
       });
-      await moduleRef.close();
+
+      await expect(service.getMediaMeta(other.id, id)).rejects.toThrow(ForbiddenException);
+      await expect(service.getMediaMeta(user.id, MISSING_ID)).rejects.toThrow(NotFoundException);
     });
 
-    it('returns null crop when not set', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      const meta = await service.getMediaMeta('user-123', FIXED_MEDIA_ID);
-      expect(meta.crop).toBeNull();
-      expect(meta.hasCropped).toBe(false);
-      await moduleRef.close();
-    });
+    it('lists the user’s media newest first', async () => {
+      const first = await upload();
+      const second = await upload();
+      await upload(other);
 
-    it('rejects non-owner', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      await expect(service.getMediaMeta('other-user', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        ForbiddenException,
-      );
-      await moduleRef.close();
-    });
+      const list = await service.listMediaForUser(user.id);
 
-    it('throws BadRequest when media lookup returns an error', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({ data: null, error: { message: 'lookup failed' } });
-      await expect(service.getMediaMeta('user-123', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
-      await moduleRef.close();
-    });
-
-    it('throws NotFound for missing media', async () => {
-      const { service, moduleRef } = await bootstrapModule(true);
-      maybeSingleFn.mockResolvedValueOnce({ data: null, error: null });
-      await expect(service.getMediaMeta('user-123', FIXED_MEDIA_ID)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      await moduleRef.close();
+      expect(list.map((m) => m.id).sort()).toEqual([first.id, second.id].sort());
+      expect(list[0]).toMatchObject({ contentType: 'image/png', createdAt: expect.any(String) });
     });
   });
 });

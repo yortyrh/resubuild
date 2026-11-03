@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -9,8 +10,10 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { type Database, desc, eq, media } from '@resubuild/db';
 import sharp from 'sharp';
+import { DATABASE } from '../database/database.tokens';
+import { ObjectStorageService } from '../storage/object-storage.service';
 import { buildGravatarImageUrl } from './gravatar.util';
 import type { CropRect, MediaMetaDto } from './media-crop.dto';
 import { fetchRemoteImage } from './media-remote-fetch.util';
@@ -27,48 +30,72 @@ export interface UploadMediaResultDto {
   contentType: string;
 }
 
+type MediaRow = typeof media.$inferSelect;
+
 @Injectable()
 export class MediaService implements OnModuleInit {
   private readonly logger = new Logger(MediaService.name);
   private readonly maxBytes: number;
-  private client: SupabaseClient | null = null;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject(DATABASE) private readonly db: Database,
+    private readonly storage: ObjectStorageService,
+  ) {
     this.maxBytes =
       Number(process.env.MEDIA_MAX_BYTES ?? RESUME_UPLOAD_MAX_BYTES_DEFAULT) ||
       RESUME_UPLOAD_MAX_BYTES_DEFAULT;
   }
 
   onModuleInit(): void {
-    const url = this.configService.get<string>('SUPABASE_URL');
-    const serviceRoleKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
     const bucket = this.configService.get<string>('MEDIA_BUCKET');
-
-    if (url && serviceRoleKey && bucket) {
-      this.client = createClient(url, serviceRoleKey, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      });
+    if (this.storage.isConfigured() && bucket) {
       return;
     }
 
-    const hint = 'Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and MEDIA_BUCKET to enable uploads.';
+    const hint =
+      'Set S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY (and S3_ENDPOINT) and MEDIA_BUCKET to enable uploads.';
     if (process.env.NODE_ENV === 'production') {
       throw new Error(`[MediaService] uploads are required in production: ${hint}`);
     }
     this.logger.warn(`Media uploads disabled (dev): ${hint}`);
   }
 
-  private ensureClient(): SupabaseClient {
-    if (!this.client) {
+  private bucket(): string {
+    const bucket = this.configService.get<string>('MEDIA_BUCKET');
+    if (!bucket) {
+      throw new ServiceUnavailableException('MEDIA_BUCKET is not set');
+    }
+    if (!this.storage.isConfigured()) {
       throw new ServiceUnavailableException(
-        'File uploads are not configured. Set MEDIA_BUCKET and SUPABASE_SERVICE_ROLE_KEY.',
+        'File uploads are not configured. Set MEDIA_BUCKET and the S3_* storage settings.',
       );
     }
-    return this.client;
+    return bucket;
+  }
+
+  private async findRow(mediaId: string): Promise<MediaRow | null> {
+    const rows = await this.db.select().from(media).where(eq(media.id, mediaId)).limit(1);
+    return rows[0] ?? null;
+  }
+
+  private async findOwnedRow(userId: string, mediaId: string): Promise<MediaRow> {
+    const row = await this.findRow(mediaId);
+    if (!row) {
+      throw new NotFoundException('Media not found');
+    }
+    if (row.user_id !== userId) {
+      throw new ForbiddenException('Not the owner of this media');
+    }
+    return row;
+  }
+
+  private async removeQuietly(bucket: string, keys: string[], context: string): Promise<void> {
+    try {
+      await this.storage.remove(bucket, keys);
+    } catch (err) {
+      this.logger.warn(`${context}: ${(err as Error).message}`);
+    }
   }
 
   /** Public base for absolute media viewer URLs returned to clients (Markdown <img src>, etc.). */
@@ -86,7 +113,7 @@ export class MediaService implements OnModuleInit {
   }
 
   /**
-   * Upload file to Storage, insert `public.media` row, return API-only viewer URL (no direct Storage URL).
+   * Upload file to object storage, insert `media` row, return API-only viewer URL (no direct storage URL).
    */
   async uploadObject(userId: string, file: Express.Multer.File): Promise<UploadMediaResultDto> {
     if (!file.buffer?.length) {
@@ -122,62 +149,48 @@ export class MediaService implements OnModuleInit {
       throw new BadRequestException(`File exceeds max size (${this.maxBytes} bytes)`);
     }
 
-    const bucket = this.configService.get<string>('MEDIA_BUCKET');
-    if (!bucket) {
-      throw new ServiceUnavailableException('MEDIA_BUCKET is not set');
-    }
-
+    const bucket = this.bucket();
     const mediaId = randomUUID();
     const objectPath = `${userId}/${mediaId}.${ext}`;
-    const supabase = this.ensureClient();
 
-    const { error: uploadError } = await supabase.storage.from(bucket).upload(objectPath, buffer, {
-      contentType,
-      upsert: false,
-    });
-
-    if (uploadError) {
-      this.logger.error(`Storage upload failed: ${uploadError.message}`);
-      throw new BadRequestException(uploadError.message);
+    try {
+      await this.storage.put(bucket, objectPath, buffer, contentType);
+    } catch (error) {
+      const message = (error as Error).message;
+      this.logger.error(`Storage upload failed: ${message}`);
+      throw new BadRequestException(message);
     }
 
-    const { error: dbError } = await supabase.from('media').insert({
-      id: mediaId,
-      user_id: userId,
-      storage_path: objectPath,
-      content_type: contentType,
-      size_bytes: buffer.length,
-    });
-
-    if (dbError) {
-      this.logger.error(`Media registry insert failed: ${dbError.message}`);
-      await supabase.storage
-        .from(bucket)
-        .remove([objectPath])
-        .catch((err) =>
-          this.logger.warn(`Rolling back orphaned object failed: ${(err as Error).message}`),
-        );
-      throw new BadRequestException(dbError.message);
+    try {
+      await this.db.insert(media).values({
+        id: mediaId,
+        user_id: userId,
+        storage_path: objectPath,
+        content_type: contentType,
+        size_bytes: buffer.length,
+      });
+    } catch (dbError) {
+      this.logger.error(`Media registry insert failed: ${(dbError as Error).message}`);
+      await this.removeQuietly(bucket, [objectPath], 'Rolling back orphaned object failed');
+      throw dbError;
     }
 
     try {
       await this.ensureThumbnail(mediaId);
     } catch (thumbnailError) {
-      await supabase.storage
-        .from(bucket)
-        .remove([objectPath])
-        .catch((err) =>
-          this.logger.warn(`Rolling back object after thumbnail failed: ${(err as Error).message}`),
+      await this.removeQuietly(
+        bucket,
+        [objectPath, thumbnailStoragePathFor(userId, mediaId)],
+        'Rolling back object after thumbnail failed',
+      );
+      await this.db
+        .delete(media)
+        .where(eq(media.id, mediaId))
+        .catch((err: unknown) =>
+          this.logger.warn(
+            `Rolling back media row after thumbnail failed: ${(err as Error).message}`,
+          ),
         );
-      const { error: rollbackDeleteError } = await supabase
-        .from('media')
-        .delete()
-        .eq('id', mediaId);
-      if (rollbackDeleteError) {
-        this.logger.warn(
-          `Rolling back media row after thumbnail failed: ${rollbackDeleteError.message}`,
-        );
-      }
       throw thumbnailError;
     }
 
@@ -188,16 +201,16 @@ export class MediaService implements OnModuleInit {
     };
   }
 
-  /**
-   * Fetches a remote profile image when it exists and stores it as owned media.
-   * Returns null when the URL is unreachable or not a supported image (caller may omit basics.image).
-   */
   /** Whether the URL can be fetched for import (host checks + image validation; no upload). */
   async canImportImageFromUrl(url: string): Promise<boolean> {
     const remote = await fetchRemoteImage(url, { maxBytes: this.maxBytes });
     return remote !== null;
   }
 
+  /**
+   * Fetches a remote profile image when it exists and stores it as owned media.
+   * Returns null when the URL is unreachable or not a supported image (caller may omit basics.image).
+   */
   async importFromUrl(userId: string, url: string): Promise<UploadMediaResultDto | null> {
     const remote = await fetchRemoteImage(url, { maxBytes: this.maxBytes });
     if (!remote) {
@@ -218,131 +231,62 @@ export class MediaService implements OnModuleInit {
     return this.importFromUrl(userId, gravatarUrl);
   }
 
+  private contentTypeOf(row: Pick<MediaRow, 'content_type'>): string {
+    return typeof row.content_type === 'string' && row.content_type.trim()
+      ? row.content_type
+      : 'application/octet-stream';
+  }
+
   /**
    * Display bytes for GET /media/:id — cropped derivative when present, else the original upload.
    * Never reads or writes `storage_path` except via {@link loadOriginalPayload}.
    */
   async loadMediaPayload(mediaId: string): Promise<{ buffer: Buffer; contentType: string }> {
-    const bucket = this.configService.get<string>('MEDIA_BUCKET');
-    if (!bucket) {
-      throw new ServiceUnavailableException('MEDIA_BUCKET is not set');
-    }
-
-    const supabase = this.ensureClient();
-
-    const { data: row, error: rowError } = await supabase
-      .from('media')
-      .select('storage_path, cropped_storage_path, content_type, thumbnail_storage_path')
-      .eq('id', mediaId)
-      .maybeSingle();
-
-    if (rowError) {
-      this.logger.error(`Media lookup failed: ${rowError.message}`);
-      throw new BadRequestException(rowError.message);
-    }
+    const bucket = this.bucket();
+    const row = await this.findRow(mediaId);
     if (!row?.storage_path) {
       throw new NotFoundException('Media not found');
     }
 
     const servePath = row.cropped_storage_path || row.storage_path;
-
-    const { data: blob, error: downloadError } = await supabase.storage
-      .from(bucket)
-      .download(servePath);
-
-    if (downloadError || !blob) {
-      this.logger.error(
-        downloadError?.message ?? 'Storage returned empty blob for stored media reference',
-      );
+    const buffer = await this.storage.get(bucket, servePath);
+    if (!buffer) {
+      this.logger.error('Storage returned no object for stored media reference');
       throw new NotFoundException('Media file unavailable');
     }
 
-    const ab = await blob.arrayBuffer();
-    const contentType =
-      typeof row.content_type === 'string' && row.content_type.trim()
-        ? row.content_type
-        : 'application/octet-stream';
-
-    return { buffer: Buffer.from(ab), contentType };
+    return { buffer, contentType: this.contentTypeOf(row) };
   }
 
   /** Original upload bytes for GET /media/:id/original (crop editor source of truth). */
   async loadOriginalPayload(mediaId: string): Promise<{ buffer: Buffer; contentType: string }> {
-    const bucket = this.configService.get<string>('MEDIA_BUCKET');
-    if (!bucket) {
-      throw new ServiceUnavailableException('MEDIA_BUCKET is not set');
-    }
-
-    const supabase = this.ensureClient();
-
-    const { data: row, error: rowError } = await supabase
-      .from('media')
-      .select('storage_path, content_type')
-      .eq('id', mediaId)
-      .maybeSingle();
-
-    if (rowError) {
-      this.logger.error(`Media lookup failed: ${rowError.message}`);
-      throw new BadRequestException(rowError.message);
-    }
+    const bucket = this.bucket();
+    const row = await this.findRow(mediaId);
     if (!row?.storage_path) {
       throw new NotFoundException('Media not found');
     }
 
-    const { data: blob, error: downloadError } = await supabase.storage
-      .from(bucket)
-      .download(row.storage_path);
-
-    if (downloadError || !blob) {
+    const buffer = await this.storage.get(bucket, row.storage_path);
+    if (!buffer) {
       throw new NotFoundException('Media file unavailable');
     }
 
-    const contentType =
-      typeof row.content_type === 'string' && row.content_type.trim()
-        ? row.content_type
-        : 'application/octet-stream';
-
-    return { buffer: Buffer.from(await blob.arrayBuffer()), contentType };
+    return { buffer, contentType: this.contentTypeOf(row) };
   }
 
   /**
    * Apply a crop rectangle to an existing media upload. Generates a cropped derivative
-   * using sharp, uploads it to Storage, and updates the media row.
+   * using sharp, uploads it to storage, and updates the media row.
    */
   async cropMedia(userId: string, mediaId: string, crop: CropRect): Promise<UploadMediaResultDto> {
-    const bucket = this.configService.get<string>('MEDIA_BUCKET');
-    if (!bucket) {
-      throw new ServiceUnavailableException('MEDIA_BUCKET is not set');
-    }
+    const bucket = this.bucket();
+    const row = await this.findOwnedRow(userId, mediaId);
 
-    const supabase = this.ensureClient();
-
-    const { data: row, error: rowError } = await supabase
-      .from('media')
-      .select('user_id, storage_path, content_type, cropped_storage_path')
-      .eq('id', mediaId)
-      .maybeSingle();
-
-    if (rowError) {
-      this.logger.error(`Media lookup failed: ${rowError.message}`);
-      throw new BadRequestException(rowError.message);
-    }
-    if (!row) {
-      throw new NotFoundException('Media not found');
-    }
-    if (row.user_id !== userId) {
-      throw new ForbiddenException('Not the owner of this media');
-    }
-
-    const { data: blob, error: downloadError } = await supabase.storage
-      .from(bucket)
-      .download(row.storage_path);
-
-    if (downloadError || !blob) {
+    const originalBuffer = await this.storage.get(bucket, row.storage_path);
+    if (!originalBuffer) {
       throw new NotFoundException('Media file unavailable');
     }
 
-    const originalBuffer = Buffer.from(await blob.arrayBuffer());
     const croppedBuffer = await sharp(originalBuffer)
       .extract({ left: crop.x, top: crop.y, width: crop.width, height: crop.height })
       .webp({ quality: 90 })
@@ -350,37 +294,25 @@ export class MediaService implements OnModuleInit {
 
     const croppedPath = row.storage_path.replace(/\.[^.]+$/, '_cropped.webp');
 
-    if (row.cropped_storage_path) {
-      await supabase.storage
-        .from(bucket)
-        .remove([row.cropped_storage_path])
-        .catch(() => {});
+    if (row.cropped_storage_path && row.cropped_storage_path !== croppedPath) {
+      await this.removeQuietly(bucket, [row.cropped_storage_path], 'Old crop cleanup failed');
     }
 
-    const { error: uploadErr } = await supabase.storage
-      .from(bucket)
-      .upload(croppedPath, croppedBuffer, {
-        contentType: 'image/webp',
-        upsert: true,
-      });
-
-    if (uploadErr) {
-      this.logger.error(`Cropped upload failed: ${uploadErr.message}`);
-      throw new BadRequestException(uploadErr.message);
+    try {
+      await this.storage.put(bucket, croppedPath, croppedBuffer, 'image/webp');
+    } catch (error) {
+      const message = (error as Error).message;
+      this.logger.error(`Cropped upload failed: ${message}`);
+      throw new BadRequestException(message);
     }
 
-    const { error: updateErr } = await supabase
-      .from('media')
-      .update({
+    await this.db
+      .update(media)
+      .set({
         crop: { x: crop.x, y: crop.y, width: crop.width, height: crop.height },
         cropped_storage_path: croppedPath,
       })
-      .eq('id', mediaId);
-
-    if (updateErr) {
-      this.logger.error(`Media crop update failed: ${updateErr.message}`);
-      throw new BadRequestException(updateErr.message);
-    }
+      .where(eq(media.id, mediaId));
 
     await this.ensureThumbnail(mediaId);
 
@@ -396,129 +328,63 @@ export class MediaService implements OnModuleInit {
    * Does not modify `storage_path` (original) or `cropped_storage_path`.
    */
   async ensureThumbnail(mediaId: string): Promise<void> {
-    const bucket = this.configService.get<string>('MEDIA_BUCKET');
-    if (!bucket) {
-      throw new ServiceUnavailableException('MEDIA_BUCKET is not set');
-    }
-
-    const supabase = this.ensureClient();
-
-    const { data: row, error: rowError } = await supabase
-      .from('media')
-      .select('user_id, storage_path, cropped_storage_path, thumbnail_storage_path')
-      .eq('id', mediaId)
-      .maybeSingle();
-
-    if (rowError) {
-      this.logger.error(`Media lookup failed: ${rowError.message}`);
-      throw new BadRequestException(rowError.message);
-    }
+    const bucket = this.bucket();
+    const row = await this.findRow(mediaId);
     if (!row?.storage_path || !row.user_id) {
       throw new NotFoundException('Media not found');
     }
 
     const servePath = row.cropped_storage_path || row.storage_path;
-    const { data: blob, error: downloadError } = await supabase.storage
-      .from(bucket)
-      .download(servePath);
-
-    if (downloadError || !blob) {
+    const sourceBuffer = await this.storage.get(bucket, servePath);
+    if (!sourceBuffer) {
       throw new NotFoundException('Media file unavailable');
     }
 
-    const sourceBuffer = Buffer.from(await blob.arrayBuffer());
     const thumbBuffer = await buildThumbnailBuffer(sourceBuffer);
     const thumbPath = thumbnailStoragePathFor(row.user_id, mediaId);
 
-    if (row.thumbnail_storage_path) {
-      await supabase.storage
-        .from(bucket)
-        .remove([row.thumbnail_storage_path])
-        .catch(() => {});
+    if (row.thumbnail_storage_path && row.thumbnail_storage_path !== thumbPath) {
+      await this.removeQuietly(
+        bucket,
+        [row.thumbnail_storage_path],
+        'Old thumbnail cleanup failed',
+      );
     }
 
-    const { error: uploadErr } = await supabase.storage
-      .from(bucket)
-      .upload(thumbPath, thumbBuffer, {
-        contentType: 'image/webp',
-        upsert: true,
-      });
-
-    if (uploadErr) {
-      this.logger.error(`Thumbnail upload failed: ${uploadErr.message}`);
-      throw new BadRequestException(uploadErr.message);
+    try {
+      await this.storage.put(bucket, thumbPath, thumbBuffer, 'image/webp');
+    } catch (error) {
+      const message = (error as Error).message;
+      this.logger.error(`Thumbnail upload failed: ${message}`);
+      throw new BadRequestException(message);
     }
 
-    const { error: updateErr } = await supabase
-      .from('media')
-      .update({ thumbnail_storage_path: thumbPath })
-      .eq('id', mediaId);
-
-    if (updateErr) {
-      this.logger.error(`Thumbnail registry update failed: ${updateErr.message}`);
-      throw new BadRequestException(updateErr.message);
-    }
+    await this.db
+      .update(media)
+      .set({ thumbnail_storage_path: thumbPath })
+      .where(eq(media.id, mediaId));
   }
 
   /** Loads thumbnail bytes for GET /media/:id/thumbnail. */
   async loadThumbnailPayload(mediaId: string): Promise<{ buffer: Buffer; contentType: string }> {
-    const bucket = this.configService.get<string>('MEDIA_BUCKET');
-    if (!bucket) {
-      throw new ServiceUnavailableException('MEDIA_BUCKET is not set');
-    }
-
-    const supabase = this.ensureClient();
-
-    const { data: row, error: rowError } = await supabase
-      .from('media')
-      .select('thumbnail_storage_path')
-      .eq('id', mediaId)
-      .maybeSingle();
-
-    if (rowError) {
-      this.logger.error(`Media lookup failed: ${rowError.message}`);
-      throw new BadRequestException(rowError.message);
-    }
+    const bucket = this.bucket();
+    const row = await this.findRow(mediaId);
     if (!row?.thumbnail_storage_path) {
       throw new NotFoundException('Media thumbnail not found');
     }
 
-    const { data: blob, error: downloadError } = await supabase.storage
-      .from(bucket)
-      .download(row.thumbnail_storage_path);
-
-    if (downloadError || !blob) {
+    const buffer = await this.storage.get(bucket, row.thumbnail_storage_path);
+    if (!buffer) {
       throw new NotFoundException('Media thumbnail unavailable');
     }
 
-    return { buffer: Buffer.from(await blob.arrayBuffer()), contentType: 'image/webp' };
+    return { buffer, contentType: 'image/webp' };
   }
 
   /** Delete a media entry and all storage objects (original, cropped, thumbnail). Owner-only. */
   async deleteMedia(userId: string, mediaId: string): Promise<void> {
-    const bucket = this.configService.get<string>('MEDIA_BUCKET');
-    if (!bucket) {
-      throw new ServiceUnavailableException('MEDIA_BUCKET is not set');
-    }
-
-    const supabase = this.ensureClient();
-
-    const { data: row, error: rowError } = await supabase
-      .from('media')
-      .select('user_id, storage_path, cropped_storage_path, thumbnail_storage_path')
-      .eq('id', mediaId)
-      .maybeSingle();
-
-    if (rowError) {
-      this.logger.error(`Media lookup failed: ${rowError.message}`);
-      throw new BadRequestException(rowError.message);
-    }
-    if (!row) {
-      throw new NotFoundException('Media not found');
-    }
-    if (row.user_id !== userId) {
-      throw new ForbiddenException('Not the owner of this media');
-    }
+    const bucket = this.bucket();
+    const row = await this.findOwnedRow(userId, mediaId);
 
     const pathsToRemove = [row.storage_path];
     if (row.cropped_storage_path) {
@@ -528,46 +394,18 @@ export class MediaService implements OnModuleInit {
       pathsToRemove.push(row.thumbnail_storage_path);
     }
 
-    await supabase.storage
-      .from(bucket)
-      .remove(pathsToRemove)
-      .catch((err) => {
-        this.logger.warn(`Storage cleanup failed: ${(err as Error).message}`);
-      });
-
-    const { error: deleteErr } = await supabase.from('media').delete().eq('id', mediaId);
-
-    if (deleteErr) {
-      this.logger.error(`Media row delete failed: ${deleteErr.message}`);
-      throw new BadRequestException(deleteErr.message);
-    }
+    await this.removeQuietly(bucket, pathsToRemove, 'Storage cleanup failed');
+    await this.db.delete(media).where(eq(media.id, mediaId));
   }
 
   /** Return crop metadata for the crop editor UI. Owner-only. */
   async getMediaMeta(userId: string, mediaId: string): Promise<MediaMetaDto> {
-    const supabase = this.ensureClient();
-
-    const { data: row, error: rowError } = await supabase
-      .from('media')
-      .select('user_id, content_type, crop, cropped_storage_path')
-      .eq('id', mediaId)
-      .maybeSingle();
-
-    if (rowError) {
-      this.logger.error(`Media lookup failed: ${rowError.message}`);
-      throw new BadRequestException(rowError.message);
-    }
-    if (!row) {
-      throw new NotFoundException('Media not found');
-    }
-    if (row.user_id !== userId) {
-      throw new ForbiddenException('Not the owner of this media');
-    }
+    const row = await this.findOwnedRow(userId, mediaId);
 
     return {
       id: mediaId,
       contentType: row.content_type,
-      crop: row.crop ?? null,
+      crop: (row.crop as MediaMetaDto['crop']) ?? null,
       hasCropped: !!row.cropped_storage_path,
     };
   }
@@ -578,20 +416,13 @@ export class MediaService implements OnModuleInit {
   async listMediaForUser(
     userId: string,
   ): Promise<Array<{ id: string; contentType: string; createdAt: string }>> {
-    const supabase = this.ensureClient();
+    const rows = await this.db
+      .select({ id: media.id, content_type: media.content_type, created_at: media.created_at })
+      .from(media)
+      .where(eq(media.user_id, userId))
+      .orderBy(desc(media.created_at));
 
-    const { data, error } = await supabase
-      .from('media')
-      .select('id, content_type, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      this.logger.error(`Media list failed: ${error.message}`);
-      throw new BadRequestException(error.message);
-    }
-
-    return (data ?? []).map((row) => ({
+    return rows.map((row) => ({
       id: row.id,
       contentType: row.content_type ?? 'application/octet-stream',
       createdAt: row.created_at ?? '',

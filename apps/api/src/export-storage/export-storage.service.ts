@@ -1,6 +1,7 @@
 import { Buffer as NodeBuffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
 import {
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -9,31 +10,35 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
+import { and, type Database, eq, lt, mcpExport } from '@resubuild/db';
 import type {
   McpExportKind,
   McpExportRecord,
   McpExportScreenshotMode,
   McpExportUploadInput,
 } from '@resubuild/types';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { DATABASE } from '../database/database.tokens';
+import { ObjectStorageService } from '../storage/object-storage.service';
 
 /**
- * Single source of truth for Supabase Storage I/O on the dedicated `mcp-exports`
+ * Single source of truth for object-storage I/O on the dedicated `mcp-exports`
  * bucket. The four `export_cv_*` MCP tools (and the `fetch_export_url` refresh
  * tool) funnel their upload / signed-URL operations through this service so the
- * lifecycle (namespaced object paths, RLS-shaped row inserts, expiry sweep) is
- * enforced in one place. The signed URL is the entire transport — there is no
+ * lifecycle (namespaced object paths, owner-scoped row inserts, expiry sweep) is
+ * enforced in one place. The presigned URL is the entire transport — there is no
  * API-host download endpoint; clients paste the URL into a browser, `curl`, or
- * `fetch` and the Supabase Storage host serves the artifact directly.
+ * `fetch` and the S3-compatible storage host serves the artifact directly.
  */
 @Injectable()
 export class ExportStorageService {
   private readonly logger = new Logger(ExportStorageService.name);
   private readonly maxBytes: number;
   private readonly defaultTtlSeconds: number;
-  private client: SupabaseClient | null = null;
-
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject(DATABASE) private readonly db: Database,
+    private readonly storage: ObjectStorageService,
+  ) {
     this.maxBytes = this.readPositiveInt('MCP_EXPORT_MAX_BYTES', 10 * 1024 * 1024);
     this.defaultTtlSeconds = this.readPositiveInt('MCP_EXPORT_TTL_SECONDS', 3600);
   }
@@ -47,27 +52,6 @@ export class ExportStorageService {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   }
 
-  private ensureClient(): SupabaseClient {
-    if (this.client) {
-      return this.client;
-    }
-    const url = this.configService.get<string>('SUPABASE_URL');
-    const serviceRoleKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!url || !serviceRoleKey) {
-      throw new ServiceUnavailableException(
-        'Supabase storage is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.',
-      );
-    }
-    this.client = createClient(url, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
-    return this.client;
-  }
-
   /**
    * Returns the bucket name. Throws 503 if `MCP_EXPORT_BUCKET` is unset so callers
    * fail fast rather than silently producing no URL.
@@ -77,6 +61,11 @@ export class ExportStorageService {
     if (!bucket) {
       throw new ServiceUnavailableException(
         'MCP export storage is not configured. Set MCP_EXPORT_BUCKET.',
+      );
+    }
+    if (!this.storage.isConfigured()) {
+      throw new ServiceUnavailableException(
+        'Object storage is not configured. Set the S3_* storage settings.',
       );
     }
     return bucket;
@@ -135,9 +124,9 @@ export class ExportStorageService {
   /**
    * Reduce a Content-Type value to its bare type/subtype, dropping any
    * parameters (e.g. `; charset=utf-8`, `; boundary=…`). Used for the
-   * Supabase Storage upload so the bucket's `allowed_mime_types` allowlist
-   * (which only stores bare types) accepts the call. The full descriptive
-   * value is preserved on the `mcp_export` row and the response envelope.
+   * stored object's `Content-Type`, so presigned downloads carry a plain
+   * media type. The full descriptive value is preserved on the `mcp_export`
+   * row and the response envelope.
    */
   private stripMimeParameters(contentType: string): string {
     const semicolonIndex = contentType.indexOf(';');
@@ -149,10 +138,10 @@ export class ExportStorageService {
 
   /**
    * Upload a rendered artifact to Storage, register a matching `mcp_export` row,
-   * and issue a short-lived Supabase signed URL for the new object in a single
-   * call. The signed URL is the canonical handoff for MCP clients — it points
-   * at the Supabase Storage host with a `?token=…` query parameter and is
-   * openable in a browser, `curl`-able, and `fetch`-able directly.
+   * and issue a short-lived presigned URL for the new object in a single call.
+   * The presigned URL is the canonical handoff for MCP clients — it points at
+   * the storage host (`S3_PUBLIC_ENDPOINT`) with `X-Amz-*` query parameters and
+   * is openable in a browser, `curl`-able, and `fetch`-able directly.
    *
    * Flow: storage upload first, then DB insert, then signed-URL issuance. On
    * any failure after the upload, the uploaded object is removed best-effort so
@@ -176,7 +165,6 @@ export class ExportStorageService {
     }
 
     const bucket = this.getBucket();
-    const supabase = this.ensureClient();
     const exportId = randomUUID();
     const ext = this.extForKind(input.kind);
     const storagePath = this.buildObjectPath({
@@ -188,80 +176,62 @@ export class ExportStorageService {
     });
     const ttlSeconds = this.defaultTtlSeconds;
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
-
-    // Supabase Storage's bucket MIME allowlist does an exact string match
-    // against `allowed_mime_types` (see `supabase/config.toml`). Callers can
-    // pass a more descriptive value (e.g. `application/json; charset=utf-8`)
-    // for the `mcp_export` row and the MCP envelope, but the storage upload
-    // itself must use the bare MIME type — strip any `;…` parameters here so
-    // the upload passes the allowlist while the descriptive value still flows
-    // back to clients through the row and the response envelope.
     const uploadContentType = this.stripMimeParameters(input.contentType);
 
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(storagePath, NodeBuffer.from(input.buffer), {
-        contentType: uploadContentType,
-        upsert: false,
-      });
-
-    if (uploadError) {
-      this.logger.error(`MCP export upload failed: ${uploadError.message}`);
-      throw new ServiceUnavailableException(uploadError.message);
+    try {
+      await this.storage.put(bucket, storagePath, NodeBuffer.from(input.buffer), uploadContentType);
+    } catch (error) {
+      const message = (error as Error).message;
+      this.logger.error(`MCP export upload failed: ${message}`);
+      throw new ServiceUnavailableException(message);
     }
 
-    const insertPayload = {
-      id: exportId,
-      user_id: input.userId,
-      cv_id: input.cvId,
-      kind: input.kind,
-      storage_path: storagePath,
-      content_type: input.contentType,
-      size_bytes: input.buffer.length,
-      filename: input.filename,
-      template_id: input.templateId ?? null,
-      mode: input.mode ?? null,
-      expires_at: expiresAt.toISOString(),
-    };
+    let inserted: typeof mcpExport.$inferSelect | undefined;
+    try {
+      [inserted] = await this.db
+        .insert(mcpExport)
+        .values({
+          id: exportId,
+          user_id: input.userId,
+          cv_id: input.cvId,
+          kind: input.kind,
+          storage_path: storagePath,
+          content_type: input.contentType,
+          size_bytes: input.buffer.length,
+          filename: input.filename,
+          template_id: input.templateId ?? null,
+          mode: input.mode ?? null,
+          expires_at: expiresAt.toISOString(),
+        })
+        .returning();
+    } catch (error) {
+      this.logger.error(`MCP export row insert failed: ${(error as Error).message}`);
+    }
 
-    const { data: inserted, error: insertError } = await supabase
-      .from('mcp_export')
-      .insert(insertPayload)
-      .select('*')
-      .single();
-
-    if (insertError || !inserted) {
-      this.logger.error(`MCP export row insert failed: ${insertError?.message ?? 'unknown'}`);
-      await supabase.storage
-        .from(bucket)
-        .remove([storagePath])
+    if (!inserted) {
+      await this.storage
+        .remove(bucket, [storagePath])
         .catch((err) =>
           this.logger.warn(
             `Rolling back orphaned MCP export object failed: ${(err as Error).message}`,
           ),
         );
-      throw new ServiceUnavailableException(
-        insertError?.message ?? 'Failed to register MCP export row',
-      );
+      throw new ServiceUnavailableException('Failed to register MCP export row');
     }
 
-    const record = this.toRecord(inserted as Record<string, unknown>);
+    const record = this.toRecord(inserted as unknown as Record<string, unknown>);
 
-    const { data: signed, error: signedError } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(storagePath, ttlSeconds);
-
-    if (signedError || !signed?.signedUrl) {
-      this.logger.error(
-        `MCP export signed URL failed (post-insert): ${signedError?.message ?? 'unknown'}`,
-      );
+    let signedUrl: string;
+    try {
+      signedUrl = await this.storage.presignGet(bucket, storagePath, ttlSeconds);
+    } catch (error) {
+      const message = (error as Error).message;
+      this.logger.error(`MCP export signed URL failed (post-insert): ${message}`);
       // The object and the row are now both live; surface 503 so the caller can retry.
-      throw new ServiceUnavailableException(
-        signedError?.message ?? 'Failed to issue MCP export signed URL',
-      );
+      throw new ServiceUnavailableException(message);
     }
 
-    return { record, signedUrl: signed.signedUrl, expiresAt: expiresAt.toISOString() };
+    return { record, signedUrl, expiresAt: expiresAt.toISOString() };
   }
 
   /**
@@ -277,54 +247,47 @@ export class ExportStorageService {
       throw new NotFoundException('Export not found');
     }
 
-    const supabase = this.ensureClient();
-    const { data: row, error } = await supabase
-      .from('mcp_export')
-      .select('*')
-      .eq('id', exportId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (error) {
-      this.logger.error(`MCP export lookup failed: ${error.message}`);
-      throw new ServiceUnavailableException(error.message);
-    }
+    const rows = await this.db
+      .select()
+      .from(mcpExport)
+      .where(and(eq(mcpExport.id, exportId), eq(mcpExport.user_id, userId)))
+      .limit(1);
+    const row = rows[0];
     if (!row) {
       throw new NotFoundException('Export not found');
     }
 
-    if (this.isExpired(row.expires_at as string | null)) {
+    if (this.isExpired(row.expires_at)) {
       throw new NotFoundException('Export not found');
     }
 
     const bucket = this.getBucket();
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
-    const { data: signed, error: signedError } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(row.storage_path as string, ttlSeconds);
-
-    if (signedError || !signed?.signedUrl) {
-      this.logger.error(`MCP export signed URL failed: ${signedError?.message ?? 'unknown'}`);
-      throw new ServiceUnavailableException(signedError?.message ?? 'Failed to create signed URL');
+    let url: string;
+    try {
+      url = await this.storage.presignGet(bucket, row.storage_path, ttlSeconds);
+    } catch (error) {
+      const message = (error as Error).message;
+      this.logger.error(`MCP export signed URL failed: ${message}`);
+      throw new ServiceUnavailableException(message);
     }
 
-    const { error: updateError } = await supabase
-      .from('mcp_export')
-      .update({ expires_at: expiresAt.toISOString() })
-      .eq('id', exportId)
-      .eq('user_id', userId);
-
-    if (updateError) {
+    try {
+      await this.db
+        .update(mcpExport)
+        .set({ expires_at: expiresAt.toISOString() })
+        .where(and(eq(mcpExport.id, exportId), eq(mcpExport.user_id, userId)));
+    } catch (error) {
       this.logger.warn(
-        `MCP export expires_at update failed: ${updateError.message} (URL is still valid for its TTL)`,
+        `MCP export expires_at update failed: ${(error as Error).message} (URL is still valid for its TTL)`,
       );
     }
 
     const record = this.toRecord({
-      ...(row as Record<string, unknown>),
+      ...(row as unknown as Record<string, unknown>),
       expires_at: expiresAt.toISOString(),
     });
-    return { url: signed.signedUrl, expiresAt: expiresAt.toISOString(), record };
+    return { url, expiresAt: expiresAt.toISOString(), record };
   }
 
   /**
@@ -343,51 +306,34 @@ export class ExportStorageService {
    * Idempotent: a second invocation against an empty set is a no-op.
    */
   async runSweep(now: Date = new Date()): Promise<{ rowsDeleted: number; objectsDeleted: number }> {
-    const supabase = this.ensureClient();
     const bucket = this.getBucket();
     const cutoff = now.toISOString();
 
-    const { data: expired, error: selectError } = await supabase
-      .from('mcp_export')
-      .select('id, storage_path')
-      .lt('expires_at', cutoff);
+    const rows = await this.db
+      .select({ id: mcpExport.id, storage_path: mcpExport.storage_path })
+      .from(mcpExport)
+      .where(lt(mcpExport.expires_at, cutoff));
 
-    if (selectError) {
-      this.logger.error(`MCP export sweep select failed: ${selectError.message}`);
-      throw new ServiceUnavailableException(selectError.message);
-    }
-
-    const rows = (expired ?? []) as Array<{ id: string; storage_path: string }>;
     if (rows.length === 0) {
       return { rowsDeleted: 0, objectsDeleted: 0 };
     }
 
     let objectsDeleted = 0;
-    const paths = rows.map((r) => r.storage_path);
     try {
-      const { data: removed, error: removeError } = await supabase.storage
-        .from(bucket)
-        .remove(paths);
-      if (removeError) {
-        this.logger.warn(`MCP export sweep remove failed: ${removeError.message}`);
-      } else {
-        objectsDeleted = Array.isArray(removed) ? removed.length : 0;
-      }
+      objectsDeleted = await this.storage.remove(
+        bucket,
+        rows.map((r) => r.storage_path),
+      );
     } catch (err) {
       this.logger.warn(`MCP export sweep threw during storage remove: ${(err as Error).message}`);
     }
 
-    const { error: deleteError, count } = await supabase
-      .from('mcp_export')
-      .delete({ count: 'exact' })
-      .lt('expires_at', cutoff);
+    const deleted = await this.db
+      .delete(mcpExport)
+      .where(lt(mcpExport.expires_at, cutoff))
+      .returning({ id: mcpExport.id });
 
-    if (deleteError) {
-      this.logger.error(`MCP export sweep delete failed: ${deleteError.message}`);
-      throw new ServiceUnavailableException(deleteError.message);
-    }
-
-    return { rowsDeleted: count ?? rows.length, objectsDeleted };
+    return { rowsDeleted: deleted.length, objectsDeleted };
   }
 
   private isExpired(expiresAt: string | null | undefined): boolean {

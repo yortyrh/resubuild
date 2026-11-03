@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { and, cv, cvTemplatePresentation, eq, inArray } from '@resubuild/db';
 import type { CvTemplatePresentationConfig } from '@resubuild/resume-template';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DbScope } from '../database/db-scope';
 
 export interface CvTemplatePresentationRow {
   cv_id: string;
@@ -11,48 +12,49 @@ export interface CvTemplatePresentationRow {
 
 @Injectable()
 export class CvTemplatePresentationRepository {
+  private ownedCv(scope: DbScope, cvId: string) {
+    return scope.db
+      .select({ id: cv.id })
+      .from(cv)
+      .where(and(eq(cv.id, cvId), eq(cv.user_id, scope.userId)));
+  }
+
   async fetch(
-    supabase: SupabaseClient,
+    scope: DbScope,
     cvId: string,
     templateId: string,
   ): Promise<CvTemplatePresentationRow | null> {
-    const { data, error } = await supabase
-      .from('cv_template_presentation')
-      .select('*')
-      .eq('cv_id', cvId)
-      .eq('template_id', templateId)
-      .maybeSingle();
+    const rows = await scope.db
+      .select()
+      .from(cvTemplatePresentation)
+      .where(
+        and(
+          eq(cvTemplatePresentation.cv_id, cvId),
+          eq(cvTemplatePresentation.template_id, templateId),
+          inArray(cvTemplatePresentation.cv_id, this.ownedCv(scope, cvId)),
+        ),
+      )
+      .limit(1);
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return data as CvTemplatePresentationRow | null;
+    return (rows[0] as CvTemplatePresentationRow | undefined) ?? null;
   }
 
+  /** Callers must have checked that `cvId` belongs to `scope.userId`. */
   async upsert(
-    supabase: SupabaseClient,
+    scope: DbScope,
     cvId: string,
     templateId: string,
     config: Partial<CvTemplatePresentationConfig>,
   ): Promise<CvTemplatePresentationRow> {
-    const { data, error } = await supabase
-      .from('cv_template_presentation')
-      .upsert(
-        {
-          cv_id: cvId,
-          template_id: templateId,
-          config,
-        },
-        { onConflict: 'cv_id,template_id' },
-      )
-      .select('*')
-      .single();
+    const [row] = await scope.db
+      .insert(cvTemplatePresentation)
+      .values({ cv_id: cvId, template_id: templateId, config })
+      .onConflictDoUpdate({
+        target: [cvTemplatePresentation.cv_id, cvTemplatePresentation.template_id],
+        set: { config },
+      })
+      .returning();
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return data as CvTemplatePresentationRow;
+    return row as CvTemplatePresentationRow;
   }
 }

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER } from '@nestjs/core';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AiAgentModule } from './ai-agent/ai-agent.module';
@@ -7,6 +8,8 @@ import { ApplicationModule } from './application/application.module';
 import { AuthModule } from './auth/auth.module';
 import { CvModule } from './cv/cv.module';
 import { CvExportModule } from './cv-export/cv-export.module';
+import { DatabaseModule } from './database/database.module';
+import { DatabaseExceptionFilter } from './database/database-exception.filter';
 import { ExportStorageModule } from './export-storage/export-storage.module';
 import { HealthController } from './health/health.controller';
 import { ImportModule } from './import/import.module';
@@ -15,6 +18,7 @@ import { ImportModelsCatalogModule } from './import-models-catalog/import-models
 import { McpModule } from './mcp/mcp.module';
 import { McpAuthModule } from './mcp/mcp-auth.module';
 import { MediaModule } from './media/media.module';
+import { StorageModule } from './storage/storage.module';
 import { WebScrapeModule } from './web-scrape/web-scrape.module';
 
 @Module({
@@ -32,6 +36,8 @@ import { WebScrapeModule } from './web-scrape/web-scrape.module';
       isGlobal: true,
     }),
     ScheduleModule.forRoot(),
+    DatabaseModule,
+    StorageModule,
     ImportModelsCatalogModule,
     AuthModule,
     CvModule,
@@ -47,5 +53,6 @@ import { WebScrapeModule } from './web-scrape/web-scrape.module';
     McpModule,
   ],
   controllers: [HealthController],
+  providers: [{ provide: APP_FILTER, useClass: DatabaseExceptionFilter }],
 })
 export class AppModule {}

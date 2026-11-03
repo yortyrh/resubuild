@@ -1,395 +1,175 @@
 /**
  * CRUD and baseline create-flow scenarios (docs/requirements/cv.md).
+ *
+ * Runs the real repository against PGlite (in-process Postgres).
  */
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { cv } from '@resubuild/db';
+import type { AuthUser } from '../auth/auth-user.types';
+import { useTestDb } from '../database/test-db.helpers';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 import { CvService } from './cv.service';
 import { CvNormalizedRepository } from './cv-normalized.repository';
-import { createMockNormalizedRepo, mockCvHeader } from './cv-test.helpers';
+
+const MISSING_ID = '00000000-0000-0000-0000-000000000000';
 
 describe('CvService', () => {
+  const ctx = useTestDb();
   let service: CvService;
-  let normalizedRepo: ReturnType<typeof createMockNormalizedRepo>;
-  const supabaseStub = {};
-
-  const user = { id: 'user-1', email: 'u@test.com', accessToken: 'jwt-access-token' };
+  let repo: CvNormalizedRepository;
+  let user: AuthUser;
+  let other: AuthUser;
 
   beforeEach(async () => {
-    normalizedRepo = createMockNormalizedRepo();
-    normalizedRepo.createClientForUser.mockReturnValue(supabaseStub as never);
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CvService,
-        ResumeSchemaValidator,
-        { provide: CvNormalizedRepository, useValue: normalizedRepo },
-      ],
-    }).compile();
-
-    service = module.get(CvService);
+    repo = new CvNormalizedRepository(ctx.db);
+    service = new CvService(new ResumeSchemaValidator(), repo);
+    user = await ctx.createUser('user@test.local');
+    other = await ctx.createUser('other@test.local');
   });
 
-  it('throws when SUPABASE credentials are incomplete', async () => {
-    normalizedRepo.createClientForUser.mockImplementation(() => {
-      throw new Error('Supabase is not configured');
-    });
-
-    await expect(service.findAll(user)).rejects.toThrow('Supabase is not configured');
-  });
+  const create = (owner: AuthUser, data: Record<string, unknown>) =>
+    service.create(owner, { data } as never);
 
   describe('findAll', () => {
-    it('throws BadRequestException when list query fails', async () => {
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        select: jest.fn(() => ({
-          eq: jest.fn(() => ({
-            order: jest.fn().mockResolvedValue({ data: null, error: { message: 'list fail' } }),
-          })),
-        })),
-      }));
-
-      await expect(service.findAll(user)).rejects.toThrow(BadRequestException);
-    });
-
-    it('returns slim CV records ordered by updated_at', async () => {
-      const header = mockCvHeader({ id: 'a', name: 'Jane', label: 'Engineer' });
-      const order = jest.fn().mockResolvedValue({ data: [header], error: null });
-
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        select: jest.fn(() => ({
-          eq: jest.fn(() => ({ order })),
-        })),
-      }));
+    it('returns the user’s primary CVs, newest first, as slim records', async () => {
+      const older = await create(user, { basics: { name: 'Older' } });
+      const newer = await create(user, { basics: { name: 'Jane', label: 'Engineer' } });
+      await create(other, { basics: { name: 'Someone else' } });
+      await repo.insertHeader(repo.scopeFor(user), { kind: 'application_clone' });
 
       const result = await service.findAll(user);
 
-      expect(result).toHaveLength(1);
-      expect(order).toHaveBeenCalled();
-      expect(result[0].title).toBe('Jane — Engineer');
-      expect((result[0].data as { basics?: { name?: string } }).basics?.name).toBe('Jane');
-      expect(result[0].data).not.toHaveProperty('meta');
+      expect(result.map((r) => r.id)).toEqual([newer.id, older.id]);
+      expect(result[0]).toMatchObject({
+        user_id: user.id,
+        title: 'Jane — Engineer',
+        templateId: 'classic',
+      });
       expect(result[0].data).not.toHaveProperty('work');
-      expect(normalizedRepo.fetchSections).not.toHaveBeenCalled();
+      expect(result[0].created_at).toMatch(/Z$/);
     });
 
-    it('returns empty list when query succeeds with null data', async () => {
-      const order = jest.fn().mockResolvedValue({ data: null, error: null });
-
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        select: jest.fn(() => ({
-          eq: jest.fn(() => ({ order })),
-        })),
-      }));
-
+    it('returns an empty list when the user has no CVs', async () => {
       await expect(service.findAll(user)).resolves.toEqual([]);
     });
+  });
 
-    it('defaults template and timestamps when header fields are missing', async () => {
-      const header = mockCvHeader({
-        template_id: undefined,
-        created_at: undefined,
-        updated_at: undefined,
-      });
-      const order = jest.fn().mockResolvedValue({ data: [header], error: null });
-
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        select: jest.fn(() => ({
-          eq: jest.fn(() => ({ order })),
-        })),
-      }));
-
-      const result = await service.findAll(user);
-
-      expect(result[0]).toMatchObject({
-        templateId: 'classic',
-        created_at: '',
-        updated_at: '',
+  describe('findOne / getHeader', () => {
+    it('returns the header for the owner', async () => {
+      const created = await create(user, { basics: { name: 'Jane' } });
+      await expect(service.findOne(user, created.id)).resolves.toMatchObject({ title: 'Jane' });
+      await expect(service.getHeader(user, created.id)).resolves.toMatchObject({
+        id: created.id,
       });
     });
-  });
 
-  it('getHeader throws NotFoundException when CV is missing', async () => {
-    normalizedRepo.fetchHeader.mockResolvedValue(null);
-    await expect(service.getHeader(user, 'gone')).rejects.toThrow(NotFoundException);
-  });
-
-  it('getHeader returns header when CV exists', async () => {
-    const header = mockCvHeader({ id: 'cv-found' });
-    normalizedRepo.fetchHeader.mockResolvedValue(header);
-
-    await expect(service.getHeader(user, 'cv-found')).resolves.toEqual(header);
-  });
-
-  describe('findOne', () => {
-    it('throws NotFoundException when CV is missing', async () => {
-      normalizedRepo.fetchHeader.mockResolvedValue(null);
-
-      await expect(service.findOne(user, 'gone')).rejects.toThrow(NotFoundException);
+    it('throws NotFound for missing or foreign CVs', async () => {
+      const created = await create(user, { basics: { name: 'Jane' } });
+      await expect(service.findOne(other, created.id)).rejects.toThrow(NotFoundException);
+      await expect(service.getHeader(user, MISSING_ID)).rejects.toThrow(NotFoundException);
     });
 
-    it('returns slim data from header row only', async () => {
-      const header = mockCvHeader({ name: 'Jane Doe', label: 'Engineer' });
-      normalizedRepo.fetchHeader.mockResolvedValue(header);
-
-      const result = await service.findOne(user, 'cv-1');
-
-      expect(result.title).toBe('Jane Doe — Engineer');
-      expect((result.data as { basics?: { name?: string } }).basics?.name).toBe('Jane Doe');
-      expect(result.data).not.toHaveProperty('meta');
-      expect(result.data).not.toHaveProperty('work');
-      expect(normalizedRepo.fetchSections).not.toHaveBeenCalled();
+    it('maps a malformed id to a 400 through the database error filter', async () => {
+      await expect(service.findOne(user, 'not-a-uuid')).rejects.toMatchObject({
+        cause: expect.objectContaining({ code: '22P02' }),
+      });
     });
   });
 
   describe('create', () => {
-    it('inserts cv row and normalized sections', async () => {
-      const insertedHeader = mockCvHeader({ id: 'fresh-id' });
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        insert: jest.fn(() => ({
-          select: jest.fn(() => ({
-            single: jest.fn().mockResolvedValue({ data: insertedHeader, error: null }),
-          })),
-        })),
-      }));
-
-      normalizedRepo.insertNormalizedCv.mockResolvedValue(
-        mockCvHeader({
-          id: 'fresh-id',
-          name: 'Jane Doe',
-          label: 'Engineer',
-        }),
-      );
-
-      const result = await service.create(user, {
-        data: { basics: { name: 'Jane Doe', label: 'Engineer' } },
+    it('inserts the cv row and normalized sections', async () => {
+      const result = await create(user, {
+        basics: { name: 'Jane Doe', label: 'Senior Software Engineer' },
+        work: [{ name: 'Tech Innovators Inc.', position: 'Lead', startDate: '2021-06-15' }],
+        education: [{ institution: 'University of Toronto', area: 'Computer Science' }],
+        meta: { canonical: 'https://example.org/old', version: 'v4.99.99' },
       });
 
-      expect(normalizedRepo.insertNormalizedCv).toHaveBeenCalled();
-      expect(result.title).toBe('Jane Doe — Engineer');
-      expect(result.data).not.toHaveProperty('meta');
-    });
-
-    it('throws BadRequestException when insert fails', async () => {
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        insert: jest.fn(() => ({
-          select: jest.fn(() => ({
-            single: jest.fn().mockResolvedValue({ data: null, error: { message: 'insert fail' } }),
-          })),
-        })),
-      }));
-
-      await expect(service.create(user, { data: { basics: { name: 'Jane' } } })).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
-    it('rejects invalid resume JSON', async () => {
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        insert: jest.fn(() => ({
-          select: jest.fn(() => ({
-            single: jest.fn().mockResolvedValue({ data: mockCvHeader({ id: 'x' }), error: null }),
-          })),
-        })),
-      }));
-
-      await expect(
-        service.create(user, { data: { work: [{ name: 123 as unknown as string }] } }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('validates before insert so invalid data does not create a cv row', async () => {
-      const insert = jest.fn();
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        insert,
-      }));
-
-      await expect(
-        service.create(user, { data: { work: [{ name: 123 as unknown as string }] } }),
-      ).rejects.toThrow(BadRequestException);
-
-      expect(insert).not.toHaveBeenCalled();
-    });
-
-    it('persists multi-section imported data via normalized insert', async () => {
-      const insertedHeader = mockCvHeader({ id: 'import-id' });
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        insert: jest.fn(() => ({
-          select: jest.fn(() => ({
-            single: jest.fn().mockResolvedValue({ data: insertedHeader, error: null }),
-          })),
-        })),
-      }));
-
-      normalizedRepo.insertNormalizedCv.mockResolvedValue(
-        mockCvHeader({
-          id: 'import-id',
-          name: 'Jane Doe',
-          label: 'Senior Software Engineer',
-        }),
-      );
-
-      const importedData = {
-        basics: { name: 'Jane Doe', label: 'Senior Software Engineer' },
-        work: [
-          {
-            name: 'Tech Innovators Inc.',
-            position: 'Lead Full Stack Developer',
-            startDate: '2021-06-15',
-          },
-        ],
-        education: [
-          {
-            institution: 'University of Toronto',
-            area: 'Computer Science',
-            studyType: 'Bachelor of Science',
-          },
-        ],
-        meta: { canonical: 'https://example.org/old', version: 'v4.99.99' },
-      };
-
-      const result = await service.create(user, { data: importedData });
-
-      expect(normalizedRepo.insertNormalizedCv).toHaveBeenCalledWith(
-        supabaseStub,
-        'import-id',
-        user.id,
-        expect.objectContaining({
-          basics: expect.objectContaining({ name: 'Jane Doe' }),
-          work: expect.arrayContaining([expect.objectContaining({ name: 'Tech Innovators Inc.' })]),
-          education: expect.arrayContaining([
-            expect.objectContaining({ institution: 'University of Toronto' }),
-          ]),
-        }),
-      );
       expect(result.title).toBe('Jane Doe — Senior Software Engineer');
       expect(result.data).not.toHaveProperty('meta');
       expect(result.data).not.toHaveProperty('work');
+
+      const full = await repo.assembleFullResume(repo.scopeFor(user), result.id);
+      expect(full?.work?.[0]?.name).toBe('Tech Innovators Inc.');
+      expect(full?.education?.[0]?.institution).toBe('University of Toronto');
+    });
+
+    it('validates before insert so invalid data does not create a cv row', async () => {
+      await expect(create(user, { work: [{ name: 123 }] })).rejects.toThrow(BadRequestException);
+      expect(await ctx.db.select().from(cv)).toEqual([]);
     });
   });
 
   describe('update', () => {
-    it('ignores title-only updates and returns slim CV', async () => {
-      normalizedRepo.fetchHeader.mockResolvedValue(mockCvHeader({ name: 'Jane' }));
-
-      const result = await service.update(user, 'cv-1', { title: 'Ignored' });
+    it('ignores title-only updates and returns the slim CV', async () => {
+      const created = await create(user, { basics: { name: 'Jane' } });
+      const result = await service.update(user, created.id, { title: 'Ignored' } as never);
       expect(result.title).toBe('Jane');
-      expect(normalizedRepo.replaceNormalizedCv).not.toHaveBeenCalled();
-      expect(normalizedRepo.fetchSections).not.toHaveBeenCalled();
-    });
-
-    it('throws NotFoundException when header is missing after data update', async () => {
-      normalizedRepo.fetchHeader.mockResolvedValue(null);
-
-      await expect(
-        service.update(user, 'cv-1', { data: { basics: { name: 'Updated' } } }),
-      ).rejects.toThrow(NotFoundException);
     });
 
     it('replaces normalized rows when data is provided', async () => {
-      normalizedRepo.fetchHeader.mockResolvedValue(
-        mockCvHeader({ name: 'Updated', label: 'Role' }),
-      );
-      normalizedRepo.replaceNormalizedCv.mockResolvedValue(
-        mockCvHeader({ name: 'Updated', label: 'Role' }),
-      );
-
-      const result = await service.update(user, 'cv-1', {
-        data: { basics: { name: 'Updated', label: 'Role' } },
+      const created = await create(user, {
+        basics: { name: 'Jane' },
+        work: [{ name: 'Old Co' }],
       });
 
-      expect(normalizedRepo.replaceNormalizedCv).toHaveBeenCalled();
+      const result = await service.update(user, created.id, {
+        data: { basics: { name: 'Updated', label: 'Role' } },
+      } as never);
+
       expect(result.title).toBe('Updated — Role');
+      const sections = await repo.fetchSections(repo.scopeFor(user), created.id);
+      expect(sections.work).toEqual([]);
     });
 
-    it('persists valid templateId', async () => {
-      const update = jest.fn(() => ({
-        eq: jest.fn().mockResolvedValue({ error: null }),
-      }));
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({ update }));
-      normalizedRepo.fetchHeader.mockResolvedValue(mockCvHeader({ template_id: 'classic' }));
-
-      const result = await service.update(user, 'cv-1', { templateId: 'capd-alum' });
-
-      expect(update).toHaveBeenCalledWith({ template_id: 'classic' });
+    it('persists a valid templateId in canonical form', async () => {
+      const created = await create(user, { basics: { name: 'Jane' } });
+      const result = await service.update(user, created.id, { templateId: 'capd-alum' } as never);
       expect(result.templateId).toBe('classic');
     });
 
-    it('rejects unknown templateId with BadRequestException', async () => {
+    it('rejects an unknown templateId', async () => {
       await expect(
-        service.update(user, 'cv-1', { templateId: 'not-a-real-template' }),
+        service.update(user, MISSING_ID, { templateId: 'not-a-real-template' } as never),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('throws BadRequestException when template update fails', async () => {
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        update: jest.fn(() => ({
-          eq: jest.fn().mockResolvedValue({ error: { message: 'template update failed' } }),
-        })),
-      }));
-      normalizedRepo.fetchHeader.mockResolvedValue(mockCvHeader());
-
-      await expect(service.update(user, 'cv-1', { templateId: 'classic' })).rejects.toThrow(
-        BadRequestException,
-      );
+    it('throws NotFound and changes nothing for another user’s CV', async () => {
+      const created = await create(user, { basics: { name: 'Jane' } });
+      await expect(
+        service.update(other, created.id, { templateId: 'classic' } as never),
+      ).rejects.toThrow(NotFoundException);
+      await expect(
+        service.update(other, created.id, { data: { basics: { name: 'Hacked' } } } as never),
+      ).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(user, created.id)).resolves.toMatchObject({ title: 'Jane' });
     });
   });
 
-  it('persistValidatedData validates and replaces normalized cv', async () => {
-    normalizedRepo.replaceNormalizedCv.mockResolvedValue(mockCvHeader({ name: 'Import' }));
-
-    const result = await service.persistValidatedData(user, 'cv-1', {
+  it('persistValidatedData validates and replaces the normalized cv', async () => {
+    const created = await create(user, { basics: { name: 'Before' } });
+    const result = await service.persistValidatedData(user, created.id, {
       basics: { name: 'Import' },
     });
-
-    expect(normalizedRepo.replaceNormalizedCv).toHaveBeenCalled();
     expect(result.title).toBe('Import');
-    expect(normalizedRepo.fetchSections).not.toHaveBeenCalled();
+    await expect(
+      service.persistValidatedData(user, created.id, { work: [{ name: 1 }] }),
+    ).rejects.toThrow(BadRequestException);
   });
 
   describe('remove', () => {
-    it('deletes cv row', async () => {
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        delete: jest.fn(() => ({
-          eq: jest.fn(() => ({
-            select: jest.fn(() => ({
-              maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'cv-1' }, error: null }),
-            })),
-          })),
-        })),
-      }));
-
-      await expect(service.remove(user, 'cv-1')).resolves.toBeUndefined();
+    it('deletes the cv row', async () => {
+      const created = await create(user, { basics: { name: 'Jane' } });
+      await expect(service.remove(user, created.id)).resolves.toBeUndefined();
+      await expect(service.findOne(user, created.id)).rejects.toThrow(NotFoundException);
     });
 
-    it('throws BadRequestException when delete fails', async () => {
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        delete: jest.fn(() => ({
-          eq: jest.fn(() => ({
-            select: jest.fn(() => ({
-              maybeSingle: jest
-                .fn()
-                .mockResolvedValue({ data: null, error: { message: 'delete fail' } }),
-            })),
-          })),
-        })),
-      }));
-
-      await expect(service.remove(user, 'cv-1')).rejects.toThrow(BadRequestException);
-    });
-
-    it('throws NotFoundException when delete returns no row', async () => {
-      (supabaseStub as { from: jest.Mock }).from = jest.fn(() => ({
-        delete: jest.fn(() => ({
-          eq: jest.fn(() => ({
-            select: jest.fn(() => ({
-              maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-            })),
-          })),
-        })),
-      }));
-
-      await expect(service.remove(user, 'missing')).rejects.toThrow(NotFoundException);
+    it('throws NotFound for missing or foreign CVs', async () => {
+      const created = await create(user, { basics: { name: 'Jane' } });
+      await expect(service.remove(other, created.id)).rejects.toThrow(NotFoundException);
+      await expect(service.remove(user, MISSING_ID)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(user, created.id)).resolves.toBeDefined();
     });
   });
 });
