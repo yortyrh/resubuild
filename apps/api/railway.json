@@ -5,6 +5,7 @@
   },
   "deploy": {
     "startCommand": "node apps/api/dist/main",
-    "healthcheckPath": "/_health"
+    "healthcheckPath": "/_health",
+    "preDeployCommand": ["node packages/db/dist/migrate.js"]
   }
 }

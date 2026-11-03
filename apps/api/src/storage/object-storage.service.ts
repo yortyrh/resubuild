@@ -8,7 +8,12 @@ import {
   type S3ClientConfig,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  type OnApplicationBootstrap,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 export interface ObjectStorageConfig {
@@ -64,14 +69,31 @@ function isNotFound(error: unknown): boolean {
  * private: clients only get bytes through the API or short-lived presigned URLs.
  */
 @Injectable()
-export class ObjectStorageService {
+export class ObjectStorageService implements OnApplicationBootstrap {
   private readonly logger = new Logger(ObjectStorageService.name);
   private readonly settings: ObjectStorageConfig | null;
   private client: S3Client | null = null;
   private presignClient: S3Client | null = null;
 
-  constructor(configService: ConfigService) {
+  constructor(private readonly configService: ConfigService) {
     this.settings = readObjectStorageConfig(configService);
+  }
+
+  /**
+   * With `S3_AUTO_CREATE_BUCKETS=true`, creates MEDIA_BUCKET and
+   * MCP_EXPORT_BUCKET when missing (self-hosted storage). Managed services
+   * usually provision buckets out of band, so this is off by default.
+   */
+  async onApplicationBootstrap(): Promise<void> {
+    if (this.configService.get<string>('S3_AUTO_CREATE_BUCKETS')?.trim() !== 'true') return;
+    if (!this.settings) return;
+    const buckets = ['MEDIA_BUCKET', 'MCP_EXPORT_BUCKET']
+      .map((key) => this.configService.get<string>(key)?.trim())
+      .filter((bucket): bucket is string => Boolean(bucket));
+    for (const bucket of new Set(buckets)) {
+      await this.ensureBucket(bucket);
+      this.logger.log(`Bucket ready: ${bucket}`);
+    }
   }
 
   isConfigured(): boolean {

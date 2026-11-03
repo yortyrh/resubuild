@@ -133,6 +133,32 @@ describe('ObjectStorageService', () => {
     );
   });
 
+  it('creates the configured buckets on bootstrap only when S3_AUTO_CREATE_BUCKETS=true', async () => {
+    send.mockResolvedValue({});
+    await new ObjectStorageService(
+      config({ ...BASE_ENV, MEDIA_BUCKET: 'media' }),
+    ).onApplicationBootstrap();
+    expect(send).not.toHaveBeenCalled();
+
+    await new ObjectStorageService(
+      config({ S3_AUTO_CREATE_BUCKETS: 'true' }),
+    ).onApplicationBootstrap();
+    expect(send).not.toHaveBeenCalled();
+
+    await new ObjectStorageService(
+      config({
+        ...BASE_ENV,
+        S3_AUTO_CREATE_BUCKETS: 'true',
+        MEDIA_BUCKET: 'media',
+        MCP_EXPORT_BUCKET: 'mcp-exports',
+      }),
+    ).onApplicationBootstrap();
+    expect(send.mock.calls.map((c) => (c[0] as HeadBucketCommand).input.Bucket)).toEqual([
+      'media',
+      'mcp-exports',
+    ]);
+  });
+
   it('ensureBucket creates the bucket only when HeadBucket says it is missing', async () => {
     const storage = new ObjectStorageService(config(BASE_ENV));
     send.mockResolvedValueOnce({});

@@ -14,8 +14,6 @@ permissions:
   contents: read
 
 env:
-  NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: anon-ci-placeholder-key
   NEXT_PUBLIC_API_URL: http://localhost:3001
 
 jobs:
@@ -52,3 +50,19 @@ jobs:
         uses: rharkor/caching-for-turbo@v2.3.12
       - run: pnpm test
       - run: pnpm build
+
+  e2e:
+    name: API e2e (Testcontainers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-monorepo
+        id: setup-monorepo
+      - run: pnpm install --frozen-lockfile
+        if: steps.setup-monorepo.outputs.node-modules-cache-hit != 'true'
+      - name: Cache for Turbo
+        uses: rharkor/caching-for-turbo@v2.3.12
+      # Workspace packages the API imports at runtime (db, email templates, …).
+      - run: pnpm turbo run build --filter=@resubuild/api^...
+      # Starts Postgres, S3 storage and Mailpit containers (runner Docker).
+      - run: pnpm test:e2e

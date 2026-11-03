@@ -3,7 +3,7 @@
 /**
  * scripts/setup-prod-env.mjs
  *
- * Deterministic generator for the release-1 .env.prod file.
+ * Deterministic generator for the production .env.prod file.
  *
  * Usage:
  *   node scripts/setup-prod-env.mjs                    # interactive prompts
@@ -16,6 +16,8 @@
  * Guards:
  *   - Refuses to overwrite a git-tracked file
  *   - Refuses to write a placeholder AI_AGENT_ENCRYPTION_KEY (unless --force)
+ *   - Auto-generates BETTER_AUTH_SECRET, MCP_KEY_PEPPER and AI_AGENT_ENCRYPTION_KEY
+ *     when absent (interactive mode)
  *   - Atomic write: write to <output>.tmp then rename
  *   - No-follow symlink on output path
  */
@@ -29,6 +31,7 @@ import { fileURLToPath } from 'node:url';
 import {
   ALLOWED_DEPLOY_TARGETS,
   applyDefaults,
+  GENERATED_SECRET_KEYS,
   MANIFEST_SCHEMA,
   parseManifest,
   resolveTarget,
@@ -177,19 +180,40 @@ async function interactiveCollect() {
   const manifest = {};
 
   const groups = [
+    { title: 'Database', keys: ['DATABASE_URL'] },
     {
-      title: 'Supabase',
+      title: 'Object storage (S3 API)',
       keys: [
-        'SUPABASE_URL',
-        'SUPABASE_ANON_KEY',
-        'SUPABASE_SERVICE_ROLE_KEY',
-        'SUPABASE_JWT_SECRET',
+        'S3_ENDPOINT',
+        'S3_REGION',
+        'S3_ACCESS_KEY_ID',
+        'S3_SECRET_ACCESS_KEY',
+        'MEDIA_BUCKET',
+        'MCP_EXPORT_BUCKET',
       ],
     },
-    { title: 'Storage', keys: ['MEDIA_BUCKET', 'MCP_EXPORT_BUCKET'] },
+    {
+      title: 'Email (SMTP)',
+      keys: ['SMTP_URL', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD', 'MAIL_FROM'],
+    },
     {
       title: 'Server',
       keys: ['PORT', 'CORS_ORIGIN', 'APP_URL', 'PUBLIC_API_URL'],
+    },
+    {
+      title: 'Auth',
+      keys: [
+        'BETTER_AUTH_SECRET',
+        'AUTH_FORGOT_PASSWORD_ENABLED',
+        'AUTH_EMAIL_VERIFICATION_ENABLED',
+        'AUTH_PASSWORDLESS_ENABLED',
+        'GITHUB_CLIENT_ID',
+        'GITHUB_CLIENT_SECRET',
+        'GOOGLE_CLIENT_ID',
+        'GOOGLE_CLIENT_SECRET',
+        'LINKEDIN_CLIENT_ID',
+        'LINKEDIN_CLIENT_SECRET',
+      ],
     },
     { title: 'Web', keys: ['NEXT_PUBLIC_API_URL'] },
     {
@@ -318,16 +342,31 @@ async function run(manifest, options) {
   // 1. Apply defaults for optional keys
   const { appliedDefaults } = applyDefaults(manifest);
 
-  // 2. Auto-generate AI_AGENT_ENCRYPTION_KEY if absent or empty
+  // 2. Auto-generate missing secrets
   const generatedKeys = new Set(appliedDefaults);
   const placeholderKeys = new Set();
 
-  if (!manifest.AI_AGENT_ENCRYPTION_KEY || manifest.AI_AGENT_ENCRYPTION_KEY === '') {
-    const generated = randomBytes(32).toString('base64');
-    manifest.AI_AGENT_ENCRYPTION_KEY = generated;
-    generatedKeys.add('AI_AGENT_ENCRYPTION_KEY');
-  } else if (manifest.AI_AGENT_ENCRYPTION_KEY === 'change-me-to-a-long-random-secret' && force) {
+  for (const key of GENERATED_SECRET_KEYS) {
+    if (!manifest[key]) {
+      manifest[key] = randomBytes(key === 'AI_AGENT_ENCRYPTION_KEY' ? 32 : 48).toString(
+        'base64url',
+      );
+      generatedKeys.add(key);
+    }
+  }
+  if (manifest.AI_AGENT_ENCRYPTION_KEY === 'change-me-to-a-long-random-secret' && force) {
     placeholderKeys.add('AI_AGENT_ENCRYPTION_KEY');
+  }
+
+  // 2b. Web auth flags mirror the API flags (single source of truth)
+  for (const flag of ['FORGOT_PASSWORD', 'EMAIL_VERIFICATION', 'PASSWORDLESS']) {
+    const value = manifest[`AUTH_${flag}_ENABLED`];
+    if (value !== undefined) manifest[`NEXT_PUBLIC_AUTH_${flag}_ENABLED`] = value;
+  }
+  for (const provider of ['GITHUB', 'GOOGLE', 'LINKEDIN']) {
+    manifest[`NEXT_PUBLIC_AUTH_${provider}_OAUTH_ENABLED`] = String(
+      Boolean(manifest[`${provider}_CLIENT_ID`] && manifest[`${provider}_CLIENT_SECRET`]),
+    );
   }
 
   // 3. Validate
@@ -350,7 +389,7 @@ async function run(manifest, options) {
   if (!dryRun) {
     if (isGitTracked(absOutput)) {
       console.error(`error: ${absOutput} is tracked by git; remove it from the index first`);
-      console.error('see README.md "Release 1: cloud Supabase + docker compose"');
+      console.error('see README.md "Deploy"');
       process.exit(1);
     }
   }
@@ -441,19 +480,28 @@ if (options.from) {
       console.error(`error: manifest not found: ${absFrom}`);
       console.error('');
       console.error('  The manifest file is gitignored (it contains secrets). Create it at the');
-      console.error('  repo root with at minimum the required Supabase credentials, then re-run');
+      console.error('  repo root with at minimum the required keys, then re-run');
       console.error('  this command. Template:');
       console.error('');
       console.error('    {');
-      console.error('      "SUPABASE_URL": "https://xxxx.supabase.co",');
-      console.error('      "SUPABASE_ANON_KEY": "eyJ...",');
-      console.error('      "SUPABASE_SERVICE_ROLE_KEY": "eyJ...",');
+      console.error(
+        '      "DATABASE_URL": "postgresql://user:pass@host:5432/resubuild?sslmode=require",',
+      );
+      console.error('      "S3_ENDPOINT": "https://nyc3.digitaloceanspaces.com",');
+      console.error('      "S3_ACCESS_KEY_ID": "...",');
+      console.error('      "S3_SECRET_ACCESS_KEY": "...",');
       console.error('      "MEDIA_BUCKET": "media",');
       console.error('      "MCP_EXPORT_BUCKET": "mcp-exports",');
       console.error('      "CORS_ORIGIN": "https://app.example.com",');
       console.error('      "APP_URL": "https://app.example.com",');
       console.error('      "PUBLIC_API_URL": "https://api.example.com",');
       console.error('      "NEXT_PUBLIC_API_URL": "https://api.example.com",');
+      console.error('      "SMTP_URL": "smtps://user:pass@smtp.example.com:465",');
+      console.error('      "MAIL_FROM": "Resubuild <no-reply@example.com>",');
+      console.error(
+        '      "BETTER_AUTH_SECRET": "LEAVE_BLANK_FOR_AUTO_GENERATION_OR_PASTE_48_RANDOM_CHARS",',
+      );
+      console.error('      "MCP_KEY_PEPPER": "LEAVE_BLANK_FOR_AUTO_GENERATION",');
       console.error(
         '      "AI_AGENT_ENCRYPTION_KEY": "REPLACE_WITH_REAL_KEY_OR_LEAVE_BLANK_FOR_AUTO_GENERATION"',
       );
@@ -464,18 +512,22 @@ if (options.from) {
       console.error('  you can omit them from the manifest if your services already have');
       console.error('  those domains attached.');
       console.error('');
-      console.error('  See README.md ("Release 1" and "Deploy to Railway") for the full');
+      console.error('  See README.md ("Deploy") for the full');
       console.error('  workflow.');
       process.exit(1);
     }
     throw err;
   }
 
-  // When using --from, AI_AGENT_ENCRYPTION_KEY must be present (CI determinism)
-  if (!manifest.AI_AGENT_ENCRYPTION_KEY && !options.force) {
-    console.error(`error: AI_AGENT_ENCRYPTION_KEY is missing from manifest and --from is in use.`);
-    console.error('  Either supply AI_AGENT_ENCRYPTION_KEY in the manifest,');
-    console.error('  or run interactively (no --from) to auto-generate it.');
+  // When using --from, secrets must be present (CI determinism: re-running must
+  // not rotate them and sign everyone out / invalidate stored keys).
+  const missingSecrets = GENERATED_SECRET_KEYS.filter((key) => !manifest[key]);
+  if (missingSecrets.length > 0 && !options.force) {
+    console.error(
+      `error: ${missingSecrets.join(', ')} missing from manifest and --from is in use.`,
+    );
+    console.error('  Either supply them in the manifest,');
+    console.error('  or run interactively (no --from) to auto-generate them.');
     process.exit(1);
   }
 } else {

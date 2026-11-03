@@ -6,34 +6,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Resubuild: JSON Resume–based CV builder with AI import (PDF/DOCX/image/URL), MIT-format preview, PDF export, job-application tailoring, and an MCP server. pnpm + Turborepo monorepo, Node 26.x LTS managed by pnpm: root `package.json` `devEngines.runtime` pins the version, pnpm downloads it and runs every script with it, and `pnpm verify` enforces it via `scripts/check-node-version.mjs`. Upgrade with `pnpm runtime set node lts`, then bump `engines.node`, `.nvmrc` (editors/CI), `apps/{api,web}/Dockerfile` base images and `@types/node` together.
 
-- `apps/web` — Next.js App Router UI. Route groups `(auth)`, `(marketing)`, `auth/` (callbacks), `dashboard/{cv,applications,templates,settings}`, `features`. Bearer token lives in `sessionStorage`; all API calls go through `src/lib/api.ts` to `NEXT_PUBLIC_API_URL`. Server-state hooks in `src/lib/queries`.
-- `apps/api` — NestJS 11 REST API (port 3001). Feature modules under `src/`: `auth`, `cv` (CRUD, items, clone, template presentation), `import` (async import jobs), `import-llm-config` / `ai-agent` (per-user LLM settings), `application` (job-application prep), `cv-export` / `export-storage` (Puppeteer PDF), `media`, `web-scrape`, `mcp` (MCP server via `@rekog/mcp-nest`, per-user API key), `supabase` (service-role client), `validation` (AJV).
+- `apps/web` — Next.js App Router UI. Route groups `(auth)`, `(marketing)`, `auth/` (callbacks), `dashboard/{cv,applications,templates,settings}`, `features`. Bearer session token lives in `localStorage` (`src/lib/auth-session.ts`); Better Auth endpoints go through `src/lib/auth/client.ts`, everything else through `src/lib/api.ts`, both to `NEXT_PUBLIC_API_URL`. Server-state hooks in `src/lib/queries`.
+- `apps/api` — NestJS 11 REST API (port 3001). Feature modules under `src/`: `auth` (Better Auth at `/api/auth/*`, `SessionAuthGuard`, OAuth handoff), `database` (Drizzle pool, `DbScope`), `storage` (S3 `ObjectStorageService`), `mail` (SMTP `MailService`), `cv` (CRUD, items, clone, template presentation), `import` (async import jobs), `import-llm-config` / `ai-agent` (per-user LLM settings), `application` (job-application prep), `cv-export` / `export-storage` (Puppeteer PDF), `media`, `web-scrape`, `mcp` (MCP server via `@rekog/mcp-nest`, per-user API key), `validation` (AJV).
 - `apps/import-agent` — Mastra workflow for resume import; consumed by `apps/api`.
-- `packages/schemas` (JSON Resume schema), `types` (shared TS types), `resume-template` (HTML renderer shared by web preview and API PDF export), `import-models` (pinned Mastra provider/model catalog).
-- `supabase/migrations` — Postgres schema. `public.cv` and related tables are protected by RLS (`auth.uid() = user_id`).
+- `packages/db` (Drizzle schema, SQL migrations in `packages/db/migrations`, PGlite test helper `@resubuild/db/testing`), `email-templates` (React Email), `schemas` (JSON Resume schema), `types` (shared TS types), `resume-template` (HTML renderer shared by web preview and API PDF export), `import-models` (pinned Mastra provider/model catalog).
+- Backing services are plain Postgres (`DATABASE_URL`), S3-compatible storage (`S3_*`) and SMTP (`SMTP_*`). Local dev runs them from `docker-compose.dev.yml`.
 
 ## Architecture notes
 
-- **Supabase key boundary:** the web bundle uses only the _publishable_ key, and only for auth flows. The service-role key is API-only. `apps/web/src/lib/web-bundle-security.test.ts` fails if web code references the service-role key, imports `apps/api/src/cv/**` / `database/**`, or uses the Supabase client outside the auth-flow allowlist.
-- **Auth:** API issues/validates Bearer tokens (`apps/api/src/auth`, Supabase guard). Optional features (email verification, passwordless, password recovery, GitHub/Google/LinkedIn OAuth) are toggled by `NEXT_PUBLIC_AUTH_*` flags in `apps/web/.env`.
-- **Email verification has two knobs** to keep in sync by hand: `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED` (web env) and `[auth.email].enable_confirmations` in `supabase/config.toml`. `pnpm setup:env` defaults both equal.
-- Local auth email is captured by Mailpit at http://127.0.0.1:54324.
+- **Server boundary:** the web bundle talks to the API over HTTP only. `apps/web/src/lib/web-bundle-security.test.ts` fails if web code references server secrets (`DATABASE_URL`, `S3_*`, `BETTER_AUTH_SECRET`…), imports `@resubuild/db`, `pg`, `drizzle-orm`, `@aws-sdk/*`, `nodemailer`, server `better-auth`, `@supabase/*`, or reaches into `apps/api`.
+- **User isolation is in the API, not the database:** there is no RLS. Every repository query must filter by `user_id` (via `CvNormalizedRepository.scopeFor(user)` / `DbScope`, or the owning `cv`). Add a cross-user test when adding a query. Repository specs run on PGlite (`useTestDb()` in `apps/api/src/database/test-db.helpers.ts`).
+- **Auth:** Better Auth inside the API (`apps/api/src/auth/better-auth.ts`), sessions in Postgres, bearer plugin (`set-auth-token` header). Optional flows are toggled by `AUTH_*_ENABLED` and `<PROVIDER>_CLIENT_ID/SECRET` in `apps/api/.env` (the source of truth; disabled flows are not served). The web mirrors them as `NEXT_PUBLIC_AUTH_*`, and `pnpm setup:env` / `setup:env:prod` derive the mirrors. OAuth starts at `GET /auth/oauth/:provider` on the API and hands the session to the SPA with a one-time code (`/auth/callback`).
+- **Email:** `MailService` sends over SMTP; templates are in `packages/email-templates` (React Email). Local mail is captured by Mailpit at http://127.0.0.1:54424.
 - Per-user AI settings (provider/model/API key) are stored encrypted with `AI_AGENT_ENCRYPTION_KEY` (generated by `pnpm setup:env`).
 - **Env vars:** any new key in `apps/{api,web}/.env.example` must be registered in `scripts/lib/env-prod-schema.mjs` (checked by `pnpm env-schema:check`, runs on pre-push). That schema also drives `pnpm setup:env:prod`.
-- **Deploy:** docker compose (`docker-compose.prod.yml`, `.env.prod`) or Railway (`apps/{api,web}/railway.json`, same Dockerfiles). Details in README.
+- **Schema changes:** edit `packages/db/src/schema`, run `pnpm db:generate`, commit the SQL in `packages/db/migrations`. Deploys run `node packages/db/dist/migrate.js` before the API starts.
+- **Deploy:** docker compose (`docker-compose.prod.yml`, `.env.prod`; `migrate` one-shot service, optional `selfhost` profile) or Railway (`apps/{api,web}/railway.json`, same Dockerfiles, pre-deploy migrations). Moving data off an old Supabase deployment: `pnpm migrate:from-supabase`. Details in README.
 - **Product requirements:** `docs/requirements/<area>.md` (stable `REQ-<AREA>-NNN` ids, no change history; git is the history). Read only the area you touch; when behavior changes, update the matching requirement in the same commit. API E2E catalog: `apps/api/test/e2e/README.md`.
 - **pnpm version** is pinned in root `package.json` (`packageManager`) and again in `apps/{api,web}/Dockerfile` (`npm install -g pnpm@…`; Node 25+ images no longer ship corepack); bump them together.
 
 ## Commands
 
-Setup (local Supabase required): `pnpm install && supabase start && pnpm setup:env && pnpm samples:seed`. Dev login: `developer@resubuild.local`, password via `pnpm local:credentials`.
+Setup (Docker or Podman required): `pnpm install && pnpm infra:up && pnpm setup:env && pnpm samples:seed`. `pnpm infra:down` / `infra:reset` stop or wipe the stack (Postgres :54432, S3 :54490, Mailpit :54424). Dev login: `developer@resubuild.local`, password via `pnpm local:credentials`.
 
 - `pnpm dev` — web :3000 + api :3001 (`dev:web`, `dev:api` individually)
 - `pnpm verify` — full CI pipeline (format:check, biome lint, typecheck, tests, build); also the pre-push hook
 - `pnpm lint` / `lint:fix` (Biome), `pnpm format` / `format:check` (Prettier), `pnpm typecheck`
 - `pnpm test` — unit tests across workspaces (Jest in api, Vitest elsewhere) plus root script tests (`vitest.config.mjs`)
-- `pnpm test:e2e` — Nest in-process integration tests against local Supabase (needs `samples:seed`)
-- `pnpm samples:pdf` — regenerate sample PDFs; `pnpm samples:seed` — re-seed after `supabase db reset`
+- `pnpm test:e2e` — Nest in-process integration tests; Testcontainers starts throw-away Postgres/S3/Mailpit, migrates and seeds (only Docker needed)
+- `pnpm samples:pdf` — regenerate sample PDFs; `pnpm samples:seed` — re-seed after `pnpm infra:reset`
+- `pnpm db:migrate` / `pnpm db:generate` — apply / create Drizzle migrations
 
 Single tests:
 

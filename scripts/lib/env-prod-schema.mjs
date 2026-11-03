@@ -20,40 +20,117 @@ export const ALLOWED_DEPLOY_TARGETS = /** @type {const} */ (['docker-compose', '
 
 /** @type {Record<string, { required: boolean, secret?: boolean, description: string, group: string, default?: string }>} */
 export const MANIFEST_SCHEMA = {
-  // Supabase — all required
-  SUPABASE_URL: {
-    required: true,
-    description: 'Supabase project URL (from Project Settings → API)',
-    group: 'Supabase',
-  },
-  SUPABASE_ANON_KEY: {
-    required: true,
-    description: 'Supabase anon/public key (from Project Settings → API)',
-    group: 'Supabase',
-  },
-  SUPABASE_SERVICE_ROLE_KEY: {
+  // Database
+  DATABASE_URL: {
     required: true,
     secret: true,
     description:
-      'Supabase service role key (from Project Settings → API — server-only, never expose)',
-    group: 'Supabase',
+      'Postgres connection string (postgresql://user:pass@host:5432/db?sslmode=require). Any Postgres 15+: Railway, DigitalOcean, AWS RDS, self-hosted.',
+    group: 'Database',
   },
-  SUPABASE_JWT_SECRET: {
+  DATABASE_POOL_MAX: {
     required: false,
-    description: 'Optional legacy JWT secret (Supabase Dashboard → Authentication → JWT Settings)',
-    group: 'Supabase',
+    description: 'Maximum connections in the API pool (default 10)',
+    group: 'Database',
   },
 
-  // Storage
+  // Object storage (S3 API)
+  S3_ENDPOINT: {
+    required: false,
+    description:
+      'S3-compatible endpoint (DigitalOcean Spaces, Railway Buckets, MinIO, R2…). Leave empty for AWS S3.',
+    group: 'Storage',
+  },
+  S3_PUBLIC_ENDPOINT: {
+    required: false,
+    description:
+      'Endpoint used to sign download URLs given to clients (defaults to S3_ENDPOINT; set when the API reaches storage on an internal host)',
+    group: 'Storage',
+  },
+  S3_REGION: {
+    required: false,
+    description: 'Bucket region (default us-east-1)',
+    group: 'Storage',
+    default: 'us-east-1',
+  },
+  S3_ACCESS_KEY_ID: {
+    required: true,
+    secret: true,
+    description: 'Access key id with read/write access to both buckets',
+    group: 'Storage',
+  },
+  S3_SECRET_ACCESS_KEY: {
+    required: true,
+    secret: true,
+    description: 'Secret access key for S3_ACCESS_KEY_ID',
+    group: 'Storage',
+  },
+  S3_FORCE_PATH_STYLE: {
+    required: false,
+    description:
+      'Path-style bucket addressing (default: true when S3_ENDPOINT is set, false for AWS)',
+    group: 'Storage',
+  },
+  S3_AUTO_CREATE_BUCKETS: {
+    required: false,
+    description:
+      'Create MEDIA_BUCKET and MCP_EXPORT_BUCKET at API start when missing (true for the selfhost compose profile; default false)',
+    group: 'Storage',
+  },
   MEDIA_BUCKET: {
     required: true,
-    description: 'Supabase Storage bucket name for resume media uploads',
+    description: 'Private bucket for resume media uploads',
     group: 'Storage',
   },
   MCP_EXPORT_BUCKET: {
     required: true,
-    description: 'Supabase Storage bucket name for MCP export artifacts',
+    description: 'Private bucket for MCP export artifacts',
     group: 'Storage',
+  },
+
+  // Email (SMTP)
+  SMTP_URL: {
+    required: false,
+    secret: true,
+    description:
+      'SMTP connection URL (smtp://user:pass@host:587 or smtps://…:465). Alternative to SMTP_HOST/PORT/USER/PASSWORD.',
+    group: 'Email',
+  },
+  SMTP_HOST: {
+    required: false,
+    description: 'SMTP server host (SES, Postmark, Resend, Mailgun, Brevo, your own MTA…)',
+    group: 'Email',
+  },
+  SMTP_PORT: {
+    required: false,
+    description: 'SMTP port (default 587; 465 implies TLS)',
+    group: 'Email',
+  },
+  SMTP_SECURE: {
+    required: false,
+    description: 'Use implicit TLS (default: true only on port 465)',
+    group: 'Email',
+  },
+  SMTP_USER: {
+    required: false,
+    description: 'SMTP username',
+    group: 'Email',
+  },
+  SMTP_PASSWORD: {
+    required: false,
+    secret: true,
+    description: 'SMTP password or API key',
+    group: 'Email',
+  },
+  MAIL_FROM: {
+    required: true,
+    description: 'Sender for transactional email, e.g. "Resubuild <no-reply@example.com>"',
+    group: 'Email',
+  },
+  APP_NAME: {
+    required: false,
+    description: 'Product name used in email templates (default Resubuild)',
+    group: 'Email',
   },
 
   // Server
@@ -74,13 +151,88 @@ export const MANIFEST_SCHEMA = {
     description: 'Public URL of the web application',
     group: 'Server',
   },
+  WEB_URL: {
+    required: false,
+    description:
+      'Public URL of the web app used in email links and OAuth redirects (defaults to APP_URL)',
+    group: 'Server',
+  },
   PUBLIC_API_URL: {
     required: true,
     description: 'Public URL the API is reachable at (used in media src attributes)',
     group: 'Server',
   },
 
-  // Web (Next.js)
+  // Auth (Better Auth)
+  BETTER_AUTH_SECRET: {
+    required: true,
+    secret: true,
+    description:
+      'Signs session tokens (≥32 random characters; auto-generated if absent in interactive mode). Rotating it signs everyone out.',
+    group: 'Auth',
+  },
+  BETTER_AUTH_URL: {
+    required: false,
+    description:
+      'Public API base URL for auth callbacks (defaults to PUBLIC_API_URL). OAuth redirect URI: <BETTER_AUTH_URL>/api/auth/callback/<provider>',
+    group: 'Auth',
+  },
+  AUTH_FORGOT_PASSWORD_ENABLED: {
+    required: false,
+    description:
+      'Enable forgot/reset password (default false). Mirror: NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED.',
+    group: 'Auth',
+    default: 'false',
+  },
+  AUTH_EMAIL_VERIFICATION_ENABLED: {
+    required: false,
+    description:
+      'Require email verification before password sign-in (default false). Mirror: NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED.',
+    group: 'Auth',
+    default: 'false',
+  },
+  AUTH_PASSWORDLESS_ENABLED: {
+    required: false,
+    description:
+      'Enable magic link + email code sign-in (default false). Mirror: NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED.',
+    group: 'Auth',
+    default: 'false',
+  },
+  GITHUB_CLIENT_ID: {
+    required: false,
+    description: 'GitHub OAuth app client id (provider enabled when id and secret are set)',
+    group: 'Auth',
+  },
+  GITHUB_CLIENT_SECRET: {
+    required: false,
+    secret: true,
+    description: 'GitHub OAuth app client secret',
+    group: 'Auth',
+  },
+  GOOGLE_CLIENT_ID: {
+    required: false,
+    description: 'Google OAuth client id',
+    group: 'Auth',
+  },
+  GOOGLE_CLIENT_SECRET: {
+    required: false,
+    secret: true,
+    description: 'Google OAuth client secret',
+    group: 'Auth',
+  },
+  LINKEDIN_CLIENT_ID: {
+    required: false,
+    description: 'LinkedIn (OpenID Connect) client id',
+    group: 'Auth',
+  },
+  LINKEDIN_CLIENT_SECRET: {
+    required: false,
+    secret: true,
+    description: 'LinkedIn client secret',
+    group: 'Auth',
+  },
+
+  // Web (Next.js) — inlined at build time
   NEXT_PUBLIC_API_URL: {
     required: true,
     description:
@@ -90,103 +242,49 @@ export const MANIFEST_SCHEMA = {
   NEXT_PUBLIC_APP_URL: {
     required: false,
     description:
-      'Public origin of the web app (used for Supabase OAuth redirectTo and emailRedirectTo). MUST match the value in [auth].additional_redirect_urls of the Supabase project. Leave blank in local dev to fall back to window.location.origin.',
+      'Public origin of the web app (password-reset redirectTo). Leave blank in local dev to fall back to window.location.origin.',
     group: 'Web',
   },
-  // Browser Supabase client (mirrors the server-side Supabase keys; the
-  // publishable key is the only one safe in a client bundle).
-  NEXT_PUBLIC_SUPABASE_URL: {
-    required: true,
-    description:
-      'Supabase project URL for the browser Supabase client (mirror of SUPABASE_URL, exposed via NEXT_PUBLIC_ for the web bundle)',
-    group: 'Web',
-  },
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: {
-    required: true,
-    description:
-      'Supabase publishable key for the browser Supabase client (the only Supabase key safe in client bundles; used for passwordless, OTP, session management)',
-    group: 'Web',
-  },
-
-  // Auth feature flags. The server-side `AUTH_FORGOT_PASSWORD_ENABLED`
-  // gates the server-side ForgotPasswordEnabledGuard. The passwordless /
-  // email-verification flags are web-only and exposed
-  // via the matching `NEXT_PUBLIC_*` mirrors below — they are
-  // resolved at build time by `apps/web/src/lib/auth/features.ts`
-  // (the previous `GET /auth/features` endpoint was removed to
-  // eliminate the layout shift the round-trip caused on every auth
-  // navigation). The [auth.email].enable_confirmations dependency
-  // remains relevant for AUTH_EMAIL_VERIFICATION_ENABLED.
-  AUTH_FORGOT_PASSWORD_ENABLED: {
-    required: false,
-    description:
-      'Enable the forgot-password / reset-password server-side guard (default false). Mirror on the web side as NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED so the SPA can render the matching control.',
-    group: 'Auth',
-    default: 'false',
-  },
-  // Web-side mirrors of the auth capability flags. Resolved by
-  // `apps/web/src/lib/auth/features.ts` at build time from
-  // process.env. Defaults to false so a misconfigured deployment
-  // does not accidentally expose opt-in features.
   NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED: {
     required: false,
-    description:
-      'Web mirror of AUTH_FORGOT_PASSWORD_ENABLED. When true, the SPA renders the "Forgot password?" link. Default false.',
+    description: 'Web mirror of AUTH_FORGOT_PASSWORD_ENABLED (renders "Forgot password?")',
     group: 'Web',
     default: 'false',
   },
   NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED: {
     required: false,
-    description:
-      'Enable email verification on signup (default false). MUST be kept in sync with [auth.email].enable_confirmations in supabase/config.toml — the generator does not auto-sync them.',
+    description: 'Web mirror of AUTH_EMAIL_VERIFICATION_ENABLED',
     group: 'Web',
     default: 'false',
   },
   NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED: {
     required: false,
-    description: 'Enable passwordless sign-in (magic link + OTP, default false).',
+    description: 'Web mirror of AUTH_PASSWORDLESS_ENABLED',
     group: 'Web',
     default: 'false',
   },
-  // Web-only mirror of the GitHub OAuth feature flag. When true, the
-  // SPA renders the "Continue with GitHub" button on /login and /register.
-  // The actual provider liveness is controlled by the
-  // `[auth.external.github]` block in supabase/config.toml (env vars
-  // GITHUB_OAUTH_CLIENT_ID and GITHUB_OAUTH_SECRET). Both knobs must be
-  // enabled for a real sign-in; setting just the SPA flag without the
-  // Supabase-side credentials results in a "Sign-in failed" toast at
-  // click time. See apps/web/src/lib/auth/features.ts.
   NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED: {
     required: false,
-    description:
-      'Render the "Continue with GitHub" button on /login and /register (default false). MUST be paired with real GITHUB_OAUTH_CLIENT_ID / GITHUB_OAUTH_SECRET in supabase/.env (or the Supabase Cloud dashboard) for sign-in to succeed.',
+    description: 'Render "Continue with GitHub" (needs GITHUB_CLIENT_ID/SECRET on the API)',
     group: 'Web',
     default: 'false',
   },
-  // Web-only mirror of the Google OAuth feature flag. When true, the
-  // SPA renders the "Continue with Google" button on /login and /register.
-  // The actual provider liveness is controlled by the
-  // `[auth.external.google]` block in supabase/config.toml (env vars
-  // GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_SECRET). Both knobs must be
-  // enabled for a real sign-in; setting just the SPA flag without the
-  // Supabase-side credentials results in a "Sign-in failed" toast at
-  // click time. See apps/web/src/lib/auth/features.ts.
   NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED: {
     required: false,
-    description:
-      'Render the "Continue with Google" button on /login and /register (default false). MUST be paired with real GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_SECRET in supabase/.env (or the Supabase Cloud dashboard) for sign-in to succeed.',
+    description: 'Render "Continue with Google" (needs GOOGLE_CLIENT_ID/SECRET on the API)',
     group: 'Web',
     default: 'false',
   },
-
-  // Server-side publishable key (used by AuthConfigService as a
-  // fallback for SUPABASE_ANON_KEY validation; required at API boot
-  // regardless of whether the browser client is in use).
-  SUPABASE_PUBLISHABLE_KEY: {
+  NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED: {
     required: false,
-    description:
-      'Supabase publishable key, used server-side by AuthConfigService (falls back to SUPABASE_ANON_KEY when unset). Required at API boot.',
-    group: 'Supabase',
+    description: 'Render "Continue with LinkedIn" (needs LINKEDIN_CLIENT_ID/SECRET on the API)',
+    group: 'Web',
+    default: 'false',
+  },
+  NEXT_PUBLIC_DEV_MAILPIT_URL: {
+    required: false,
+    description: 'Local development only: Mailpit UI linked from auth screens',
+    group: 'Web',
   },
 
   // AI / PDF import
@@ -228,10 +326,10 @@ export const MANIFEST_SCHEMA = {
 
   // MCP server
   MCP_KEY_PEPPER: {
-    required: false,
+    required: true,
     secret: true,
     description:
-      'HMAC pepper for MCP API key hashing (defaults to SUPABASE_SERVICE_ROLE_KEY when unset)',
+      'HMAC pepper for MCP API key hashing (auto-generated if absent in interactive mode). Changing it invalidates existing MCP keys. When migrating from Supabase without MCP_KEY_PEPPER, set it to the old SUPABASE_SERVICE_ROLE_KEY to keep existing keys.',
     group: 'MCP Server',
   },
   MCP_SERVER_ENABLED: {
@@ -242,7 +340,7 @@ export const MANIFEST_SCHEMA = {
   },
   MCP_EXPORT_TTL_SECONDS: {
     required: false,
-    description: 'Signed-URL TTL for MCP CV export in seconds (default 3600)',
+    description: 'Presigned-URL TTL for MCP CV export in seconds (default 3600)',
     group: 'MCP Server',
     default: '3600',
   },
@@ -270,6 +368,99 @@ export const MANIFEST_SCHEMA = {
     group: 'Generator',
   },
 };
+
+/** Secrets the interactive generator creates when absent. */
+export const GENERATED_SECRET_KEYS = /** @type {const} */ ([
+  'BETTER_AUTH_SECRET',
+  'MCP_KEY_PEPPER',
+  'AI_AGENT_ENCRYPTION_KEY',
+]);
+
+/** Output sections of `.env.prod`, in order. */
+export const SERIALIZE_GROUPS = [
+  { title: 'Database', keys: ['DATABASE_URL', 'DATABASE_POOL_MAX'] },
+  {
+    title: 'Object storage (S3 API)',
+    keys: [
+      'S3_ENDPOINT',
+      'S3_PUBLIC_ENDPOINT',
+      'S3_REGION',
+      'S3_ACCESS_KEY_ID',
+      'S3_SECRET_ACCESS_KEY',
+      'S3_FORCE_PATH_STYLE',
+      'S3_AUTO_CREATE_BUCKETS',
+      'MEDIA_BUCKET',
+      'MCP_EXPORT_BUCKET',
+    ],
+  },
+  {
+    title: 'Email (SMTP)',
+    keys: [
+      'SMTP_URL',
+      'SMTP_HOST',
+      'SMTP_PORT',
+      'SMTP_SECURE',
+      'SMTP_USER',
+      'SMTP_PASSWORD',
+      'MAIL_FROM',
+      'APP_NAME',
+    ],
+  },
+  {
+    title: 'Server (NestJS API)',
+    keys: ['PORT', 'CORS_ORIGIN', 'APP_URL', 'WEB_URL', 'PUBLIC_API_URL'],
+  },
+  {
+    title: 'Auth (Better Auth)',
+    keys: [
+      'BETTER_AUTH_SECRET',
+      'BETTER_AUTH_URL',
+      'AUTH_FORGOT_PASSWORD_ENABLED',
+      'AUTH_EMAIL_VERIFICATION_ENABLED',
+      'AUTH_PASSWORDLESS_ENABLED',
+      'GITHUB_CLIENT_ID',
+      'GITHUB_CLIENT_SECRET',
+      'GOOGLE_CLIENT_ID',
+      'GOOGLE_CLIENT_SECRET',
+      'LINKEDIN_CLIENT_ID',
+      'LINKEDIN_CLIENT_SECRET',
+    ],
+  },
+  {
+    title: 'Web (Next.js)',
+    keys: [
+      'NEXT_PUBLIC_API_URL',
+      'NEXT_PUBLIC_APP_URL',
+      'NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED',
+      'NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED',
+      'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED',
+      'NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED',
+      'NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED',
+      'NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED',
+    ],
+  },
+  {
+    title: 'AI / PDF Import',
+    keys: [
+      'AI_AGENT_ENCRYPTION_KEY',
+      'IMPORT_LLM_CONFIG_ENCRYPTION_KEY',
+      'PDF_IMPORT_MAX_BYTES',
+      'PDF_IMPORT_ENABLED',
+      'IMPORT_MODELS_CATALOG_SOURCE',
+    ],
+  },
+  { title: 'PDF Export (Chromium)', keys: ['CHROMIUM_EXECUTABLE_PATH'] },
+  {
+    title: 'MCP Server',
+    keys: [
+      'MCP_KEY_PEPPER',
+      'MCP_SERVER_ENABLED',
+      'MCP_EXPORT_TTL_SECONDS',
+      'MCP_EXPORT_MAX_BYTES',
+    ],
+  },
+  { title: 'Runtime', keys: ['NODE_ENV'] },
+];
 
 const REQUIRED_KEYS = Object.entries(MANIFEST_SCHEMA)
   .filter(([, v]) => v.required)
@@ -374,14 +565,27 @@ export function validateManifest(manifest, opts = {}) {
     }
   }
 
-  // 4. Warn about unknown keys (they pass through silently)
+  // 4. Email delivery needs an SMTP server
+  if (!manifest.SMTP_URL && !manifest.SMTP_HOST) {
+    errors.push(
+      'Configure SMTP: set SMTP_URL, or SMTP_HOST (plus SMTP_PORT/SMTP_USER/SMTP_PASSWORD).',
+    );
+  }
+
+  // 5. Session signing secret strength
+  const authSecret = manifest.BETTER_AUTH_SECRET;
+  if (authSecret && authSecret.length < 32 && !allowPlaceholders) {
+    errors.push('BETTER_AUTH_SECRET must be at least 32 characters.');
+  }
+
+  // 6. Warn about unknown keys (they pass through silently)
   for (const key of Object.keys(manifest)) {
     if (!ALL_KEYS.includes(key)) {
       warnings.push(`Unknown key in manifest: ${key} — this will be written as-is to .env.prod.`);
     }
   }
 
-  // 5. Validate DEPLOY_TARGET against the closed set
+  // 7. Validate DEPLOY_TARGET against the closed set
   if (manifest.DEPLOY_TARGET !== undefined && manifest.DEPLOY_TARGET !== '') {
     if (!ALLOWED_DEPLOY_TARGETS.includes(manifest.DEPLOY_TARGET)) {
       errors.push(
@@ -512,76 +716,12 @@ export function serializeToDotenv(manifest, extras = {}) {
     }
   }
 
-  const groups = [
-    {
-      title: 'Supabase',
-      keys: [
-        'SUPABASE_URL',
-        'SUPABASE_ANON_KEY',
-        'SUPABASE_PUBLISHABLE_KEY',
-        'SUPABASE_SERVICE_ROLE_KEY',
-        'SUPABASE_JWT_SECRET',
-      ],
-    },
-    {
-      title: 'Storage',
-      keys: ['MEDIA_BUCKET', 'MCP_EXPORT_BUCKET'],
-    },
-    {
-      title: 'Server (NestJS API)',
-      keys: ['PORT', 'CORS_ORIGIN', 'APP_URL', 'PUBLIC_API_URL'],
-    },
-    {
-      title: 'Web (Next.js)',
-      keys: [
-        'NEXT_PUBLIC_API_URL',
-        'NEXT_PUBLIC_APP_URL',
-        'NEXT_PUBLIC_SUPABASE_URL',
-        'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
-        'NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED',
-        'NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED',
-        'NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED',
-        'NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED',
-        'NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED',
-      ],
-    },
-    {
-      title: 'Auth (server-side flag)',
-      keys: ['AUTH_FORGOT_PASSWORD_ENABLED'],
-    },
-    {
-      title: 'AI / PDF Import',
-      keys: [
-        'AI_AGENT_ENCRYPTION_KEY',
-        'IMPORT_LLM_CONFIG_ENCRYPTION_KEY',
-        'PDF_IMPORT_MAX_BYTES',
-        'PDF_IMPORT_ENABLED',
-        'IMPORT_MODELS_CATALOG_SOURCE',
-      ],
-    },
-    {
-      title: 'PDF Export (Chromium)',
-      keys: ['CHROMIUM_EXECUTABLE_PATH'],
-    },
-    {
-      title: 'MCP Server',
-      keys: [
-        'MCP_KEY_PEPPER',
-        'MCP_SERVER_ENABLED',
-        'MCP_EXPORT_TTL_SECONDS',
-        'MCP_EXPORT_MAX_BYTES',
-      ],
-    },
-    {
-      title: 'Runtime',
-      keys: ['NODE_ENV'],
-    },
-  ];
+  const groups = SERIALIZE_GROUPS;
 
   /** @type {string[]} */
   const lines = [
     '# Generated by scripts/setup-prod-env.mjs — do not commit to version control.',
-    '# See README.md "Release 1: cloud Supabase + docker compose" for documentation.',
+    '# See README.md "Deploy" for documentation.',
     '',
   ];
 

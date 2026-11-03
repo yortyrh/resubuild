@@ -5,5 +5,5 @@ dist
 coverage
 pnpm-lock.yaml
 *.log
-supabase/.temp/
+supabase/
 **/next-env.d.ts

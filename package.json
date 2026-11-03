@@ -37,7 +37,8 @@
     "infra:reset": "bash scripts/compose.sh down --volumes",
     "infra:logs": "bash scripts/compose.sh logs -f",
     "db:migrate": "pnpm --filter @resubuild/db build && pnpm --filter @resubuild/db db:migrate",
-    "db:generate": "pnpm --filter @resubuild/db db:generate"
+    "db:generate": "pnpm --filter @resubuild/db db:generate",
+    "migrate:from-supabase": "pnpm --filter @resubuild/db build && node scripts/migrate-from-supabase.mjs"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1161.0",

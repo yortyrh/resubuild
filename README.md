@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="https://app.resubuild.dev">app.resubuild.dev</a> · <a href="#local-development-supabase-cli">Run it locally</a> · <a href="https://github.com/yortyrh/resubuild">GitHub</a>
+  <a href="https://app.resubuild.dev">app.resubuild.dev</a> · <a href="#local-development-docker">Run it locally</a> · <a href="https://github.com/yortyrh/resubuild">GitHub</a>
 </p>
 
 ![Resubuild banner — AI Resume Builder & Tailoring](./apps/web/public/resubuild-banner.jpg)
@@ -31,115 +31,72 @@ The public marketing entry is **`/`** — a landing page that demonstrates the P
 
 ## For developers
 
-Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authentication + schema validation), and **Supabase Postgres** (RLS-protected storage). Auth is **API-issued Bearer tokens** (JSON over CORS). The web bundle embeds the **Supabase publishable client** (`@supabase/supabase-js`) **only** for the auth flows (see [`docs/requirements/auth.md`](docs/requirements/auth.md)) — the **publishable key** is the only Supabase key allowed in client bundles; **service-role keys remain server-only** (see [`apps/web/src/lib/web-bundle-security.test.ts`](apps/web/src/lib/web-bundle-security.test.ts) for the lint-style guard).
+Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API, authentication, schema validation) and **plain Postgres + S3-compatible storage + SMTP**. No hosted backend is required: any Postgres (Railway, DigitalOcean, AWS RDS, self-hosted), any S3 API (AWS S3, DigitalOcean Spaces, Railway Buckets, MinIO, RustFS…) and any SMTP server work.
+
+The browser talks **only** to the API over HTTP with a Bearer token. Database, storage, mail and auth secrets stay server-side; [`apps/web/src/lib/web-bundle-security.test.ts`](apps/web/src/lib/web-bundle-security.test.ts) fails CI if web code imports server-only packages or references those secrets.
 
 ### Stack
 
-- **apps/web** — Next.js App Router, shadcn-style UI, token session in `sessionStorage`, calls Nest at `NEXT_PUBLIC_API_URL`
-- **apps/api** — NestJS REST API, `/auth/*` issuance + JWT guard, AJV validation against [JSON Resume schema](https://raw.githubusercontent.com/jsonresume/resume-schema/refs/heads/master/schema.json)
+- **apps/web** — Next.js App Router, shadcn-style UI; session token in `localStorage`; calls the API at `NEXT_PUBLIC_API_URL`
+- **apps/api** — NestJS REST API: Better Auth at `/api/auth/*`, AJV validation against the [JSON Resume schema](https://raw.githubusercontent.com/jsonresume/resume-schema/refs/heads/master/schema.json), Drizzle data access, S3 storage, SMTP mail, MCP server
 - **apps/import-agent** — Mastra PDF import workflow and reusable verification tools
+- **packages/db** — Drizzle schema, SQL migrations (`packages/db/migrations`), Postgres client, PGlite test helper
+- **packages/email-templates** — React Email templates for every transactional email
 - **packages/schemas** — official resume JSON schema
 - **packages/types** — shared TypeScript resume types
 - **packages/resume-template** — MIT-format HTML renderer for preview and PDF export
 - **packages/import-models** — pinned Mastra provider/model catalog for PDF import settings
-- **supabase/migrations** — `cv` table + RLS policies
 
 ## Authentication
 
-Resubuild's authentication is split between the **Nest API** (token issuance, validation, and the service-role Supabase client) and the **Next.js web SPA** (a publishable-key Supabase client for the auth UI only). Product requirements for every flow live in [`docs/requirements/auth.md`](docs/requirements/auth.md).
+Authentication runs inside the API with [Better Auth](https://www.better-auth.com): users, OAuth accounts, sessions and verification tokens live in the same Postgres (`user`, `account`, `session`, `verification`). Product requirements for every flow live in [`docs/requirements/auth.md`](docs/requirements/auth.md).
+
+- Clients send `Authorization: Bearer <session token>`. Endpoints that create a session return the token in the `set-auth-token` response header.
+- Sessions are stored server-side (7-day lifetime, extended on use). Logout and password changes revoke them.
+- Data isolation is enforced in the API: every repository query is scoped by `user_id`. There is no row-level security to rely on.
+- Email links (verification, reset, magic link) open web pages (`/auth/verify`, `/reset-password`, `/auth/magic`) that call the API with the token.
+- OAuth runs on the API origin: `/auth/oauth/:provider` → provider → `/api/auth/callback/:provider` → `/auth/oauth/complete`. The API then redirects to the web `/auth/callback` with a single-use code that the SPA exchanges for its token (`POST /auth/oauth/exchange`). Web and API can live on different sites without third-party cookies.
 
 ### Auth flows
 
-| Flow                              | Always on? | Feature flag (client-side mirror)             | Requirement  |
-| --------------------------------- | ---------- | --------------------------------------------- | ------------ |
-| Email + password login / register | yes        | —                                             | REQ-AUTH-001 |
-| Change password (authenticated)   | yes        | —                                             | REQ-AUTH-004 |
-| Forgot / reset password           | opt-in     | `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED`    | REQ-AUTH-005 |
-| Email verification                | opt-in     | `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED` | REQ-AUTH-006 |
-| Passwordless — magic link         | opt-in     | `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`       | REQ-AUTH-007 |
-| Passwordless — 6-digit OTP        | opt-in     | `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`       | REQ-AUTH-007 |
-| GitHub OAuth                      | opt-in     | `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED`       | REQ-AUTH-008 |
-| Google OAuth                      | opt-in     | `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED`       | REQ-AUTH-008 |
-| LinkedIn OAuth                    | opt-in     | `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED`     | REQ-AUTH-008 |
+| Flow                              | Always on? | Flag (`apps/api/.env`; web mirror `NEXT_PUBLIC_*`)  | Requirement  |
+| --------------------------------- | ---------- | --------------------------------------------------- | ------------ |
+| Email + password login / register | yes        | —                                                   | REQ-AUTH-001 |
+| Change password (authenticated)   | yes        | —                                                   | REQ-AUTH-004 |
+| Forgot / reset password           | opt-in     | `AUTH_FORGOT_PASSWORD_ENABLED`                      | REQ-AUTH-005 |
+| Email verification                | opt-in     | `AUTH_EMAIL_VERIFICATION_ENABLED`                   | REQ-AUTH-006 |
+| Passwordless — magic link         | opt-in     | `AUTH_PASSWORDLESS_ENABLED`                         | REQ-AUTH-007 |
+| Passwordless — 6-digit code       | opt-in     | `AUTH_PASSWORDLESS_ENABLED`                         | REQ-AUTH-007 |
+| GitHub / Google / LinkedIn OAuth  | opt-in     | `<PROVIDER>_CLIENT_ID` + `<PROVIDER>_CLIENT_SECRET` | REQ-AUTH-008 |
 
 ### Feature flags
 
-The optional auth flows are gated by **client-side `NEXT_PUBLIC_*` env vars** in `apps/web/.env`. The SPA reads them at build time via `process.env.NEXT_PUBLIC_*` (resolved by `apps/web/src/lib/auth/features.ts`); no API round-trip, no layout shift on auth pages. Each value is interpreted as a strict boolean — only the literal string `true` enables the flag; anything else (including the empty string, `1`, `yes`, `TRUE`) is treated as `false`, and a missing var defaults to `false`. Flipping a flag requires a web redeploy to take effect in production.
+The API env (`apps/api/.env`) is the single source of truth: disabled flows are not registered with Better Auth, so their endpoints return 404. The SPA renders matching controls from build-time mirrors (`NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED`, `…_EMAIL_VERIFICATION_ENABLED`, `…_PASSWORDLESS_ENABLED`, `…_GITHUB_OAUTH_ENABLED`, `…_GOOGLE_OAUTH_ENABLED`, `…_LINKEDIN_OAUTH_ENABLED`) resolved by `apps/web/src/lib/auth/features.ts`. Only the literal string `true` enables a flag.
 
-The only flag that **also** lives on the API side is `AUTH_FORGOT_PASSWORD_ENABLED` in `apps/api/.env` — it is consumed by the server-side `ForgotPasswordEnabledGuard` on `POST /auth/forgot-password` and `POST /auth/reset-password` so a misconfigured SPA cannot trigger recovery emails when the API operator has disabled the flow. `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED` is a mirror for the UI; the two must agree at runtime. `setup:env` writes the same value to both files.
+`pnpm setup:env` (local) and `pnpm setup:env:prod` (production) derive the web mirrors from the API values, so they cannot drift. An OAuth button turns on when both credentials of that provider are set. If you edit an env file by hand, re-run the generator or keep both files in sync. Flipping a flag in production requires a web rebuild.
 
-```bash
-# apps/web/.env — mirror to apps/api/.env for the forgot-password one only
-NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED=true
-NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=true
-NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED=true
-NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED=true
-NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED=true
-NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED=true
+### OAuth providers
 
-# apps/api/.env — only the server-side flag
-AUTH_FORGOT_PASSWORD_ENABLED=true
-```
+Register this redirect URI with each provider: `<BETTER_AUTH_URL>/api/auth/callback/<github|google|linkedin>` (locally `http://localhost:3001/api/auth/callback/github`). Then set `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` (or the Google/LinkedIn pair) in `apps/api/.env` and re-run `pnpm setup:env`.
 
-The `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED` flag controls whether the SPA renders the **Continue with GitHub** button on `/login` and `/register`. The `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED` flag analogously controls the **Continue with Google** button. The `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED` flag analogously controls the **Continue with LinkedIn** button. Enabling any of these flags is **necessary but not sufficient**: the Supabase project must also have the corresponding real provider configured (locally, that means non-stub credentials in `supabase/.env`; in production, the equivalent keys in the Supabase Cloud dashboard). `setup:env` writes `github-oauth-stub`, `google-oauth-stub`, and `linkedin-oauth-stub` placeholders on first run so `supabase start` boots, but those placeholders make `signInWithOAuth` fail at click time — replace them with real credentials to go live. The button-gating flags and the provider credentials are independent so a misconfigured provider never silently leaks failed OAuth attempts to the UI. See REQ-AUTH-008 in [`docs/requirements/auth.md`](docs/requirements/auth.md).
-
-#### LinkedIn-specific setup
-
-The LinkedIn provider has one extra operator step that GitHub and Google do not: the underlying LinkedIn OAuth app must have the **"Sign In with LinkedIn using OpenID Connect"** product enabled in the LinkedIn Developer portal. Without it, LinkedIn's authorisation server rejects the `openid profile email` scopes that the Supabase `linkedin_oidc` provider requests, and clicking the button lands back on `/login?error=invalid_scope_error&error_description=The+requested+permission+scope+is+not+valid` even though the credentials are correct.
-
-To wire up LinkedIn end-to-end:
-
-1. Open **https://www.linkedin.com/developers/apps** and create a new app (or select an existing one). On the **Auth** tab, add the Supabase callback URL to **Authorized redirect URLs for your app**: `http://127.0.0.1:54321/auth/v1/callback` for local dev, or `https://<PROJECT_REF>.supabase.co/auth/v1/callback` for a hosted Supabase project.
-2. On the **Products** tab, click **Add product** next to **"Sign In with LinkedIn using OpenID Connect"** and wait for LinkedIn to confirm the product is active. This is the step most operators miss — until the product is added, the Supabase `linkedin_oidc` provider will always fail with `invalid_scope_error` no matter what credentials are configured.
-3. Copy the **Client ID** and **Primary Client Secret** from the **Auth** tab into `LINKEDIN_OAUTH_CLIENT_ID` and `LINKEDIN_OAUTH_SECRET` in `supabase/.env` (or into the **Authentication → Providers → LinkedIn (OIDC)** section of the Supabase Cloud dashboard for hosted projects), then restart `supabase start` so the new env vars are picked up.
-
-The Supabase SDK uses the post-August-2023 `linkedin_oidc` provider, which is NOT compatible with LinkedIn apps that only have the legacy **"Sign In with LinkedIn"** product enabled. If you have a pre-August-2023 LinkedIn app using the deprecated `r_liteprofile` / `r_emailaddress` scopes, add the OIDC product to it (LinkedIn allows this on legacy apps) or create a new app enrolled in OIDC.
-
-### Required env vars
-
-| Where      | Var                                    | Purpose                                                                                                                                                                                                                                                                      |
-| ---------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/api` | `SUPABASE_URL`                         | Supabase project URL (server)                                                                                                                                                                                                                                                |
-| `apps/api` | `SUPABASE_SERVICE_ROLE_KEY`            | Service-role key for `auth.admin` operations (server-only)                                                                                                                                                                                                                   |
-| `apps/api` | `SUPABASE_PUBLISHABLE_KEY`             | Publishable key mirrored to the SPA (the web bundle also reads its own `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`)                                                                                                                                                               |
-| `apps/web` | `NEXT_PUBLIC_SUPABASE_URL`             | Public Supabase URL for the auth client                                                                                                                                                                                                                                      |
-| `apps/web` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | The **only** Supabase key in the browser bundle                                                                                                                                                                                                                              |
-| `supabase` | `GITHUB_OAUTH_CLIENT_ID`               | GitHub OAuth app client_id, consumed by `[auth.external.github]` in `supabase/config.toml` (non-functional `github-oauth-stub` written by `setup:env` on first run)                                                                                                          |
-| `supabase` | `GITHUB_OAUTH_SECRET`                  | GitHub OAuth app client_secret (same source of truth as the client_id)                                                                                                                                                                                                       |
-| `supabase` | `GOOGLE_OAUTH_CLIENT_ID`               | Google OAuth app client_id, consumed by `[auth.external.google]` in `supabase/config.toml` (non-functional `google-oauth-stub` written by `setup:env` on first run)                                                                                                          |
-| `supabase` | `GOOGLE_OAUTH_SECRET`                  | Google OAuth app client_secret (same source of truth as the client_id)                                                                                                                                                                                                       |
-| `supabase` | `LINKEDIN_OAUTH_CLIENT_ID`             | LinkedIn OAuth app client_id from a LinkedIn app with the **"Sign In with LinkedIn using OpenID Connect"** product enabled, consumed by `[auth.external.linkedin_oidc]` in `supabase/config.toml` (non-functional `linkedin-oauth-stub` written by `setup:env` on first run) |
-| `supabase` | `LINKEDIN_OAUTH_SECRET`                | LinkedIn OAuth app Primary Client Secret (same source of truth as the client_id; the OIDC product MUST be active on the LinkedIn app or the button fails with `invalid_scope_error`)                                                                                         |
-
-### Two-knob email verification
-
-Email verification is gated by **two** independent settings, and the operator is responsible for keeping them in sync:
-
-1. `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=true` in `apps/web/.env` — controls whether the SPA routes unverified signups to `/auth/check-email`. This is the only auth capability flag for email verification; the API does not gate `GET /auth/email-verified` behind a server-side flag, and the previous `AUTH_EMAIL_VERIFICATION_ENABLED` env var was removed from `apps/api/.env` and `AuthConfigService`'s Zod schema.
-2. `[auth.email].enable_confirmations = true` in `supabase/config.toml` — tells Supabase itself to send the confirmation email.
-
-**Misconfiguration states:**
-
-- `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=true` but `enable_confirmations = false` → the SPA shows the "check your email" page, but the user never receives an email.
-- `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=false` but `enable_confirmations = true` → Supabase sends the email, but the SPA has no verification flow to send the user through.
-- Both `false` → no email verification at all (default).
-
-There is no auto-sync. The `setup-local-env.sh` script defaults both to the same value to keep dev sane; production operators must verify both are set before flipping the feature on.
-
-In **local development**, confirmation and passwordless emails do not leave your machine — they appear in [Mailpit](#local-auth-emails-mailpit) at http://127.0.0.1:54324.
-
-### Bundle security guard
-
-`apps/web/src/lib/web-bundle-security.test.ts` is a Vitest guard that fails CI if any web source file references the service-role key, imports from `apps/api/src/cv/**` or `apps/api/src/database/**`, or uses `@supabase/supabase-js` outside the auth-flow scope. It also asserts the carve-out is documented in `README.md` and `apps/web/.env.example`.
+LinkedIn apps must have the **"Sign In with LinkedIn using OpenID Connect"** product enabled. Without it, LinkedIn rejects the `openid profile email` scopes with `invalid_scope_error`.
 
 ## Prerequisites
 
 - pnpm 12+ (see `packageManager`). pnpm downloads the pinned Node.js (26 LTS, root `package.json` `devEngines.runtime`) on `pnpm install` and runs every script with it; any Node on PATH works for bootstrapping pnpm.
-- [Supabase CLI](https://supabase.com/docs/guides/cli) (for local development)
+- Docker (or Podman) for the local infrastructure and the e2e tests.
 
-## Local development (Supabase CLI)
+## Local development (Docker)
 
-For day-to-day work on your machine, use the local Supabase stack and the seed script. No cloud project required.
+[`docker-compose.dev.yml`](docker-compose.dev.yml) runs the backing services; the apps run on your machine with hot reload.
+
+| Service  | Image                    | Host port(s)                       |
+| -------- | ------------------------ | ---------------------------------- |
+| Postgres | `postgres:18-alpine`     | 54432                              |
+| Storage  | `rustfs/rustfs` (S3 API) | 54490 (S3), 54491 (console)        |
+| Mailpit  | `axllent/mailpit`        | 54425 (SMTP), **54424 (inbox UI)** |
+
+Ports can be changed with `RESUBUILD_POSTGRES_PORT`, `RESUBUILD_S3_PORT`, `RESUBUILD_S3_CONSOLE_PORT`, `RESUBUILD_SMTP_PORT` and `RESUBUILD_MAILPIT_PORT` (set them for both `pnpm infra:up` and `pnpm setup:env`). The storage image is S3-compatible; MinIO no longer publishes community images, but any S3 server can replace it without code changes.
 
 ### Setup
 
@@ -147,21 +104,16 @@ From the repo root:
 
 ```bash
 pnpm install
-supabase start
-pnpm setup:env      # writes apps/api/.env and apps/web/.env (Supabase + PDF import defaults)
-pnpm samples:seed   # creates dev + E2E accounts, sample CVs, and media (no API needed)
+pnpm infra:up       # start Postgres, storage and Mailpit; apply migrations; create buckets
+pnpm setup:env      # write apps/api/.env and apps/web/.env (secrets generated once, then preserved)
+pnpm samples:seed   # dev + E2E accounts, sample CVs and media (no API needed)
 ```
 
-On first seed, **unique passwords are generated for your machine** and saved to `.samples/local-credentials.json` (gitignored). The seed prints them to the terminal. To show them again later:
+On first seed, **unique passwords are generated for your machine** and saved to `.samples/local-credentials.json` (gitignored). To show them again: `pnpm local:credentials`.
 
-```bash
-pnpm local:credentials
-```
+**Developer sign-in:** `developer@resubuild.local`, password from `pnpm local:credentials`.
 
-**Developer sign-in** (use this in the browser):
-
-- Email: `developer@resubuild.local`
-- Password: run `pnpm local:credentials` (not committed to git)
+Other infrastructure commands: `pnpm infra:down` (stop, keep data), `pnpm infra:reset` (stop and delete all local data), `pnpm infra:logs`, `pnpm db:migrate` (apply migrations), `pnpm db:generate` (create a migration after editing `packages/db/src/schema`).
 
 ### Run the app
 
@@ -171,32 +123,24 @@ pnpm dev            # web :3000 + api :3001
 
 Open http://localhost:3000, sign in with the developer account, and you should see 10 sample CVs on the dashboard.
 
-### Local auth emails (Mailpit)
+### Local email (Mailpit)
 
-Local Supabase does **not** deliver auth email to real inboxes. Messages are captured by **Mailpit** (enabled via `[local_smtp] enabled = true` in `supabase/config.toml`).
+Every email the API sends locally is captured by **Mailpit**. Nothing reaches real inboxes.
 
-**Inbox URL:** http://127.0.0.1:54324
+**Inbox:** http://127.0.0.1:54424
 
-After `supabase start`, the CLI prints the Mailpit URL under **Development Tools**. You can also run `supabase status` to see it again.
+In development the auth screens show a dashed **Development** banner with a direct Mailpit link. Production builds omit it.
 
-When `pnpm dev` targets local Supabase (`NEXT_PUBLIC_SUPABASE_URL` on `localhost` / `127.0.0.1`), the web app shows a dashed **Development** banner on login, register, forgot-password, and check-email screens with a direct Mailpit link. It is omitted in production builds and when the SPA points at cloud Supabase.
+| Flow                    | Where to trigger it                  | What to look for in Mailpit        |
+| ----------------------- | ------------------------------------ | ---------------------------------- |
+| Signup confirmation     | `/register`                          | Confirmation link → `/auth/verify` |
+| Forgot password         | `/login` → **Forgot your password?** | Reset link → `/reset-password`     |
+| Email code (OTP)        | `/login` → **Email code** tab        | 6-digit code                       |
+| Email link (magic link) | `/login` → **Email link** tab        | Sign-in link → `/auth/magic`       |
 
-Use Mailpit when testing any flow that sends email:
+To try these flows, set the matching `AUTH_*_ENABLED=true` in `apps/api/.env`, run `pnpm setup:env` to update the web mirrors, and restart `pnpm dev`.
 
-| Flow                    | Where to trigger it                  | What to look for in Mailpit     |
-| ----------------------- | ------------------------------------ | ------------------------------- |
-| Signup confirmation     | `/register`                          | Confirmation link               |
-| Forgot password         | `/login` → **Forgot your password?** | Reset link → `/reset-password`  |
-| Email code (OTP)        | `/login` → **Email code** tab        | 6-digit code                    |
-| Email link (magic link) | `/login` → **Email link** tab        | Sign-in link → `/auth/callback` |
-
-**Quick OTP / magic-link check**
-
-1. Enable `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED=true` in `apps/web/.env` and restart `pnpm dev`.
-2. On `/login`, use the **Email code** or **Email link** tab with `developer@resubuild.local` (or any registered address).
-3. Open Mailpit, open the newest message, and use the code or click the link.
-
-Emails are not sent in production-like Docker/cloud setups unless you configure SMTP in the Supabase dashboard.
+Email templates live in [`packages/email-templates`](packages/email-templates) ([React Email](https://react.email)). Preview them with `pnpm --filter @resubuild/email-templates preview`.
 
 ### CV preview and PDF export
 
@@ -221,143 +165,85 @@ Manual checks:
 - Valid model + bad API key → `422`, PDF import stays disabled.
 - Non-PDF or oversize upload → client/API error, no CV created.
 
-### Optional — verify the stack
+### Tests
 
-E2E tests boot Nest in-process (no separate `pnpm dev:api` needed) and use the dedicated E2E account from `local-credentials.json`:
-
-```bash
-pnpm test:e2e       # 11 integration tests against local Supabase
-```
-
-Re-run `pnpm samples:seed` after resetting Supabase (`supabase db reset`) or to refresh sample data. Passwords stay the same unless you delete `.samples/local-credentials.json`.
+- **Unit** (`pnpm test`): Jest in the API, Vitest elsewhere. Repository specs run against [PGlite](https://pglite.dev) (Postgres compiled to WebAssembly, in memory), so they exercise real SQL without Docker.
+- **E2E** (`pnpm test:e2e`): boots Nest in-process. [Testcontainers](https://testcontainers.com) starts a throw-away Postgres (data on tmpfs), S3 storage and Mailpit, then applies the migrations, seeds the fixture accounts and stops everything at the end. Only Docker is required: no `.env` file and no running dev stack. Email flows are asserted through the Mailpit API. With Podman, Testcontainers' Ryuk reaper is disabled automatically; global teardown stops the containers.
 
 ---
 
-## Cloud Supabase setup
+## Deploy
 
-For deployment or a shared remote database:
+Production needs four things, all configured through env vars:
 
-1. Create a project at [supabase.com](https://supabase.com).
-2. Enable **Email** auth (Authentication → Providers).
-3. Apply the database migration (creates `public.cv`, RLS policies, and triggers).
+| Need     | Variables                                                                                                   | Examples                                                      |
+| -------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Postgres | `DATABASE_URL`                                                                                              | Railway Postgres, DigitalOcean Managed DB, AWS RDS            |
+| Storage  | `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `MEDIA_BUCKET`, `MCP_EXPORT_BUCKET` | AWS S3, DigitalOcean Spaces, Railway Buckets, MinIO           |
+| Email    | `SMTP_URL` (or `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASSWORD`), `MAIL_FROM`                            | Amazon SES, Postmark, Resend, Mailgun, Brevo (all speak SMTP) |
+| Auth     | `BETTER_AUTH_SECRET`, `MCP_KEY_PEPPER`, optional OAuth client ids/secrets                                   | generated by `pnpm setup:env:prod`                            |
 
-**Recommended — Supabase CLI**
+Buckets must be **private**: the API streams media itself and hands out short-lived presigned URLs for MCP exports. If the API reaches storage on an internal host, set `S3_PUBLIC_ENDPOINT` to the public one so presigned URLs work for clients.
 
-```bash
-supabase login
-supabase link --project-ref <your-project-ref>
-supabase db push
-```
-
-`<your-project-ref>` is the ID in your project URL: `https://<project-ref>.supabase.co`.
-
-**Alternative — SQL editor**
-
-Paste and run migrations from `supabase/migrations/` in Supabase → **SQL Editor**.
-
----
-
-## Release 1: cloud Supabase + docker compose
-
-Deploy the system to a production docker compose stack connected to a non-self-hosted (cloud) Supabase project.
-
-> **Minimum viable target.** This release ships without TLS, a reverse proxy, or a container registry push. Those concerns are left to follow-on changes.
-
-### Prerequisites
-
-Before starting, you need from your Supabase dashboard:
-
-- **Supabase project URL** → Project Settings → API → "Project URL"
-- **Supabase anon key** → Project Settings → API → "anon / public" key
-- **Supabase service role key** → Project Settings → API → "service_role" key (**treat as server-only**)
-- **Two Storage buckets** named `media` and `mcp-exports` (create them under Storage in the Supabase dashboard)
-- **Public URL** for this deployment (e.g., `https://app.example.com`)
-
-The `supabase link` / `supabase db push` step from the **Cloud Supabase setup** section above is also required to apply migrations to your cloud project.
+Migrations run as a separate step before the API starts: `node packages/db/dist/migrate.js` (the API image includes it).
 
 ### Step 1 — Generate `.env.prod`
-
-From the repo root:
 
 ```bash
 pnpm setup:env:prod
 ```
 
-The script prompts for all required variables and auto-generates an `AI_AGENT_ENCRYPTION_KEY` if you don't supply one.
+The script prompts for the values. It generates `BETTER_AUTH_SECRET`, `MCP_KEY_PEPPER` and `AI_AGENT_ENCRYPTION_KEY` when absent, and derives the web `NEXT_PUBLIC_AUTH_*` mirrors from the API flags.
 
-**Non-interactive / agent flow:** write the values to a `prod-secrets.json` manifest (gitignored) and run `pnpm setup:env:prod --from prod-secrets.json`, so secret values never appear in a terminal transcript or chat.
+**Non-interactive / agent flow:** write the values to a `prod-secrets.json` manifest (gitignored) and run `pnpm setup:env:prod --from prod-secrets.json`, so secret values never appear in a terminal transcript or chat. With `--from`, the three secrets must already be in the manifest, so a re-run never rotates them. Preview with `pnpm setup:env:prod:dry-run --from prod-secrets.json`.
 
-**Dry-run preview:**
-
-```bash
-pnpm setup:env:prod:dry-run --from prod-secrets.json
-```
-
-### Step 2 — Verify docker compose
+### Docker compose
 
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod config
+docker compose -f docker-compose.prod.yml --env-file .env.prod config   # verify
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 ```
 
-### Step 3 — Bring up the stack
+The one-shot `migrate` service applies migrations, then `api` and `web` start. Without TLS, a reverse proxy or a registry push, this is a minimal target.
 
-```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod up
-```
+To run Postgres and storage on the same host, add `--profile selfhost`. That starts `postgres` and `storage` (RustFS). Set `POSTGRES_PASSWORD`, point `DATABASE_URL` at `postgresql://resubuild:<password>@postgres:5432/resubuild` and `S3_ENDPOINT` at `http://storage:9000`, and set `S3_AUTO_CREATE_BUCKETS=true` so the API creates the buckets.
 
-Both services (`web`, `api`) read from `.env.prod`. The `api` service mounts a named volume (`resubuild-puppeteer-cache`) so Chromium is not re-downloaded on every container restart.
+### Railway
 
-### Files
-
-| File                                                                 | Purpose                                         |
-| -------------------------------------------------------------------- | ----------------------------------------------- |
-| [`scripts/setup-prod-env.mjs`](scripts/setup-prod-env.mjs)           | Script engine                                   |
-| [`scripts/lib/env-prod-schema.mjs`](scripts/lib/env-prod-schema.mjs) | Schema module (shared by script and drift test) |
-| [`docker-compose.prod.yml`](docker-compose.prod.yml)                 | Compose definition                              |
-
-### Deploy to Railway (parallel managed target)
-
-The same env-var surface can deploy to a managed Railway project. The Railway target reuses `apps/api/Dockerfile` and `apps/web/Dockerfile` verbatim — no `Dockerfile.railway` fork. The env generator is the same; pass `--target railway` so the four public-URL keys (`CORS_ORIGIN`, `APP_URL`, `PUBLIC_API_URL`, `NEXT_PUBLIC_API_URL`) default to the production custom domains (`https://app.resubuild.dev` for the web app, `https://api.resubuild.dev` for the API). No find-and-replace step is required as long as the operator attaches the matching custom domains to the corresponding services in the Railway dashboard.
-
-The pre-gathered env vars are the same list documented under **Prerequisites** above (Project URL, anon key, service role key, two storage bucket names). The same `pnpm setup:env:prod` flow writes the manifest to `prod-secrets.json`; only the `--target` flag changes:
+The Railway target reuses `apps/api/Dockerfile` and `apps/web/Dockerfile`. Add a Railway **Postgres** (use its `DATABASE_URL`) and a **Bucket** (S3 credentials), and point SMTP at your mail provider. `apps/api/railway.json` runs the migrations as a pre-deploy command. Pass `--target railway` so the public-URL keys (`CORS_ORIGIN`, `APP_URL`, `PUBLIC_API_URL`, `NEXT_PUBLIC_API_URL`) default to the production custom domains (`https://app.resubuild.dev`, `https://api.resubuild.dev`):
 
 ```bash
 pnpm setup:env:prod --target railway --from prod-secrets.json
 ```
 
-| File                                                       | Purpose                                            |
-| ---------------------------------------------------------- | -------------------------------------------------- |
-| [`apps/api/railway.json`](apps/api/railway.json)           | Service config for the api service (build + start) |
-| [`apps/web/railway.json`](apps/web/railway.json)           | Service config for the web service (build + start) |
-| [`.railwayignore`](.railwayignore)                         | Build context exclusions                           |
-| [`scripts/deploy-railway.mjs`](scripts/deploy-railway.mjs) | Preflight wrapper (`pnpm deploy:railway`)          |
+| File                                                       | Purpose                                                  |
+| ---------------------------------------------------------- | -------------------------------------------------------- |
+| [`apps/api/railway.json`](apps/api/railway.json)           | api service config (build, pre-deploy migrations, start) |
+| [`apps/web/railway.json`](apps/web/railway.json)           | web service config (build + start)                       |
+| [`.railwayignore`](.railwayignore)                         | Build context exclusions                                 |
+| [`scripts/deploy-railway.mjs`](scripts/deploy-railway.mjs) | Preflight wrapper (`pnpm deploy:railway`)                |
 
-**Service topology and scale-to-zero.** The release-1 Railway target deploys two services (one `api`, one `web`) into a single Railway project. Each service has `apps/{api,web}/railway.json` at its service root directory so Railway's monorepo auto-detect locates the build config next to its `Dockerfile`. Both services should run on their existing `apps/{api,web}/Dockerfile` and scale to zero when idle. The scale-to-zero toggle (Railway's "App Sleeping") is a per-service dashboard setting in **Settings → App Sleeping** — enable it after each service is created and trigger a new deployment for the change to take effect. App Sleeping is not a `railway.json` field and cannot be enforced by config-as-code, so set it manually. Attach the custom domains (`app.resubuild.dev`, `api.resubuild.dev`) to the matching services in the Railway dashboard.
+**Service topology and scale-to-zero.** Two services (`api`, `web`) share one Railway project. Each has `apps/{api,web}/railway.json` at its service root so Railway's monorepo auto-detect finds the build config next to its `Dockerfile`. Scale-to-zero ("App Sleeping") is a per-service dashboard setting (**Settings → App Sleeping**). It is not a `railway.json` field, so enable it by hand and redeploy. Attach the custom domains (`app.resubuild.dev`, `api.resubuild.dev`) to the matching services.
 
-**Known limitations (scope statements, not TODOs):**
-
-- No persistent Puppeteer cache volume on the Railway free tier — the api service re-downloads Chromium (~181 MiB) on every cold start from App Sleeping (and on every fresh deploy).
-- No preview / ephemeral environments per pull request.
-- The two services communicate over the public internet (or, on paid plans, over a Railway private network), not over a docker compose bridge network. CORS must be configured for the public origin.
-
-**Verify:**
+**Known limitations:** no persistent Puppeteer cache on the free tier (Chromium is re-downloaded on cold start); no per-PR preview environments; services talk over the public internet unless you use Railway's private network, so CORS must allow the public web origin.
 
 ```bash
 curl -f https://api.resubuild.dev/_health
 curl -f https://app.resubuild.dev/
 ```
 
-Collect from **Project Settings → API**:
+### Migrating an existing Supabase deployment
 
-- Project URL → **`SUPABASE_URL`**
-- anon public key → **`SUPABASE_ANON_KEY`**
+[`scripts/migrate-from-supabase.mjs`](scripts/migrate-from-supabase.mjs) copies a Supabase project into the new setup. It keeps the same user ids, so every row keeps its owner.
 
-Then configure env files:
+1. Create the target schema: `DATABASE_URL=<target> pnpm db:migrate`.
+2. Export the source and target settings (see the script header): `SOURCE_DATABASE_URL`, `SOURCE_S3_*` (Supabase Storage S3 keys from **Project Settings → Storage**), plus the target `DATABASE_URL` and `S3_*`.
+3. Rehearse: `pnpm migrate:from-supabase --dry-run`.
+4. Migrate: `pnpm migrate:from-supabase`. It is idempotent and safe to re-run, and it prints per-table counts at the end.
 
-```bash
-cp apps/web/.env.example apps/web/.env.local
-cp apps/api/.env.example apps/api/.env
-```
+What moves: `auth.users` becomes `user`. Bcrypt password hashes keep working and are upgraded to scrypt on the next sign-in. GitHub, Google and LinkedIn identities become OAuth accounts. All application tables are copied, and so are the `media` and `mcp-exports` objects.
+
+What does not move: active sessions, so everyone signs in again. If the old deployment ran without `MCP_KEY_PEPPER`, its MCP keys were hashed with `SUPABASE_SERVICE_ROLE_KEY`; set `MCP_KEY_PEPPER` to that old value to keep existing MCP keys valid.
 
 ## Quality checks
 
@@ -368,7 +254,7 @@ From the repo root:
 - **`pnpm typecheck`** — TypeScript across all packages
 - **`pnpm verify`** — full CI pipeline locally (Prettier, Biome, typecheck, unit tests, build)
 - **`pnpm test`** — unit tests (Vitest + Jest)
-- **`pnpm test:e2e`** — integration tests against local Supabase (requires setup above)
+- **`pnpm test:e2e`** — API integration tests in throw-away containers (needs Docker)
 - **`pnpm local:credentials`** — show local dev and E2E login details for this machine
 
 Git hooks (Lefthook): **pre-commit** (Biome + Prettier on staged files), **pre-push** (`pnpm verify`).
@@ -378,14 +264,14 @@ Git hooks (Lefthook): **pre-commit** (Biome + Prettier on staged files), **pre-p
 The verify pipeline caps parallelism to keep peak memory under ~4 GB per process
 on constrained environments (CI runners, laptops). Defaults:
 
-| Tool                                     | Default cap                                   |
-| ---------------------------------------- | --------------------------------------------- |
-| Jest (`apps/api` unit tests)             | `--maxWorkers=2`                              |
-| Vitest (all workspaces)                  | `singleFork: true` (one fork)                 |
-| Turborepo (`test`, `build`, `typecheck`) | `concurrency: 2`                              |
-| Prettier (`pnpm format`, `format:check`) | `--concurrency=2`                             |
-| Biome                                    | unchanged (~250 MB peak)                      |
-| GitHub Actions CI                        | 2 parallel jobs (`quality`, `test-and-build`) |
+| Tool                                     | Default cap                                          |
+| ---------------------------------------- | ---------------------------------------------------- |
+| Jest (`apps/api` unit tests)             | `--maxWorkers=2`                                     |
+| Vitest (all workspaces)                  | `singleFork: true` (one fork)                        |
+| Turborepo (`test`, `build`, `typecheck`) | `concurrency: 2`                                     |
+| Prettier (`pnpm format`, `format:check`) | `--concurrency=2`                                    |
+| Biome                                    | unchanged (~250 MB peak)                             |
+| GitHub Actions CI                        | 3 parallel jobs (`quality`, `test-and-build`, `e2e`) |
 
 To raise the cap on a larger machine, set the `RESUME_PARALLELISM` env var:
 
@@ -398,12 +284,15 @@ use the conservative defaults).
 
 ## Troubleshooting
 
-| Error                                                      | Fix                                                                                                                                                                |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Could not find the table 'public.cv' in the schema cache` | Run `supabase db push` or `supabase start` with migrations applied.                                                                                                |
-| `Invalid or expired token`                                 | Sign out and sign in again. Ensure `SUPABASE_*` vars in `apps/api/.env` match your Supabase instance.                                                              |
-| Forgot local dev password                                  | Run `pnpm local:credentials`.                                                                                                                                      |
-| `pnpm verify` fails on Node version                        | Run it via pnpm (`pnpm verify`, not `node …`) after `pnpm install`; pnpm supplies Node 26 from `devEngines.runtime`. To upgrade Node: `pnpm runtime set node lts`. |
+| Error                                  | Fix                                                                                                                                                                |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `relation "cv" does not exist`         | Apply migrations: `pnpm infra:up` (local) or `pnpm db:migrate` with `DATABASE_URL`.                                                                                |
+| `DATABASE_URL is not configured`       | Run `pnpm setup:env` (local) or set it in `.env.prod`.                                                                                                             |
+| `Invalid or expired token`             | Sign out and sign in again; sessions are revoked on logout and password change.                                                                                    |
+| No email arrives locally               | Open Mailpit at http://127.0.0.1:54424; check `SMTP_HOST`/`SMTP_PORT` in `apps/api/.env` and that `pnpm infra:up` is running.                                      |
+| Port already in use on `pnpm infra:up` | Override with `RESUBUILD_*_PORT` (see [Local development](#local-development-docker)) and re-run `pnpm setup:env`.                                                 |
+| Forgot local dev password              | Run `pnpm local:credentials`.                                                                                                                                      |
+| `pnpm verify` fails on Node version    | Run it via pnpm (`pnpm verify`, not `node …`) after `pnpm install`; pnpm supplies Node 26 from `devEngines.runtime`. To upgrade Node: `pnpm runtime set node lts`. |
 
 ## Debugging the API
 
@@ -411,45 +300,55 @@ See [`apps/api/README.md`](apps/api/README.md#debugging-the-api) for the full gu
 
 ## API (`apps/api`)
 
-Authenticate with Bearer tokens from **`POST /auth/login`** / **`POST /auth/register`**. The UI stores tokens in **`sessionStorage`**.
+Sign in through Better Auth (`POST /api/auth/sign-in/email`, `POST /api/auth/sign-up/email`, …) and send the returned token as `Authorization: Bearer <token>`. The UI keeps it in `localStorage`.
 
-| Method | Path                                       | Description                                             |
-| ------ | ------------------------------------------ | ------------------------------------------------------- |
-| GET    | `/cv`                                      | List user's CVs                                         |
-| GET    | `/cv/:id`                                  | Get one CV                                              |
-| POST   | `/cv`                                      | Create `{ title?, data }`                               |
-| PATCH  | `/cv/:id`                                  | Update `{ title?, data? }`                              |
-| DELETE | `/cv/:id`                                  | Delete CV                                               |
-| GET    | `/cv/:id/export/html`                      | Full MIT-format HTML document (auth)                    |
-| GET    | `/cv/:id/export/pdf`                       | PDF bytes (`Content-Disposition` attachment)            |
-| GET    | `/cv/:id/export/json`                      | JSON Resume download (`Content-Disposition` attachment) |
-| GET    | `/import/llm/providers`                    | List PDF import LLM providers                           |
-| GET    | `/import/llm/providers/:providerId/models` | List models for a provider                              |
-| GET    | `/import/llm/config`                       | Current user's import LLM settings                      |
-| PUT    | `/import/llm/config`                       | Save provider/model/API key                             |
-| POST   | `/cv/import/pdf`                           | Start async PDF import (`202`, `{ jobId }`)             |
-| GET    | `/cv/import/:jobId`                        | Poll PDF import job status                              |
+| Method | Path                                       | Description                                                               |
+| ------ | ------------------------------------------ | ------------------------------------------------------------------------- |
+| \*     | `/api/auth/*`                              | Better Auth (sign-in/up, verify, reset, magic link, OTP, OAuth callbacks) |
+| GET    | `/auth/me`                                 | Current user + `has_password`                                             |
+| POST   | `/auth/password`                           | Change (or set a first) password; returns the new token                   |
+| POST   | `/auth/logout`                             | Revoke the current session                                                |
+| GET    | `/auth/oauth/:provider`                    | Start OAuth (top-level navigation)                                        |
+| POST   | `/auth/oauth/exchange`                     | Exchange the OAuth one-time code for a token                              |
+| GET    | `/cv`                                      | List user's CVs                                                           |
+| GET    | `/cv/:id`                                  | Get one CV                                                                |
+| POST   | `/cv`                                      | Create `{ title?, data }`                                                 |
+| PATCH  | `/cv/:id`                                  | Update `{ title?, data? }`                                                |
+| DELETE | `/cv/:id`                                  | Delete CV                                                                 |
+| GET    | `/cv/:id/export/html`                      | Full MIT-format HTML document (auth)                                      |
+| GET    | `/cv/:id/export/pdf`                       | PDF bytes (`Content-Disposition` attachment)                              |
+| GET    | `/cv/:id/export/json`                      | JSON Resume download (`Content-Disposition` attachment)                   |
+| GET    | `/import/llm/providers`                    | List PDF import LLM providers                                             |
+| GET    | `/import/llm/providers/:providerId/models` | List models for a provider                                                |
+| GET    | `/import/llm/config`                       | Current user's import LLM settings                                        |
+| PUT    | `/import/llm/config`                       | Save provider/model/API key                                               |
+| POST   | `/cv/import/pdf`                           | Start async PDF import (`202`, `{ jobId }`)                               |
+| GET    | `/cv/import/:jobId`                        | Poll PDF import job status                                                |
 
 ## Security
 
-- Row Level Security on `public.cv`: users only access their own rows (`auth.uid() = user_id`).
-- Nest validates Supabase access tokens via `auth.getUser()` and forwards the user token to Supabase so RLS applies.
+- Every repository query is scoped by the authenticated user's id (no reliance on database row-level security); cross-user access is covered by unit and e2e tests.
+- Sessions are stored and revoked server-side; passwords are hashed with scrypt (bcrypt hashes migrated from Supabase are upgraded on sign-in).
+- Buckets are private; clients get media through the API and MCP exports through short-lived presigned URLs.
+- The web bundle cannot import database, storage, mail or auth-server packages (`web-bundle-security.test.ts`).
 
 ## Project structure
 
 ```
 apps/
-  api/          NestJS REST API
-  import-agent/ Mastra PDF import workflow
-  web/          Next.js frontend
+  api/             NestJS REST API (auth, data, storage, mail, MCP)
+  import-agent/    Mastra PDF import workflow
+  web/             Next.js frontend
 packages/
-  import-models/ pinned Mastra provider/model catalog
+  db/              Drizzle schema + SQL migrations
+  email-templates/ React Email templates
+  import-models/   pinned Mastra provider/model catalog
   resume-template/ MIT HTML renderer for preview/PDF export
-  schemas/      resume.schema.json
-  types/        shared Resume types
+  schemas/         resume.schema.json
+  types/           shared Resume types
 docs/
-  requirements/ product requirements (tech-agnostic, stable REQ ids)
-supabase/
-  migrations/   database schema
-.samples/       seed fixture (CVs, media, local credentials)
+  requirements/    product requirements (tech-agnostic, stable REQ ids)
+docker-compose.dev.yml   local Postgres, S3 storage, Mailpit
+docker-compose.prod.yml  production compose target
+.samples/          seed fixture (CVs, media, local credentials)
 ```

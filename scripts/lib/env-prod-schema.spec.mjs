@@ -14,9 +14,9 @@ import {
 // ---------------------------------------------------------------------------
 describe('parseManifest', () => {
   it('parses a valid manifest', () => {
-    const { manifest, parseError } = parseManifest('{"SUPABASE_URL":"https://x.supabase.co"}');
+    const { manifest, parseError } = parseManifest('{"DATABASE_URL":"postgresql://x"}');
     expect(parseError).toBeNull();
-    expect(manifest.SUPABASE_URL).toBe('https://x.supabase.co');
+    expect(manifest.DATABASE_URL).toBe('postgresql://x');
   });
 
   it('coerces numeric values to strings', () => {
@@ -55,19 +55,20 @@ describe('parseManifest', () => {
 // ---------------------------------------------------------------------------
 describe('validateManifest', () => {
   const FULL_VALID_MANIFEST = {
-    SUPABASE_URL: 'https://x.supabase.co',
-    SUPABASE_ANON_KEY:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IngiLCJyYW5rIjoiOSIsImlhdCI6MTYyMzQwNDAwMCwiZXhwIjoxOTM4OTgwMDAwfQ.123',
-    SUPABASE_SERVICE_ROLE_KEY:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IngiLCJyYW5rIjoiOSIsImlhdCI6MTYyMzQwNDAwMCwiZXhwIjoxOTM4OTgwMDAwfQ.srv',
+    DATABASE_URL: 'postgresql://resubuild:secret@db.example.com:5432/resubuild?sslmode=require',
+    S3_ENDPOINT: 'https://nyc3.digitaloceanspaces.com',
+    S3_ACCESS_KEY_ID: 'AKIAEXAMPLE',
+    S3_SECRET_ACCESS_KEY: 'secret-access-key',
     MEDIA_BUCKET: 'media',
     MCP_EXPORT_BUCKET: 'mcp-exports',
+    SMTP_URL: 'smtps://user:pass@smtp.example.com:465',
+    MAIL_FROM: 'Resubuild <no-reply@example.com>',
     CORS_ORIGIN: 'https://app.example.com',
     APP_URL: 'https://app.example.com',
     PUBLIC_API_URL: 'https://api.example.com',
     NEXT_PUBLIC_API_URL: 'https://api.example.com',
-    NEXT_PUBLIC_SUPABASE_URL: 'https://x.supabase.co',
-    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_TEST',
+    BETTER_AUTH_SECRET: 'b'.repeat(48),
+    MCP_KEY_PEPPER: 'pepper-value',
     AI_AGENT_ENCRYPTION_KEY: 'YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=',
   };
 
@@ -77,12 +78,28 @@ describe('validateManifest', () => {
     expect(errors).toHaveLength(0);
   });
 
-  it('fails when SUPABASE_SERVICE_ROLE_KEY is missing', () => {
+  it('fails when DATABASE_URL is missing', () => {
     const manifest = { ...FULL_VALID_MANIFEST };
-    delete manifest.SUPABASE_SERVICE_ROLE_KEY;
+    delete manifest.DATABASE_URL;
     const { valid, errors } = validateManifest(manifest);
     expect(valid).toBe(false);
-    expect(errors).toContain('Missing required key: SUPABASE_SERVICE_ROLE_KEY');
+    expect(errors).toContain('Missing required key: DATABASE_URL');
+  });
+
+  it('requires an SMTP server (SMTP_URL or SMTP_HOST)', () => {
+    const manifest = { ...FULL_VALID_MANIFEST };
+    delete manifest.SMTP_URL;
+    expect(validateManifest(manifest).errors.some((e) => e.includes('Configure SMTP'))).toBe(true);
+    expect(validateManifest({ ...manifest, SMTP_HOST: 'smtp.example.com' }).valid).toBe(true);
+  });
+
+  it('rejects a BETTER_AUTH_SECRET shorter than 32 characters', () => {
+    const { valid, errors } = validateManifest({
+      ...FULL_VALID_MANIFEST,
+      BETTER_AUTH_SECRET: 'short',
+    });
+    expect(valid).toBe(false);
+    expect(errors).toContain('BETTER_AUTH_SECRET must be at least 32 characters.');
   });
 
   it('fails when AI_AGENT_ENCRYPTION_KEY is placeholder without --force', () => {
@@ -109,7 +126,7 @@ describe('validateManifest', () => {
   it('fails if a value contains \\r', () => {
     const manifest = {
       ...FULL_VALID_MANIFEST,
-      SUPABASE_URL: 'https://x.supabase.co\r\nTRACE:',
+      APP_URL: 'https://app.example.com\r\nTRACE:',
     };
     const { valid, errors } = validateManifest(manifest);
     expect(valid).toBe(false);
@@ -119,7 +136,7 @@ describe('validateManifest', () => {
   it('fails if a value contains NUL byte', () => {
     const manifest = {
       ...FULL_VALID_MANIFEST,
-      SUPABASE_URL: 'https://x.supabase.co\0',
+      APP_URL: 'https://app.example.com\0',
     };
     const { valid, errors } = validateManifest(manifest);
     expect(valid).toBe(false);
@@ -139,30 +156,26 @@ describe('validateManifest', () => {
 describe('serializeToDotenv', () => {
   it('serializes a valid manifest with group headers and description comments', () => {
     const manifest = {
-      SUPABASE_URL: 'https://x.supabase.co',
-      SUPABASE_ANON_KEY: 'anon-key',
-      SUPABASE_SERVICE_ROLE_KEY: 'srv-key',
+      DATABASE_URL: 'postgresql://x',
       AI_AGENT_ENCRYPTION_KEY: 'generated-key',
     };
     const output = serializeToDotenv(manifest);
-    expect(output).toContain('# ── Supabase ──');
-    expect(output).toContain('SUPABASE_URL=https://x.supabase.co');
-    expect(output).toContain('# Supabase project URL (from Project Settings → API)');
+    expect(output).toContain('# ── Database ──');
+    expect(output).toContain('DATABASE_URL=postgresql://x');
+    expect(output).toContain('# Postgres connection string');
     expect(output).toContain('# Generated by scripts/setup-prod-env.mjs');
   });
 
   it('omits groups with no keys present', () => {
-    const manifest = { SUPABASE_URL: 'https://x.supabase.co' };
+    const manifest = { DATABASE_URL: 'postgresql://x' };
     const output = serializeToDotenv(manifest);
-    expect(output).not.toContain('# ── Storage ──');
-    expect(output).toContain('# ── Supabase ──');
+    expect(output).not.toContain('# ── Object storage (S3 API) ──');
+    expect(output).toContain('# ── Database ──');
   });
 
   it('marks auto-generated keys with a comment', () => {
     const manifest = {
-      SUPABASE_URL: 'https://x.supabase.co',
-      SUPABASE_ANON_KEY: 'anon',
-      SUPABASE_SERVICE_ROLE_KEY: 'srv',
+      DATABASE_URL: 'postgresql://x',
       AI_AGENT_ENCRYPTION_KEY: 'gen',
     };
     const generated = new Set(['AI_AGENT_ENCRYPTION_KEY']);
@@ -172,9 +185,7 @@ describe('serializeToDotenv', () => {
 
   it('marks placeholder keys with a warning comment', () => {
     const manifest = {
-      SUPABASE_URL: 'https://x.supabase.co',
-      SUPABASE_ANON_KEY: 'anon',
-      SUPABASE_SERVICE_ROLE_KEY: 'srv',
+      DATABASE_URL: 'postgresql://x',
       AI_AGENT_ENCRYPTION_KEY: 'change-me-to-a-long-random-secret',
     };
     const placeholder = new Set(['AI_AGENT_ENCRYPTION_KEY']);
@@ -184,9 +195,7 @@ describe('serializeToDotenv', () => {
 
   it('omits keys that are absent from the manifest', () => {
     const manifest = {
-      SUPABASE_URL: 'https://x.supabase.co',
-      SUPABASE_ANON_KEY: 'anon',
-      SUPABASE_SERVICE_ROLE_KEY: 'srv',
+      DATABASE_URL: 'postgresql://x',
     };
     const output = serializeToDotenv(manifest);
     expect(output).not.toContain('AI_AGENT_ENCRYPTION_KEY');
@@ -203,9 +212,7 @@ describe('serializeToDotenv', () => {
   // deployable.
   it('writes the four public-URL keys with the production custom domains when target=railway', () => {
     const manifest = {
-      SUPABASE_URL: 'https://x.supabase.co',
-      SUPABASE_ANON_KEY: 'anon',
-      SUPABASE_SERVICE_ROLE_KEY: 'srv',
+      DATABASE_URL: 'postgresql://x',
       AI_AGENT_ENCRYPTION_KEY: 'gen',
     };
     const output = serializeToDotenv(manifest, { target: 'railway' });
@@ -224,9 +231,7 @@ describe('serializeToDotenv', () => {
 
   it('preserves the docker compose placeholders verbatim when target=docker-compose (regression guard)', () => {
     const manifest = {
-      SUPABASE_URL: 'https://x.supabase.co',
-      SUPABASE_ANON_KEY: 'anon',
-      SUPABASE_SERVICE_ROLE_KEY: 'srv',
+      DATABASE_URL: 'postgresql://x',
       AI_AGENT_ENCRYPTION_KEY: 'gen',
     };
     const outputDefault = serializeToDotenv(manifest);
@@ -240,9 +245,7 @@ describe('serializeToDotenv', () => {
 
   it('manifest values for the four public-URL keys win over target defaults', () => {
     const manifest = {
-      SUPABASE_URL: 'https://x.supabase.co',
-      SUPABASE_ANON_KEY: 'anon',
-      SUPABASE_SERVICE_ROLE_KEY: 'srv',
+      DATABASE_URL: 'postgresql://x',
       AI_AGENT_ENCRYPTION_KEY: 'gen',
       CORS_ORIGIN: 'https://my.example.com',
     };
@@ -256,19 +259,19 @@ describe('serializeToDotenv', () => {
 // ---------------------------------------------------------------------------
 describe('validateManifest DEPLOY_TARGET', () => {
   const FULL_VALID_MANIFEST = {
-    SUPABASE_URL: 'https://x.supabase.co',
-    SUPABASE_ANON_KEY:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IngiLCJyYW5rIjoiOSIsImlhdCI6MTYyMzQwNDAwMCwiZXhwIjoxOTM4OTgwMDAwfQ.123',
-    SUPABASE_SERVICE_ROLE_KEY:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IngiLCJyYW5rIjoiOSIsImlhdCI6MTYyMzQwNDAwMCwiZXhwIjoxOTM4OTgwMDAwfQ.srv',
+    DATABASE_URL: 'postgresql://x',
+    S3_ACCESS_KEY_ID: 'AKIAEXAMPLE',
+    S3_SECRET_ACCESS_KEY: 'secret-access-key',
     MEDIA_BUCKET: 'media',
     MCP_EXPORT_BUCKET: 'mcp-exports',
+    SMTP_HOST: 'smtp.example.com',
+    MAIL_FROM: 'Resubuild <no-reply@example.com>',
     CORS_ORIGIN: 'https://app.example.com',
     APP_URL: 'https://app.example.com',
     PUBLIC_API_URL: 'https://api.example.com',
     NEXT_PUBLIC_API_URL: 'https://api.example.com',
-    NEXT_PUBLIC_SUPABASE_URL: 'https://x.supabase.co',
-    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_TEST',
+    BETTER_AUTH_SECRET: 'b'.repeat(48),
+    MCP_KEY_PEPPER: 'pepper-value',
     AI_AGENT_ENCRYPTION_KEY: 'YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=',
   };
 

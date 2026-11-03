@@ -1,15 +1,20 @@
 # docker-compose.prod.yml
 #
-# Release 1: cloud Supabase + docker compose target.
+# Production docker compose target: web + api + one-shot migrations.
 #
 # Intentionally minimal scope — no TLS, no reverse proxy, no registry push.
-# See README.md "Release 1: cloud Supabase + docker compose".
+# See README.md "Deploy".
+#
+# Backing services are external by default (managed Postgres, S3-compatible
+# storage, SMTP provider) and configured in .env.prod. To run Postgres and S3
+# storage on the same host instead, enable the `selfhost` profile and point
+# DATABASE_URL / S3_ENDPOINT at the `postgres` / `storage` services.
 #
 # Prerequisites:
-#   1. Run `pnpm setup:env:prod` to generate
-#      .env.prod with real Supabase credentials.
+#   1. Run `pnpm setup:env:prod` to generate .env.prod.
 #   2. Bring up the stack:
-#      docker compose -f docker-compose.prod.yml --env-file .env.prod up
+#      docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#      (add `--profile selfhost` for bundled Postgres + storage)
 #
 # The .env.prod file is gitignored — it is NOT committed to version control.
 
@@ -21,13 +26,8 @@ services:
       args:
         # Required: Next.js inlines NEXT_PUBLIC_* at build time, so it must be
         # passed as a build arg (not just a runtime env var) for the production
-        # bundle to call the correct API URL and Supabase project. Without
-        # NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY the
-        # @supabase/ssr client throws "Your project's URL and API key are
-        # required" the first time it tries to instantiate.
+        # bundle to call the correct API URL.
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
-        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
         # Auth feature flags — consumed by apps/web/src/lib/auth/features.ts at
         # build time. The runtime `env_file` below is too late; these must be
         # baked into the bundle for the SPA to render the matching controls.
@@ -37,9 +37,8 @@ services:
         NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED: ${NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED}
         NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED: ${NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED}
         NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED: ${NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED}
-        # OAuth redirectTo base — must match the value in [auth].additional_redirect_urls
-        # in the Supabase project. Without this, social-login redirects fall back to
-        # window.location.origin which may be http://localhost:... in containers.
+        # Public web origin (password-reset redirectTo). Without it the SPA falls
+        # back to window.location.origin.
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
     ports:
       - '3000:3000'
@@ -57,10 +56,25 @@ services:
     networks:
       - resubuild-net
 
+  # Applies pending Drizzle migrations, then exits. The api waits for it.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ['node', 'packages/db/dist/migrate.js']
+    env_file:
+      - .env.prod
+    restart: 'no'
+    networks:
+      - resubuild-net
+
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     ports:
       - '3001:3000'
     env_file:
@@ -79,9 +93,40 @@ services:
     networks:
       - resubuild-net
 
+  # ── Optional bundled backing services (`--profile selfhost`) ──
+  postgres:
+    profiles: ['selfhost']
+    image: docker.io/library/postgres:18-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-resubuild}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD for the selfhost profile}
+      POSTGRES_DB: ${POSTGRES_DB:-resubuild}
+    volumes:
+      - resubuild-postgres:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-resubuild}']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - resubuild-net
+
+  storage:
+    profiles: ['selfhost']
+    image: docker.io/rustfs/rustfs:1.0.4
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY}
+    volumes:
+      - resubuild-storage:/data
+    networks:
+      - resubuild-net
+
 volumes:
   # Persists Puppeteer browser binaries across container restarts.
   resubuild-puppeteer-cache:
+  resubuild-postgres:
+  resubuild-storage:
 
 networks:
   # Minimal bridge network — no external exposure in this release.
