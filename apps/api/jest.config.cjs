@@ -23,9 +23,10 @@ module.exports = {
   transform: {
     ...tsjPreset.transform,
     '^.+\\.mjs$': 'babel-jest',
-    // PGlite (in-memory Postgres for repository specs) uses dynamic import();
-    // see test/jest/dynamic-import-to-require.transform.cjs.
-    '@electric-sql[\\/]pglite[\\/].+\\.cjs$':
+    // PGlite (in-memory Postgres for repository specs) and @react-email/render
+    // (mail templates) use dynamic import(); see
+    // test/jest/dynamic-import-to-require.transform.cjs.
+    '(@electric-sql[\\/]pglite|@react-email[\\/]render)[\\/].+\\.cjs$':
       '<rootDir>/../test/jest/dynamic-import-to-require.transform.cjs',
   },
   // `@mastra/core@1.38.0` and many of its transitive dependencies

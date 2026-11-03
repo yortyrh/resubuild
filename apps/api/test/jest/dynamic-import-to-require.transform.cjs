@@ -1,9 +1,10 @@
 /**
- * Jest transformer for PGlite's CommonJS build.
+ * Jest transformer for CommonJS builds that still use dynamic `import()`.
  *
  * `@electric-sql/pglite/dist/*.cjs` loads Node built-ins with `await import("fs")`
- * and friends. Jest's CommonJS runtime rejects dynamic `import()` unless Node runs
- * with `--experimental-vm-modules`, which in turn breaks other CJS shims in this
+ * and friends; `@react-email/render` lazily imports `react-dom/server`. Jest's
+ * CommonJS runtime rejects dynamic `import()` unless Node runs with
+ * `--experimental-vm-modules`, which in turn breaks other CJS shims in this
  * suite (e.g. the `marked` UMD mapping). Rewriting the calls to `require()` keeps
  * the suite on the plain CJS runtime. `module.require` is used because the
  * Emscripten glue declares its own `var require`, shadowing the wrapper one.

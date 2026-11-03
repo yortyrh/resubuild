@@ -15,6 +15,7 @@ import { HealthController } from './health/health.controller';
 import { ImportModule } from './import/import.module';
 import { ImportLlmConfigModule } from './import-llm-config/import-llm-config.module';
 import { ImportModelsCatalogModule } from './import-models-catalog/import-models-catalog.module';
+import { MailModule } from './mail/mail.module';
 import { McpModule } from './mcp/mcp.module';
 import { McpAuthModule } from './mcp/mcp-auth.module';
 import { MediaModule } from './media/media.module';
@@ -38,6 +39,7 @@ import { WebScrapeModule } from './web-scrape/web-scrape.module';
     ScheduleModule.forRoot(),
     DatabaseModule,
     StorageModule,
+    MailModule,
     ImportModelsCatalogModule,
     AuthModule,
     CvModule,
