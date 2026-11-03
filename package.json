@@ -30,12 +30,22 @@
     "local:credentials": "node scripts/show-local-credentials.mjs",
     "test:e2e": "pnpm --filter @resubuild/api test:e2e",
     "test:scripts": "vitest run --config vitest.config.mjs",
-    "env-schema:check": "vitest run --config vitest.config.mjs scripts/lib/env-prod-schema.spec.mjs"
+    "env-schema:check": "vitest run --config vitest.config.mjs scripts/lib/env-prod-schema.spec.mjs",
+    "infra:up": "bash scripts/compose.sh up -d --wait && pnpm --filter @resubuild/db build && node scripts/infra-init.mjs",
+    "infra:init": "node scripts/infra-init.mjs",
+    "infra:down": "bash scripts/compose.sh down",
+    "infra:reset": "bash scripts/compose.sh down --volumes",
+    "infra:logs": "bash scripts/compose.sh logs -f",
+    "db:migrate": "pnpm --filter @resubuild/db build && pnpm --filter @resubuild/db db:migrate",
+    "db:generate": "pnpm --filter @resubuild/db db:generate"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1161.0",
     "@biomejs/biome": "^2.4.15",
+    "@resubuild/db": "workspace:*",
     "@supabase/supabase-js": "^2.50.0",
     "lefthook": "^2.1.8",
+    "pg": "^8.23.1",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "puppeteer": "^25.1.0",

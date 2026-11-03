@@ -166,9 +166,15 @@ importers:
 
   .:
     devDependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1161.0
+        version: 3.1161.0
       '@biomejs/biome':
         specifier: ^2.4.15
         version: 2.4.15
+      '@resubuild/db':
+        specifier: workspace:*
+        version: link:packages/db
       '@supabase/supabase-js':
         specifier: ^2.50.0
         version: 2.106.1
@@ -178,6 +184,9 @@ importers:
       node:
         specifier: runtime:26.13.0
         version: runtime:26.13.0
+      pg:
+        specifier: ^8.23.1
+        version: 8.23.1
       prettier:
         specifier: ^3.5.3
         version: 3.8.3

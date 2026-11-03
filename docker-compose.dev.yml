@@ -1,0 +1,56 @@
+# Local development infrastructure: Postgres, S3-compatible storage, SMTP catcher.
+#
+#   pnpm infra:up      start everything, apply migrations, create buckets
+#   pnpm infra:down    stop (data is kept in named volumes)
+#   pnpm infra:reset   stop and delete all local data
+#
+# The apps run on the host (`pnpm dev`). Host ports default to the 544xx range
+# (Postgres 54432, S3 54490, S3 console 54491, SMTP 54425, Mailpit UI 54424) and
+# can be changed with the RESUBUILD_*_PORT variables; `pnpm setup:env` writes
+# matching app env files.
+name: resubuild-dev
+
+services:
+  postgres:
+    image: docker.io/library/postgres:18-alpine
+    environment:
+      POSTGRES_USER: resubuild
+      POSTGRES_PASSWORD: resubuild
+      POSTGRES_DB: resubuild
+    ports:
+      - '${RESUBUILD_POSTGRES_PORT:-54432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U resubuild -d resubuild']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # S3-compatible object storage (MinIO-style API and web console).
+  # Any S3 server works; swap the image without touching application code.
+  storage:
+    image: docker.io/rustfs/rustfs:1.0.4
+    environment:
+      RUSTFS_ACCESS_KEY: resubuild
+      RUSTFS_SECRET_KEY: resubuild-secret
+      RUSTFS_CONSOLE_ENABLE: 'true'
+    ports:
+      - '${RESUBUILD_S3_PORT:-54490}:9000'
+      - '${RESUBUILD_S3_CONSOLE_PORT:-54491}:9001'
+    volumes:
+      - storage-data:/data
+
+  # Catches every email the API sends. Web UI: http://127.0.0.1:54424
+  mailpit:
+    image: docker.io/axllent/mailpit:v1.33.0
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: '1'
+      MP_SMTP_AUTH_ALLOW_INSECURE: '1'
+    ports:
+      - '${RESUBUILD_SMTP_PORT:-54425}:1025'
+      - '${RESUBUILD_MAILPIT_PORT:-54424}:8025'
+
+volumes:
+  postgres-data:
+  storage-data:
