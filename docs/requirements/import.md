@@ -1,0 +1,57 @@
+# Import and AI settings (`IMP`)
+
+### REQ-IMP-001 New CV options
+
+A user can create a CV from scratch, import it from a file, or import it from a URL.
+
+### REQ-IMP-002 Preview before create
+
+No import creates a CV automatically. Every import produces a schema-valid draft, which the user can **Preview** (rendered with a template) and **Edit** (raw JSON) before pressing **Save**.
+
+- The primary action is **Import** until a valid draft exists, then **Save**. Progress is shown while the import runs.
+- AI-processed imports report success in a notification and mention when social profiles were found online.
+
+### REQ-IMP-003 File import
+
+Import from file accepts JSON Resume (`.json`), PDF, Markdown, Word (`.docx`), and images (PNG, JPEG, WebP). The format is detected automatically.
+
+- JSON is validated and normalized locally and needs no AI.
+- Every other format runs as a background AI job that the client follows until it succeeds or fails.
+- Size limits are enforced before upload (for example about 1 MB for JSON and 5 MB for PDF), with a clear error.
+
+### REQ-IMP-004 URL import
+
+Import from URL accepts a direct JSON Resume URL (imported without AI) or a web page (AI job).
+
+- Invalid URLs are rejected without starting a job.
+- Page content is extracted with the user's configured scraping provider when present, otherwise from the raw page.
+
+### REQ-IMP-005 JSON Resume normalization
+
+External JSON Resume documents are normalized before creation: ids are stripped and missing sections are filled. An exported document can be re-imported without manual edits (round-trip; see REQ-EXP-007).
+
+### REQ-IMP-006 AI import pipeline
+
+AI imports extract the text (or transcribe an image with a vision-capable model), draft a JSON Resume, then run a verify-and-repair loop: schema validation, date normalization, optional web lookup.
+
+- The loop has a bounded number of retries (default 3). If it is exceeded, the job fails with all collected errors.
+- The pipeline uses the user's own model and API key, never a deployment-wide default.
+
+### REQ-IMP-007 Social profile discovery
+
+When web search is configured and the draft has a name, the import searches the public web for the person's profiles on supported networks (LinkedIn, GitHub, X, and others) and merges valid ones into the draft without overwriting existing profiles.
+
+- Search is bounded per job: at most 5 queries of up to 3 results each, and the search for a network stops once a profile is found.
+- Merged profiles have a network, an HTTPS URL, and a username.
+
+### REQ-IMP-008 AI provider settings
+
+AI import and job-application preparation stay disabled until the user configures a provider, a model, and an API key. While unconfigured, the UI shows a setup link instead of the action.
+
+- The flow is provider first, then model (chosen from a server-provided catalog, not free text), then API key. Labels name the expected key (for example "OpenAI API key").
+- The key is validated before activation and stored encrypted. It is never returned in plain text.
+- The model catalog can be refreshed from a public model registry, and only lists chat-capable models the runtime supports.
+
+### REQ-IMP-009 Web scraping and search settings
+
+Users can optionally save a page-extraction / web-search provider and its API key (stored encrypted) in AI settings. Without it, URL import falls back to raw page fetch, and web lookup and profile discovery are skipped without failing.
