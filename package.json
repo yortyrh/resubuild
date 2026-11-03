@@ -45,6 +45,13 @@
   },
   "packageManager": "pnpm@12.16.1",
   "engines": {
-    "node": "22.x"
+    "node": "26.x"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "26.13.0",
+      "onFail": "download"
+    }
   }
 }

@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
@@ -39,7 +39,7 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 RUN apk add --no-cache git
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
+RUN npm install -g pnpm@12.16.1
 
 # Copy workspace manifests and turbo config
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
@@ -56,14 +56,14 @@ RUN rm -rf node_modules/.cache/turbo && \
     pnpm turbo build --filter=@resubuild/web
 
 # Stage 2: Runtime
-FROM node:22-alpine AS runtime
+FROM node:26-alpine AS runtime
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
 # Install pnpm and curl (for healthcheck)
-RUN corepack enable && corepack prepare pnpm@11.8.0 --activate && \
+RUN npm install -g pnpm@12.16.1 && \
     apk add --no-cache curl
 
 # Copy all workspace manifests needed for pnpm to resolve workspace protocol

@@ -134,8 +134,7 @@ In **local development**, confirmation and passwordless emails do not leave your
 
 ## Prerequisites
 
-- Node.js 20+
-- pnpm 10+
+- pnpm 12+ (see `packageManager`). pnpm downloads the pinned Node.js (26 LTS, root `package.json` `devEngines.runtime`) on `pnpm install` and runs every script with it; any Node on PATH works for bootstrapping pnpm.
 - [Supabase CLI](https://supabase.com/docs/guides/cli) (for local development)
 
 ## Local development (Supabase CLI)
@@ -399,12 +398,12 @@ use the conservative defaults).
 
 ## Troubleshooting
 
-| Error                                                      | Fix                                                                                                   |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `Could not find the table 'public.cv' in the schema cache` | Run `supabase db push` or `supabase start` with migrations applied.                                   |
-| `Invalid or expired token`                                 | Sign out and sign in again. Ensure `SUPABASE_*` vars in `apps/api/.env` match your Supabase instance. |
-| Forgot local dev password                                  | Run `pnpm local:credentials`.                                                                         |
-| `pnpm verify` fails on Node version                        | Use Node **22** (see `.nvmrc`). CI uses 22; newer Node can hide test failures that break in CI.       |
+| Error                                                      | Fix                                                                                                                                                                |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Could not find the table 'public.cv' in the schema cache` | Run `supabase db push` or `supabase start` with migrations applied.                                                                                                |
+| `Invalid or expired token`                                 | Sign out and sign in again. Ensure `SUPABASE_*` vars in `apps/api/.env` match your Supabase instance.                                                              |
+| Forgot local dev password                                  | Run `pnpm local:credentials`.                                                                                                                                      |
+| `pnpm verify` fails on Node version                        | Run it via pnpm (`pnpm verify`, not `node …`) after `pnpm install`; pnpm supplies Node 26 from `devEngines.runtime`. To upgrade Node: `pnpm runtime set node lts`. |
 
 ## Debugging the API
 

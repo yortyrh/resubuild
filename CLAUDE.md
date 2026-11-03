@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Resubuild: JSON Resume–based CV builder with AI import (PDF/DOCX/image/URL), MIT-format preview, PDF export, job-application tailoring, and an MCP server. pnpm + Turborepo monorepo, Node 22.x (`.nvmrc`; `pnpm verify` enforces it via `scripts/check-node-version.mjs`).
+Resubuild: JSON Resume–based CV builder with AI import (PDF/DOCX/image/URL), MIT-format preview, PDF export, job-application tailoring, and an MCP server. pnpm + Turborepo monorepo, Node 26.x LTS managed by pnpm: root `package.json` `devEngines.runtime` pins the version, pnpm downloads it and runs every script with it, and `pnpm verify` enforces it via `scripts/check-node-version.mjs`. Upgrade with `pnpm runtime set node lts`, then bump `engines.node`, `.nvmrc` (editors/CI), `apps/{api,web}/Dockerfile` base images and `@types/node` together.
 
 - `apps/web` — Next.js App Router UI. Route groups `(auth)`, `(marketing)`, `auth/` (callbacks), `dashboard/{cv,applications,templates,settings}`, `features`. Bearer token lives in `sessionStorage`; all API calls go through `src/lib/api.ts` to `NEXT_PUBLIC_API_URL`. Server-state hooks in `src/lib/queries`.
 - `apps/api` — NestJS 11 REST API (port 3001). Feature modules under `src/`: `auth`, `cv` (CRUD, items, clone, template presentation), `import` (async import jobs), `import-llm-config` / `ai-agent` (per-user LLM settings), `application` (job-application prep), `cv-export` / `export-storage` (Puppeteer PDF), `media`, `web-scrape`, `mcp` (MCP server via `@rekog/mcp-nest`, per-user API key), `supabase` (service-role client), `validation` (AJV).
@@ -22,7 +22,7 @@ Resubuild: JSON Resume–based CV builder with AI import (PDF/DOCX/image/URL), M
 - **Env vars:** any new key in `apps/{api,web}/.env.example` must be registered in `scripts/lib/env-prod-schema.mjs` (checked by `pnpm env-schema:check`, runs on pre-push). That schema also drives `pnpm setup:env:prod`.
 - **Deploy:** docker compose (`docker-compose.prod.yml`, `.env.prod`) or Railway (`apps/{api,web}/railway.json`, same Dockerfiles). Details in README.
 - **Product requirements:** `docs/requirements/<area>.md` (stable `REQ-<AREA>-NNN` ids, no change history; git is the history). Read only the area you touch; when behavior changes, update the matching requirement in the same commit. API E2E catalog: `apps/api/test/e2e/README.md`.
-- **pnpm version** is pinned in root `package.json` (`packageManager`) and again in `apps/{api,web}/Dockerfile` (`corepack prepare pnpm@…`); bump them together.
+- **pnpm version** is pinned in root `package.json` (`packageManager`) and again in `apps/{api,web}/Dockerfile` (`npm install -g pnpm@…`; Node 25+ images no longer ship corepack); bump them together.
 
 ## Commands
 
