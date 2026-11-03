@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   InvalidImportedResumeError,
@@ -9,8 +8,8 @@ import {
 } from './prepare-imported-resume';
 
 const samplePath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '../../../.samples/resumes/jsonresume/Jane Doe - Senior Software Engineer.json',
+  process.cwd(),
+  '../../.samples/resumes/jsonresume/Jane Doe - Senior Software Engineer.json',
 );
 
 describe('prepareImportedResume', () => {

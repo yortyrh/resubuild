@@ -72,7 +72,7 @@ describe('visual templates', () => {
     const config = getDefaultPresentationConfig('classic');
     const hidden = {
       ...config,
-      hiddenSections: ['education'],
+      hiddenSections: ['education'] as typeof config.hiddenSections,
     };
     const order = visibleSectionOrder(hidden);
     expect(order).not.toContain('education');

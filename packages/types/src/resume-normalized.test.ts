@@ -42,6 +42,10 @@ function compareEndDateNullsFirst(a?: string, b?: string): number {
   return compareDateDesc(a, b);
 }
 
+function itemId(item: object): string {
+  return 'id' in item && typeof item.id === 'string' ? item.id : '';
+}
+
 function normalizeDateSections(resume: Resume): Resume {
   const normalized = { ...resume };
 
@@ -51,7 +55,7 @@ function normalizeDateSections(resume: Resume): Resume {
       if (byEnd !== 0) return byEnd;
       const byStart = compareDateDesc(a.startDate, b.startDate);
       if (byStart !== 0) return byStart;
-      return (a.id ?? '').localeCompare(b.id ?? '');
+      return itemId(a).localeCompare(itemId(b));
     });
   }
 
@@ -61,7 +65,7 @@ function normalizeDateSections(resume: Resume): Resume {
       if (byEnd !== 0) return byEnd;
       const byStart = compareDateDesc(a.startDate, b.startDate);
       if (byStart !== 0) return byStart;
-      return (a.id ?? '').localeCompare(b.id ?? '');
+      return itemId(a).localeCompare(itemId(b));
     });
   }
 
@@ -71,7 +75,7 @@ function normalizeDateSections(resume: Resume): Resume {
       if (byEnd !== 0) return byEnd;
       const byStart = compareDateDesc(a.startDate, b.startDate);
       if (byStart !== 0) return byStart;
-      return (a.id ?? '').localeCompare(b.id ?? '');
+      return itemId(a).localeCompare(itemId(b));
     });
   }
 
@@ -97,7 +101,7 @@ function normalizeDateSections(resume: Resume): Resume {
       if (byEnd !== 0) return byEnd;
       const byStart = compareDateDesc(a.startDate, b.startDate);
       if (byStart !== 0) return byStart;
-      return (a.id ?? '').localeCompare(b.id ?? '');
+      return itemId(a).localeCompare(itemId(b));
     });
   }
 
