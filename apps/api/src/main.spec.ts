@@ -10,6 +10,9 @@
  */
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { configureApp } from './configure-app';
+
+jest.mock('./configure-app', () => ({ configureApp: jest.fn() }));
 
 jest.mock('@nestjs/core', () => {
   const actual = jest.requireActual('@nestjs/core');
@@ -18,8 +21,6 @@ jest.mock('@nestjs/core', () => {
     NestFactory: {
       ...actual.NestFactory,
       create: jest.fn().mockResolvedValue({
-        enableCors: jest.fn(),
-        useGlobalPipes: jest.fn(),
         listen: jest.fn().mockResolvedValue(undefined),
         close: jest.fn().mockResolvedValue(undefined),
       }),
@@ -32,13 +33,17 @@ describe('bootstrap', () => {
     jest.unmock('@nestjs/core');
   });
 
-  it('calls NestFactory.create with { snapshot: true }', async () => {
+  it('calls NestFactory.create with { snapshot: true, bodyParser: false } and configures the app', async () => {
     // Dynamically import to trigger bootstrap before assertions
-    await import('./main');
+    require('./main');
 
     // Allow one event-loop tick for the async bootstrap to start
     await new Promise((resolve) => setImmediate(resolve));
 
-    expect(NestFactory.create).toHaveBeenCalledWith(AppModule, { snapshot: true });
+    expect(NestFactory.create).toHaveBeenCalledWith(AppModule, {
+      snapshot: true,
+      bodyParser: false,
+    });
+    expect(configureApp).toHaveBeenCalled();
   });
 });

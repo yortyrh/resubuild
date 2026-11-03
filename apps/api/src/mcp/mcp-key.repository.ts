@@ -38,11 +38,9 @@ export class McpKeyRepository {
   ) {}
 
   private pepper(): string {
-    const pepper =
-      this.configService.get<string>('MCP_KEY_PEPPER') ??
-      this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
+    const pepper = this.configService.get<string>('MCP_KEY_PEPPER')?.trim();
     if (!pepper) {
-      throw new Error('MCP_KEY_PEPPER or SUPABASE_SERVICE_ROLE_KEY must be configured');
+      throw new Error('MCP_KEY_PEPPER must be configured');
     }
     return pepper;
   }

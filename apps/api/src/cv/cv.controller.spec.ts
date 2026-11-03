@@ -2,7 +2,7 @@
  * CV REST API (docs/requirements/cv.md) — guard applies to handlers; controller forwards to CvService.
  */
 
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { CvController } from './cv.controller';
 import type { CvRecord } from './cv.service';
 
@@ -23,7 +23,6 @@ describe('CvController', () => {
   const userCtx: AuthenticatedRequest['user'] = {
     id: 'u42',
     email: 'hitme@test.dev',
-    accessToken: 'tok',
   };
   const req = { user: userCtx } as AuthenticatedRequest;
 

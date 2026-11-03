@@ -43,7 +43,7 @@ export function useTestDb(): TestDbContext {
     },
     async createUser(email) {
       const id = await current().createUser(email);
-      return { id, email: email ?? `${id}@test.local`, authMethod: 'jwt' };
+      return { id, email: email ?? `${id}@test.local`, authMethod: 'session' };
     },
   };
 }

@@ -22,6 +22,20 @@ export default function CheckEmailClient() {
     return <AuthPageShell title="Checking verification…" description="Please wait a moment." />;
   }
 
+  if (verifyEmail.data?.verified && verifyEmail.data.signedIn) {
+    return (
+      <AuthPageShell title="Email verified!" description="Your email has been verified.">
+        <Button
+          type="button"
+          className="w-full"
+          onClick={() => (window.location.href = '/dashboard')}
+        >
+          Continue to dashboard
+        </Button>
+      </AuthPageShell>
+    );
+  }
+
   if (verifyEmail.data?.verified) {
     return (
       <AuthPageShell

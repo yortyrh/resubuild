@@ -20,7 +20,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { type AuthenticatedRequest, SessionAuthGuard } from '../auth/session-auth.guard';
 import { MediaService } from './media.service';
 import { CropRectDto } from './media-crop.dto';
 import { ImportMediaGravatarDto } from './media-import-gravatar.dto';
@@ -32,7 +32,7 @@ export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 
   @Post('upload')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SessionAuthGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -50,7 +50,7 @@ export class MediaController {
   }
 
   @Post('import-url')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SessionAuthGuard)
   @HttpCode(HttpStatus.OK)
   async importFromUrl(@Req() req: AuthenticatedRequest, @Body() body: ImportMediaUrlDto) {
     const result = await this.mediaService.importFromUrl(req.user.id, body.url);
@@ -61,7 +61,7 @@ export class MediaController {
   }
 
   @Post('import-url/check')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SessionAuthGuard)
   @HttpCode(HttpStatus.OK)
   async checkImportUrl(@Body() body: ImportMediaUrlDto) {
     const importable = await this.mediaService.canImportImageFromUrl(body.url);
@@ -69,7 +69,7 @@ export class MediaController {
   }
 
   @Post('import-gravatar')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SessionAuthGuard)
   @HttpCode(HttpStatus.OK)
   async importFromGravatar(@Req() req: AuthenticatedRequest, @Body() body: ImportMediaGravatarDto) {
     const result = await this.mediaService.importFromGravatarEmail(req.user.id, body.email);
@@ -80,7 +80,7 @@ export class MediaController {
   }
 
   @Patch(':id/crop')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SessionAuthGuard)
   async crop(
     @Req() req: AuthenticatedRequest,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
@@ -90,7 +90,7 @@ export class MediaController {
   }
 
   @Delete(':id')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SessionAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(
     @Req() req: AuthenticatedRequest,
@@ -100,7 +100,7 @@ export class MediaController {
   }
 
   @Get(':id/meta')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SessionAuthGuard)
   async meta(
     @Req() req: AuthenticatedRequest,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,

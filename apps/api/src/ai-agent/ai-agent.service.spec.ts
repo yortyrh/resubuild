@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import type { ImportModelCatalog } from '@resubuild/import-models';
 import catalog from '@resubuild/import-models/catalog.json';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import type { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import type { AiAgentRepository } from './ai-agent.repository';
 import { AiAgentService } from './ai-agent.service';
@@ -22,7 +22,6 @@ describe('AiAgentService', () => {
   const user = {
     id: 'u1',
     email: 'u@test.dev',
-    accessToken: 'tok',
   } as AuthenticatedRequest['user'];
 
   let service: AiAgentService;

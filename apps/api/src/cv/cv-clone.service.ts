@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Resume } from '@resubuild/types';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import type { DbScope } from '../database/db-scope';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
 import { CvNormalizedRepository } from './cv-normalized.repository';

@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import type { Response } from 'express';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import type { CvExportService } from '../cv-export/cv-export.service';
 import { ApplicationController } from './application.controller';
 import type { ApplicationService } from './application.service';
@@ -9,7 +9,6 @@ describe('ApplicationController', () => {
   const user = {
     id: 'u1',
     email: 'u@test.dev',
-    accessToken: 'tok',
   } as AuthenticatedRequest['user'];
   const req = { user } as AuthenticatedRequest;
 

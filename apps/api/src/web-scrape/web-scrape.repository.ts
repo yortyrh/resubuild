@@ -6,7 +6,7 @@ import {
   resolveAiAgentEncryptionKey,
   tryDecryptSecret,
 } from '../ai-agent/ai-agent-crypto.util';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { DATABASE } from '../database/database.tokens';
 
 export type WebScrapeProvider = 'firecrawl' | 'tavily';

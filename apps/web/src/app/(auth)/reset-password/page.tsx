@@ -1,15 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
 import { AuthPageShell } from '@/components/auth/auth-page-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useResetPassword } from '@/lib/queries/auth-mutations';
-import { getSupabaseClient } from '@/lib/supabase/client';
 
-function ResetPasswordForm({ sessionReady }: { sessionReady: boolean }) {
+function ResetPasswordForm({ token }: { token: string }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
@@ -30,10 +30,10 @@ function ResetPasswordForm({ sessionReady }: { sessionReady: boolean }) {
       return;
     }
 
-    resetPassword.mutate(password);
+    resetPassword.mutate({ token, password });
   };
 
-  if (!sessionReady) {
+  if (!token) {
     return (
       <AuthPageShell
         title="Invalid reset link"
@@ -112,58 +112,10 @@ function ResetPasswordForm({ sessionReady }: { sessionReady: boolean }) {
   );
 }
 
+/** Reads the `?token=` from the emailed reset link (`/reset-password?token=…`). */
 function ResetPasswordLoader() {
-  const [sessionReady, setSessionReady] = useState(false);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const resolveRecoverySession = async () => {
-      const supabase = getSupabaseClient();
-      const { data } = await supabase.auth.getSession();
-      if (!cancelled && data.session) {
-        setSessionReady(true);
-        setChecking(false);
-        return;
-      }
-
-      const hash = window.location.hash;
-      if (hash) {
-        const params = new URLSearchParams(hash.substring(1));
-        const accessToken = params.get('access_token');
-        const refreshToken = params.get('refresh_token');
-        if (accessToken && refreshToken) {
-          const { data: setData, error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          if (!cancelled && !error && setData.session) {
-            window.history.replaceState(null, '', window.location.pathname);
-            setSessionReady(true);
-            setChecking(false);
-            return;
-          }
-        }
-      }
-
-      if (!cancelled) {
-        setSessionReady(false);
-        setChecking(false);
-      }
-    };
-
-    void resolveRecoverySession();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (checking) {
-    return <AuthPageShell title="Set new password" description="Loading your reset session…" />;
-  }
-
-  return <ResetPasswordForm sessionReady={sessionReady} />;
+  const token = useSearchParams().get('token') ?? '';
+  return <ResetPasswordForm token={token} />;
 }
 
 export default function ResetPasswordPage() {

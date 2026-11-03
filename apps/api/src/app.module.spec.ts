@@ -23,6 +23,9 @@ describe('AppModule', () => {
   const originalNodeEnv = process.env.NODE_ENV;
   // The pool connects lazily, so an unreachable URL is enough to compile the module.
   process.env.DATABASE_URL ??= 'postgresql://test:test@127.0.0.1:1/test';
+  // Required by AuthConfigService when Better Auth is constructed (no .env in CI).
+  process.env.BETTER_AUTH_SECRET ??= 'test-secret-that-is-at-least-32-characters';
+  process.env.APP_URL ??= 'http://localhost:3000';
 
   afterEach(() => {
     process.env.NODE_ENV = originalNodeEnv;

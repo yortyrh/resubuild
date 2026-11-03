@@ -14,7 +14,7 @@ describe('CvTemplatePresentationService', () => {
     upsert: jest.Mock;
   };
   const supabaseStub = {};
-  const user = { id: 'user-1', email: 'u@test.com', accessToken: 'jwt' };
+  const user = { id: 'user-1', email: 'u@test.com' };
 
   beforeEach(async () => {
     normalizedRepo = createMockNormalizedRepo();

@@ -6,8 +6,8 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
+import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
 
@@ -39,7 +39,7 @@ describe('MediaController', () => {
     const alwaysAuthGuard: CanActivate = {
       canActivate: (ctx: ExecutionContext) => {
         const req = ctx.switchToHttp().getRequest<AuthenticatedRequest>();
-        req.user = { id: 'user-test-1', accessToken: 't', email: 'example@example.com' };
+        req.user = { id: 'user-test-1', email: 'example@example.com' };
         return true;
       },
     };
@@ -64,7 +64,7 @@ describe('MediaController', () => {
         },
       ],
     })
-      .overrideGuard(SupabaseAuthGuard)
+      .overrideGuard(SessionAuthGuard)
       .useValue(alwaysAuthGuard)
       .compile();
 
@@ -88,7 +88,7 @@ describe('MediaController', () => {
     });
 
     const req = {
-      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+      user: { id: 'user-test-1', email: 'example@example.com' },
     } as AuthenticatedRequest;
 
     await expect(controller.upload(req, sampleFile)).resolves.toEqual({
@@ -108,7 +108,7 @@ describe('MediaController', () => {
     });
 
     const req = {
-      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+      user: { id: 'user-test-1', email: 'example@example.com' },
     } as AuthenticatedRequest;
 
     await expect(
@@ -125,7 +125,7 @@ describe('MediaController', () => {
   it('returns 404 when import-url finds no image', async () => {
     importFromUrl.mockResolvedValue(null);
     const req = {
-      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+      user: { id: 'user-test-1', email: 'example@example.com' },
     } as AuthenticatedRequest;
 
     await expect(
@@ -146,7 +146,7 @@ describe('MediaController', () => {
   it('returns 404 when import-gravatar finds no avatar', async () => {
     importFromGravatarEmail.mockResolvedValue(null);
     const req = {
-      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+      user: { id: 'user-test-1', email: 'example@example.com' },
     } as AuthenticatedRequest;
 
     await expect(
@@ -162,7 +162,7 @@ describe('MediaController', () => {
     });
 
     const req = {
-      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+      user: { id: 'user-test-1', email: 'example@example.com' },
     } as AuthenticatedRequest;
 
     await expect(
@@ -187,7 +187,7 @@ describe('MediaController', () => {
 
   it('rejects upload when file part is missing', () => {
     const req = {
-      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+      user: { id: 'user-test-1', email: 'example@example.com' },
     } as AuthenticatedRequest;
 
     expect(() => controller.upload(req)).toThrow(BadRequestException);
@@ -204,7 +204,7 @@ describe('MediaController', () => {
     });
 
     const req = {
-      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+      user: { id: 'user-test-1', email: 'example@example.com' },
     } as AuthenticatedRequest;
 
     await expect(controller.crop(req, id, crop)).resolves.toMatchObject({ id });
@@ -216,7 +216,7 @@ describe('MediaController', () => {
     deleteMedia.mockResolvedValue(undefined);
 
     const req = {
-      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+      user: { id: 'user-test-1', email: 'example@example.com' },
     } as AuthenticatedRequest;
 
     await expect(controller.delete(req, id)).resolves.toBeUndefined();
@@ -259,7 +259,7 @@ describe('MediaController', () => {
     });
 
     const req = {
-      user: { id: 'user-test-1', accessToken: 't', email: 'example@example.com' },
+      user: { id: 'user-test-1', email: 'example@example.com' },
     } as AuthenticatedRequest;
 
     await expect(controller.meta(req, id)).resolves.toMatchObject({ id, hasCropped: false });

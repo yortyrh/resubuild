@@ -3,7 +3,7 @@ import { McpKeyRepository } from './mcp-key.repository';
 import { McpSettingsService } from './mcp-settings.service';
 import { MCP_TOOL_NAMES } from './tool-definitions';
 
-const user = { id: 'user-1', accessToken: 'tok', authMethod: 'jwt' as const };
+const user = { id: 'user-1', authMethod: 'session' as const };
 
 describe('McpSettingsService', () => {
   let service: McpSettingsService;

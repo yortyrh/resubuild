@@ -1,10 +1,10 @@
 import { Body, Controller, Get, Param, Put, Req, UseGuards } from '@nestjs/common';
-import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { type AuthenticatedRequest, SessionAuthGuard } from '../auth/session-auth.guard';
 import { SaveImportLlmConfigDto } from './dto/save-import-llm-config.dto';
 import { ImportLlmConfigService } from './import-llm-config.service';
 
 @Controller('import/llm')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SessionAuthGuard)
 export class ImportLlmConfigController {
   constructor(private readonly importLlmConfigService: ImportLlmConfigService) {}
 

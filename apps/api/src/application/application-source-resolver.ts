@@ -1,7 +1,7 @@
 import type { CvSummaryForRanking } from '@resubuild/import-agent';
 import type { JobApplicationRow, Resume } from '@resubuild/types';
 import { assembleResume, deriveCvTitleFromBasics } from '@resubuild/types';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
 
 export const APPLICATION_SNAPSHOT_CV_ID = '__application_snapshot__';

@@ -6,7 +6,7 @@ import {
   isSortBackedSection,
   sanitizeResumeItemPayload,
 } from '@resubuild/types';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import type { DbScope } from '../database/db-scope';
 import { MediaService } from '../media/media.service';
 import { parseMediaIdFromViewerUrl } from '../media/media-url.util';

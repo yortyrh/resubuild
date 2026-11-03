@@ -74,7 +74,7 @@ describe('application-source-resolver', () => {
 });
 
 describe('resolveApplicationSource', () => {
-  const user = { id: 'u1', accessToken: 'tok' } as never;
+  const user = { id: 'u1' } as never;
   const sampleResume = {
     basics: { name: 'Jane Doe', label: 'Engineer' },
     work: [],
@@ -209,7 +209,7 @@ describe('resolveApplicationSource', () => {
 });
 
 describe('buildSourceCvSnapshot', () => {
-  const user = { id: 'u1', accessToken: 'tok' } as never;
+  const user = { id: 'u1' } as never;
 
   it('assembles resume JSON for a source CV id', async () => {
     const resume = { basics: { name: 'Jane Doe' }, work: [], skills: [] };
@@ -225,7 +225,7 @@ describe('buildSourceCvSnapshot', () => {
 });
 
 describe('buildCvSummaryFromId', () => {
-  const user = { id: 'u1', accessToken: 'tok' } as never;
+  const user = { id: 'u1' } as never;
 
   it('returns null when CV header is missing', async () => {
     const normalizedRepo = {

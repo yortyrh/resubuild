@@ -1,13 +1,17 @@
 import { readFileSync } from 'node:fs';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { signIn, tokenFromEmail, WEB_ORIGIN, waitForEmail } from './auth-helpers';
 import { createE2eApp } from './create-e2e-app';
 import { loadE2eAccountState, loadFixture, samplesPath } from './fixture';
 
-describe('E2E — auth (local Supabase)', () => {
+describe('E2E — auth', () => {
   let app: INestApplication;
   const fixture = loadFixture();
   const state = loadE2eAccountState();
+  const server = () => app.getHttpServer();
+  const auth = (path: string) =>
+    request(server()).post(`/api/auth${path}`).set('Origin', WEB_ORIGIN);
 
   beforeAll(async () => {
     app = await createE2eApp();
@@ -17,35 +21,138 @@ describe('E2E — auth (local Supabase)', () => {
     await app.close();
   });
 
-  it('POST /auth/login returns tokens for the seeded fixture user', async () => {
-    const response = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send(fixture.e2eUser)
-      .expect(200);
+  it('POST /api/auth/sign-in/email returns a bearer token for the seeded user', async () => {
+    const response = await auth('/sign-in/email').send(fixture.e2eUser).expect(200);
 
-    expect(response.body.access_token).toEqual(expect.any(String));
+    expect(response.headers['set-auth-token']).toEqual(expect.any(String));
     expect(response.body.user.id).toBe(state.user.id);
     expect(response.body.user.email).toBe(fixture.e2eUser.email);
+  });
+
+  it('rejects a wrong password', async () => {
+    await auth('/sign-in/email')
+      .send({ email: fixture.e2eUser.email, password: 'definitely-wrong' })
+      .expect(401);
   });
 
   it('GET /auth/me returns the authenticated user', async () => {
-    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
+    const token = await signIn(app, fixture.e2eUser);
 
-    const response = await request(app.getHttpServer())
+    const response = await request(server())
       .get('/auth/me')
-      .set('Authorization', `Bearer ${login.body.access_token}`)
+      .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
     expect(response.body.user.id).toBe(state.user.id);
     expect(response.body.user.email).toBe(fixture.e2eUser.email);
+    expect(response.body.has_password).toBe(true);
   });
 
-  it('GET /auth/me without token returns 401', async () => {
-    await request(app.getHttpServer()).get('/auth/me').expect(401);
+  it('GET /auth/me without or with an unknown token returns 401', async () => {
+    await request(server()).get('/auth/me').expect(401);
+    await request(server()).get('/auth/me').set('Authorization', 'Bearer nope').expect(401);
+  });
+
+  it('POST /auth/logout revokes the session', async () => {
+    const token = await signIn(app, fixture.e2eUser);
+    await request(server())
+      .post('/auth/logout')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
+    await request(server()).get('/auth/me').set('Authorization', `Bearer ${token}`).expect(401);
+  });
+
+  it('registers, emails a verification link and signs in once verified', async () => {
+    const email = `signup-${Date.now()}@e2e.local`;
+    const password = 'signup-password';
+
+    const signUp = await auth('/sign-up/email')
+      .send({ email, password, name: 'Signup' })
+      .expect(200);
+    expect(signUp.body.token).toBeNull();
+    await auth('/sign-in/email').send({ email, password }).expect(403);
+
+    const mail = await waitForEmail(email, /Confirm your email/);
+    const token = tokenFromEmail(mail.text, '/auth/verify');
+
+    const verified = await request(server())
+      .get(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+      .set('Origin', WEB_ORIGIN)
+      .expect(200);
+    expect(verified.headers['set-auth-token']).toEqual(expect.any(String));
+    await expect(signIn(app, { email, password })).resolves.toEqual(expect.any(String));
+  });
+
+  it('resets a forgotten password through the emailed link', async () => {
+    const email = `reset-${Date.now()}@e2e.local`;
+    await auth('/sign-up/email').send({ email, password: 'old-password', name: 'Reset' });
+
+    await auth('/request-password-reset').send({ email }).expect(200);
+    const mail = await waitForEmail(email, /Reset your Resubuild password/);
+    const token = tokenFromEmail(mail.text, '/reset-password');
+
+    await auth('/reset-password').send({ token, newPassword: 'new-password' }).expect(200);
+    await waitForEmail(email, /password was changed/);
+    await auth('/sign-in/email')
+      .send({ email, password: 'old-password' })
+      .expect((res) => {
+        expect([401, 403]).toContain(res.status);
+      });
+  });
+
+  it('signs in with an emailed magic link and with an emailed one-time code', async () => {
+    const email = fixture.e2eUser.email;
+
+    await auth('/sign-in/magic-link').send({ email }).expect(200);
+    const link = await waitForEmail(email, /sign-in link/);
+    const magic = await request(server())
+      .get(
+        `/api/auth/magic-link/verify?token=${encodeURIComponent(tokenFromEmail(link.text, '/auth/magic'))}`,
+      )
+      .set('Origin', WEB_ORIGIN)
+      .expect(200);
+    expect(magic.headers['set-auth-token']).toEqual(expect.any(String));
+
+    await auth('/email-otp/send-verification-otp').send({ email, type: 'sign-in' }).expect(200);
+    const codeMail = await waitForEmail(email, /is your Resubuild code/);
+    const otp = codeMail.subject.slice(0, 6);
+    const otpSignIn = await auth('/sign-in/email-otp').send({ email, otp }).expect(200);
+    expect(otpSignIn.headers['set-auth-token']).toEqual(expect.any(String));
+  });
+
+  it('isolates users: another account cannot read, change or delete the fixture CVs', async () => {
+    const email = `intruder-${Date.now()}@e2e.local`;
+    await auth('/sign-up/email').send({ email, password: 'intruder-pw', name: 'Intruder' });
+    const verifyMail = await waitForEmail(email, /Confirm your email/);
+    await request(server())
+      .get(
+        `/api/auth/verify-email?token=${encodeURIComponent(tokenFromEmail(verifyMail.text, '/auth/verify'))}`,
+      )
+      .set('Origin', WEB_ORIGIN);
+    const intruder = await signIn(app, { email, password: 'intruder-pw' });
+    const victimCv = state.cvs[0].id;
+    const bearer = `Bearer ${intruder}`;
+
+    const list = await request(server()).get('/cv').set('Authorization', bearer).expect(200);
+    expect(list.body).toEqual([]);
+    await request(server()).get(`/cv/${victimCv}`).set('Authorization', bearer).expect(404);
+    await request(server())
+      .patch(`/cv/${victimCv}`)
+      .set('Authorization', bearer)
+      .send({ data: { basics: { name: 'Hacked' } } })
+      .expect(404);
+    await request(server()).delete(`/cv/${victimCv}`).set('Authorization', bearer).expect(404);
+
+    const owner = await signIn(app, fixture.e2eUser);
+    const stillThere = await request(server())
+      .get(`/cv/${victimCv}`)
+      .set('Authorization', `Bearer ${owner}`)
+      .expect(200);
+    expect(stillThere.body.title).not.toBe('Hacked');
   });
 });
 
-describe('E2E — CV REST (local Supabase)', () => {
+describe('E2E — CV REST', () => {
   let app: INestApplication;
   let accessToken: string;
   const fixture = loadFixture();
@@ -53,8 +160,7 @@ describe('E2E — CV REST (local Supabase)', () => {
 
   beforeAll(async () => {
     app = await createE2eApp();
-    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
-    accessToken = login.body.access_token;
+    accessToken = await signIn(app, fixture.e2eUser);
   });
 
   afterAll(async () => {
@@ -235,7 +341,7 @@ describe('E2E — CV REST (local Supabase)', () => {
   });
 });
 
-describe('E2E — media service (local Supabase)', () => {
+describe('E2E — media service', () => {
   let app: INestApplication;
   let accessToken: string;
   const fixture = loadFixture();
@@ -243,8 +349,7 @@ describe('E2E — media service (local Supabase)', () => {
 
   beforeAll(async () => {
     app = await createE2eApp();
-    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
-    accessToken = login.body.access_token;
+    accessToken = await signIn(app, fixture.e2eUser);
   });
 
   afterAll(async () => {
@@ -295,7 +400,7 @@ describe('E2E — media service (local Supabase)', () => {
   });
 });
 
-describe('E2E — CV export (local Supabase)', () => {
+describe('E2E — CV export', () => {
   let app: INestApplication;
   let accessToken: string;
   const fixture = loadFixture();
@@ -303,8 +408,7 @@ describe('E2E — CV export (local Supabase)', () => {
 
   beforeAll(async () => {
     app = await createE2eApp();
-    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
-    accessToken = login.body.access_token;
+    accessToken = await signIn(app, fixture.e2eUser);
   });
 
   afterAll(async () => {
@@ -353,7 +457,7 @@ describe('E2E — CV export (local Supabase)', () => {
   });
 });
 
-describe('E2E — CV template presentation (local Supabase)', () => {
+describe('E2E — CV template presentation', () => {
   let app: INestApplication;
   let accessToken: string;
   const fixture = loadFixture();
@@ -361,8 +465,7 @@ describe('E2E — CV template presentation (local Supabase)', () => {
 
   beforeAll(async () => {
     app = await createE2eApp();
-    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
-    accessToken = login.body.access_token;
+    accessToken = await signIn(app, fixture.e2eUser);
   });
 
   afterAll(async () => {
@@ -411,15 +514,14 @@ describe('E2E — CV template presentation (local Supabase)', () => {
   });
 });
 
-describe('E2E — CV lifecycle (local Supabase)', () => {
+describe('E2E — CV lifecycle', () => {
   let app: INestApplication;
   let accessToken: string;
   const fixture = loadFixture();
 
   beforeAll(async () => {
     app = await createE2eApp();
-    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
-    accessToken = login.body.access_token;
+    accessToken = await signIn(app, fixture.e2eUser);
   });
 
   afterAll(async () => {
@@ -454,7 +556,7 @@ describe('E2E — CV lifecycle (local Supabase)', () => {
   });
 });
 
-describe('E2E — CV sections coverage (local Supabase)', () => {
+describe('E2E — CV sections coverage', () => {
   let app: INestApplication;
   let accessToken: string;
   const fixture = loadFixture();
@@ -462,8 +564,7 @@ describe('E2E — CV sections coverage (local Supabase)', () => {
 
   beforeAll(async () => {
     app = await createE2eApp();
-    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
-    accessToken = login.body.access_token;
+    accessToken = await signIn(app, fixture.e2eUser);
   });
 
   afterAll(async () => {
@@ -528,15 +629,14 @@ describe('E2E — CV sections coverage (local Supabase)', () => {
   });
 });
 
-describe('E2E — AI agent catalog (local Supabase)', () => {
+describe('E2E — AI agent catalog', () => {
   let app: INestApplication;
   let accessToken: string;
   const fixture = loadFixture();
 
   beforeAll(async () => {
     app = await createE2eApp();
-    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
-    accessToken = login.body.access_token;
+    accessToken = await signIn(app, fixture.e2eUser);
   });
 
   afterAll(async () => {
@@ -563,15 +663,14 @@ describe('E2E — AI agent catalog (local Supabase)', () => {
   });
 });
 
-describe('E2E — import LLM config (local Supabase)', () => {
+describe('E2E — import LLM config', () => {
   let app: INestApplication;
   let accessToken: string;
   const fixture = loadFixture();
 
   beforeAll(async () => {
     app = await createE2eApp();
-    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
-    accessToken = login.body.access_token;
+    accessToken = await signIn(app, fixture.e2eUser);
   });
 
   afterAll(async () => {
@@ -598,7 +697,7 @@ describe('E2E — import LLM config (local Supabase)', () => {
   });
 });
 
-describe('E2E — import URL validation (local Supabase)', () => {
+describe('E2E — import URL validation', () => {
   let app: INestApplication;
   let accessToken: string;
   const originalFetch = global.fetch;
@@ -606,8 +705,7 @@ describe('E2E — import URL validation (local Supabase)', () => {
 
   beforeAll(async () => {
     app = await createE2eApp();
-    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
-    accessToken = login.body.access_token;
+    accessToken = await signIn(app, fixture.e2eUser);
   });
 
   afterAll(async () => {
@@ -648,15 +746,14 @@ describe('E2E — import URL validation (local Supabase)', () => {
   });
 });
 
-describe('E2E — markdown import (local Supabase)', () => {
+describe('E2E — markdown import', () => {
   let app: INestApplication;
   let accessToken: string;
   const fixture = loadFixture();
 
   beforeAll(async () => {
     app = await createE2eApp();
-    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
-    accessToken = login.body.access_token;
+    accessToken = await signIn(app, fixture.e2eUser);
   });
 
   afterAll(async () => {
@@ -682,15 +779,14 @@ describe('E2E — markdown import (local Supabase)', () => {
   });
 });
 
-describe('E2E — MCP transport gate (local Supabase)', () => {
+describe('E2E — MCP transport gate', () => {
   let app: INestApplication;
   let accessToken: string;
   const fixture = loadFixture();
 
   beforeAll(async () => {
     app = await createE2eApp();
-    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
-    accessToken = login.body.access_token;
+    accessToken = await signIn(app, fixture.e2eUser);
   });
 
   afterAll(async () => {
@@ -722,7 +818,7 @@ describe('E2E — MCP transport gate (local Supabase)', () => {
   });
 });
 
-describe('E2E — MCP transport disabled (local Supabase)', () => {
+describe('E2E — MCP transport disabled', () => {
   let app: INestApplication;
   let accessToken: string;
   const fixture = loadFixture();
@@ -732,8 +828,7 @@ describe('E2E — MCP transport disabled (local Supabase)', () => {
     process.env.MCP_SERVER_ENABLED = 'false';
     jest.resetModules();
     app = await createE2eApp();
-    const login = await request(app.getHttpServer()).post('/auth/login').send(fixture.e2eUser);
-    accessToken = login.body.access_token;
+    accessToken = await signIn(app, fixture.e2eUser);
   });
 
   afterAll(async () => {

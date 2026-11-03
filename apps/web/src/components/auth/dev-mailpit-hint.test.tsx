@@ -6,7 +6,7 @@ import { DevMailpitHint } from './dev-mailpit-hint';
 describe('DevMailpitHint', () => {
   beforeEach(() => {
     vi.stubEnv('NODE_ENV', 'development');
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:54321');
+    vi.stubEnv('NEXT_PUBLIC_DEV_MAILPIT_URL', 'http://127.0.0.1:54424');
   });
 
   afterEach(() => {
@@ -22,7 +22,7 @@ describe('DevMailpitHint', () => {
     expect(hint).toHaveTextContent('sign-in code');
     expect(screen.getByRole('link', { name: 'Mailpit' })).toHaveAttribute(
       'href',
-      'http://127.0.0.1:54324',
+      'http://127.0.0.1:54424',
     );
   });
 
@@ -34,8 +34,8 @@ describe('DevMailpitHint', () => {
     expect(screen.queryByTestId('dev-mailpit-hint')).not.toBeInTheDocument();
   });
 
-  it('renders nothing when Supabase URL is not local', () => {
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://abc.supabase.co');
+  it('renders nothing when the mail catcher URL is not local', () => {
+    vi.stubEnv('NEXT_PUBLIC_DEV_MAILPIT_URL', 'https://mail.example.com');
 
     render(<DevMailpitHint />);
 

@@ -1,4 +1,4 @@
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { CvExportController } from './cv-export.controller';
 import type { CvExportService } from './cv-export.service';
 
@@ -11,7 +11,6 @@ describe('CvExportController', () => {
   const userCtx: AuthenticatedRequest['user'] = {
     id: 'u42',
     email: 'hitme@test.dev',
-    accessToken: 'tok',
   };
   const req = { user: userCtx } as AuthenticatedRequest;
 

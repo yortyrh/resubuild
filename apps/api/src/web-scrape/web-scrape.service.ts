@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import type { SaveWebScrapeConfigDto } from './dto/save-web-scrape-config.dto';
 import {
   type DecryptedWebScrapeConfig,

@@ -34,11 +34,7 @@ export interface AuthMe {
   user: {
     id: string;
     email?: string;
-    /**
-     * Optional profile picture URL sourced from the authenticated Supabase
-     * user's `user_metadata.avatar_url` (falling back to `user_metadata.picture`).
-     * `null` when neither metadata key is present or both are empty strings.
-     */
+    /** Profile picture URL (e.g. from the OAuth provider); `null` when unset. */
     picture?: string | null;
   };
   has_password: boolean;
@@ -48,7 +44,7 @@ export async function fetchAuthMe(): Promise<AuthMe> {
   return apiFetch<AuthMe>('/auth/me');
 }
 
-/** Revokes refresh tokens server-side when the API supports it. */
+/** Revokes the session behind `token` on the API. */
 export async function logout(token: string): Promise<void> {
   await fetch(`${apiUrl}/auth/logout`, {
     method: 'POST',
@@ -62,8 +58,8 @@ export async function logout(token: string): Promise<void> {
 export function changePassword(
   currentPassword: string | undefined,
   newPassword: string,
-): Promise<{ updated: true }> {
-  return apiFetch<{ updated: true }>('/auth/password', {
+): Promise<{ updated: true; token?: string }> {
+  return apiFetch<{ updated: true; token?: string }>('/auth/password', {
     method: 'POST',
     body: JSON.stringify({
       current_password: currentPassword ?? null,

@@ -1,10 +1,10 @@
 import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
-import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { type AuthenticatedRequest, SessionAuthGuard } from '../auth/session-auth.guard';
 import { CreateMcpKeyDto, PatchMcpSettingsDto } from './dto/mcp-settings.dto';
 import { McpSettingsService } from './mcp-settings.service';
 
 @Controller('settings/mcp')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SessionAuthGuard)
 export class McpSettingsController {
   constructor(private readonly mcpSettingsService: McpSettingsService) {}
 

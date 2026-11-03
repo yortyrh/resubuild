@@ -22,19 +22,44 @@ const markedUmd = path.join(
 );
 
 module.exports = {
-  moduleFileExtensions: ['js', 'json', 'ts'],
+  moduleFileExtensions: ['js', 'json', 'ts', 'mjs', 'cjs'],
   rootDir: '.',
   testEnvironment: 'node',
   testRegex: '.e2e-spec.ts$',
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
+    '^.+\\.(t|j)s$': [
+      'ts-jest',
+      { tsconfig: path.join(__dirname, '..', '..', 'tsconfig.jest.json') },
+    ],
+    // ESM-only packages (better-auth and its deps ship .mjs) → CommonJS.
+    '^.+\\.mjs$': [
+      'babel-jest',
+      { babelrc: false, configFile: false, plugins: ['@babel/plugin-transform-modules-commonjs'] },
+    ],
+    // @react-email/render uses dynamic import(); see ../jest/dynamic-import-to-require.transform.cjs.
+    '@react-email[\\/]render[\\/].+\\.cjs$': path.join(
+      __dirname,
+      '..',
+      'jest',
+      'dynamic-import-to-require.transform.cjs',
+    ),
   },
+  // Transform ESM-only dependencies too (same rule as the unit-test config),
+  // except the Testcontainers stack loaded by globalSetup, which is plain CJS
+  // and breaks when re-transpiled (undici uses class fields + super).
+  transformIgnorePatterns: [
+    '/node_modules/(?!(.+)/)',
+    '/node_modules/\\.pnpm/(undici|testcontainers|@testcontainers\\+[^/]+|dockerode|docker-modem|docker-compose|ssh2|tar-fs|tar-stream|properties-reader|archiver)@',
+  ],
   moduleNameMapper: {
     '^marked$': markedUmd,
     '^p-map$': path.join(stubsDir, 'p-map.cjs'),
     '^tokenx$': path.join(stubsDir, 'tokenx.cjs'),
   },
   globalSetup: '<rootDir>/global-setup.ts',
+  globalTeardown: '<rootDir>/global-teardown.ts',
   testTimeout: 60_000,
+  // Container start-up + migrations + seed run in globalSetup.
+  slowTestThreshold: 30,
   maxWorkers: 1,
 };

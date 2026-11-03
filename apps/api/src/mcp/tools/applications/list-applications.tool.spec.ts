@@ -1,7 +1,7 @@
 import { getMcpAuthUser, mcpAuthStorage } from '../../mcp-auth.context';
 import { ListApplicationsTool } from './list-applications.tool';
 
-const user = { id: 'user-1', accessToken: 'tok', authMethod: 'jwt' as const };
+const user = { id: 'user-1', authMethod: 'session' as const };
 
 describe('ListApplicationsTool', () => {
   let tool: ListApplicationsTool;

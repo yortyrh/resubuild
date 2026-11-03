@@ -1,4 +1,4 @@
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import type { WebScrapeRepository } from './web-scrape.repository';
 import { WebScrapeService } from './web-scrape.service';
 
@@ -6,7 +6,6 @@ describe('WebScrapeService', () => {
   const user = {
     id: 'u1',
     email: 'u@test.dev',
-    accessToken: 'tok',
   } as AuthenticatedRequest['user'];
 
   let service: WebScrapeService;

@@ -4,14 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockSignInWithOAuth = vi.fn();
+const mockSignIn = vi.fn();
 
-vi.mock('@/lib/supabase/client', () => ({
-  getSupabaseClient: () => ({
-    auth: {
-      signInWithOAuth: mockSignInWithOAuth,
-    },
-  }),
+vi.mock('@/lib/auth/oauth', () => ({
+  GITHUB_OAUTH_ERROR_MESSAGE: 'Sign-in failed. Please try again.',
+  signInWithGitHub: () => mockSignIn(),
 }));
 
 vi.mock('sonner', () => ({
@@ -22,7 +19,7 @@ import { ContinueWithGitHubButton } from './continue-with-github-button';
 
 describe('ContinueWithGitHubButton', () => {
   beforeEach(() => {
-    mockSignInWithOAuth.mockReset();
+    mockSignIn.mockReset();
     (toast.error as ReturnType<typeof vi.fn>).mockReset();
   });
 
@@ -31,37 +28,26 @@ describe('ContinueWithGitHubButton', () => {
   });
 
   it('renders the "Continue with GitHub" label by default', () => {
-    mockSignInWithOAuth.mockResolvedValue({
-      data: { url: 'https://github.com/.../authorize' },
-      error: null,
-    });
-
     render(<ContinueWithGitHubButton />);
-
     expect(screen.getByRole('button', { name: /continue with github/i })).toBeInTheDocument();
   });
 
-  it('invokes signInWithOAuth on click and stays on the page on success', async () => {
-    mockSignInWithOAuth.mockResolvedValue({
-      data: { url: 'https://github.com/.../authorize' },
-      error: null,
-    });
+  it('starts the OAuth navigation on click and stays disabled while redirecting', async () => {
+    mockSignIn.mockResolvedValue({ navigated: true });
 
     render(<ContinueWithGitHubButton />);
-
-    await userEvent.click(screen.getByRole('button', { name: /continue with github/i }));
+    const button = screen.getByRole('button', { name: /continue with github/i });
+    await userEvent.click(button);
 
     await waitFor(() => {
-      expect(mockSignInWithOAuth).toHaveBeenCalledTimes(1);
+      expect(mockSignIn).toHaveBeenCalledTimes(1);
     });
     expect(toast.error).not.toHaveBeenCalled();
+    expect(button).toBeDisabled();
   });
 
   it('surfaces a non-blocking error toast on failure and re-enables the button', async () => {
-    mockSignInWithOAuth.mockResolvedValue({
-      data: { url: null },
-      error: { message: 'Provider not enabled', name: 'AuthError', status: 400 },
-    });
+    mockSignIn.mockRejectedValue(new Error('Provider not enabled'));
 
     render(<ContinueWithGitHubButton />);
     const button = screen.getByRole('button', { name: /continue with github/i });
@@ -70,7 +56,17 @@ describe('ContinueWithGitHubButton', () => {
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('Provider not enabled');
     });
-    // The button must re-enable so the user can retry without a hard reload.
     expect(button).not.toBeDisabled();
+  });
+
+  it('falls back to the generic message when the error has none', async () => {
+    mockSignIn.mockRejectedValue(new Error(''));
+
+    render(<ContinueWithGitHubButton />);
+    await userEvent.click(screen.getByRole('button', { name: /continue with github/i }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Sign-in failed. Please try again.');
+    });
   });
 });

@@ -1,10 +1,10 @@
 import { Controller, Get, Header, Param, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
-import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { type AuthenticatedRequest, SessionAuthGuard } from '../auth/session-auth.guard';
 import { CvExportService } from './cv-export.service';
 
 @Controller('cv')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SessionAuthGuard)
 export class CvExportController {
   constructor(private readonly exportService: CvExportService) {}
 

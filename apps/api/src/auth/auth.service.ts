@@ -1,84 +1,84 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import type { Session } from '@supabase/supabase-js';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { LoginDto, RefreshDto, RegisterDto } from './dto/auth.dto';
-import type { AuthTokenResponse } from './session.types';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { account, and, type Database, eq, isNotNull } from '@resubuild/db';
+import { DATABASE } from '../database/database.tokens';
+import type { AuthUser } from './auth-user.types';
+import { type Auth, BETTER_AUTH } from './better-auth';
+import type { AuthMeResponse } from './session.types';
+
+function errorMessage(error: unknown, fallback: string): string {
+  const e = error as { body?: { message?: unknown }; message?: unknown };
+  const message = e?.body?.message ?? e?.message;
+  return typeof message === 'string' && message ? message : fallback;
+}
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    @Inject(BETTER_AUTH) private readonly auth: Auth,
+    @Inject(DATABASE) private readonly db: Database,
+  ) {}
 
-  private getBrowserClient(): SupabaseClient {
-    const url = this.configService.get<string>('SUPABASE_URL');
-    const anonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
-    if (!url || !anonKey) {
-      throw new UnauthorizedException('Server auth is not configured');
-    }
-    return createClient(url, anonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
+  async hasPassword(userId: string): Promise<boolean> {
+    const rows = await this.db
+      .select({ id: account.id })
+      .from(account)
+      .where(
+        and(
+          eq(account.userId, userId),
+          eq(account.providerId, 'credential'),
+          isNotNull(account.password),
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
   }
 
-  private toTokenResponse(session: Session | null): AuthTokenResponse {
-    if (!session?.access_token || !session.refresh_token) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-    const user = session.user;
-    if (!user?.id) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
+  async me(user: AuthUser): Promise<AuthMeResponse> {
+    const candidate = user.userMetadata?.picture;
+    const picture =
+      typeof candidate === 'string' && candidate.trim().length > 0 ? candidate.trim() : null;
+
     return {
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-      expires_in: session.expires_in ?? 3600,
-      expires_at: session.expires_at ?? undefined,
-      token_type: 'bearer',
-      user: { id: user.id, email: user.email ?? undefined },
+      user: { id: user.id, email: user.email, picture },
+      has_password: await this.hasPassword(user.id),
     };
   }
 
-  async login(dto: LoginDto): Promise<AuthTokenResponse> {
-    const supabase = this.getBrowserClient();
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: dto.email,
-      password: dto.password,
-    });
-    if (error || !data.session) {
-      throw new UnauthorizedException('Invalid credentials');
+  /**
+   * Changes the password (current one required) or sets a first password for
+   * OAuth/passwordless accounts. Changing a password revokes every session
+   * and returns a fresh token (`token`) that replaces the caller's one.
+   */
+  async changePassword(
+    user: AuthUser,
+    authorization: string,
+    currentPassword: string | null | undefined,
+    newPassword: string,
+  ): Promise<{ updated: true; token?: string }> {
+    const headers = new Headers({ authorization });
+    try {
+      if (await this.hasPassword(user.id)) {
+        if (!currentPassword) {
+          throw new BadRequestException('Current password is required');
+        }
+        const result = (await this.auth.api.changePassword({
+          headers,
+          body: { currentPassword, newPassword, revokeOtherSessions: true },
+        })) as { token?: string | null };
+        return result.token ? { updated: true, token: result.token } : { updated: true };
+      } else {
+        await this.auth.api.setPassword({ headers, body: { newPassword } });
+      }
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException(errorMessage(error, 'Password update failed'));
     }
-    return this.toTokenResponse(data.session);
+    return { updated: true };
   }
 
-  async register(dto: RegisterDto): Promise<AuthTokenResponse | { message: string }> {
-    const supabase = this.getBrowserClient();
-    const { data, error } = await supabase.auth.signUp({
-      email: dto.email,
-      password: dto.password,
-    });
-    if (error) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-    if (data.session) {
-      return this.toTokenResponse(data.session);
-    }
-    return {
-      message: 'Check your email to confirm your account, then sign in.',
-    };
-  }
-
-  async refresh(dto: RefreshDto): Promise<AuthTokenResponse> {
-    const supabase = this.getBrowserClient();
-    const { data, error } = await supabase.auth.refreshSession({
-      refresh_token: dto.refresh_token,
-    });
-    if (error || !data.session) {
-      throw new UnauthorizedException('Invalid or expired refresh token');
-    }
-    return this.toTokenResponse(data.session);
+  /** Revokes the session behind the bearer token. */
+  async logout(authorization: string | undefined): Promise<void> {
+    if (!authorization) return;
+    await this.auth.api.signOut({ headers: new Headers({ authorization }) }).catch(() => undefined);
   }
 }

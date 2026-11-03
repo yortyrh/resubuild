@@ -7,7 +7,7 @@ describe('CvItemsController', () => {
   let controller: CvItemsController;
   let service: jest.Mocked<CvItemService>;
 
-  const user = { id: 'user-1', email: 'u@test.com', accessToken: 'token' };
+  const user = { id: 'user-1', email: 'u@test.com' };
   const req = { user } as never;
   const cvId = 'cv-1';
   const resolved = { item: { id: 'row-1' } };

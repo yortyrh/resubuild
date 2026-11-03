@@ -1,10 +1,10 @@
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { McpSettingsController } from './mcp-settings.controller';
 import type { McpSettingsService } from './mcp-settings.service';
 
 describe('McpSettingsController', () => {
   const req = {
-    user: { id: 'u1', accessToken: 'tok', authMethod: 'jwt' },
+    user: { id: 'u1', authMethod: 'session' },
   } as AuthenticatedRequest;
 
   let service: jest.Mocked<Pick<McpSettingsService, 'getSettings' | 'patchSettings' | 'createKey'>>;

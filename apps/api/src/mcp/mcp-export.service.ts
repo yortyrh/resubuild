@@ -12,7 +12,7 @@ import { ExportStorageService } from '../export-storage/export-storage.service';
  * `contentType`, hands the buffer to the storage service, and returns the
  * canonical `McpExportEnvelope` shape that MCP tool handlers send to the client.
  *
- * The envelope's `url` is the **Supabase Storage signed URL** for the artifact
+ * The envelope's `url` is the **presigned object-storage URL** for the artifact
  * — a self-contained URL with a `?token=…` query parameter that authenticates
  * the request at the storage layer. It is openable in a browser tab, usable
  * with `curl <url> -o cv.pdf`, and consumable via `fetch(url)` without any

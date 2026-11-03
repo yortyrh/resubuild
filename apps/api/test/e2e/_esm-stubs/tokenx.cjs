@@ -3,7 +3,7 @@
  *
  * `@mastra/core` transitively imports `tokenx` for token estimation during
  * AI model invocations. The e2e suite never runs an actual inference call
- * (the Supabase-backed tests fail at the auth layer, and the MCP transport
+ * (the database-backed tests fail at the auth layer, and the MCP transport
  * gate tests do not invoke a model), so this stub preserves the call
  * surface without performing the real heuristic estimation.
  */

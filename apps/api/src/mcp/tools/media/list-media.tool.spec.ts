@@ -1,7 +1,7 @@
 import { getMcpAuthUser, mcpAuthStorage } from '../../mcp-auth.context';
 import { ListMediaTool } from './list-media.tool';
 
-const user = { id: 'user-1', accessToken: 'tok', authMethod: 'jwt' as const };
+const user = { id: 'user-1', authMethod: 'session' as const };
 
 describe('ListMediaTool', () => {
   let tool: ListMediaTool;

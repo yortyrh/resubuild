@@ -74,7 +74,7 @@ export const productFaqItems: SeoFaqItem[] = [
   {
     question: 'Is the data private?',
     answer:
-      'Yes. Your CVs are stored under your Supabase account with row-level security; only you can read or write them. Resubuild does not sell, share, or train models on your data.',
+      'Yes. Your CVs are stored under your account and every request is scoped to it; only you can read or write them. Resubuild does not sell, share, or train models on your data.',
   },
   {
     question: 'What format is the export?',

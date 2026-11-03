@@ -58,8 +58,8 @@
  *    Calling it outside (e.g., during server startup) throws.
  *
  * 3. The `AuthUser` object contains only the minimal identity needed — it does NOT
- *    contain Supabase tokens or long-lived credentials (those are fetched per-request
- *    via `createClientForUser()`).
+ *    contain session tokens or long-lived credentials. Repositories scope every
+ *    query by `user.id` (`CvNormalizedRepository.scopeFor()`).
  *
  * ## Usage Example
  *
@@ -102,7 +102,7 @@ export const mcpAuthStorage = new AsyncLocalStorage<AuthUser>();
  *                 when tool/service code is called outside a request lifecycle.
  *
  * @returns The `AuthUser` for the current request — contains `id`, optional `email`,
- *          and `authMethod` ('jwt' | 'mcp').
+ *          and `authMethod` ('session' | 'mcp').
  *
  * @example
  * ```typescript

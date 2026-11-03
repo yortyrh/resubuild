@@ -1,4 +1,4 @@
-/** Map Supabase auth callback query errors to actionable copy. */
+/** Map OAuth callback query errors (`/login?error=…&error_description=…`) to actionable copy. */
 export function oauthCallbackErrorMessage(
   errorCode: string | null,
   errorDescription: string | null,

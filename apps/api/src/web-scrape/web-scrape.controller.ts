@@ -9,12 +9,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { type AuthenticatedRequest, SessionAuthGuard } from '../auth/session-auth.guard';
 import { SaveWebScrapeConfigDto } from './dto/save-web-scrape-config.dto';
 import { WebScrapeService } from './web-scrape.service';
 
 @Controller('web-scrape')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SessionAuthGuard)
 export class WebScrapeController {
   constructor(private readonly webScrapeService: WebScrapeService) {}
 

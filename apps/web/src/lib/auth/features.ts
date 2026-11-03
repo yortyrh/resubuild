@@ -6,16 +6,13 @@
  * inlined by the Next.js bundler at build time, so the SPA can render the right
  * auth controls without an `/auth/features` round-trip on every navigation.
  *
- * The `forgot_password`, `email_verification`, and `passwordless` values mirror
- * the operator-controlled env vars in `apps/api/.env` (`AUTH_FORGOT_PASSWORD_ENABLED`,
- * `AUTH_EMAIL_VERIFICATION_ENABLED`, `AUTH_PASSWORDLESS_ENABLED`). The
- * `github_oauth` and `google_oauth` flags are web-only because the SPA's
- * "Continue with GitHub" and "Continue with Google" buttons are build-time
- * render decisions — the Supabase-side `[auth.external.github]` and
- * `[auth.external.google]` blocks in `supabase/config.toml` are the actual
- * provider gates. The operator is responsible for keeping the API flags in sync
- * with their web mirrors; `scripts/setup-local-env.sh` and
- * `scripts/setup-prod-env.mjs` copy the API values into the web mirror keys.
+ * Every flag mirrors `apps/api/.env`: `forgot_password`, `email_verification`
+ * and `passwordless` copy `AUTH_FORGOT_PASSWORD_ENABLED`,
+ * `AUTH_EMAIL_VERIFICATION_ENABLED` and `AUTH_PASSWORDLESS_ENABLED`; the
+ * `*_oauth` flags are on when the API has that provider's client id and
+ * secret. The API enforces the flags (disabled flows are not served);
+ * `pnpm setup:env` and `pnpm setup:env:prod` derive the web values from the
+ * API values so they stay in sync.
  *
  * Parsing rules (consistent with the legacy API Zod schema in
  * `apps/api/src/auth/config/auth.config.ts`): only the literal string

@@ -8,14 +8,17 @@ vi.mock('@/lib/api', () => ({
   fetchAuthMe: (...args: unknown[]) => mockFetchAuthMe(...args),
 }));
 
-const mockGetSession = vi.fn();
+const mockAuthRequest = vi.fn();
+const mockGetSessionToken = vi.fn();
+const mockClearSession = vi.fn();
 
-vi.mock('@/lib/supabase/client', () => ({
-  getSupabaseClient: () => ({
-    auth: {
-      getSession: (...args: unknown[]) => mockGetSession(...args),
-    },
-  }),
+vi.mock('@/lib/auth/client', () => ({
+  authRequest: (...args: unknown[]) => mockAuthRequest(...args),
+}));
+
+vi.mock('@/lib/auth-session', () => ({
+  getSessionToken: () => mockGetSessionToken(),
+  clearSession: () => mockClearSession(),
 }));
 
 import * as featuresModule from '@/lib/auth/features';
@@ -73,51 +76,65 @@ describe('auth query hooks', () => {
   });
 
   describe('useAuthSession', () => {
-    it('returns exists:false when no session', async () => {
-      mockGetSession.mockResolvedValue({ data: { session: null } });
+    const NO_SESSION = { exists: false, userId: null, email: null, emailVerified: false };
 
+    it('returns exists:false without calling the API when no token is stored', async () => {
+      mockGetSessionToken.mockReturnValue(null);
       const { result } = renderHookWithQueryClient(() => useAuthSession());
 
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true);
-      });
-
-      expect(result.current.data).toEqual({
-        exists: false,
-        userId: null,
-        email: null,
-        emailVerified: false,
-      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(NO_SESSION);
+      expect(mockAuthRequest).not.toHaveBeenCalled();
     });
 
-    it('returns session data when session exists', async () => {
-      mockGetSession.mockResolvedValue({
-        data: {
-          session: {
-            user: {
-              id: 'user-123',
-              email: 'test@example.com',
-            },
-            access_token: 'tok-abc',
-            refresh_token: 'ref-xyz',
-            expires_in: 3600,
-            expires_at: Date.now() / 1000 + 3600,
-            token_type: 'bearer',
-          },
-        },
+    it('resolves the stored token against /get-session', async () => {
+      mockGetSessionToken.mockReturnValue('tok-abc');
+      mockAuthRequest.mockResolvedValue({
+        data: { user: { id: 'user-123', email: 'test@example.com', emailVerified: true } },
+        token: null,
       });
 
       const { result } = renderHookWithQueryClient(() => useAuthSession());
 
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true);
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(mockAuthRequest).toHaveBeenCalledWith('/get-session', {
+        method: 'GET',
+        token: 'tok-abc',
       });
-
-      expect(result.current.data).toMatchObject({
+      expect(result.current.data).toEqual({
         exists: true,
         userId: 'user-123',
         email: 'test@example.com',
+        emailVerified: true,
       });
+    });
+
+    it('clears a revoked or unknown token', async () => {
+      mockGetSessionToken.mockReturnValue('tok-old');
+      mockAuthRequest.mockResolvedValueOnce({ data: null, token: null });
+
+      const first = renderHookWithQueryClient(() => useAuthSession());
+      await waitFor(() => expect(first.result.current.isSuccess).toBe(true));
+      expect(first.result.current.data).toEqual(NO_SESSION);
+
+      mockAuthRequest.mockRejectedValueOnce(
+        Object.assign(new Error('Unauthorized'), { status: 401 }),
+      );
+      const second = renderHookWithQueryClient(() => useAuthSession());
+      await waitFor(() => expect(second.result.current.isSuccess).toBe(true));
+      expect(second.result.current.data).toEqual(NO_SESSION);
+      expect(mockClearSession).toHaveBeenCalledTimes(2);
+    });
+
+    it('surfaces network errors without clearing the token', async () => {
+      mockGetSessionToken.mockReturnValue('tok');
+      mockAuthRequest.mockRejectedValue(Object.assign(new Error('offline'), { status: 0 }));
+      mockClearSession.mockClear();
+
+      const { result } = renderHookWithQueryClient(() => useAuthSession());
+
+      await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });
+      expect(mockClearSession).not.toHaveBeenCalled();
     });
   });
 

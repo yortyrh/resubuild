@@ -1,35 +1,35 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DEV_MAILPIT_URL, isDevMailpitHintVisible } from './dev-mailpit';
+import { DEV_MAILPIT_URL, devMailpitUrl, isDevMailpitHintVisible } from './dev-mailpit';
 
 describe('isDevMailpitHintVisible', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it('is true for local development against local Supabase', () => {
+  it('is true for local development against the local mail catcher', () => {
     vi.stubEnv('NODE_ENV', 'development');
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:54321');
+    vi.stubEnv('NEXT_PUBLIC_DEV_MAILPIT_URL', 'http://127.0.0.1:54424');
 
     expect(isDevMailpitHintVisible()).toBe(true);
   });
 
   it('is false in production builds', () => {
     vi.stubEnv('NODE_ENV', 'production');
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:54321');
+    vi.stubEnv('NEXT_PUBLIC_DEV_MAILPIT_URL', 'http://127.0.0.1:54424');
 
     expect(isDevMailpitHintVisible()).toBe(false);
   });
 
-  it('is false when Supabase URL points to cloud', () => {
+  it('is false when the mail catcher URL is not local', () => {
     vi.stubEnv('NODE_ENV', 'development');
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://abc.supabase.co');
+    vi.stubEnv('NEXT_PUBLIC_DEV_MAILPIT_URL', 'https://mail.example.com');
 
     expect(isDevMailpitHintVisible()).toBe(false);
   });
 
   it('is false when ?hide-dev-banner=1 is in the URL', () => {
     vi.stubEnv('NODE_ENV', 'development');
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:54321');
+    vi.stubEnv('NEXT_PUBLIC_DEV_MAILPIT_URL', 'http://127.0.0.1:54424');
 
     // Simulate window.location.search = '?hide-dev-banner=1'
     vi.stubGlobal('window', {
@@ -41,7 +41,10 @@ describe('isDevMailpitHintVisible', () => {
 });
 
 describe('DEV_MAILPIT_URL', () => {
-  it('defaults to local Mailpit', () => {
-    expect(DEV_MAILPIT_URL).toBe('http://127.0.0.1:54324');
+  it('defaults to the docker-compose.dev.yml Mailpit', () => {
+    vi.stubEnv('NEXT_PUBLIC_DEV_MAILPIT_URL', '');
+    expect(devMailpitUrl()).toBe('http://127.0.0.1:54424');
+    vi.unstubAllEnvs();
+    expect(typeof DEV_MAILPIT_URL).toBe('string');
   });
 });

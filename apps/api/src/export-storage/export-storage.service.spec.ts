@@ -5,7 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
-import { mcpExport } from '@resubuild/db';
+import { eq, mcpExport } from '@resubuild/db';
 import type { McpExportUploadInput } from '@resubuild/types';
 import type { AuthUser } from '../auth/auth-user.types';
 import { useTestDb } from '../database/test-db.helpers';
@@ -207,7 +207,6 @@ describe('ExportStorageService', () => {
     it('removes expired rows and their objects, leaving valid rows alone', async () => {
       const expired = await service.uploadAndRegister(input());
       const valid = await service.uploadAndRegister(input({ kind: 'html' }));
-      const { eq } = await import('@resubuild/db');
       await ctx.db
         .update(mcpExport)
         .set({ expires_at: '2000-01-01T00:00:00.000Z' })

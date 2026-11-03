@@ -10,7 +10,7 @@ import {
   getDefaultPresentationConfig,
 } from '@resubuild/resume-template';
 import type { Resume } from '@resubuild/types';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
 import { CvTemplatePresentationService } from '../cv/cv-template-presentation.service';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
@@ -38,7 +38,6 @@ describe('CvExportService', () => {
   const userCtx: AuthenticatedRequest['user'] = {
     id: 'u42',
     email: 'hitme@test.dev',
-    accessToken: 'tok',
   };
 
   const supabase = {} as never;

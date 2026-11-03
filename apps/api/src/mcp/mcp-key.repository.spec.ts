@@ -31,14 +31,9 @@ describe('McpKeyRepository', () => {
       expect(pepper()).toBe('test-pepper');
     });
 
-    it('falls back to SUPABASE_SERVICE_ROLE_KEY', () => {
-      env = { SUPABASE_SERVICE_ROLE_KEY: 'fallback-pepper' };
-      expect(pepper()).toBe('fallback-pepper');
-    });
-
     it('throws when no pepper is configured', () => {
       env = {};
-      expect(pepper).toThrow('MCP_KEY_PEPPER or SUPABASE_SERVICE_ROLE_KEY must be configured');
+      expect(pepper).toThrow('MCP_KEY_PEPPER must be configured');
     });
   });
 

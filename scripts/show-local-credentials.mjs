@@ -10,7 +10,7 @@ async function main() {
   const credentials = await loadLocalCredentials();
   if (!credentials) {
     console.error(
-      'No local credentials found. Run: supabase start && pnpm setup:env && pnpm samples:seed',
+      'No local credentials found. Run: pnpm infra:up && pnpm setup:env && pnpm samples:seed',
     );
     process.exit(1);
   }

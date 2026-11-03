@@ -9,14 +9,10 @@ WORKDIR /app
 # after the build layer). Pass via `docker build --build-arg ...` or Compose
 # `args:` so the values are baked into the production bundle.
 #
-# All keys listed here MUST match a var in `apps/web/src/lib/supabase/client.ts`,
-# `apps/web/src/lib/supabase/server.ts`, and `apps/web/src/lib/auth/features.ts`.
-# A missing arg at build time causes the `?? ''` fallback in those modules to
-# resolve to an empty string, which @supabase/ssr rejects with
-# "Your project's URL and API key are required to create a Supabase client!".
+# All keys listed here MUST match a var read by `apps/web/src/lib/auth/client.ts`
+# (NEXT_PUBLIC_API_URL) or `apps/web/src/lib/auth/features.ts` (auth flags).
+# A missing NEXT_PUBLIC_API_URL makes the browser call http://localhost:3001.
 ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 ARG NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED
 ARG NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED
 ARG NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED
@@ -25,8 +21,6 @@ ARG NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED
 ARG NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED
 ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
-ENV NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED=$NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED
 ENV NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED=$NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED
 ENV NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED=$NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED

@@ -11,7 +11,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { type AuthenticatedRequest, SessionAuthGuard } from '../auth/session-auth.guard';
 import { CvItemService } from './cv-item.service';
 import {
   AwardItemDto,
@@ -31,7 +31,7 @@ import {
 } from './dto/cv-item.dto';
 
 @Controller('cv/:cvId')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SessionAuthGuard)
 export class CvItemsController {
   constructor(private readonly cvItemService: CvItemService) {}
 

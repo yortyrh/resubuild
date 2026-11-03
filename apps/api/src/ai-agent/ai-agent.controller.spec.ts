@@ -1,4 +1,4 @@
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { AiAgentController } from './ai-agent.controller';
 import type { AiAgentService } from './ai-agent.service';
 
@@ -6,7 +6,6 @@ describe('AiAgentController', () => {
   const user = {
     id: 'u1',
     email: 'u@test.dev',
-    accessToken: 'tok',
   } as AuthenticatedRequest['user'];
   const req = { user } as AuthenticatedRequest;
 

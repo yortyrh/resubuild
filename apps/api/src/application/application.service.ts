@@ -23,7 +23,7 @@ import {
   sanitizeAiTypographyDeep,
 } from '@resubuild/types';
 import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { CvService } from '../cv/cv.service';
 import { CvCloneService } from '../cv/cv-clone.service';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';

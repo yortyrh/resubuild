@@ -47,20 +47,16 @@ function loadSourceFiles(): ScannedFile[] {
 const SOURCE_FILES = loadSourceFiles();
 
 /**
- * Static-analysis guard mirroring the `web-application` spec scenario
- * "Client bundle has Supabase client but no DB-direct symbols".
+ * Static-analysis guard (docs/requirements/nfr.md REQ-NFR-002): the web
+ * bundle talks to the API over HTTP only. It must not reach the database,
+ * object storage or server secrets directly.
  *
- * It walks every source file that the web app would ship to the browser
- * and asserts that nothing references server-only symbols. If a future
- * refactor accidentally re-introduces the service-role key or a deep
- * import into `apps/api/src/cv/**` (or the spec-named `database-cv-rls`
- * capability), this test fails fast and points at the offending file.
- *
- * Note: a literal scan of the compiled `.next` bundle would be more
- * authoritative, but a build artifact is not always present in CI. The
- * source-level guard catches the most common regression class (an
- * accidental import in a `'use client'` module) and is fast enough to
- * run on every `pnpm test`.
+ * It walks every source file the web app would ship and asserts that nothing
+ * imports server-only modules or references server-only secrets. A literal
+ * scan of the compiled `.next` bundle would be more authoritative, but a build
+ * artifact is not always present in CI; this source-level guard catches the
+ * common regression (an accidental import in a `'use client'` module) and is
+ * fast enough to run on every `pnpm test`.
  */
 describe('web bundle security invariants (source-level)', () => {
   it('includes the expected source files in the scan', () => {
@@ -70,36 +66,31 @@ describe('web bundle security invariants (source-level)', () => {
     expect(relativePaths).not.toContain(SELF_PATH);
   });
 
-  it('does not reference the Supabase service-role key in any web source file', () => {
-    const offenders = SOURCE_FILES.filter(
-      (file) =>
-        /SUPABASE_SERVICE_ROLE_KEY/.test(file.content) ||
-        // `service_role` is the JSON role Supabase uses; the literal
-        // string must not appear in any web source file.
-        /service_role/.test(file.content),
-    );
+  it('does not reference server-only secrets', () => {
+    const secretNames =
+      /\b(DATABASE_URL|S3_SECRET_ACCESS_KEY|S3_ACCESS_KEY_ID|SMTP_PASSWORD|SMTP_URL|BETTER_AUTH_SECRET|MCP_KEY_PEPPER|AI_AGENT_ENCRYPTION_KEY|[A-Z]+_CLIENT_SECRET)\b/;
+    const offenders = SOURCE_FILES.filter((file) => secretNames.test(file.content));
 
     expect(
       offenders.map((f) => f.path),
-      'service-role key references in web source',
+      'server-only secret references in web source',
     ).toEqual([]);
   });
 
-  it('does not expose a NEXT_PUBLIC_ prefix on the service-role key', () => {
-    // Belt-and-braces: a `NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY` would
-    // be a disaster. Scan for the dangerous prefix pairing.
-    const offenders = SOURCE_FILES.filter((file) =>
-      /NEXT_PUBLIC_(SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SERVICE_KEY)/.test(file.content),
-    );
+  it('does not import database, storage, mail or auth-server packages', () => {
+    const banned =
+      /from\s+['"](@resubuild\/db|@resubuild\/email-templates|pg|drizzle-orm[^'"]*|@aws-sdk\/[^'"]+|nodemailer|better-auth(?!\/(client|react))[^'"]*|@supabase\/[^'"]+)['"]/;
+    const offenders = SOURCE_FILES.filter((file) => banned.test(file.content));
 
-    expect(offenders.map((f) => f.path)).toEqual([]);
+    expect(
+      offenders.map((f) => f.path),
+      'server-only package imports in web source',
+    ).toEqual([]);
   });
 
-  it('does not import from the server-only api code-paths (cv or database symbols)', () => {
-    // These symbols MUST stay server-side (docs/requirements/nfr.md
-    // REQ-NFR-002). The web bundle
-    // is forbidden from importing them; instead the web goes through
-    // the HTTP surface in `apps/web/src/lib/api.ts`.
+  it('does not import from the server-only api code-paths', () => {
+    // The web goes through the HTTP surface in `apps/web/src/lib/api.ts`
+    // and `apps/web/src/lib/auth/client.ts`.
     const bannedImportPatterns: { pattern: RegExp; label: string }[] = [
       { pattern: /from\s+['"]@resubuild\/api['"]/, label: '@resubuild/api' },
       {
@@ -112,48 +103,12 @@ describe('web bundle security invariants (source-level)', () => {
       },
     ];
 
-    const offenders = SOURCE_FILES.flatMap((file) => {
-      const matches = bannedImportPatterns
+    const offenders = SOURCE_FILES.flatMap((file) =>
+      bannedImportPatterns
         .filter(({ pattern }) => pattern.test(file.content))
-        .map(({ label }) => `${file.path} (${label})`);
-      return matches;
-    });
+        .map(({ label }) => `${file.path} (${label})`),
+    );
 
     expect(offenders, 'api code-path imports in web source').toEqual([]);
-  });
-
-  it('keeps the Supabase browser client scoped to auth flows only', () => {
-    // The `@supabase/supabase-js` import is permitted only in:
-    //   - apps/web/src/lib/supabase/**
-    //   - apps/web/src/lib/queries/auth-*
-    // Every other location must go through the API layer (see
-    // biome.jsonc `noRestrictedImports` rule in `apps/web/src/lib/cv-*`
-    // and `apps/web/src/components/cv/*`).
-    const allowed =
-      /^src\/(lib\/supabase\/|lib\/queries\/auth-|lib\/auth-session\.ts|app\/auth\/|components\/auth\/)/;
-    const offenders = SOURCE_FILES.filter((file) =>
-      /from\s+['"]@supabase\//.test(file.content),
-    ).filter((file) => !allowed.test(file.path));
-
-    expect(
-      offenders.map((f) => f.path),
-      'Supabase client imports outside auth-flow scope',
-    ).toEqual([]);
-  });
-
-  it('documents the carve-out somewhere visible to operators', () => {
-    // The carve-out ("only the publishable key may ship in the browser
-    // bundle") MUST be documented in the root README or the web
-    // `.env.example`. The test concatenates both.
-    const repoRoot = join(webRoot, '..', '..');
-    const readme = readFileSync(join(repoRoot, 'README.md'), 'utf8');
-    const webEnvExample = readFileSync(join(webRoot, '.env.example'), 'utf8');
-    const concatenated = [readme, webEnvExample].join('\n');
-
-    // The publishable key is the ONLY Supabase key allowed in the
-    // browser bundle. A passing assertion means the carve-out is
-    // documented; a service-role key reference is a regression.
-    expect(concatenated).toMatch(/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);
-    expect(concatenated).not.toMatch(/NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY/);
   });
 });

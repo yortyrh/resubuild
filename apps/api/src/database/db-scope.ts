@@ -6,9 +6,9 @@ import { getTableColumns, type Table } from '@resubuild/db';
  * Per-request data-access scope: the database handle (or open transaction)
  * plus the id of the user every query must be restricted to.
  *
- * Replaces the per-user Supabase client: there is no RLS, so repositories
- * must add `user_id = scope.userId` (directly or through the owning `cv`)
- * to every read and write.
+ * There is no row-level security in the database, so repositories must add
+ * `user_id = scope.userId` (directly or through the owning `cv`) to every
+ * read and write.
  */
 export interface DbScope {
   readonly db: DbExecutor;

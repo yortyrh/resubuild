@@ -1,9 +1,7 @@
 /**
- * Public origin for the SPA, used to build Supabase OAuth redirectTo
- * values and emailRedirectTo values. The same value that the
- * email-template callbacks land on, so it must be registered in
- * [auth].additional_redirect_urls in supabase/config.toml and in the
- * Supabase Cloud dashboard.
+ * Public origin for the SPA, used to build redirect URLs handed to the API
+ * (password reset `redirectTo`). Email links themselves are built by the API
+ * from its `WEB_URL`, so both must point at the same public origin.
  *
  * Falls back to window.location.origin in local dev where
  * NEXT_PUBLIC_APP_URL is unset (the developer is hitting the app

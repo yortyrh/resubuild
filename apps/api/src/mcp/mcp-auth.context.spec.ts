@@ -1,7 +1,7 @@
 import type { AuthUser } from '../auth/auth-user.types';
 import { getMcpAuthUser, mcpAuthStorage } from './mcp-auth.context';
 
-const mockUser = { id: 'user-1', accessToken: 'tok', authMethod: 'jwt' as const };
+const mockUser = { id: 'user-1', authMethod: 'session' as const };
 
 describe('mcp-auth.context', () => {
   describe('getMcpAuthUser', () => {
@@ -27,8 +27,8 @@ describe('mcp-auth.context', () => {
     });
 
     it('returns correct user when multiple concurrent contexts', () => {
-      const user1 = { id: 'user-1', accessToken: 'tok1', authMethod: 'jwt' as const };
-      const user2 = { id: 'user-2', accessToken: 'tok2', authMethod: 'jwt' as const };
+      const user1 = { id: 'user-1', authMethod: 'session' as const };
+      const user2 = { id: 'user-2', authMethod: 'session' as const };
 
       let user1Captured: AuthUser | undefined;
       let user2Captured: AuthUser | undefined;
@@ -83,7 +83,7 @@ describe('mcp-auth.context', () => {
         results.push(getMcpAuthUser());
       });
 
-      const otherUser = { id: 'other-user', accessToken: 'tok2', authMethod: 'jwt' as const };
+      const otherUser = { id: 'other-user', authMethod: 'session' as const };
       mcpAuthStorage.run(otherUser, () => {
         results.push(getMcpAuthUser());
       });

@@ -1,7 +1,7 @@
 import { getMcpAuthUser, mcpAuthStorage } from '../mcp-auth.context';
 import { ApplicationResource } from './application.resource';
 
-const user = { id: 'user-1', accessToken: 'tok', authMethod: 'jwt' as const };
+const user = { id: 'user-1', authMethod: 'session' as const };
 
 describe('ApplicationResource', () => {
   let resource: ApplicationResource;

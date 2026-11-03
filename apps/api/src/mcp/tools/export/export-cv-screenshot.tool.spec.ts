@@ -1,7 +1,7 @@
 import { getMcpAuthUser, mcpAuthStorage } from '../../mcp-auth.context';
 import { ExportCvScreenshotTool } from './export-cv-screenshot.tool';
 
-const user = { id: 'user-1', accessToken: 'tok', authMethod: 'jwt' as const };
+const user = { id: 'user-1', authMethod: 'session' as const };
 
 describe('ExportCvScreenshotTool', () => {
   let tool: ExportCvScreenshotTool;

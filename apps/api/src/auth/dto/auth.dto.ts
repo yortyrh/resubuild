@@ -1,25 +1,20 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
-export class LoginDto {
-  @IsEmail()
-  email!: string;
+export class ChangePasswordDto {
+  /** Required when the account already has a password; omit to set a first password. */
+  @IsOptional()
+  @IsString()
+  current_password?: string | null;
 
   @IsString()
   @MinLength(6)
-  password!: string;
+  @MaxLength(128)
+  new_password!: string;
 }
 
-export class RegisterDto {
-  @IsEmail()
-  email!: string;
-
-  @IsString()
-  @MinLength(6)
-  password!: string;
-}
-
-export class RefreshDto {
+export class OAuthExchangeDto {
   @IsString()
   @MinLength(10)
-  refresh_token!: string;
+  @MaxLength(200)
+  code!: string;
 }

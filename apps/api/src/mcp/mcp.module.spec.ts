@@ -22,6 +22,7 @@ import { CvExportModule } from '../cv-export/cv-export.module';
 import { FakeDatabaseModule } from '../database/fake-database.module';
 import { ExportStorageModule } from '../export-storage/export-storage.module';
 import { ImportModelsCatalogModule } from '../import-models-catalog/import-models-catalog.module';
+import { MailModule } from '../mail/mail.module';
 import { MediaModule } from '../media/media.module';
 import { StorageModule } from '../storage/storage.module';
 import { McpModule } from './mcp.module';
@@ -29,6 +30,9 @@ import { McpAuthModule } from './mcp-auth.module';
 
 @Module({})
 class NoopModule {}
+// Required by AuthConfigService when Better Auth is constructed (no .env in CI).
+process.env.BETTER_AUTH_SECRET ??= 'test-secret-that-is-at-least-32-characters';
+process.env.APP_URL ??= 'http://localhost:3000';
 
 describe('McpModule', () => {
   it('compiles when MCP_SERVER_ENABLED is unset (default)', async () => {
@@ -40,6 +44,7 @@ describe('McpModule', () => {
         NoopModule,
         FakeDatabaseModule,
         StorageModule,
+        MailModule,
         AuthModule,
         CvModule,
         CvExportModule,
@@ -65,6 +70,7 @@ describe('McpModule', () => {
         NoopModule,
         FakeDatabaseModule,
         StorageModule,
+        MailModule,
         AuthModule,
         CvModule,
         CvExportModule,

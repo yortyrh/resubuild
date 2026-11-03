@@ -3,7 +3,7 @@ import { firstValueFrom, of } from 'rxjs';
 import { mcpAuthStorage } from './mcp-auth.context';
 import { McpAuthRequestBridge } from './mcp-auth-request-bridge.interceptor';
 
-const mockUser = { id: 'user-1', accessToken: 'tok', authMethod: 'jwt' as const };
+const mockUser = { id: 'user-1', authMethod: 'session' as const };
 
 function makeContext(url: string | undefined, user: unknown): ExecutionContext {
   return {

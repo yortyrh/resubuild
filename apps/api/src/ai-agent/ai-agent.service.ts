@@ -12,7 +12,7 @@ import {
   listCatalogProviders,
   validateImportModelId,
 } from '@resubuild/import-models';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import type { AiAgentAccountSummary, AiAgentActiveStatus } from './ai-agent.repository';
 import { AiAgentRepository } from './ai-agent.repository';

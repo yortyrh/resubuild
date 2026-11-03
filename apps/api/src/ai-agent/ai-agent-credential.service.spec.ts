@@ -1,12 +1,11 @@
 import { UnprocessableEntityException } from '@nestjs/common';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { AiAgentCredentialService } from './ai-agent-credential.service';
 
 describe('AiAgentCredentialService', () => {
   const user = {
     id: 'u1',
     email: 'u@test.dev',
-    accessToken: 'tok',
   } as AuthenticatedRequest['user'];
 
   let service: AiAgentCredentialService;

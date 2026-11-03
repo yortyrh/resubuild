@@ -3,7 +3,7 @@
  */
 
 import { BadRequestException } from '@nestjs/common';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { ImportController } from './import.controller';
 import type { ImportService } from './import.service';
 
@@ -11,7 +11,6 @@ describe('ImportController', () => {
   const user = {
     id: 'u1',
     email: 'u@test.dev',
-    accessToken: 'tok',
   } as AuthenticatedRequest['user'];
   const req = { user } as AuthenticatedRequest;
 

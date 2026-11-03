@@ -4,22 +4,21 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { changePassword, logout } from '@/lib/api';
-import { authCallbackUrl, resetPasswordCallbackUrl } from '@/lib/auth/app-url';
-import { clearSession, persistSupabaseSession, STORAGE_KEYS } from '@/lib/auth-session';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { resetPasswordCallbackUrl } from '@/lib/auth/app-url';
+import { authRequest } from '@/lib/auth/client';
+import { clearSession, getSessionToken, saveSessionToken } from '@/lib/auth-session';
 import { authKeys } from './auth-queries';
 
 export { authKeys };
 
-function authErrorMessage(error: { message: string } | null, fallback: string): string {
-  return error?.message ?? fallback;
+function requireToken(token: string | null, message: string): string {
+  if (!token) throw new Error(message);
+  return token;
 }
 
-async function syncSessionAfterAuth(): Promise<void> {
-  const { data } = await getSupabaseClient().auth.getSession();
-  if (data.session) {
-    persistSupabaseSession(data.session);
-  }
+/** Display name for new accounts (Better Auth requires one): the email's local part. */
+function nameFromEmail(email: string): string {
+  return email.split('@')[0] || email;
 }
 
 // ---------------------------------------------------------------------------
@@ -32,17 +31,11 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async ({ email, password }: { email: string; password: string }) => {
-      const { data, error } = await getSupabaseClient().auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error || !data.session) {
-        throw new Error(authErrorMessage(error, 'Invalid credentials'));
-      }
-      return data.session;
+      const { token } = await authRequest('/sign-in/email', { body: { email, password } });
+      return requireToken(token, 'Invalid credentials');
     },
-    onSuccess: async (session) => {
-      persistSupabaseSession(session);
+    onSuccess: (token) => {
+      saveSessionToken(token);
       void queryClient.invalidateQueries({ queryKey: authKeys.session() });
       router.push('/dashboard');
       router.refresh();
@@ -67,11 +60,11 @@ export function useRegister() {
       email: string;
       password: string;
     }): Promise<RegisterResult> => {
-      const { data, error } = await getSupabaseClient().auth.signUp({ email, password });
-      if (error) {
-        throw new Error(authErrorMessage(error, 'Registration failed'));
-      }
-      if (data.session) {
+      const { token } = await authRequest('/sign-up/email', {
+        body: { email, password, name: nameFromEmail(email) },
+      });
+      if (token) {
+        saveSessionToken(token);
         return { kind: 'session' };
       }
       return {
@@ -79,9 +72,8 @@ export function useRegister() {
         message: 'Check your email to confirm your account, then sign in.',
       };
     },
-    onSuccess: async (result) => {
+    onSuccess: (result) => {
       if (result.kind === 'session') {
-        await syncSessionAfterAuth();
         void queryClient.invalidateQueries({ queryKey: authKeys.session() });
         router.push('/dashboard');
         router.refresh();
@@ -105,13 +97,9 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: async () => {
-      const token = sessionStorage.getItem(STORAGE_KEYS.access_token);
+      const token = getSessionToken();
       if (token) {
         await logout(token).catch(() => {});
-      }
-      const { error } = await getSupabaseClient().auth.signOut();
-      if (error) {
-        throw new Error(error.message);
       }
     },
     onSettled: () => {
@@ -138,27 +126,13 @@ export function useChangePassword() {
       currentPassword?: string;
       newPassword: string;
     }) => changePassword(currentPassword, newPassword),
-    onSuccess: async (_data, variables) => {
-      const supabase = getSupabaseClient();
-      const { data: sessionData } = await supabase.auth.getSession();
-      const email = sessionData.session?.user?.email;
-
-      if (email) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password: variables.newPassword,
-        });
-        if (signInError) {
-          toast.error('Password updated, but you need to sign in again');
-          clearSession();
-        } else {
-          await syncSessionAfterAuth();
-        }
+    onSuccess: (data) => {
+      // Changing the password revokes every session and returns a new token.
+      if (data?.token) {
+        saveSessionToken(data.token);
       }
-
       void queryClient.invalidateQueries({ queryKey: authKeys.session() });
       void queryClient.invalidateQueries({ queryKey: authKeys.me() });
-
       toast.success('Password updated successfully');
     },
   });
@@ -167,12 +141,9 @@ export function useChangePassword() {
 export function useForgotPassword() {
   return useMutation({
     mutationFn: async (email: string) => {
-      const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email, {
-        redirectTo: resetPasswordCallbackUrl(),
+      await authRequest('/request-password-reset', {
+        body: { email, redirectTo: resetPasswordCallbackUrl() },
       });
-      if (error) {
-        throw new Error(error.message);
-      }
     },
   });
 }
@@ -182,14 +153,11 @@ export function useResetPassword() {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: async (password: string) => {
-      const { error } = await getSupabaseClient().auth.updateUser({ password });
-      if (error) {
-        throw new Error(error.message);
-      }
+    mutationFn: async ({ token, password }: { token: string; password: string }) => {
+      if (!token) throw new Error('This reset link is invalid or has expired.');
+      await authRequest('/reset-password', { body: { token, newPassword: password } });
     },
-    onSuccess: async () => {
-      await getSupabaseClient().auth.signOut();
+    onSuccess: () => {
       clearSession();
       void queryClient.invalidateQueries({ queryKey: authKeys.session() });
       toast.success('Password reset successful. Please sign in.');
@@ -205,13 +173,9 @@ export function useResetPassword() {
 export function useRequestOtp() {
   return useMutation({
     mutationFn: async (email: string) => {
-      const { error } = await getSupabaseClient().auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: authCallbackUrl() },
+      await authRequest('/email-otp/send-verification-otp', {
+        body: { email, type: 'sign-in' },
       });
-      if (error) {
-        throw new Error(error.message);
-      }
     },
   });
 }
@@ -222,18 +186,11 @@ export function useVerifyOtp() {
 
   return useMutation({
     mutationFn: async ({ email, token }: { email: string; token: string }) => {
-      const { data, error } = await getSupabaseClient().auth.verifyOtp({
-        email,
-        token,
-        type: 'email',
-      });
-      if (error || !data.session) {
-        throw new Error(authErrorMessage(error, 'Invalid or expired code'));
-      }
-      return data.session;
+      const result = await authRequest('/sign-in/email-otp', { body: { email, otp: token } });
+      return requireToken(result.token, 'Invalid or expired code');
     },
-    onSuccess: async (session) => {
-      persistSupabaseSession(session);
+    onSuccess: (token) => {
+      saveSessionToken(token);
       void queryClient.invalidateQueries({ queryKey: authKeys.session() });
       router.push('/dashboard');
       router.refresh();
@@ -244,13 +201,30 @@ export function useVerifyOtp() {
 export function useSendMagicLink() {
   return useMutation({
     mutationFn: async (email: string) => {
-      const { error } = await getSupabaseClient().auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: authCallbackUrl() },
+      await authRequest('/sign-in/magic-link', { body: { email } });
+    },
+  });
+}
+
+/** Completes a magic-link sign-in from the emailed `/auth/magic?token=…` link. */
+export function useVerifyMagicLink() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (token: string) => {
+      const result = await authRequest('/magic-link/verify', {
+        method: 'GET',
+        query: { token },
       });
-      if (error) {
-        throw new Error(error.message);
-      }
+      const sessionToken = requireToken(
+        result.token,
+        'This sign-in link is invalid or has expired.',
+      );
+      saveSessionToken(sessionToken);
+      return sessionToken;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: authKeys.session() });
     },
   });
 }
@@ -259,17 +233,27 @@ export function useSendMagicLink() {
 // Email verification
 // ---------------------------------------------------------------------------
 
+/**
+ * Verifies the emailed `/auth/verify?token=…` link. Verification signs the
+ * user in (Better Auth `autoSignInAfterVerification`).
+ */
 export function useVerifyEmailToken() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (token: string) => {
-      const { data, error } = await getSupabaseClient().auth.verifyOtp({
-        token_hash: token,
-        type: 'email',
-      });
-      if (error) {
-        return { verified: false as const };
+      try {
+        const result = await authRequest('/verify-email', { method: 'GET', query: { token } });
+        if (result.token) {
+          saveSessionToken(result.token);
+        }
+        return { verified: true as const, signedIn: Boolean(result.token) };
+      } catch {
+        return { verified: false as const, signedIn: false };
       }
-      return { verified: Boolean(data.session) };
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: authKeys.session() });
     },
   });
 }

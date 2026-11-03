@@ -1,7 +1,7 @@
 import { getMcpAuthUser, mcpAuthStorage } from '../../mcp-auth.context';
 import { ReplaceCvFromJsonresumeTool } from './replace-cv-from-jsonresume.tool';
 
-const user = { id: 'user-1', accessToken: 'tok', authMethod: 'jwt' as const };
+const user = { id: 'user-1', authMethod: 'session' as const };
 
 describe('ReplaceCvFromJsonresumeTool', () => {
   let tool: ReplaceCvFromJsonresumeTool;

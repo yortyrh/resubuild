@@ -19,7 +19,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { memoryStorage } from 'multer';
-import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { type AuthenticatedRequest, SessionAuthGuard } from '../auth/session-auth.guard';
 import { CvExportService } from '../cv-export/cv-export.service';
 import { PDF_IMPORT_MAX_BYTES_DEFAULT } from '../import/import.service';
 import { APPLICATION_IMAGE_MIME_TYPES, ApplicationService } from './application.service';
@@ -31,7 +31,7 @@ import {
 } from './dto/application.dto';
 
 @Controller('applications')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SessionAuthGuard)
 export class ApplicationController {
   constructor(
     private readonly applicationService: ApplicationService,

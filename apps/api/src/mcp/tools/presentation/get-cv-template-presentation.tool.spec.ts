@@ -1,7 +1,7 @@
 import { getMcpAuthUser, mcpAuthStorage } from '../../mcp-auth.context';
 import { GetCvTemplatePresentationTool } from './get-cv-template-presentation.tool';
 
-const user = { id: 'user-1', accessToken: 'tok', authMethod: 'jwt' as const };
+const user = { id: 'user-1', authMethod: 'session' as const };
 
 describe('GetCvTemplatePresentationTool', () => {
   let tool: GetCvTemplatePresentationTool;

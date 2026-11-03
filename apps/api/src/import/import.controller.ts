@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { type AuthenticatedRequest, SessionAuthGuard } from '../auth/session-auth.guard';
 import { ImportFromUrlDto } from './dto/import-from-url.dto';
 import {
   DOCX_IMPORT_MAX_BYTES_DEFAULT,
@@ -25,7 +25,7 @@ import {
 } from './import.service';
 
 @Controller('cv/import')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SessionAuthGuard)
 export class ImportController {
   constructor(private readonly importService: ImportService) {}
 

@@ -2,7 +2,7 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from '@nes
 import { ConfigService } from '@nestjs/config';
 import { aiAgentAccount, aiAgentPreference, and, asc, type Database, eq } from '@resubuild/db';
 import { parseMastraModelId, resolveProviderId } from '@resubuild/import-models';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { DATABASE } from '../database/database.tokens';
 import {
   AiAgentDecryptionError,

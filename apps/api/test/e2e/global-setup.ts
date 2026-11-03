@@ -1,54 +1,72 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import path from 'node:path';
+import { startE2eInfra } from './infra';
 
 const repoRoot = path.resolve(__dirname, '../../../..');
-const apiEnvPath = path.join(repoRoot, 'apps/api/.env');
-const statePath = path.join(repoRoot, '.samples/e2e-fixture.state.json');
 
-function loadEnvFile(filePath: string) {
-  if (!existsSync(filePath)) {
-    return;
-  }
-  const content = readFileSync(filePath, 'utf8');
-  for (const line of content.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) {
-      continue;
+interface SeedDbModule {
+  loadSeedConfig: (env: NodeJS.ProcessEnv) => unknown;
+}
+interface SeedFixturesModule {
+  seedFixtures: (config: unknown, options: { log: (line: string) => void }) => Promise<unknown>;
+}
+
+/** Shared with global-teardown.ts (same process). */
+declare global {
+  // eslint-disable-next-line no-var
+  var __E2E_STOP_INFRA__: (() => Promise<void>) | undefined;
+}
+
+/**
+ * Self-contained e2e environment: needs only Docker (or Podman).
+ *
+ * Starts Postgres/S3/Mailpit containers, points the API env at them, seeds the
+ * fixture accounts with the same code as `pnpm samples:seed`, and leaves the
+ * containers running until global-teardown.ts.
+ */
+/**
+ * Podman's Docker-compatible API cannot stream Ryuk's startup logs, so the
+ * reaper never reports ready. Skip it there; global-teardown stops the
+ * containers anyway. Override with TESTCONTAINERS_RYUK_DISABLED explicitly.
+ */
+function disableRyukOnPodman(): void {
+  if (process.env.TESTCONTAINERS_RYUK_DISABLED !== undefined) return;
+  const socket = process.env.DOCKER_HOST?.replace(/^unix:\/\//, '') ?? '/var/run/docker.sock';
+  try {
+    if (existsSync(socket) && realpathSync(socket).includes('podman')) {
+      process.env.TESTCONTAINERS_RYUK_DISABLED = 'true';
     }
-    const eq = trimmed.indexOf('=');
-    if (eq <= 0) {
-      continue;
-    }
-    const key = trimmed.slice(0, eq).trim();
-    const value = trimmed.slice(eq + 1).trim();
-    if (!(key in process.env)) {
-      process.env[key] = value;
-    }
+  } catch {
+    // Not a local socket (remote Docker host): keep Ryuk.
   }
 }
 
 export default async function globalSetup() {
-  loadEnvFile(apiEnvPath);
+  disableRyukOnPodman();
+  const infra = await startE2eInfra();
+  globalThis.__E2E_STOP_INFRA__ = infra.stop;
 
-  const required = [
-    'SUPABASE_URL',
-    'SUPABASE_ANON_KEY',
-    'SUPABASE_SERVICE_ROLE_KEY',
-    'MEDIA_BUCKET',
-  ];
-  const missing = required.filter((key) => !process.env[key]?.trim());
-  if (missing.length > 0) {
-    throw new Error(
-      `E2E requires local Supabase env in apps/api/.env (missing: ${missing.join(', ')}). Run: supabase start && pnpm setup:env`,
-    );
-  }
+  Object.assign(process.env, infra.env, {
+    NODE_ENV: 'test',
+    PORT: '3001',
+    APP_URL: 'http://localhost:3000',
+    WEB_URL: 'http://localhost:3000',
+    CORS_ORIGIN: 'http://localhost:3000',
+    PUBLIC_API_URL: 'http://localhost:3001',
+    BETTER_AUTH_URL: 'http://localhost:3001',
+    BETTER_AUTH_SECRET: 'e2e-better-auth-secret-at-least-32-characters',
+    MCP_KEY_PEPPER: 'e2e-mcp-pepper',
+    AI_AGENT_ENCRYPTION_KEY: 'e2e-ai-agent-encryption-key-32-characters!',
+    AUTH_FORGOT_PASSWORD_ENABLED: 'true',
+    AUTH_EMAIL_VERIFICATION_ENABLED: 'true',
+    AUTH_PASSWORDLESS_ENABLED: 'true',
+    IMPORT_MODELS_CATALOG_SOURCE: 'static',
+  });
 
-  if (!existsSync(statePath)) {
-    throw new Error(`E2E fixture state not found at ${statePath}. Run: pnpm samples:seed`);
-  }
+  // Seed with the same code as `pnpm samples:seed` (plain ESM in scripts/).
+  const importScript = (relative: string) => import(path.join(repoRoot, relative));
+  const seedDb = (await importScript('scripts/lib/seed-db.mjs')) as SeedDbModule;
+  const seedFixtures = (await importScript('scripts/lib/seed-fixtures.mjs')) as SeedFixturesModule;
 
-  const credentialsPath = path.join(repoRoot, '.samples/local-credentials.json');
-  if (!existsSync(credentialsPath)) {
-    throw new Error(`Local credentials not found at ${credentialsPath}. Run: pnpm samples:seed`);
-  }
+  await seedFixtures.seedFixtures(seedDb.loadSeedConfig(process.env), { log: () => undefined });
 }

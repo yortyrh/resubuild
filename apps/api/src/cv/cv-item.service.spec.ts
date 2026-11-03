@@ -16,7 +16,7 @@ describe('CvItemService', () => {
   let normalizedRepo: ReturnType<typeof createMockNormalizedRepo>;
   let ensureThumbnail: jest.Mock;
 
-  const user = { id: 'user-1', email: 'u@test.com', accessToken: 'jwt-access-token' };
+  const user = { id: 'user-1', email: 'u@test.com' };
   const supabaseStub = {};
 
   let workRows: Record<string, unknown>[] = [];

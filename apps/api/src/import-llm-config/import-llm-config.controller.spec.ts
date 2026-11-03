@@ -2,7 +2,7 @@
  * Mirrors import LLM config controller endpoints.
  */
 
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { ImportLlmConfigController } from './import-llm-config.controller';
 import type { ImportLlmConfigService } from './import-llm-config.service';
 
@@ -10,7 +10,6 @@ describe('ImportLlmConfigController', () => {
   const user = {
     id: 'u1',
     email: 'u@test.dev',
-    accessToken: 'tok',
   } as AuthenticatedRequest['user'];
   const req = { user } as AuthenticatedRequest;
 

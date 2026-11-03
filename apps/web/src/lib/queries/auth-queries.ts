@@ -3,8 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 import type { AuthMe } from '@/lib/api';
 import { fetchAuthMe } from '@/lib/api';
+import { authRequest } from '@/lib/auth/client';
 import { getAuthFeatures } from '@/lib/auth/features';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { clearSession, getSessionToken } from '@/lib/auth-session';
 
 export type { AuthMe } from '@/lib/api';
 
@@ -44,30 +45,42 @@ export interface AuthSession {
   emailVerified: boolean;
 }
 
+const NO_SESSION: AuthSession = { exists: false, userId: null, email: null, emailVerified: false };
+
 /**
- * Reads the current session from the Supabase client.
+ * Resolves the stored bearer token against the API (`/api/auth/get-session`).
  * Used by SessionGate to guard routes and by UserMenu to display user info.
- * Manual invalidation only (staleTime: Infinity) — session is updated by the
- * SupabaseListener component via onAuthStateChange.
+ * Manual invalidation only (staleTime: Infinity) — sign-in/out mutations
+ * invalidate this query.
  */
 export function useAuthSession() {
   return useQuery<AuthSession>({
     queryKey: authKeys.session(),
     queryFn: async (): Promise<AuthSession> => {
-      const supabase = getSupabaseClient();
-      const { data } = await supabase.auth.getSession();
+      const token = getSessionToken();
+      if (!token) return NO_SESSION;
 
-      if (!data.session) {
-        return { exists: false, userId: null, email: null, emailVerified: false };
+      try {
+        const { data } = await authRequest<{
+          user?: { id: string; email: string; emailVerified?: boolean };
+        } | null>('/get-session', { method: 'GET', token });
+        if (!data?.user) {
+          clearSession();
+          return NO_SESSION;
+        }
+        return {
+          exists: true,
+          userId: data.user.id,
+          email: data.user.email ?? null,
+          emailVerified: Boolean(data.user.emailVerified),
+        };
+      } catch (error) {
+        if ((error as { status?: number }).status === 401) {
+          clearSession();
+          return NO_SESSION;
+        }
+        throw error;
       }
-
-      const user = data.session.user as unknown as Record<string, unknown>;
-      return {
-        exists: true,
-        userId: data.session.user.id,
-        email: data.session.user.email ?? null,
-        emailVerified: Boolean(user.email_confirmed_at ?? user.email_verified),
-      };
     },
     staleTime: Infinity,
   });

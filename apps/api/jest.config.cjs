@@ -7,8 +7,6 @@ const path = require('node:path');
 const markedPkg = require.resolve('marked/package.json');
 const markedUmdPath = path.join(path.dirname(markedPkg), 'lib/marked.umd.js');
 
-const { jsWithTs: tsjPreset } = require('ts-jest/presets');
-
 /** @type {import('jest').Config} */
 module.exports = {
   moduleFileExtensions: ['js', 'json', 'ts', 'mjs'],
@@ -21,8 +19,13 @@ module.exports = {
   // that `ts-jest` does not handle in `.mjs` mode; `babel-jest` will
   // rewrite the `export` statement to CJS for the Jest CJS runtime.
   transform: {
-    ...tsjPreset.transform,
-    '^.+\\.mjs$': 'babel-jest',
+    // ts-jest compiles with tsconfig.jest.json (CommonJS) — see that file.
+    '^.+\\.[tj]sx?$': ['ts-jest', { tsconfig: '<rootDir>/../tsconfig.jest.json' }],
+    // ESM-only packages (.mjs) are rewritten to CommonJS for Jest's CJS runtime.
+    '^.+\\.mjs$': [
+      'babel-jest',
+      { babelrc: false, configFile: false, plugins: ['@babel/plugin-transform-modules-commonjs'] },
+    ],
     // PGlite (in-memory Postgres for repository specs) and @react-email/render
     // (mail templates) use dynamic import(); see
     // test/jest/dynamic-import-to-require.transform.cjs.

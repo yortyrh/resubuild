@@ -1,28 +1,17 @@
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
+import { configureApp } from './configure-app';
 
 async function bootstrap() {
-  // snapshot required by @nestjs/devtools-integration (see apps/api/README.md "Debugging the API")
-  const app = await NestFactory.create(AppModule, { snapshot: true });
-
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',')
-      .map((o) => o.trim())
-      .filter(Boolean) ?? ['http://localhost:3000'],
-    credentials: false,
-    allowedHeaders: ['Authorization', 'Content-Type'],
-    exposedHeaders: ['Content-Disposition'],
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  // snapshot required by @nestjs/devtools-integration (see apps/api/README.md "Debugging the API");
+  // bodyParser is registered by configureApp() after the Better Auth handler.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    snapshot: true,
+    bodyParser: false,
   });
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-    }),
-  );
+  configureApp(app);
 
   const port = process.env.PORT ?? 3001;
   await app.listen(port);

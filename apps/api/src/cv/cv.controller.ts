@@ -10,14 +10,14 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { type AuthenticatedRequest, SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { type AuthenticatedRequest, SessionAuthGuard } from '../auth/session-auth.guard';
 import { CvService } from './cv.service';
 import { CvTemplatePresentationService } from './cv-template-presentation.service';
 import { CreateCvDto, UpdateCvDto } from './dto/cv.dto';
 import { UpsertCvTemplatePresentationDto } from './dto/cv-template-presentation.dto';
 
 @Controller('cv')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SessionAuthGuard)
 export class CvController {
   constructor(
     private readonly cvService: CvService,

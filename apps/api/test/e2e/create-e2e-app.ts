@@ -4,7 +4,7 @@
  * Both `AppModule` and `@nestjs/testing` are intentionally `require()`'d
  * inside the function body instead of being imported at the top of this
  * file. The `MCP_SERVER_ENABLED=false` describe block in
- * `local-supabase.e2e-spec.ts` mutates the env var, then calls
+ * `api.e2e-spec.ts` mutates the env var, then calls
  * `jest.resetModules()` and `createE2eApp()`. If `AppModule` were imported
  * here statically, it would be evaluated once at module load and
  * `McpModule`'s `isMcpServerDisabled()` check would have run with the
@@ -24,19 +24,15 @@ export async function createE2eApp(): Promise<INestApplication> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
   const { Test } = require('@nestjs/testing') as typeof import('@nestjs/testing');
   // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
-  const { ValidationPipe } = require('@nestjs/common') as typeof import('@nestjs/common');
+  const { configureApp } =
+    require('../../src/configure-app') as typeof import('../../src/configure-app');
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
 
-  const app = moduleRef.createNestApplication();
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-    }),
-  );
+  // Same HTTP wiring as main.ts (Better Auth handler before the body parsers).
+  const app = moduleRef.createNestApplication({ bodyParser: false });
+  configureApp(app);
   await app.init();
   return app;
 }

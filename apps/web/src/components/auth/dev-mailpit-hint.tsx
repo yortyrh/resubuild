@@ -1,6 +1,6 @@
 'use client';
 
-import { DEV_MAILPIT_URL, isDevMailpitHintVisible } from '@/lib/dev-mailpit';
+import { devMailpitUrl, isDevMailpitHintVisible } from '@/lib/dev-mailpit';
 
 export interface DevMailpitHintProps {
   /** Short label for what to look for, e.g. "sign-in code" or "confirmation link". */
@@ -22,7 +22,7 @@ export function DevMailpitHint({ emailKind }: DevMailpitHintProps) {
       <span className="text-foreground font-medium">Development:</span> auth emails are not sent to
       real inboxes. Open{' '}
       <a
-        href={DEV_MAILPIT_URL}
+        href={devMailpitUrl()}
         target="_blank"
         rel="noopener noreferrer"
         className="text-primary font-medium underline underline-offset-2"

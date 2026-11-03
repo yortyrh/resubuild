@@ -1,0 +1,9 @@
+{
+  "//": "Jest (ts-jest) only: emit CommonJS so dynamic import() becomes require() inside Jest's CJS VM. Type-checking uses tsconfig.json (nodenext). isolatedModules is off so decorator metadata has no typeof guards (keeps branch coverage meaningful).",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "isolatedModules": false
+  }
+}

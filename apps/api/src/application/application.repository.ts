@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, type Database, desc, eq, inArray, jobApplication } from '@resubuild/db';
 import type { JobApplicationRow, JobApplicationStatus, JobSourceType } from '@resubuild/types';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { DATABASE } from '../database/database.tokens';
 import { pickColumns } from '../database/db-scope';
 

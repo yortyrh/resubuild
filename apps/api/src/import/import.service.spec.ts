@@ -14,7 +14,7 @@ import {
 import type { ImportModelCatalog } from '@resubuild/import-models';
 import catalog from '@resubuild/import-models/catalog.json';
 import { InvalidImportedResumeError, prepareImportedResume } from '@resubuild/types';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import type { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import { ImportService } from './import.service';
 
@@ -60,7 +60,6 @@ describe('ImportService', () => {
   const user = {
     id: 'u1',
     email: 'u@test.dev',
-    accessToken: 'tok',
   } as AuthenticatedRequest['user'];
 
   let service: ImportService;

@@ -3,14 +3,13 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { ImportLlmConfigService } from './import-llm-config.service';
 
 describe('ImportLlmConfigService', () => {
   const user = {
     id: 'u1',
     email: 'u@test.dev',
-    accessToken: 'tok',
   } as AuthenticatedRequest['user'];
 
   let service: ImportLlmConfigService;

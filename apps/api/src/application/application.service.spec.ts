@@ -56,7 +56,6 @@ describe('ApplicationService', () => {
   const user = {
     id: 'u1',
     email: 'u@test.dev',
-    accessToken: 'tok',
   } as never;
 
   let service: ApplicationService;

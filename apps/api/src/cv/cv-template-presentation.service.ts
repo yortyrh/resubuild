@@ -7,7 +7,7 @@ import {
   mergePresentationConfig,
   resolveCanonicalTemplateId,
 } from '@resubuild/resume-template';
-import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';
+import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { CvNormalizedRepository } from './cv-normalized.repository';
 import { CvTemplatePresentationRepository } from './cv-template-presentation.repository';
 
