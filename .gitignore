@@ -13,6 +13,9 @@ coverage
 # restarts so incremental rebuilds are fast; see openspec/specs/monorepo-and-toolchain).
 *.tsbuildinfo
 
+# Jetbrains
+.idea/
+
 # Supabase CLI local state (branch selection, link refs, temp files)
 supabase/.temp/
 supabase/.branches/
