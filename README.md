@@ -173,7 +173,7 @@ Open http://localhost:3000, sign in with the developer account, and you should s
 
 ### Local auth emails (Mailpit)
 
-Local Supabase does **not** deliver auth email to real inboxes. Messages are captured by **Mailpit** (enabled via `[inbucket] enabled = true` in `supabase/config.toml`).
+Local Supabase does **not** deliver auth email to real inboxes. Messages are captured by **Mailpit** (enabled via `[local_smtp] enabled = true` in `supabase/config.toml`).
 
 **Inbox URL:** http://127.0.0.1:54324
 

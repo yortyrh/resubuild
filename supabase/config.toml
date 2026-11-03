@@ -22,7 +22,7 @@ additional_redirect_urls = [
 ]
 
 [auth.email]
-enable_signup = true
+enabled = true
 enable_confirmations = true
 
 # GitHub OAuth — gated client-side by NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED.
@@ -93,7 +93,7 @@ public = false
 file_size_limit = "10MiB"
 allowed_mime_types = ["application/pdf", "text/html", "image/png", "application/json"]
 
-[inbucket]
+[local_smtp]
 enabled = true
 
 [edge_runtime]
