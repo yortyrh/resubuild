@@ -9,8 +9,6 @@
  * `favicon.ico` is special: it is emitted as a multi-resolution `.ico`
  * container bundling the `sizes` sub-images listed in its entry, all with the
  * configured `margin` (typically `0` because browsers pad favicons themselves).
- *
- * @see openspec/changes/add-icon-generation-script/specs/web-icon-generation/spec.md
  */
 
 /**

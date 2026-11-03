@@ -34,20 +34,6 @@ function walk(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
-function walkAll(dir: string, acc: string[] = []): string[] {
-  for (const entry of readdirSync(dir)) {
-    if (SKIP_DIRS.has(entry)) continue;
-    const full = join(dir, entry);
-    const stats = statSync(full);
-    if (stats.isDirectory()) {
-      walkAll(full, acc);
-    } else {
-      acc.push(full);
-    }
-  }
-  return acc;
-}
-
 function loadSourceFiles(): ScannedFile[] {
   return walk(srcRoot)
     .map((path) => ({
@@ -110,8 +96,8 @@ describe('web bundle security invariants (source-level)', () => {
   });
 
   it('does not import from the server-only api code-paths (cv or database symbols)', () => {
-    // These are the symbols the OpenSpec `cv-rest-api` and
-    // `database-cv-rls` specs say MUST stay server-side. The web bundle
+    // These symbols MUST stay server-side (docs/requirements/nfr.md
+    // REQ-NFR-002). The web bundle
     // is forbidden from importing them; instead the web goes through
     // the HTTP surface in `apps/web/src/lib/api.ts`.
     const bannedImportPatterns: { pattern: RegExp; label: string }[] = [
@@ -157,19 +143,12 @@ describe('web bundle security invariants (source-level)', () => {
 
   it('documents the carve-out somewhere visible to operators', () => {
     // The carve-out ("only the publishable key may ship in the browser
-    // bundle") MUST be documented in the OpenSpec specs (including
-    // active change specs), the root README, or the web `.env.example`.
-    // This survives a docs refactor because at least one of these
-    // locations is the source of truth, and the test concatenates them
-    // all.
+    // bundle") MUST be documented in the root README or the web
+    // `.env.example`. The test concatenates both.
     const repoRoot = join(webRoot, '..', '..');
     const readme = readFileSync(join(repoRoot, 'README.md'), 'utf8');
     const webEnvExample = readFileSync(join(webRoot, '.env.example'), 'utf8');
-    const openspecRoot = join(repoRoot, 'openspec');
-    const specFiles = walkAll(openspecRoot)
-      .filter((path) => path.endsWith('.md') || path.endsWith('.mdx'))
-      .map((path) => readFileSync(path, 'utf8'));
-    const concatenated = [readme, webEnvExample, ...specFiles].join('\n');
+    const concatenated = [readme, webEnvExample].join('\n');
 
     // The publishable key is the ONLY Supabase key allowed in the
     // browser bundle. A passing assertion means the carve-out is

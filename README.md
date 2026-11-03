@@ -31,7 +31,7 @@ The public marketing entry is **`/`** — a landing page that demonstrates the P
 
 ## For developers
 
-Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authentication + schema validation), and **Supabase Postgres** (RLS-protected storage). Auth is **API-issued Bearer tokens** (JSON over CORS). The web bundle embeds the **Supabase publishable client** (`@supabase/supabase-js`) **only** for the auth flows listed in the [`authentication`](openspec/specs/authentication/spec.md) spec — the **publishable key** is the only Supabase key allowed in client bundles; **service-role keys remain server-only** (see [`apps/web/src/lib/web-bundle-security.test.ts`](apps/web/src/lib/web-bundle-security.test.ts) for the lint-style guard).
+Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authentication + schema validation), and **Supabase Postgres** (RLS-protected storage). Auth is **API-issued Bearer tokens** (JSON over CORS). The web bundle embeds the **Supabase publishable client** (`@supabase/supabase-js`) **only** for the auth flows (see [`docs/requirements/auth.md`](docs/requirements/auth.md)) — the **publishable key** is the only Supabase key allowed in client bundles; **service-role keys remain server-only** (see [`apps/web/src/lib/web-bundle-security.test.ts`](apps/web/src/lib/web-bundle-security.test.ts) for the lint-style guard).
 
 ### Stack
 
@@ -46,21 +46,21 @@ Monorepo for managing CVs with **Next.js** (UI), **NestJS** (REST API + authenti
 
 ## Authentication
 
-Resubuild's authentication is split between the **Nest API** (token issuance, validation, and the service-role Supabase client) and the **Next.js web SPA** (a publishable-key Supabase client for the auth UI only). The two halves are wired by the `authentication`, `web-application`, and the new `auth-feature-flags`, `auth-password-recovery`, `auth-email-verification`, `auth-passwordless`, and `auth-change-password` OpenSpec specs.
+Resubuild's authentication is split between the **Nest API** (token issuance, validation, and the service-role Supabase client) and the **Next.js web SPA** (a publishable-key Supabase client for the auth UI only). Product requirements for every flow live in [`docs/requirements/auth.md`](docs/requirements/auth.md).
 
 ### Auth flows
 
-| Flow                              | Always on? | Feature flag (client-side mirror)             | OpenSpec spec             |
-| --------------------------------- | ---------- | --------------------------------------------- | ------------------------- |
-| Email + password login / register | yes        | —                                             | `authentication`          |
-| Change password (authenticated)   | yes        | —                                             | `auth-change-password`    |
-| Forgot / reset password           | opt-in     | `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED`    | `auth-password-recovery`  |
-| Email verification                | opt-in     | `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED` | `auth-email-verification` |
-| Passwordless — magic link         | opt-in     | `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`       | `auth-passwordless`       |
-| Passwordless — 6-digit OTP        | opt-in     | `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`       | `auth-passwordless`       |
-| GitHub OAuth                      | opt-in     | `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED`       | `auth-github-oauth`       |
-| Google OAuth                      | opt-in     | `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED`       | `auth-google-oauth`       |
-| LinkedIn OAuth                    | opt-in     | `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED`     | `auth-linkedin-oauth`     |
+| Flow                              | Always on? | Feature flag (client-side mirror)             | Requirement  |
+| --------------------------------- | ---------- | --------------------------------------------- | ------------ |
+| Email + password login / register | yes        | —                                             | REQ-AUTH-001 |
+| Change password (authenticated)   | yes        | —                                             | REQ-AUTH-004 |
+| Forgot / reset password           | opt-in     | `NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED`    | REQ-AUTH-005 |
+| Email verification                | opt-in     | `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION_ENABLED` | REQ-AUTH-006 |
+| Passwordless — magic link         | opt-in     | `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`       | REQ-AUTH-007 |
+| Passwordless — 6-digit OTP        | opt-in     | `NEXT_PUBLIC_AUTH_PASSWORDLESS_ENABLED`       | REQ-AUTH-007 |
+| GitHub OAuth                      | opt-in     | `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED`       | REQ-AUTH-008 |
+| Google OAuth                      | opt-in     | `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED`       | REQ-AUTH-008 |
+| LinkedIn OAuth                    | opt-in     | `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED`     | REQ-AUTH-008 |
 
 ### Feature flags
 
@@ -81,7 +81,7 @@ NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED=true
 AUTH_FORGOT_PASSWORD_ENABLED=true
 ```
 
-The `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED` flag controls whether the SPA renders the **Continue with GitHub** button on `/login` and `/register`. The `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED` flag analogously controls the **Continue with Google** button. The `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED` flag analogously controls the **Continue with LinkedIn** button. Enabling any of these flags is **necessary but not sufficient**: the Supabase project must also have the corresponding real provider configured (locally, that means non-stub credentials in `supabase/.env`; in production, the equivalent keys in the Supabase Cloud dashboard). `setup:env` writes `github-oauth-stub`, `google-oauth-stub`, and `linkedin-oauth-stub` placeholders on first run so `supabase start` boots, but those placeholders make `signInWithOAuth` fail at click time — replace them with real credentials to go live. The button-gating flags and the provider credentials are independent so a misconfigured provider never silently leaks failed OAuth attempts to the UI. See `openspec/specs/auth-github-oauth/spec.md`, `openspec/specs/auth-google-oauth/spec.md`, and `openspec/specs/auth-linkedin-oauth/spec.md` for the end-to-end flows.
+The `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED` flag controls whether the SPA renders the **Continue with GitHub** button on `/login` and `/register`. The `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED` flag analogously controls the **Continue with Google** button. The `NEXT_PUBLIC_AUTH_LINKEDIN_OAUTH_ENABLED` flag analogously controls the **Continue with LinkedIn** button. Enabling any of these flags is **necessary but not sufficient**: the Supabase project must also have the corresponding real provider configured (locally, that means non-stub credentials in `supabase/.env`; in production, the equivalent keys in the Supabase Cloud dashboard). `setup:env` writes `github-oauth-stub`, `google-oauth-stub`, and `linkedin-oauth-stub` placeholders on first run so `supabase start` boots, but those placeholders make `signInWithOAuth` fail at click time — replace them with real credentials to go live. The button-gating flags and the provider credentials are independent so a misconfigured provider never silently leaks failed OAuth attempts to the UI. See REQ-AUTH-008 in [`docs/requirements/auth.md`](docs/requirements/auth.md).
 
 #### LinkedIn-specific setup
 
@@ -130,7 +130,7 @@ In **local development**, confirmation and passwordless emails do not leave your
 
 ### Bundle security guard
 
-`apps/web/src/lib/web-bundle-security.test.ts` is a Vitest guard that fails CI if any web source file references the service-role key, imports from `apps/api/src/cv/**` or `apps/api/src/database/**`, or uses `@supabase/supabase-js` outside the auth-flow scope. It also asserts the carve-out is documented in `README.md` / `.env.example` / the OpenSpec specs.
+`apps/web/src/lib/web-bundle-security.test.ts` is a Vitest guard that fails CI if any web source file references the service-role key, imports from `apps/api/src/cv/**` or `apps/api/src/database/**`, or uses `@supabase/supabase-js` outside the auth-flow scope. It also asserts the carve-out is documented in `README.md` and `apps/web/.env.example`.
 
 ## Prerequisites
 
@@ -262,7 +262,7 @@ Paste and run migrations from `supabase/migrations/` in Supabase → **SQL Edito
 
 Deploy the system to a production docker compose stack connected to a non-self-hosted (cloud) Supabase project.
 
-> **Minimum viable target.** This release ships without TLS, a reverse proxy, or a container registry push. Those concerns are addressed by follow-on release-1 changes. See [openspec/specs/prod-env-bootstrap-helper/spec.md](openspec/specs/prod-env-bootstrap-helper/spec.md) for the full scope.
+> **Minimum viable target.** This release ships without TLS, a reverse proxy, or a container registry push. Those concerns are left to follow-on changes.
 
 ### Prerequisites
 
@@ -286,7 +286,7 @@ pnpm setup:env:prod
 
 The script prompts for all required variables and auto-generates an `AI_AGENT_ENCRYPTION_KEY` if you don't supply one.
 
-**LLM agent flow:** Use the `/opsx:setup-prod-env` command or load the [`.cursor/skills/setup-prod-env/SKILL.md`](.cursor/skills/setup-prod-env/SKILL.md) to drive the generator as an agent. Both write a `prod-secrets.json` manifest to disk (gitignored) and invoke the script via `--from` so secret values never appear in chat.
+**Non-interactive / agent flow:** write the values to a `prod-secrets.json` manifest (gitignored) and run `pnpm setup:env:prod --from prod-secrets.json`, so secret values never appear in a terminal transcript or chat.
 
 **Dry-run preview:**
 
@@ -310,14 +310,11 @@ Both services (`web`, `api`) read from `.env.prod`. The `api` service mounts a n
 
 ### Files
 
-| File                                                                                                   | Purpose                                                 |
-| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
-| [`scripts/setup-prod-env.mjs`](scripts/setup-prod-env.mjs)                                             | Script engine                                           |
-| [`scripts/lib/env-prod-schema.mjs`](scripts/lib/env-prod-schema.mjs)                                   | Schema module (shared by script, SKILL, cursor command) |
-| [`docker-compose.prod.yml`](docker-compose.prod.yml)                                                   | Compose definition                                      |
-| [`.cursor/skills/setup-prod-env/SKILL.md`](.cursor/skills/setup-prod-env/SKILL.md)                     | LLM agent workflow                                      |
-| [`.cursor/commands/setup-prod-env.md`](.cursor/commands/setup-prod-env.md)                             | Cursor command (`/opsx:setup-prod-env`)                 |
-| [`openspec/specs/prod-env-bootstrap-helper/spec.md`](openspec/specs/prod-env-bootstrap-helper/spec.md) | Full spec                                               |
+| File                                                                 | Purpose                                         |
+| -------------------------------------------------------------------- | ----------------------------------------------- |
+| [`scripts/setup-prod-env.mjs`](scripts/setup-prod-env.mjs)           | Script engine                                   |
+| [`scripts/lib/env-prod-schema.mjs`](scripts/lib/env-prod-schema.mjs) | Schema module (shared by script and drift test) |
+| [`docker-compose.prod.yml`](docker-compose.prod.yml)                 | Compose definition                              |
 
 ### Deploy to Railway (parallel managed target)
 
@@ -329,17 +326,14 @@ The pre-gathered env vars are the same list documented under **Prerequisites** a
 pnpm setup:env:prod --target railway --from prod-secrets.json
 ```
 
-| File                                                                                                                                           | Purpose                                                          |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| [`apps/api/railway.json`](apps/api/railway.json)                                                                                               | Service config for the api service (build + start)               |
-| [`apps/web/railway.json`](apps/web/railway.json)                                                                                               | Service config for the web service (build + start)               |
-| [`.railwayignore`](.railwayignore)                                                                                                             | Build context exclusions                                         |
-| [`scripts/deploy-railway.mjs`](scripts/deploy-railway.mjs)                                                                                     | Preflight wrapper (`pnpm deploy:railway`)                        |
-| [`.cursor/skills/railway-deploy/SKILL.md`](.cursor/skills/railway-deploy/SKILL.md)                                                             | LLM agent workflow (includes custom-domain + App Sleeping steps) |
-| [`.cursor/commands/railway-deploy.md`](.cursor/commands/railway-deploy.md)                                                                     | Cursor command (`/opsx:railway-deploy`)                          |
-| [`openspec/changes/railway-deployment/specs/railway-deployment/spec.md`](openspec/changes/railway-deployment/specs/railway-deployment/spec.md) | Full spec                                                        |
+| File                                                       | Purpose                                            |
+| ---------------------------------------------------------- | -------------------------------------------------- |
+| [`apps/api/railway.json`](apps/api/railway.json)           | Service config for the api service (build + start) |
+| [`apps/web/railway.json`](apps/web/railway.json)           | Service config for the web service (build + start) |
+| [`.railwayignore`](.railwayignore)                         | Build context exclusions                           |
+| [`scripts/deploy-railway.mjs`](scripts/deploy-railway.mjs) | Preflight wrapper (`pnpm deploy:railway`)          |
 
-**Service topology and scale-to-zero.** The release-1 Railway target deploys two services (one `api`, one `web`) into a single Railway project. Each service has `apps/{api,web}/railway.json` at its service root directory so Railway's monorepo auto-detect locates the build config next to its `Dockerfile`. Both services should run on their existing `apps/{api,web}/Dockerfile` and scale to zero when idle. The scale-to-zero toggle (Railway's "App Sleeping") is a per-service dashboard setting in **Settings → App Sleeping** — enable it after each service is created and trigger a new deployment for the change to take effect. App Sleeping is not a `railway.json` field and cannot be enforced by config-as-code; the SKILL and command document the toggle explicitly.
+**Service topology and scale-to-zero.** The release-1 Railway target deploys two services (one `api`, one `web`) into a single Railway project. Each service has `apps/{api,web}/railway.json` at its service root directory so Railway's monorepo auto-detect locates the build config next to its `Dockerfile`. Both services should run on their existing `apps/{api,web}/Dockerfile` and scale to zero when idle. The scale-to-zero toggle (Railway's "App Sleeping") is a per-service dashboard setting in **Settings → App Sleeping** — enable it after each service is created and trigger a new deployment for the change to take effect. App Sleeping is not a `railway.json` field and cannot be enforced by config-as-code, so set it manually. Attach the custom domains (`app.resubuild.dev`, `api.resubuild.dev`) to the matching services in the Railway dashboard.
 
 **Known limitations (scope statements, not TODOs):**
 
@@ -454,6 +448,8 @@ packages/
   resume-template/ MIT HTML renderer for preview/PDF export
   schemas/      resume.schema.json
   types/        shared Resume types
+docs/
+  requirements/ product requirements (tech-agnostic, stable REQ ids)
 supabase/
   migrations/   database schema
 .samples/       seed fixture (CVs, media, local credentials)

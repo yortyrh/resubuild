@@ -7,8 +7,6 @@
  * change. Margins are applied by compositing a smaller rasterization of the
  * SVG onto a transparent canvas of the final pixel size, centering the
  * artwork with equal padding on every side.
- *
- * @see openspec/changes/add-icon-generation-script/specs/web-icon-generation/spec.md
  */
 
 import { mkdir, writeFile } from 'node:fs/promises';

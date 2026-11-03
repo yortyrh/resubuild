@@ -350,7 +350,7 @@ async function run(manifest, options) {
   if (!dryRun) {
     if (isGitTracked(absOutput)) {
       console.error(`error: ${absOutput} is tracked by git; remove it from the index first`);
-      console.error('see openspec/specs/prod-env-bootstrap-helper/spec.md');
+      console.error('see README.md "Release 1: cloud Supabase + docker compose"');
       process.exit(1);
     }
   }
@@ -464,8 +464,7 @@ if (options.from) {
       console.error('  you can omit them from the manifest if your services already have');
       console.error('  those domains attached.');
       console.error('');
-      console.error('  See .cursor/skills/railway-deploy/SKILL.md (Railway) or');
-      console.error('  .cursor/skills/setup-prod-env/SKILL.md (docker compose) for the full');
+      console.error('  See README.md ("Release 1" and "Deploy to Railway") for the full');
       console.error('  workflow.');
       process.exit(1);
     }

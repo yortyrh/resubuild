@@ -12,8 +12,6 @@
  * The suite runs against the generator's pure helpers (`innerSize`,
  * `buildIco`, `renderPngWithMargin`) plus a single integration run that
  * writes outputs into a tmp directory and inspects them with `sharp`.
- *
- * @see openspec/changes/add-icon-generation-script/specs/web-icon-generation/spec.md
  */
 
 import { mkdtemp, readFile, rm } from 'node:fs/promises';

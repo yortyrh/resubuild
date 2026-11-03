@@ -3,7 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  // snapshot required by @nestjs/devtools-integration (see ../../../openspec/changes/improve-agent-debug-api)
+  // snapshot required by @nestjs/devtools-integration (see apps/api/README.md "Debugging the API")
   const app = await NestFactory.create(AppModule, { snapshot: true });
 
   app.enableCors({

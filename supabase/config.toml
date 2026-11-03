@@ -33,7 +33,7 @@ enable_confirmations = true
 # `github-oauth-stub` placeholders so `supabase start` boots; those stubs
 # make signInWithOAuth fail with a "Sign-in failed" toast at click time —
 # the SPA stays usable and the operator supplies real credentials to go
-# live. See openspec/specs/auth-github-oauth/spec.md.
+# live. See README.md "Feature flags".
 [auth.external.github]
 enabled = true
 client_id = "env(GITHUB_OAUTH_CLIENT_ID)"
@@ -49,7 +49,7 @@ secret = "env(GITHUB_OAUTH_SECRET)"
 # `google-oauth-stub` placeholders so `supabase start` boots; those stubs
 # make signInWithOAuth fail with a "Sign-in failed" toast at click time —
 # the SPA stays usable and the operator supplies real credentials to go
-# live. See openspec/specs/auth-google-oauth/spec.md.
+# live. See README.md "Feature flags".
 [auth.external.google]
 enabled = true
 client_id = "env(GOOGLE_OAUTH_CLIENT_ID)"
@@ -65,7 +65,7 @@ secret = "env(GOOGLE_OAUTH_SECRET)"
 # `linkedin-oauth-stub` placeholders so `supabase start` boots; those stubs
 # make signInWithOAuth fail with a "Sign-in failed" toast at click time —
 # the SPA stays usable and the operator supplies real credentials to go
-# live. See openspec/specs/auth-linkedin-oauth/spec.md.
+# live. See README.md "Feature flags".
 [auth.external.linkedin_oidc]
 enabled = true
 client_id = "env(LINKEDIN_OAUTH_CLIENT_ID)"

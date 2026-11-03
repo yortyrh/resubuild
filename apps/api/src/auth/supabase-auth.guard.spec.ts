@@ -1,5 +1,5 @@
 /**
- * Scenarios aligned with openspec/specs/authentication (Bearer guard + getUser).
+ * Bearer guard + getUser scenarios (docs/requirements/auth.md REQ-AUTH-001).
  */
 
 import type { ExecutionContext } from '@nestjs/common';

@@ -3,12 +3,10 @@
 # Release 1: cloud Supabase + docker compose target.
 #
 # Intentionally minimal scope — no TLS, no reverse proxy, no registry push.
-# See openspec/specs/prod-env-bootstrap-helper/spec.md for the full spec and
-# the follow-on release-1 changes that address TLS, reverse proxy, and
-# registry push concerns.
+# See README.md "Release 1: cloud Supabase + docker compose".
 #
 # Prerequisites:
-#   1. Run `pnpm setup:env:prod` (or use /opsx:setup-prod-env) to generate
+#   1. Run `pnpm setup:env:prod` to generate
 #      .env.prod with real Supabase credentials.
 #   2. Bring up the stack:
 #      docker compose -f docker-compose.prod.yml --env-file .env.prod up

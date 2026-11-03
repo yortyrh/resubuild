@@ -9,10 +9,6 @@
  * Runs as part of `pnpm test` from the repo root via
  * `vitest run --config vitest.config.mjs` (which includes
  * every `scripts/lib/*.spec.mjs`).
- *
- * See:
- *   - openspec/changes/railway-deployment/specs/railway-deployment/spec.md
- *   - openspec/changes/railway-deployment/specs/monorepo-and-toolchain/spec.md
  */
 
 import { existsSync, readFileSync } from 'node:fs';

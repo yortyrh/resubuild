@@ -18,7 +18,7 @@ pre-push:
       # apps/{api,web}/.env.example that are not registered in
       # scripts/lib/env-prod-schema.mjs. Runs in <1s; fails fast before
       # the full verify pipeline (~5min) so the named error points at
-      # the offending key. See openspec/specs/prod-env-bootstrap-helper.
+      # the offending key.
       # {all_files} opts out of lefthook's "no matching push files" skip
       # so the check always runs.
       run: ': {all_files}; pnpm env-schema:check'

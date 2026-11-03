@@ -1,5 +1,5 @@
 /**
- * Mirrors openspec/specs/authentication (guard + JWT validation is separate specs)
+ * Covers docs/requirements/auth.md (guard + JWT validation is separate specs)
  * plus API auth issuance: login/register/refresh and misconfiguration handling.
  *
  * Note: the previous `getFeatures()` method was removed. Auth capability

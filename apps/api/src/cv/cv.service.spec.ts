@@ -1,5 +1,5 @@
 /**
- * Scenarios referenced from openspec/specs/cv-rest-api (CRUD, baseline create flow).
+ * CRUD and baseline create-flow scenarios (docs/requirements/cv.md).
  */
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';

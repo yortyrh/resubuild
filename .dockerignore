@@ -11,7 +11,7 @@
 **/.cursor
 **/.vscode
 **/.idea
-**/openspec
+**/docs
 **/scripts
 **/test
 **/tests

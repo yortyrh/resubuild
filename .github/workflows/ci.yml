@@ -20,8 +20,8 @@ env:
 
 jobs:
   # Collapsed from 5 parallel jobs to 2 to keep peak per-job RAM under ~3 GB
-  # on a standard ubuntu-latest runner (~7 GB). See
-  # openspec/specs/toolchain-parallelism-budget/spec.md
+  # on a standard ubuntu-latest runner (~7 GB). See README.md
+  # "Toolchain memory budget".
   quality:
     name: Quality
     runs-on: ubuntu-latest

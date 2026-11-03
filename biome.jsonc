@@ -14,7 +14,6 @@
       "!**/.next",
       "!**/.turbo",
       "!**/coverage",
-      "!**/.agents",
       "!supabase/.temp",
       "!**/next-env.d.ts",
       "!**/*.css",

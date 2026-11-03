@@ -52,7 +52,7 @@ module.exports = {
   coverageDirectory: '../coverage',
   testEnvironment: 'node',
   // memory-budget: cap workers to 2 to avoid OOM on constrained environments
-  // see openspec/specs/toolchain-parallelism-budget/spec.md
+  // see README.md "Toolchain memory budget" (RESUME_PARALLELISM)
   maxWorkers: 2,
   setupFiles: ['<rootDir>/../test/setup-unit-env.ts'],
 };

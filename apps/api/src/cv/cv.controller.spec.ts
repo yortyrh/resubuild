@@ -1,5 +1,5 @@
 /**
- * Mirrors openspec CV REST API — guard applies to handlers; controller forwards to CvService.
+ * CV REST API (docs/requirements/cv.md) — guard applies to handlers; controller forwards to CvService.
  */
 
 import type { AuthenticatedRequest } from '../auth/supabase-auth.guard';

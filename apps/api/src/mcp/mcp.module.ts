@@ -95,9 +95,6 @@ const resourceProviders = [CvResource, ApplicationResource, MediaResource];
  * and per-resource providers, the auth-context bridge interceptor (bound to
  * the `/mcp` and `/mcp/` routes), and the REST key-management surface that
  * stays live even when the MCP server itself is disabled.
- *
- * Migration from the prior hand-rolled `McpController` / `McpToolsService`
- * stack is fully captured in `openspec/changes/mcp-rekog-nest-adoption`.
  */
 @Module({
   imports: [

@@ -21,7 +21,7 @@ export default defineConfig({
     // accepted by stricter Node builds (see #no-webstorage-on-node-26).
     execArgv: ['--no-experimental-webstorage'],
     // memory-budget: singleFork=true keeps all files in one fork to avoid RAM exhaustion
-    // see openspec/specs/toolchain-parallelism-budget/spec.md
+    // see README.md "Toolchain memory budget" (RESUME_PARALLELISM)
     // @ts-expect-error -- singleFork requires Vitest 5+; present in apps/web as a future upgrade
     poolOptions: { forks: { singleFork: true } },
     coverage: {

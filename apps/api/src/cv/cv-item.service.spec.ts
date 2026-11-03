@@ -1,5 +1,5 @@
 /**
- * Scenarios referenced from openspec/changes/cv-granular-item-management (item CRUD, 404).
+ * Item CRUD and 404 scenarios (docs/requirements/cv.md REQ-CV-004/005).
  */
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';
