@@ -77,6 +77,24 @@ export function parseLlmJson(text: string): Record<string, unknown> {
   throw new LlmJsonError(`LLM returned malformed JSON: ${reason}`);
 }
 
+/** Upper bound for draft replies; a JSON Resume never needs more than this. */
+export const MAX_DRAFT_OUTPUT_TOKENS = 32_768;
+
+/**
+ * `modelSettings` for JSON drafts: the model's own output limit (capped), so
+ * long CVs are not cut off by a small provider default. Empty when unknown.
+ */
+export function draftModelSettings(maxOutputTokens?: number): Record<string, unknown> {
+  if (!maxOutputTokens || !Number.isFinite(maxOutputTokens) || maxOutputTokens <= 0) {
+    return {};
+  }
+  return {
+    modelSettings: {
+      maxOutputTokens: Math.min(Math.floor(maxOutputTokens), MAX_DRAFT_OUTPUT_TOKENS),
+    },
+  };
+}
+
 /** The subset of the Mastra `Agent` this module needs (keeps it testable). */
 export interface JsonAgent {
   generate(

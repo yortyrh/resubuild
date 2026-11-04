@@ -15,7 +15,7 @@ import type {
   TextImportWorkflowResult,
 } from '../types';
 import { toAgentModelConfig } from './agent-model-config';
-import { generateJson } from './llm-json';
+import { draftModelSettings, generateJson } from './llm-json';
 import { applySocialProfileDiscovery } from './social-profile-discovery';
 
 const MAX_REPAIR_ATTEMPTS = 3;
@@ -44,13 +44,17 @@ async function generateJsonFromPrompt(
   instructions: string,
   prompt: string,
   generate?: TextImportWorkflowInput['generateDraft'],
+  maxOutputTokens?: number,
 ): Promise<Record<string, unknown>> {
   if (generate) {
     return generate(prompt);
   }
 
   const agent = createAgent(modelId, apiKey, instructions);
-  return generateJson(agent, prompt, { schema: resumeDraftSchema });
+  return generateJson(agent, prompt, {
+    schema: resumeDraftSchema,
+    generateOptions: draftModelSettings(maxOutputTokens),
+  });
 }
 
 export async function runTextImportWorkflow(
@@ -70,6 +74,7 @@ async function runTextImportWorkflowInner(
     DRAFT_INSTRUCTIONS,
     `Resume text:\n\n${input.sourceText}`,
     input.generateDraft,
+    input.maxOutputTokens,
   );
 
   draft = {
@@ -134,6 +139,8 @@ async function runTextImportWorkflowInner(
         input.apiKey,
         REPAIR_INSTRUCTIONS,
         `Validation errors:\n${validation.errors.join('\n')}\n\nDraft:\n${JSON.stringify(draft)}`,
+        undefined,
+        input.maxOutputTokens,
       );
     }
     draft = sanitizeAiTypographyDeep({
@@ -159,6 +166,7 @@ export async function runPdfImportWorkflow(
     modelId: input.modelId,
     apiKey: input.apiKey,
     searchApiKey: input.searchApiKey,
+    maxOutputTokens: input.maxOutputTokens,
     onProgress: input.onProgress,
     finalize: input.finalize,
     generateDraft: input.generateDraft,
@@ -184,6 +192,7 @@ export async function runImageImportWorkflow(
     modelId: input.modelId,
     apiKey: input.apiKey,
     searchApiKey: input.searchApiKey,
+    maxOutputTokens: input.maxOutputTokens,
     onProgress: input.onProgress,
     finalize: input.finalize,
     generateDraft: input.generateDraft,

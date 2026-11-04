@@ -1,6 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { resumeDraftSchema } from '../schemas/resume-draft.schema';
-import { generateJson, type JsonAgent, LlmJsonError, parseLlmJson, stripNulls } from './llm-json';
+import {
+  draftModelSettings,
+  generateJson,
+  type JsonAgent,
+  LlmJsonError,
+  MAX_DRAFT_OUTPUT_TOKENS,
+  parseLlmJson,
+  stripNulls,
+} from './llm-json';
 
 /** A long resume, like the ones that hit the model's output-token limit. */
 function longResume() {
@@ -70,7 +78,7 @@ describe('stripNulls', () => {
 });
 
 function fakeAgent(...replies: Array<Awaited<ReturnType<JsonAgent['generate']>> | Error>) {
-  const generate = vi.fn(async () => {
+  const generate = vi.fn(async (_prompt: string, _options?: Record<string, unknown>) => {
     const reply = replies.shift();
     if (!reply) throw new Error('unexpected extra call');
     if (reply instanceof Error) throw reply;
@@ -149,5 +157,17 @@ describe('generateJson', () => {
     const { agent, generate } = fakeAgent({ text: 'Sorry, I cannot read that file.' });
     await expect(generateJson(agent, 'p')).rejects.toThrow('LLM did not return JSON');
     expect(generate).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('draftModelSettings', () => {
+  it('uses the model output limit, capped, and nothing when unknown', () => {
+    expect(draftModelSettings(16384)).toEqual({ modelSettings: { maxOutputTokens: 16384 } });
+    expect(draftModelSettings(200_000)).toEqual({
+      modelSettings: { maxOutputTokens: MAX_DRAFT_OUTPUT_TOKENS },
+    });
+    expect(draftModelSettings(undefined)).toEqual({});
+    expect(draftModelSettings(0)).toEqual({});
+    expect(draftModelSettings(Number.NaN)).toEqual({});
   });
 });

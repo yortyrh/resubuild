@@ -14,6 +14,7 @@ import {
   runWebsiteImportWorkflow,
   type WebsiteImportToolsConfig,
 } from '@resubuild/import-agent';
+import { getModelMaxOutputTokens } from '@resubuild/import-models';
 import { InvalidImportedResumeError, prepareImportedResume } from '@resubuild/types';
 import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
 import type { AuthenticatedRequest } from '../auth/session-auth.guard';
@@ -329,6 +330,11 @@ export class ImportService {
     return null;
   }
 
+  /** Output-token limit of the selected model, so long CVs are not cut off mid-JSON. */
+  private resolveMaxOutputTokens(modelId: string): number | undefined {
+    return getModelMaxOutputTokens(this.catalogService.getCatalog(), modelId);
+  }
+
   private async withScopedApiKey<T>(
     modelId: string,
     apiKey: string,
@@ -369,6 +375,7 @@ export class ImportService {
           modelId,
           apiKey,
           searchApiKey,
+          maxOutputTokens: this.resolveMaxOutputTokens(modelId),
           onProgress: (progress: ImportJobProgress) => {
             this.jobStore.update(jobId, { progress });
           },
@@ -400,6 +407,7 @@ export class ImportService {
           modelId,
           apiKey,
           searchApiKey,
+          maxOutputTokens: this.resolveMaxOutputTokens(modelId),
           onProgress: (progress: ImportJobProgress) => {
             this.jobStore.update(jobId, { progress });
           },
@@ -434,6 +442,7 @@ export class ImportService {
           modelId: llmConfig.modelId,
           apiKey: llmConfig.apiKey,
           toolsConfig,
+          maxOutputTokens: this.resolveMaxOutputTokens(llmConfig.modelId),
           onProgress: (progress: ImportJobProgress) => {
             this.jobStore.update(jobId, { progress });
           },
@@ -494,6 +503,7 @@ export class ImportService {
           modelId,
           apiKey,
           searchApiKey,
+          maxOutputTokens: this.resolveMaxOutputTokens(modelId),
           onProgress: (progress: ImportJobProgress) => {
             this.jobStore.update(jobId, { progress });
           },

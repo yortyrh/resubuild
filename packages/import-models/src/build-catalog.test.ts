@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildImportModelCatalog } from './build-catalog';
+import { getModelMaxOutputTokens } from './index';
 import type { ModelsDevRegistry } from './models-dev';
 
 const miniRegistry: ModelsDevRegistry = {
@@ -15,6 +16,13 @@ const miniRegistry: ModelsDevRegistry = {
         tool_call: true,
         reasoning: false,
         modalities: { output: ['text'] },
+        limit: { context: 128000, output: 16384 },
+      },
+      'gpt-no-limit': {
+        id: 'gpt-no-limit',
+        name: 'GPT without limit metadata',
+        modalities: { output: ['text'] },
+        limit: { output: 0 },
       },
       'text-embedding-3-small': {
         id: 'text-embedding-3-small',
@@ -42,11 +50,22 @@ describe('buildImportModelCatalog', () => {
     const catalog = buildImportModelCatalog(miniRegistry);
     expect(catalog.providers).toHaveLength(1);
     expect(catalog.providers[0].id).toBe('openai');
-    expect(catalog.providers[0].models).toHaveLength(1);
-    expect(catalog.providers[0].models[0]).toMatchObject({
-      id: 'openai/gpt-4o-mini',
-      recommendedForPdfImport: true,
-    });
+    expect(catalog.providers[0].models).toHaveLength(2);
+    expect(catalog.providers[0].models).toContainEqual(
+      expect.objectContaining({
+        id: 'openai/gpt-4o-mini',
+        recommendedForPdfImport: true,
+      }),
+    );
+  });
+
+  it('keeps the provider output-token limit when models.dev reports one', () => {
+    const catalog = buildImportModelCatalog(miniRegistry);
+    const byId = Object.fromEntries(catalog.providers[0].models.map((m) => [m.id, m]));
+    expect(byId['openai/gpt-4o-mini'].maxOutputTokens).toBe(16384);
+    expect(byId['openai/gpt-no-limit']).not.toHaveProperty('maxOutputTokens');
+    expect(getModelMaxOutputTokens(catalog, 'openai/gpt-4o-mini')).toBe(16384);
+    expect(getModelMaxOutputTokens(catalog, 'openai/missing')).toBeUndefined();
   });
 
   it('skips providers with no chat models', () => {

@@ -118,9 +118,13 @@ function buildModelEntry(
     return null;
   }
 
+  const maxOutputTokens = model.limit?.output;
   return {
     id: fullId,
     displayName: model.name ?? modelKey,
+    ...(Number.isInteger(maxOutputTokens) && (maxOutputTokens as number) > 0
+      ? { maxOutputTokens }
+      : {}),
     _meta: model,
   };
 }

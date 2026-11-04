@@ -10,7 +10,7 @@ import {
 } from '../tools/website-import-tools';
 import type { ImportJobProgress, TextImportWorkflowResult } from '../types';
 import { toAgentModelConfig } from './agent-model-config';
-import { generateJson } from './llm-json';
+import { draftModelSettings, generateJson } from './llm-json';
 import { applySocialProfileDiscovery } from './social-profile-discovery';
 
 const MAX_REPAIR_ATTEMPTS = 3;
@@ -31,6 +31,8 @@ export interface WebsiteImportWorkflowInput {
   modelId: string;
   apiKey: string;
   toolsConfig: WebsiteImportToolsConfig;
+  /** Model's output-token limit (see TextImportWorkflowInput.maxOutputTokens). */
+  maxOutputTokens?: number;
   onProgress?: (progress: ImportJobProgress) => void;
   finalize?: (draft: Record<string, unknown>) => Promise<string>;
   generateDraft?: (prompt: string) => Promise<Record<string, unknown>>;
@@ -71,7 +73,7 @@ async function generateWebsiteDraft(
       'Start by loading the page with your page tool, then build complete JSON Resume data.',
     {
       schema: resumeDraftSchema,
-      generateOptions: { maxSteps: MAX_AGENT_STEPS },
+      generateOptions: { maxSteps: MAX_AGENT_STEPS, ...draftModelSettings(input.maxOutputTokens) },
       // Separate structuring pass after the tool loop (tools + response format
       // in one call is not supported by every provider).
       structuredOutputOptions: { model: toAgentModelConfig(input.modelId, input.apiKey) },
@@ -87,12 +89,16 @@ async function generateRepair(
   repairDraft?: WebsiteImportWorkflowInput['repairDraft'],
   draft?: Record<string, unknown>,
   errors?: string[],
+  maxOutputTokens?: number,
 ): Promise<Record<string, unknown>> {
   if (repairDraft && draft && errors) {
     return repairDraft(draft, errors);
   }
 
-  return generateJson(createRepairAgent(modelId, apiKey), prompt, { schema: resumeDraftSchema });
+  return generateJson(createRepairAgent(modelId, apiKey), prompt, {
+    schema: resumeDraftSchema,
+    generateOptions: draftModelSettings(maxOutputTokens),
+  });
 }
 
 export async function runWebsiteImportWorkflow(
@@ -162,6 +168,7 @@ export async function runWebsiteImportWorkflow(
       input.repairDraft,
       draft,
       validation.errors,
+      input.maxOutputTokens,
     );
     draft = sanitizeAiTypographyDeep({ ...createEmptyResume(), ...draft });
   }

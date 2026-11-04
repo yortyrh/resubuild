@@ -3,58 +3,70 @@
   "providers": [
     {
       "id": "openai",
-      "displayName": "OpenAI (BYOK — API key from platform.openai.com)",
+      "displayName": "OpenAI (BYOK \u2014 API key from platform.openai.com)",
       "apiKeyEnvVar": "OPENAI_API_KEY",
       "apiKeyLabel": "OpenAI API key",
       "models": [
         {
           "id": "openai/gpt-3.5-turbo",
-          "displayName": "GPT-3.5-turbo"
+          "displayName": "GPT-3.5-turbo",
+          "maxOutputTokens": 4096
         },
         {
           "id": "openai/gpt-4",
-          "displayName": "GPT-4"
+          "displayName": "GPT-4",
+          "maxOutputTokens": 8192
         },
         {
           "id": "openai/gpt-4-turbo",
-          "displayName": "GPT-4 Turbo"
+          "displayName": "GPT-4 Turbo",
+          "maxOutputTokens": 4096
         },
         {
           "id": "openai/gpt-4.1",
-          "displayName": "GPT-4.1"
+          "displayName": "GPT-4.1",
+          "maxOutputTokens": 32768
         },
         {
           "id": "openai/gpt-4.1-mini",
-          "displayName": "GPT-4.1 mini"
+          "displayName": "GPT-4.1 mini",
+          "maxOutputTokens": 32768
         },
         {
           "id": "openai/gpt-4.1-nano",
-          "displayName": "GPT-4.1 nano"
+          "displayName": "GPT-4.1 nano",
+          "maxOutputTokens": 32768
         },
         {
           "id": "openai/gpt-4o",
-          "displayName": "GPT-4o"
+          "displayName": "GPT-4o",
+          "maxOutputTokens": 16384
         },
         {
           "id": "openai/gpt-4o-2024-05-13",
-          "displayName": "GPT-4o (2024-05-13)"
+          "displayName": "GPT-4o (2024-05-13)",
+          "maxOutputTokens": 4096
         },
         {
           "id": "openai/gpt-4o-2024-08-06",
-          "displayName": "GPT-4o (2024-08-06)"
+          "displayName": "GPT-4o (2024-08-06)",
+          "maxOutputTokens": 16384
         },
         {
           "id": "openai/gpt-4o-2024-11-20",
-          "displayName": "GPT-4o (2024-11-20)"
+          "displayName": "GPT-4o (2024-11-20)",
+          "maxOutputTokens": 16384
         },
         {
           "id": "openai/gpt-4o-mini",
           "displayName": "GPT-4o mini",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 16384
         },
         {
           "id": "openai/gpt-5",
-          "displayName": "GPT-5"
+          "displayName": "GPT-5",
+          "maxOutputTokens": 128000
         },
         {
           "id": "openai/gpt-5-chat-latest",
@@ -62,11 +74,13 @@
         },
         {
           "id": "openai/gpt-5-mini",
-          "displayName": "GPT-5 Mini"
+          "displayName": "GPT-5 Mini",
+          "maxOutputTokens": 128000
         },
         {
           "id": "openai/gpt-5-nano",
-          "displayName": "GPT-5 Nano"
+          "displayName": "GPT-5 Nano",
+          "maxOutputTokens": 128000
         },
         {
           "id": "openai/gpt-5-codex",
@@ -74,7 +88,8 @@
         },
         {
           "id": "openai/o1",
-          "displayName": "o1"
+          "displayName": "o1",
+          "maxOutputTokens": 100000
         },
         {
           "id": "openai/o1-mini",
@@ -86,11 +101,13 @@
         },
         {
           "id": "openai/o1-pro",
-          "displayName": "o1-pro"
+          "displayName": "o1-pro",
+          "maxOutputTokens": 100000
         },
         {
           "id": "openai/o3",
-          "displayName": "o3"
+          "displayName": "o3",
+          "maxOutputTokens": 100000
         },
         {
           "id": "openai/o3-deep-research",
@@ -98,15 +115,18 @@
         },
         {
           "id": "openai/o3-mini",
-          "displayName": "o3-mini"
+          "displayName": "o3-mini",
+          "maxOutputTokens": 100000
         },
         {
           "id": "openai/o3-pro",
-          "displayName": "o3-pro"
+          "displayName": "o3-pro",
+          "maxOutputTokens": 100000
         },
         {
           "id": "openai/o4-mini",
-          "displayName": "o4-mini"
+          "displayName": "o4-mini",
+          "maxOutputTokens": 100000
         },
         {
           "id": "openai/o4-mini-deep-research",
@@ -116,7 +136,7 @@
     },
     {
       "id": "anthropic",
-      "displayName": "Anthropic (BYOK — API key from docs.anthropic.com)",
+      "displayName": "Anthropic (BYOK \u2014 API key from docs.anthropic.com)",
       "apiKeyEnvVar": "ANTHROPIC_API_KEY",
       "apiKeyLabel": "Anthropic API key",
       "models": [
@@ -163,13 +183,14 @@
         },
         {
           "id": "anthropic/claude-sonnet-4-5-20250929",
-          "displayName": "Claude Sonnet 4.5"
+          "displayName": "Claude Sonnet 4.5",
+          "maxOutputTokens": 64000
         }
       ]
     },
     {
       "id": "google",
-      "displayName": "Google (BYOK — API key from ai.google.dev)",
+      "displayName": "Google (BYOK \u2014 API key from ai.google.dev)",
       "apiKeyEnvVar": "GOOGLE_GENERATIVE_AI_API_KEY",
       "apiKeyLabel": "Google API key",
       "models": [
@@ -184,29 +205,34 @@
         {
           "id": "google/gemini-2.5-flash",
           "displayName": "Gemini 2.5 Flash",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 65536
         },
         {
           "id": "google/gemini-2.5-flash-lite",
-          "displayName": "Gemini 2.5 Flash-Lite"
+          "displayName": "Gemini 2.5 Flash-Lite",
+          "maxOutputTokens": 65536
         },
         {
           "id": "google/gemini-2.5-pro",
-          "displayName": "Gemini 2.5 Pro"
+          "displayName": "Gemini 2.5 Pro",
+          "maxOutputTokens": 65536
         },
         {
           "id": "google/gemini-flash-latest",
-          "displayName": "Gemini Flash Latest"
+          "displayName": "Gemini Flash Latest",
+          "maxOutputTokens": 65536
         },
         {
           "id": "google/gemini-flash-lite-latest",
-          "displayName": "Gemini Flash-Lite Latest"
+          "displayName": "Gemini Flash-Lite Latest",
+          "maxOutputTokens": 65536
         }
       ]
     },
     {
       "id": "deepseek",
-      "displayName": "DeepSeek (BYOK — API key from api-docs.deepseek.com)",
+      "displayName": "DeepSeek (BYOK \u2014 API key from api-docs.deepseek.com)",
       "apiKeyEnvVar": "DEEPSEEK_API_KEY",
       "apiKeyLabel": "DeepSeek API key",
       "models": [
@@ -223,7 +249,7 @@
     },
     {
       "id": "groq",
-      "displayName": "Groq (BYOK — API key from console.groq.com)",
+      "displayName": "Groq (BYOK \u2014 API key from console.groq.com)",
       "apiKeyEnvVar": "GROQ_API_KEY",
       "apiKeyLabel": "Groq API key",
       "models": [
@@ -238,11 +264,13 @@
         },
         {
           "id": "groq/openai/gpt-oss-120b",
-          "displayName": "GPT OSS 120B"
+          "displayName": "GPT OSS 120B",
+          "maxOutputTokens": 65536
         },
         {
           "id": "groq/openai/gpt-oss-20b",
-          "displayName": "GPT OSS 20B"
+          "displayName": "GPT OSS 20B",
+          "maxOutputTokens": 65536
         },
         {
           "id": "groq/moonshotai/kimi-k2-instruct",
@@ -262,11 +290,13 @@
         },
         {
           "id": "groq/llama-3.1-8b-instant",
-          "displayName": "Llama 3.1 8B Instant"
+          "displayName": "Llama 3.1 8B Instant",
+          "maxOutputTokens": 131072
         },
         {
           "id": "groq/llama-3.3-70b-versatile",
-          "displayName": "Llama 3.3 70B Versatile"
+          "displayName": "Llama 3.3 70B Versatile",
+          "maxOutputTokens": 32768
         },
         {
           "id": "groq/meta-llama/llama-4-maverick-17b-128e-instruct",
@@ -300,13 +330,14 @@
     },
     {
       "id": "mistral",
-      "displayName": "Mistral (BYOK — API key from docs.mistral.ai)",
+      "displayName": "Mistral (BYOK \u2014 API key from docs.mistral.ai)",
       "apiKeyEnvVar": "MISTRAL_API_KEY",
       "apiKeyLabel": "Mistral API key",
       "models": [
         {
           "id": "mistral/codestral-latest",
-          "displayName": "Codestral (latest)"
+          "displayName": "Codestral (latest)",
+          "maxOutputTokens": 4096
         },
         {
           "id": "mistral/devstral-medium-2507",
@@ -322,7 +353,8 @@
         },
         {
           "id": "mistral/magistral-medium-latest",
-          "displayName": "Magistral Medium (latest)"
+          "displayName": "Magistral Medium (latest)",
+          "maxOutputTokens": 16384
         },
         {
           "id": "mistral/magistral-small",
@@ -331,11 +363,13 @@
         {
           "id": "mistral/ministral-3b-latest",
           "displayName": "Ministral 3B (latest)",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 128000
         },
         {
           "id": "mistral/ministral-8b-latest",
-          "displayName": "Ministral 8B (latest)"
+          "displayName": "Ministral 8B (latest)",
+          "maxOutputTokens": 128000
         },
         {
           "id": "mistral/open-mistral-7b",
@@ -343,19 +377,23 @@
         },
         {
           "id": "mistral/mistral-large-latest",
-          "displayName": "Mistral Large (latest)"
+          "displayName": "Mistral Large (latest)",
+          "maxOutputTokens": 262144
         },
         {
           "id": "mistral/mistral-medium-latest",
-          "displayName": "Mistral Medium (latest)"
+          "displayName": "Mistral Medium (latest)",
+          "maxOutputTokens": 262144
         },
         {
           "id": "mistral/mistral-medium-2505",
-          "displayName": "Mistral Medium 3"
+          "displayName": "Mistral Medium 3",
+          "maxOutputTokens": 131072
         },
         {
           "id": "mistral/mistral-medium-2508",
-          "displayName": "Mistral Medium 3.1"
+          "displayName": "Mistral Medium 3.1",
+          "maxOutputTokens": 262144
         },
         {
           "id": "mistral/mistral-nemo",
@@ -363,7 +401,8 @@
         },
         {
           "id": "mistral/mistral-small-latest",
-          "displayName": "Mistral Small (latest)"
+          "displayName": "Mistral Small (latest)",
+          "maxOutputTokens": 256000
         },
         {
           "id": "mistral/open-mixtral-8x22b",
@@ -375,7 +414,8 @@
         },
         {
           "id": "mistral/pixtral-12b",
-          "displayName": "Pixtral 12B"
+          "displayName": "Pixtral 12B",
+          "maxOutputTokens": 128000
         },
         {
           "id": "mistral/pixtral-large-latest",
@@ -385,7 +425,7 @@
     },
     {
       "id": "openrouter",
-      "displayName": "OpenRouter (BYOK — API key from openrouter.ai)",
+      "displayName": "OpenRouter (BYOK \u2014 API key from openrouter.ai)",
       "apiKeyEnvVar": "OPENROUTER_API_KEY",
       "apiKeyLabel": "OpenRouter API key",
       "models": [
@@ -399,7 +439,8 @@
         },
         {
           "id": "openrouter/anthropic/claude-opus-4.1",
-          "displayName": "Claude Opus 4.1 (latest)"
+          "displayName": "Claude Opus 4.1 (latest)",
+          "maxOutputTokens": 32000
         },
         {
           "id": "openrouter/anthropic/claude-sonnet-4",
@@ -407,31 +448,38 @@
         },
         {
           "id": "openrouter/anthropic/claude-sonnet-4.5",
-          "displayName": "Claude Sonnet 4.5 (latest)"
+          "displayName": "Claude Sonnet 4.5 (latest)",
+          "maxOutputTokens": 64000
         },
         {
           "id": "openrouter/mistralai/codestral-2508",
-          "displayName": "Codestral 2508"
+          "displayName": "Codestral 2508",
+          "maxOutputTokens": 204800
         },
         {
           "id": "openrouter/deepseek/deepseek-chat-v3-0324",
-          "displayName": "DeepSeek V3 0324"
+          "displayName": "DeepSeek V3 0324",
+          "maxOutputTokens": 115200
         },
         {
           "id": "openrouter/deepseek/deepseek-chat-v3.1",
-          "displayName": "DeepSeek V3.1"
+          "displayName": "DeepSeek V3.1",
+          "maxOutputTokens": 147456
         },
         {
           "id": "openrouter/deepseek/deepseek-v3.1-terminus",
-          "displayName": "DeepSeek V3.1 Terminus"
+          "displayName": "DeepSeek V3.1 Terminus",
+          "maxOutputTokens": 147456
         },
         {
           "id": "openrouter/google/gemini-2.5-flash",
-          "displayName": "Gemini 2.5 Flash"
+          "displayName": "Gemini 2.5 Flash",
+          "maxOutputTokens": 65535
         },
         {
           "id": "openrouter/google/gemini-2.5-pro",
-          "displayName": "Gemini 2.5 Pro"
+          "displayName": "Gemini 2.5 Pro",
+          "maxOutputTokens": 65536
         },
         {
           "id": "openrouter/google/gemini-2.5-pro-preview-05-06",
@@ -439,11 +487,13 @@
         },
         {
           "id": "openrouter/google/gemma-3-12b-it",
-          "displayName": "Gemma 3 12B"
+          "displayName": "Gemma 3 12B",
+          "maxOutputTokens": 16384
         },
         {
           "id": "openrouter/google/gemma-3-27b-it",
-          "displayName": "Gemma 3 27B"
+          "displayName": "Gemma 3 27B",
+          "maxOutputTokens": 117964
         },
         {
           "id": "openrouter/google/gemma-3n-e4b-it",
@@ -455,36 +505,44 @@
         },
         {
           "id": "openrouter/z-ai/glm-4.5",
-          "displayName": "GLM-4.5"
+          "displayName": "GLM-4.5",
+          "maxOutputTokens": 98304
         },
         {
           "id": "openrouter/z-ai/glm-4.5-air",
-          "displayName": "GLM-4.5-Air"
+          "displayName": "GLM-4.5-Air",
+          "maxOutputTokens": 98304
         },
         {
           "id": "openrouter/z-ai/glm-4.5v",
-          "displayName": "GLM-4.5V"
+          "displayName": "GLM-4.5V",
+          "maxOutputTokens": 16384
         },
         {
           "id": "openrouter/z-ai/glm-4.6",
-          "displayName": "GLM-4.6"
+          "displayName": "GLM-4.6",
+          "maxOutputTokens": 131072
         },
         {
           "id": "openrouter/openai/gpt-4.1",
-          "displayName": "GPT-4.1"
+          "displayName": "GPT-4.1",
+          "maxOutputTokens": 32768
         },
         {
           "id": "openrouter/openai/gpt-4.1-mini",
-          "displayName": "GPT-4.1 mini"
+          "displayName": "GPT-4.1 mini",
+          "maxOutputTokens": 32768
         },
         {
           "id": "openrouter/openai/gpt-4o-mini",
           "displayName": "GPT-4o mini",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 16384
         },
         {
           "id": "openrouter/openai/gpt-5",
-          "displayName": "GPT-5"
+          "displayName": "GPT-5",
+          "maxOutputTokens": 128000
         },
         {
           "id": "openrouter/openai/gpt-5-chat",
@@ -492,11 +550,13 @@
         },
         {
           "id": "openrouter/openai/gpt-5-mini",
-          "displayName": "GPT-5 Mini"
+          "displayName": "GPT-5 Mini",
+          "maxOutputTokens": 128000
         },
         {
           "id": "openrouter/openai/gpt-5-nano",
-          "displayName": "GPT-5 Nano"
+          "displayName": "GPT-5 Nano",
+          "maxOutputTokens": 128000
         },
         {
           "id": "openrouter/openai/gpt-5-codex",
@@ -504,15 +564,18 @@
         },
         {
           "id": "openrouter/openai/gpt-oss-120b",
-          "displayName": "gpt-oss-120b"
+          "displayName": "gpt-oss-120b",
+          "maxOutputTokens": 65536
         },
         {
           "id": "openrouter/openai/gpt-oss-20b",
-          "displayName": "gpt-oss-20b"
+          "displayName": "gpt-oss-20b",
+          "maxOutputTokens": 117964
         },
         {
           "id": "openrouter/nousresearch/hermes-4-405b",
-          "displayName": "Hermes 4 405B"
+          "displayName": "Hermes 4 405B",
+          "maxOutputTokens": 117964
         },
         {
           "id": "openrouter/nousresearch/hermes-4-70b",
@@ -520,11 +583,13 @@
         },
         {
           "id": "openrouter/moonshotai/kimi-k2",
-          "displayName": "Kimi K2 0711"
+          "displayName": "Kimi K2 0711",
+          "maxOutputTokens": 98304
         },
         {
           "id": "openrouter/moonshotai/kimi-k2-0905",
-          "displayName": "Kimi K2 0905"
+          "displayName": "Kimi K2 0905",
+          "maxOutputTokens": 98304
         },
         {
           "id": "openrouter/meta-llama/llama-3.2-11b-vision-instruct",
@@ -536,19 +601,23 @@
         },
         {
           "id": "openrouter/mistralai/mistral-medium-3",
-          "displayName": "Mistral Medium 3"
+          "displayName": "Mistral Medium 3",
+          "maxOutputTokens": 104857
         },
         {
           "id": "openrouter/mistralai/mistral-medium-3.1",
-          "displayName": "Mistral Medium 3.1"
+          "displayName": "Mistral Medium 3.1",
+          "maxOutputTokens": 104857
         },
         {
           "id": "openrouter/mistralai/mistral-small-3.1-24b-instruct",
-          "displayName": "Mistral Small 3.1 24B"
+          "displayName": "Mistral Small 3.1 24B",
+          "maxOutputTokens": 102400
         },
         {
           "id": "openrouter/mistralai/mistral-small-3.2-24b-instruct",
-          "displayName": "Mistral Small 3.2 24B"
+          "displayName": "Mistral Small 3.2 24B",
+          "maxOutputTokens": 16384
         },
         {
           "id": "openrouter/openai/o4-mini",
@@ -556,23 +625,28 @@
         },
         {
           "id": "openrouter/qwen/qwen-2.5-coder-32b-instruct",
-          "displayName": "Qwen2.5 Coder 32B Instruct"
+          "displayName": "Qwen2.5 Coder 32B Instruct",
+          "maxOutputTokens": 29491
         },
         {
           "id": "openrouter/qwen/qwen2.5-vl-72b-instruct",
-          "displayName": "Qwen2.5 VL 72B Instruct"
+          "displayName": "Qwen2.5 VL 72B Instruct",
+          "maxOutputTokens": 115200
         },
         {
           "id": "openrouter/qwen/qwen3-235b-a22b-thinking-2507",
-          "displayName": "Qwen3 235B A22B Thinking 2507"
+          "displayName": "Qwen3 235B A22B Thinking 2507",
+          "maxOutputTokens": 16384
         },
         {
           "id": "openrouter/qwen/qwen3-30b-a3b-instruct-2507",
-          "displayName": "Qwen3 30B A3B Instruct 2507"
+          "displayName": "Qwen3 30B A3B Instruct 2507",
+          "maxOutputTokens": 235929
         },
         {
           "id": "openrouter/qwen/qwen3-coder",
-          "displayName": "Qwen3 Coder 480B A35B"
+          "displayName": "Qwen3 Coder 480B A35B",
+          "maxOutputTokens": 65536
         },
         {
           "id": "openrouter/qwen/qwen3-coder:free",
@@ -584,7 +658,8 @@
         },
         {
           "id": "openrouter/qwen/qwen3-next-80b-a3b-instruct",
-          "displayName": "Qwen3 Next 80B A3B Instruct"
+          "displayName": "Qwen3 Next 80B A3B Instruct",
+          "maxOutputTokens": 235929
         },
         {
           "id": "openrouter/deepseek/deepseek-r1-distill-llama-70b",
@@ -592,39 +667,42 @@
         },
         {
           "id": "openrouter/rekaai/reka-flash-3",
-          "displayName": "Reka Flash 3"
+          "displayName": "Reka Flash 3",
+          "maxOutputTokens": 58982
         }
       ]
     },
     {
       "id": "alibaba",
-      "displayName": "Alibaba (BYOK — API key from alibabacloud.com)",
+      "displayName": "Alibaba (BYOK \u2014 API key from alibabacloud.com)",
       "apiKeyEnvVar": "DASHSCOPE_API_KEY",
       "apiKeyLabel": "Dashscope API key",
       "models": [
         {
           "id": "alibaba/qwen3-coder-plus",
           "displayName": "Qwen3 Coder Plus",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 65536
         }
       ]
     },
     {
       "id": "alibaba-cn",
-      "displayName": "Alibaba (China) (BYOK — API key from alibabacloud.com)",
+      "displayName": "Alibaba (China) (BYOK \u2014 API key from alibabacloud.com)",
       "apiKeyEnvVar": "DASHSCOPE_API_KEY",
       "apiKeyLabel": "Dashscope API key",
       "models": [
         {
           "id": "alibaba-cn/qwen3-coder-plus",
           "displayName": "Qwen3 Coder Plus",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 65536
         }
       ]
     },
     {
       "id": "baseten",
-      "displayName": "Baseten (BYOK — API key from docs.baseten.co)",
+      "displayName": "Baseten (BYOK \u2014 API key from docs.baseten.co)",
       "apiKeyEnvVar": "BASETEN_API_KEY",
       "apiKeyLabel": "Baseten API key",
       "models": [
@@ -637,20 +715,21 @@
     },
     {
       "id": "cerebras",
-      "displayName": "Cerebras (BYOK — API key from inference-docs.cerebras.ai)",
+      "displayName": "Cerebras (BYOK \u2014 API key from inference-docs.cerebras.ai)",
       "apiKeyEnvVar": "CEREBRAS_API_KEY",
       "apiKeyLabel": "Cerebras API key",
       "models": [
         {
           "id": "cerebras/gpt-oss-120b",
           "displayName": "GPT OSS 120B",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 40960
         }
       ]
     },
     {
       "id": "chutes",
-      "displayName": "Chutes (BYOK — API key from llm.chutes.ai)",
+      "displayName": "Chutes (BYOK \u2014 API key from llm.chutes.ai)",
       "apiKeyEnvVar": "CHUTES_API_KEY",
       "apiKeyLabel": "Chutes API key",
       "models": [
@@ -675,7 +754,7 @@
     },
     {
       "id": "cortecs",
-      "displayName": "Cortecs (BYOK — API key from api.cortecs.ai)",
+      "displayName": "Cortecs (BYOK \u2014 API key from api.cortecs.ai)",
       "apiKeyEnvVar": "CORTECS_API_KEY",
       "apiKeyLabel": "Cortecs API key",
       "models": [
@@ -690,15 +769,18 @@
         {
           "id": "cortecs/gemini-2.5-pro",
           "displayName": "Gemini 2.5 Pro",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 65535
         },
         {
           "id": "cortecs/gpt-4.1",
-          "displayName": "GPT 4.1"
+          "displayName": "GPT 4.1",
+          "maxOutputTokens": 32768
         },
         {
           "id": "cortecs/gpt-oss-120b",
-          "displayName": "GPT Oss 120b"
+          "displayName": "GPT Oss 120b",
+          "maxOutputTokens": 131000
         },
         {
           "id": "cortecs/kimi-k2-instruct",
@@ -710,11 +792,13 @@
         },
         {
           "id": "cortecs/nova-pro-v1",
-          "displayName": "Nova Pro 1.0"
+          "displayName": "Nova Pro 1.0",
+          "maxOutputTokens": 10000
         },
         {
           "id": "cortecs/qwen3-32b",
-          "displayName": "Qwen3 32B"
+          "displayName": "Qwen3 32B",
+          "maxOutputTokens": 16384
         },
         {
           "id": "cortecs/qwen3-coder-480b-a35b-instruct",
@@ -724,7 +808,7 @@
     },
     {
       "id": "deepinfra",
-      "displayName": "Deep Infra (BYOK — API key from deepinfra.com)",
+      "displayName": "Deep Infra (BYOK \u2014 API key from deepinfra.com)",
       "apiKeyEnvVar": "DEEPINFRA_API_KEY",
       "apiKeyLabel": "Deepinfra API key",
       "models": [
@@ -743,19 +827,21 @@
         },
         {
           "id": "deepinfra/Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo",
-          "displayName": "Qwen3 Coder 480B A35B Instruct Turbo"
+          "displayName": "Qwen3 Coder 480B A35B Instruct Turbo",
+          "maxOutputTokens": 66536
         }
       ]
     },
     {
       "id": "fastrouter",
-      "displayName": "FastRouter (BYOK — API key from fastrouter.ai)",
+      "displayName": "FastRouter (BYOK \u2014 API key from fastrouter.ai)",
       "apiKeyEnvVar": "FASTROUTER_API_KEY",
       "apiKeyLabel": "Fastrouter API key",
       "models": [
         {
           "id": "fastrouter/anthropic/claude-opus-4.1",
-          "displayName": "Claude Opus 4.1"
+          "displayName": "Claude Opus 4.1",
+          "maxOutputTokens": 32000
         },
         {
           "id": "fastrouter/anthropic/claude-sonnet-4",
@@ -768,39 +854,48 @@
         {
           "id": "fastrouter/google/gemini-2.5-flash",
           "displayName": "Gemini 2.5 Flash",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 65536
         },
         {
           "id": "fastrouter/google/gemini-2.5-pro",
-          "displayName": "Gemini 2.5 Pro"
+          "displayName": "Gemini 2.5 Pro",
+          "maxOutputTokens": 65536
         },
         {
           "id": "fastrouter/openai/gpt-oss-120b",
-          "displayName": "GPT OSS 120B"
+          "displayName": "GPT OSS 120B",
+          "maxOutputTokens": 32768
         },
         {
           "id": "fastrouter/openai/gpt-oss-20b",
-          "displayName": "GPT OSS 20B"
+          "displayName": "GPT OSS 20B",
+          "maxOutputTokens": 32768
         },
         {
           "id": "fastrouter/openai/gpt-4.1",
-          "displayName": "GPT-4.1"
+          "displayName": "GPT-4.1",
+          "maxOutputTokens": 32768
         },
         {
           "id": "fastrouter/openai/gpt-5",
-          "displayName": "GPT-5"
+          "displayName": "GPT-5",
+          "maxOutputTokens": 128000
         },
         {
           "id": "fastrouter/openai/gpt-5-mini",
-          "displayName": "GPT-5 Mini"
+          "displayName": "GPT-5 Mini",
+          "maxOutputTokens": 128000
         },
         {
           "id": "fastrouter/openai/gpt-5-nano",
-          "displayName": "GPT-5 Nano"
+          "displayName": "GPT-5 Nano",
+          "maxOutputTokens": 128000
         },
         {
           "id": "fastrouter/x-ai/grok-4",
-          "displayName": "Grok 4"
+          "displayName": "Grok 4",
+          "maxOutputTokens": 64000
         },
         {
           "id": "fastrouter/moonshotai/kimi-k2",
@@ -814,14 +909,15 @@
     },
     {
       "id": "fireworks-ai",
-      "displayName": "Fireworks AI (BYOK — API key from fireworks.ai)",
+      "displayName": "Fireworks AI (BYOK \u2014 API key from fireworks.ai)",
       "apiKeyEnvVar": "FIREWORKS_API_KEY",
       "apiKeyLabel": "Fireworks API key",
       "models": [
         {
           "id": "fireworks-ai/accounts/fireworks/models/gpt-oss-120b",
           "displayName": "GPT OSS 120B",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 32768
         },
         {
           "id": "fireworks-ai/accounts/fireworks/models/gpt-oss-20b",
@@ -831,7 +927,7 @@
     },
     {
       "id": "github-models",
-      "displayName": "GitHub Models (BYOK — API key from docs.github.com)",
+      "displayName": "GitHub Models (BYOK \u2014 API key from docs.github.com)",
       "apiKeyEnvVar": "GITHUB_TOKEN",
       "apiKeyLabel": "Github Token API key",
       "models": [
@@ -1060,34 +1156,40 @@
     },
     {
       "id": "huggingface",
-      "displayName": "Hugging Face (BYOK — API key from huggingface.co)",
+      "displayName": "Hugging Face (BYOK \u2014 API key from huggingface.co)",
       "apiKeyEnvVar": "HF_TOKEN",
       "apiKeyLabel": "Hf Token API key",
       "models": [
         {
           "id": "huggingface/deepseek-ai/DeepSeek-R1-0528",
-          "displayName": "DeepSeek-R1-0528"
+          "displayName": "DeepSeek-R1-0528",
+          "maxOutputTokens": 32768
         },
         {
           "id": "huggingface/moonshotai/Kimi-K2-Instruct",
           "displayName": "Kimi-K2-Instruct",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 16384
         },
         {
           "id": "huggingface/moonshotai/Kimi-K2-Instruct-0905",
-          "displayName": "Kimi-K2-Instruct-0905"
+          "displayName": "Kimi-K2-Instruct-0905",
+          "maxOutputTokens": 16384
         },
         {
           "id": "huggingface/Qwen/Qwen3-235B-A22B-Thinking-2507",
-          "displayName": "Qwen3-235B-A22B-Thinking-2507"
+          "displayName": "Qwen3-235B-A22B-Thinking-2507",
+          "maxOutputTokens": 81920
         },
         {
           "id": "huggingface/Qwen/Qwen3-Coder-480B-A35B-Instruct",
-          "displayName": "Qwen3-Coder-480B-A35B-Instruct"
+          "displayName": "Qwen3-Coder-480B-A35B-Instruct",
+          "maxOutputTokens": 65536
         },
         {
           "id": "huggingface/Qwen/Qwen3-Next-80B-A3B-Instruct",
-          "displayName": "Qwen3-Next-80B-A3B-Instruct"
+          "displayName": "Qwen3-Next-80B-A3B-Instruct",
+          "maxOutputTokens": 32768
         },
         {
           "id": "huggingface/Qwen/Qwen3-Next-80B-A3B-Thinking",
@@ -1097,52 +1199,61 @@
     },
     {
       "id": "inference",
-      "displayName": "Inference (BYOK — API key from inference.net)",
+      "displayName": "Inference (BYOK \u2014 API key from inference.net)",
       "apiKeyEnvVar": "INFERENCE_API_KEY",
       "apiKeyLabel": "Inference API key",
       "models": [
         {
           "id": "inference/google/gemma-3",
           "displayName": "Google Gemma 3",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 4096
         },
         {
           "id": "inference/meta/llama-3.1-8b-instruct",
-          "displayName": "Llama 3.1 8B Instruct"
+          "displayName": "Llama 3.1 8B Instruct",
+          "maxOutputTokens": 4096
         },
         {
           "id": "inference/meta/llama-3.2-11b-vision-instruct",
-          "displayName": "Llama 3.2 11B Vision Instruct"
+          "displayName": "Llama 3.2 11B Vision Instruct",
+          "maxOutputTokens": 4096
         },
         {
           "id": "inference/meta/llama-3.2-1b-instruct",
-          "displayName": "Llama 3.2 1B Instruct"
+          "displayName": "Llama 3.2 1B Instruct",
+          "maxOutputTokens": 4096
         },
         {
           "id": "inference/meta/llama-3.2-3b-instruct",
-          "displayName": "Llama 3.2 3B Instruct"
+          "displayName": "Llama 3.2 3B Instruct",
+          "maxOutputTokens": 4096
         },
         {
           "id": "inference/mistral/mistral-nemo-12b-instruct",
-          "displayName": "Mistral Nemo 12B Instruct"
+          "displayName": "Mistral Nemo 12B Instruct",
+          "maxOutputTokens": 4096
         },
         {
           "id": "inference/osmosis/osmosis-structure-0.6b",
-          "displayName": "Osmosis Structure 0.6B"
+          "displayName": "Osmosis Structure 0.6B",
+          "maxOutputTokens": 2048
         },
         {
           "id": "inference/qwen/qwen-2.5-7b-vision-instruct",
-          "displayName": "Qwen 2.5 7B Vision Instruct"
+          "displayName": "Qwen 2.5 7B Vision Instruct",
+          "maxOutputTokens": 4096
         },
         {
           "id": "inference/qwen/qwen3-embedding-4b",
-          "displayName": "Qwen 3 Embedding 4B"
+          "displayName": "Qwen 3 Embedding 4B",
+          "maxOutputTokens": 2048
         }
       ]
     },
     {
       "id": "llama",
-      "displayName": "Llama (BYOK — API key from llama.developer.meta.com)",
+      "displayName": "Llama (BYOK \u2014 API key from llama.developer.meta.com)",
       "apiKeyEnvVar": "LLAMA_API_KEY",
       "apiKeyLabel": "Llama API key",
       "models": [
@@ -1179,78 +1290,89 @@
     },
     {
       "id": "lmstudio",
-      "displayName": "LMStudio (BYOK — API key from lmstudio.ai)",
+      "displayName": "LMStudio (BYOK \u2014 API key from lmstudio.ai)",
       "apiKeyEnvVar": "LMSTUDIO_API_KEY",
       "apiKeyLabel": "Lmstudio API key",
       "models": [
         {
           "id": "lmstudio/openai/gpt-oss-20b",
-          "displayName": "GPT OSS 20B"
+          "displayName": "GPT OSS 20B",
+          "maxOutputTokens": 32768
         },
         {
           "id": "lmstudio/qwen/qwen3-30b-a3b-2507",
           "displayName": "Qwen3 30B A3B 2507",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 16384
         },
         {
           "id": "lmstudio/qwen/qwen3-coder-30b",
-          "displayName": "Qwen3 Coder 30B"
+          "displayName": "Qwen3 Coder 30B",
+          "maxOutputTokens": 65536
         }
       ]
     },
     {
       "id": "lucidquery",
-      "displayName": "LucidQuery AI (BYOK — API key from lucidquery.com)",
+      "displayName": "LucidQuery AI (BYOK \u2014 API key from lucidquery.com)",
       "apiKeyEnvVar": "LUCIDQUERY_API_KEY",
       "apiKeyLabel": "Lucidquery API key",
       "models": [
         {
           "id": "lucidquery/lucidnova-rf1-100b",
           "displayName": "LucidNova RF1 100B",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 8000
         },
         {
           "id": "lucidquery/lucidquery-nexus-coder",
-          "displayName": "LucidQuery Nexus Coder"
+          "displayName": "LucidQuery Nexus Coder",
+          "maxOutputTokens": 60000
         }
       ]
     },
     {
       "id": "modelscope",
-      "displayName": "ModelScope (BYOK — API key from modelscope.cn)",
+      "displayName": "ModelScope (BYOK \u2014 API key from modelscope.cn)",
       "apiKeyEnvVar": "MODELSCOPE_API_KEY",
       "apiKeyLabel": "Modelscope API key",
       "models": [
         {
           "id": "modelscope/ZhipuAI/GLM-4.5",
-          "displayName": "GLM-4.5"
+          "displayName": "GLM-4.5",
+          "maxOutputTokens": 98304
         },
         {
           "id": "modelscope/Qwen/Qwen3-235B-A22B-Instruct-2507",
           "displayName": "Qwen3 235B A22B Instruct 2507",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 131072
         },
         {
           "id": "modelscope/Qwen/Qwen3-30B-A3B-Instruct-2507",
-          "displayName": "Qwen3 30B A3B Instruct 2507"
+          "displayName": "Qwen3 30B A3B Instruct 2507",
+          "maxOutputTokens": 16384
         },
         {
           "id": "modelscope/Qwen/Qwen3-30B-A3B-Thinking-2507",
-          "displayName": "Qwen3 30B A3B Thinking 2507"
+          "displayName": "Qwen3 30B A3B Thinking 2507",
+          "maxOutputTokens": 32768
         },
         {
           "id": "modelscope/Qwen/Qwen3-Coder-30B-A3B-Instruct",
-          "displayName": "Qwen3 Coder 30B A3B Instruct"
+          "displayName": "Qwen3 Coder 30B A3B Instruct",
+          "maxOutputTokens": 65536
         },
         {
           "id": "modelscope/Qwen/Qwen3-235B-A22B-Thinking-2507",
-          "displayName": "Qwen3-235B-A22B-Thinking-2507"
+          "displayName": "Qwen3-235B-A22B-Thinking-2507",
+          "maxOutputTokens": 131072
         }
       ]
     },
     {
       "id": "moonshotai",
-      "displayName": "Moonshot AI (BYOK — API key from platform.moonshot.ai)",
+      "displayName": "Moonshot AI (BYOK \u2014 API key from platform.moonshot.ai)",
       "apiKeyEnvVar": "MOONSHOT_API_KEY",
       "apiKeyLabel": "Moonshot API key",
       "models": [
@@ -1271,7 +1393,7 @@
     },
     {
       "id": "moonshotai-cn",
-      "displayName": "Moonshot AI (China) (BYOK — API key from platform.moonshot.cn)",
+      "displayName": "Moonshot AI (China) (BYOK \u2014 API key from platform.moonshot.cn)",
       "apiKeyEnvVar": "MOONSHOT_API_KEY",
       "apiKeyLabel": "Moonshot API key",
       "models": [
@@ -1292,28 +1414,31 @@
     },
     {
       "id": "morph",
-      "displayName": "Morph (BYOK — API key from docs.morphllm.com)",
+      "displayName": "Morph (BYOK \u2014 API key from docs.morphllm.com)",
       "apiKeyEnvVar": "MORPH_API_KEY",
       "apiKeyLabel": "Morph API key",
       "models": [
         {
           "id": "morph/auto",
-          "displayName": "Auto"
+          "displayName": "Auto",
+          "maxOutputTokens": 32000
         },
         {
           "id": "morph/morph-v3-fast",
           "displayName": "Morph v3 Fast",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 131072
         },
         {
           "id": "morph/morph-v3-large",
-          "displayName": "Morph v3 Large"
+          "displayName": "Morph v3 Large",
+          "maxOutputTokens": 131072
         }
       ]
     },
     {
       "id": "nvidia",
-      "displayName": "Nvidia (BYOK — API key from docs.api.nvidia.com)",
+      "displayName": "Nvidia (BYOK \u2014 API key from docs.api.nvidia.com)",
       "apiKeyEnvVar": "NVIDIA_API_KEY",
       "apiKeyLabel": "Nvidia API key",
       "models": [
@@ -1342,77 +1467,90 @@
     },
     {
       "id": "opencode",
-      "displayName": "OpenCode Zen (BYOK — API key from opencode.ai)",
+      "displayName": "OpenCode Zen (BYOK \u2014 API key from opencode.ai)",
       "apiKeyEnvVar": "OPENCODE_API_KEY",
       "apiKeyLabel": "Opencode API key",
       "models": [
         {
           "id": "opencode/claude-3-5-haiku",
           "displayName": "Claude Haiku 3.5",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 8192
         },
         {
           "id": "opencode/claude-opus-4-1",
-          "displayName": "Claude Opus 4.1"
+          "displayName": "Claude Opus 4.1",
+          "maxOutputTokens": 32000
         },
         {
           "id": "opencode/claude-sonnet-4",
-          "displayName": "Claude Sonnet 4"
+          "displayName": "Claude Sonnet 4",
+          "maxOutputTokens": 64000
         },
         {
           "id": "opencode/claude-sonnet-4-5",
-          "displayName": "Claude Sonnet 4.5"
+          "displayName": "Claude Sonnet 4.5",
+          "maxOutputTokens": 64000
         },
         {
           "id": "opencode/glm-4.6",
-          "displayName": "GLM-4.6"
+          "displayName": "GLM-4.6",
+          "maxOutputTokens": 131072
         },
         {
           "id": "opencode/gpt-5",
-          "displayName": "GPT-5"
+          "displayName": "GPT-5",
+          "maxOutputTokens": 128000
         },
         {
           "id": "opencode/gpt-5-codex",
-          "displayName": "GPT-5 Codex"
+          "displayName": "GPT-5 Codex",
+          "maxOutputTokens": 128000
         },
         {
           "id": "opencode/grok-code",
-          "displayName": "Grok Code Fast 1"
+          "displayName": "Grok Code Fast 1",
+          "maxOutputTokens": 256000
         },
         {
           "id": "opencode/kimi-k2",
-          "displayName": "Kimi K2"
+          "displayName": "Kimi K2",
+          "maxOutputTokens": 262144
         },
         {
           "id": "opencode/qwen3-coder",
-          "displayName": "Qwen3 Coder"
+          "displayName": "Qwen3 Coder",
+          "maxOutputTokens": 65536
         }
       ]
     },
     {
       "id": "perplexity",
-      "displayName": "Perplexity (BYOK — API key from docs.perplexity.ai)",
+      "displayName": "Perplexity (BYOK \u2014 API key from docs.perplexity.ai)",
       "apiKeyEnvVar": "PERPLEXITY_API_KEY",
       "apiKeyLabel": "Perplexity API key",
       "models": [
         {
           "id": "perplexity/sonar",
           "displayName": "Sonar",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 4096
         },
         {
           "id": "perplexity/sonar-pro",
-          "displayName": "Sonar Pro"
+          "displayName": "Sonar Pro",
+          "maxOutputTokens": 8192
         },
         {
           "id": "perplexity/sonar-reasoning-pro",
-          "displayName": "Sonar Reasoning Pro"
+          "displayName": "Sonar Reasoning Pro",
+          "maxOutputTokens": 4096
         }
       ]
     },
     {
       "id": "requesty",
-      "displayName": "Requesty (BYOK — API key from requesty.ai)",
+      "displayName": "Requesty (BYOK \u2014 API key from requesty.ai)",
       "apiKeyEnvVar": "REQUESTY_API_KEY",
       "apiKeyLabel": "Requesty API key",
       "models": [
@@ -1465,52 +1603,61 @@
     },
     {
       "id": "submodel",
-      "displayName": "submodel (BYOK — API key from submodel.gitbook.io)",
+      "displayName": "submodel (BYOK \u2014 API key from submodel.gitbook.io)",
       "apiKeyEnvVar": "SUBMODEL_INSTAGEN_ACCESS_KEY",
       "apiKeyLabel": "Submodel Instagen Access Key API key",
       "models": [
         {
           "id": "submodel/deepseek-ai/DeepSeek-R1-0528",
-          "displayName": "DeepSeek R1 0528"
+          "displayName": "DeepSeek R1 0528",
+          "maxOutputTokens": 163840
         },
         {
           "id": "submodel/deepseek-ai/DeepSeek-V3-0324",
           "displayName": "DeepSeek V3 0324",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 163840
         },
         {
           "id": "submodel/deepseek-ai/DeepSeek-V3.1",
-          "displayName": "DeepSeek V3.1"
+          "displayName": "DeepSeek V3.1",
+          "maxOutputTokens": 163840
         },
         {
           "id": "submodel/zai-org/GLM-4.5-Air",
-          "displayName": "GLM 4.5 Air"
+          "displayName": "GLM 4.5 Air",
+          "maxOutputTokens": 131072
         },
         {
           "id": "submodel/zai-org/GLM-4.5-FP8",
-          "displayName": "GLM 4.5 FP8"
+          "displayName": "GLM 4.5 FP8",
+          "maxOutputTokens": 131072
         },
         {
           "id": "submodel/openai/gpt-oss-120b",
-          "displayName": "GPT OSS 120B"
+          "displayName": "GPT OSS 120B",
+          "maxOutputTokens": 32768
         },
         {
           "id": "submodel/Qwen/Qwen3-235B-A22B-Instruct-2507",
-          "displayName": "Qwen3 235B A22B Instruct 2507"
+          "displayName": "Qwen3 235B A22B Instruct 2507",
+          "maxOutputTokens": 131072
         },
         {
           "id": "submodel/Qwen/Qwen3-235B-A22B-Thinking-2507",
-          "displayName": "Qwen3 235B A22B Thinking 2507"
+          "displayName": "Qwen3 235B A22B Thinking 2507",
+          "maxOutputTokens": 131072
         },
         {
           "id": "submodel/Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8",
-          "displayName": "Qwen3 Coder 480B A35B Instruct"
+          "displayName": "Qwen3 Coder 480B A35B Instruct",
+          "maxOutputTokens": 262144
         }
       ]
     },
     {
       "id": "synthetic",
-      "displayName": "Synthetic (BYOK — API key from synthetic.new)",
+      "displayName": "Synthetic (BYOK \u2014 API key from synthetic.new)",
       "apiKeyEnvVar": "SYNTHETIC_API_KEY",
       "apiKeyLabel": "Synthetic API key",
       "models": [
@@ -1545,7 +1692,8 @@
         },
         {
           "id": "synthetic/hf:openai/gpt-oss-120b",
-          "displayName": "GPT OSS 120B"
+          "displayName": "GPT OSS 120B",
+          "maxOutputTokens": 65536
         },
         {
           "id": "synthetic/hf:moonshotai/Kimi-K2-Instruct-0905",
@@ -1595,53 +1743,60 @@
     },
     {
       "id": "togetherai",
-      "displayName": "Together AI (BYOK — API key from docs.together.ai)",
+      "displayName": "Together AI (BYOK \u2014 API key from docs.together.ai)",
       "apiKeyEnvVar": "TOGETHER_API_KEY",
       "apiKeyLabel": "Together API key",
       "models": [
         {
           "id": "togetherai/deepseek-ai/DeepSeek-R1",
-          "displayName": "DeepSeek R1"
+          "displayName": "DeepSeek R1",
+          "maxOutputTokens": 163839
         },
         {
           "id": "togetherai/deepseek-ai/DeepSeek-V3",
-          "displayName": "DeepSeek V3"
+          "displayName": "DeepSeek V3",
+          "maxOutputTokens": 131072
         },
         {
           "id": "togetherai/openai/gpt-oss-120b",
-          "displayName": "GPT OSS 120B"
+          "displayName": "GPT OSS 120B",
+          "maxOutputTokens": 131072
         },
         {
           "id": "togetherai/meta-llama/Llama-3.3-70B-Instruct-Turbo",
           "displayName": "Llama 3.3 70B",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 131072
         },
         {
           "id": "togetherai/Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8",
-          "displayName": "Qwen3 Coder 480B A35B Instruct"
+          "displayName": "Qwen3 Coder 480B A35B Instruct",
+          "maxOutputTokens": 262144
         }
       ]
     },
     {
       "id": "upstage",
-      "displayName": "Upstage (BYOK — API key from developers.upstage.ai)",
+      "displayName": "Upstage (BYOK \u2014 API key from developers.upstage.ai)",
       "apiKeyEnvVar": "UPSTAGE_API_KEY",
       "apiKeyLabel": "Upstage API key",
       "models": [
         {
           "id": "upstage/solar-mini",
           "displayName": "solar-mini",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 4096
         },
         {
           "id": "upstage/solar-pro2",
-          "displayName": "solar-pro2"
+          "displayName": "solar-pro2",
+          "maxOutputTokens": 8192
         }
       ]
     },
     {
       "id": "venice",
-      "displayName": "Venice AI (BYOK — API key from docs.venice.ai)",
+      "displayName": "Venice AI (BYOK \u2014 API key from docs.venice.ai)",
       "apiKeyEnvVar": "VENICE_API_KEY",
       "apiKeyLabel": "Venice API key",
       "models": [
@@ -1658,7 +1813,7 @@
     },
     {
       "id": "vercel",
-      "displayName": "Vercel AI Gateway (BYOK — API key from github.com)",
+      "displayName": "Vercel AI Gateway (BYOK \u2014 API key from github.com)",
       "apiKeyEnvVar": "AI_GATEWAY_API_KEY",
       "apiKeyLabel": "Ai Gateway API key",
       "models": [
@@ -1680,11 +1835,13 @@
         },
         {
           "id": "vercel/mistral/codestral",
-          "displayName": "Codestral (latest)"
+          "displayName": "Codestral (latest)",
+          "maxOutputTokens": 4000
         },
         {
           "id": "vercel/deepseek/deepseek-r1",
-          "displayName": "DeepSeek-R1"
+          "displayName": "DeepSeek-R1",
+          "maxOutputTokens": 32768
         },
         {
           "id": "vercel/google/gemini-2.0-flash",
@@ -1696,19 +1853,23 @@
         },
         {
           "id": "vercel/google/gemini-2.5-flash",
-          "displayName": "Gemini 2.5 Flash"
+          "displayName": "Gemini 2.5 Flash",
+          "maxOutputTokens": 65535
         },
         {
           "id": "vercel/google/gemini-2.5-pro",
-          "displayName": "Gemini 2.5 Pro"
+          "displayName": "Gemini 2.5 Pro",
+          "maxOutputTokens": 65535
         },
         {
           "id": "vercel/openai/gpt-oss-120b",
-          "displayName": "GPT OSS 120B"
+          "displayName": "GPT OSS 120B",
+          "maxOutputTokens": 131072
         },
         {
           "id": "vercel/openai/gpt-oss-20b",
-          "displayName": "GPT OSS 20B"
+          "displayName": "GPT OSS 20B",
+          "maxOutputTokens": 8192
         },
         {
           "id": "vercel/openai/gpt-4-turbo",
@@ -1716,56 +1877,69 @@
         },
         {
           "id": "vercel/openai/gpt-4.1",
-          "displayName": "GPT-4.1"
+          "displayName": "GPT-4.1",
+          "maxOutputTokens": 32768
         },
         {
           "id": "vercel/openai/gpt-4.1-mini",
-          "displayName": "GPT-4.1 mini"
+          "displayName": "GPT-4.1 mini",
+          "maxOutputTokens": 32768
         },
         {
           "id": "vercel/openai/gpt-4.1-nano",
-          "displayName": "GPT-4.1 nano"
+          "displayName": "GPT-4.1 nano",
+          "maxOutputTokens": 32768
         },
         {
           "id": "vercel/openai/gpt-4o",
-          "displayName": "GPT-4o"
+          "displayName": "GPT-4o",
+          "maxOutputTokens": 16384
         },
         {
           "id": "vercel/openai/gpt-4o-mini",
           "displayName": "GPT-4o mini",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 16384
         },
         {
           "id": "vercel/openai/gpt-5",
-          "displayName": "GPT-5"
+          "displayName": "GPT-5",
+          "maxOutputTokens": 128000
         },
         {
           "id": "vercel/openai/gpt-5-mini",
-          "displayName": "GPT-5 Mini"
+          "displayName": "GPT-5 Mini",
+          "maxOutputTokens": 128000
         },
         {
           "id": "vercel/openai/gpt-5-nano",
-          "displayName": "GPT-5 Nano"
+          "displayName": "GPT-5 Nano",
+          "maxOutputTokens": 128000
         },
         {
           "id": "vercel/openai/gpt-5-codex",
-          "displayName": "GPT-5-Codex"
+          "displayName": "GPT-5-Codex",
+          "maxOutputTokens": 128000
         },
         {
           "id": "vercel/moonshotai/kimi-k2",
-          "displayName": "Kimi K2 Instruct"
+          "displayName": "Kimi K2 Instruct",
+          "maxOutputTokens": 131072
         },
         {
           "id": "vercel/meta/llama-3.3-70b",
-          "displayName": "Llama-3.3-70B-Instruct"
+          "displayName": "Llama-3.3-70B-Instruct",
+          "maxOutputTokens": 8192
         },
         {
           "id": "vercel/meta/llama-4-maverick",
-          "displayName": "Llama-4-Maverick-17B-128E-Instruct-FP8"
+          "displayName": "Llama-4-Maverick-17B-128E-Instruct-FP8",
+          "maxOutputTokens": 8192
         },
         {
           "id": "vercel/meta/llama-4-scout",
-          "displayName": "Llama-4-Scout-17B-16E-Instruct-FP8"
+          "displayName": "Llama-4-Scout-17B-16E-Instruct-FP8",
+          "maxOutputTokens": 8192
         },
         {
           "id": "vercel/mistral/magistral-medium",
@@ -1777,15 +1951,18 @@
         },
         {
           "id": "vercel/mistral/ministral-3b",
-          "displayName": "Ministral 3B (latest)"
+          "displayName": "Ministral 3B (latest)",
+          "maxOutputTokens": 4000
         },
         {
           "id": "vercel/mistral/ministral-8b",
-          "displayName": "Ministral 8B (latest)"
+          "displayName": "Ministral 8B (latest)",
+          "maxOutputTokens": 4000
         },
         {
           "id": "vercel/mistral/mistral-small",
-          "displayName": "Mistral Small (latest)"
+          "displayName": "Mistral Small (latest)",
+          "maxOutputTokens": 4000
         },
         {
           "id": "vercel/mistral/mixtral-8x22b-instruct",
@@ -1793,39 +1970,48 @@
         },
         {
           "id": "vercel/morph/morph-v3-fast",
-          "displayName": "Morph v3 Fast"
+          "displayName": "Morph v3 Fast",
+          "maxOutputTokens": 131072
         },
         {
           "id": "vercel/morph/morph-v3-large",
-          "displayName": "Morph v3 Large"
+          "displayName": "Morph v3 Large",
+          "maxOutputTokens": 131072
         },
         {
           "id": "vercel/amazon/nova-lite",
-          "displayName": "Nova Lite"
+          "displayName": "Nova Lite",
+          "maxOutputTokens": 10000
         },
         {
           "id": "vercel/amazon/nova-micro",
-          "displayName": "Nova Micro"
+          "displayName": "Nova Micro",
+          "maxOutputTokens": 10000
         },
         {
           "id": "vercel/amazon/nova-pro",
-          "displayName": "Nova Pro"
+          "displayName": "Nova Pro",
+          "maxOutputTokens": 10000
         },
         {
           "id": "vercel/openai/o1",
-          "displayName": "o1"
+          "displayName": "o1",
+          "maxOutputTokens": 100000
         },
         {
           "id": "vercel/openai/o3",
-          "displayName": "o3"
+          "displayName": "o3",
+          "maxOutputTokens": 100000
         },
         {
           "id": "vercel/openai/o3-mini",
-          "displayName": "o3-mini"
+          "displayName": "o3-mini",
+          "maxOutputTokens": 100000
         },
         {
           "id": "vercel/openai/o4-mini",
-          "displayName": "o4-mini"
+          "displayName": "o4-mini",
+          "maxOutputTokens": 100000
         },
         {
           "id": "vercel/mistral/pixtral-12b",
@@ -1847,7 +2033,7 @@
     },
     {
       "id": "wandb",
-      "displayName": "Weights & Biases (BYOK — API key from docs.wandb.ai)",
+      "displayName": "Weights & Biases (BYOK \u2014 API key from docs.wandb.ai)",
       "apiKeyEnvVar": "WANDB_API_KEY",
       "apiKeyLabel": "Wandb API key",
       "models": [
@@ -1857,11 +2043,13 @@
         },
         {
           "id": "wandb/meta-llama/Llama-3.3-70B-Instruct",
-          "displayName": "Llama-3.3-70B-Instruct"
+          "displayName": "Llama-3.3-70B-Instruct",
+          "maxOutputTokens": 128000
         },
         {
           "id": "wandb/meta-llama/Llama-3.1-8B-Instruct",
-          "displayName": "Meta-Llama-3.1-8B-Instruct"
+          "displayName": "Meta-Llama-3.1-8B-Instruct",
+          "maxOutputTokens": 131072
         },
         {
           "id": "wandb/microsoft/Phi-4-mini-instruct",
@@ -1884,36 +2072,41 @@
     },
     {
       "id": "zai",
-      "displayName": "Z.AI (BYOK — API key from docs.z.ai)",
+      "displayName": "Z.AI (BYOK \u2014 API key from docs.z.ai)",
       "apiKeyEnvVar": "ZHIPU_API_KEY",
       "apiKeyLabel": "Zhipu API key",
       "models": [
         {
           "id": "zai/glm-4.5",
-          "displayName": "GLM-4.5"
+          "displayName": "GLM-4.5",
+          "maxOutputTokens": 98304
         },
         {
           "id": "zai/glm-4.5-air",
-          "displayName": "GLM-4.5-Air"
+          "displayName": "GLM-4.5-Air",
+          "maxOutputTokens": 98304
         },
         {
           "id": "zai/glm-4.5-flash",
           "displayName": "GLM-4.5-Flash",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 98304
         },
         {
           "id": "zai/glm-4.5v",
-          "displayName": "GLM-4.5V"
+          "displayName": "GLM-4.5V",
+          "maxOutputTokens": 16384
         },
         {
           "id": "zai/glm-4.6",
-          "displayName": "GLM-4.6"
+          "displayName": "GLM-4.6",
+          "maxOutputTokens": 131072
         }
       ]
     },
     {
       "id": "zai-coding-plan",
-      "displayName": "Z.AI Coding Plan (BYOK — API key from docs.z.ai)",
+      "displayName": "Z.AI Coding Plan (BYOK \u2014 API key from docs.z.ai)",
       "apiKeyEnvVar": "ZHIPU_API_KEY",
       "apiKeyLabel": "Zhipu API key",
       "models": [
@@ -1926,36 +2119,41 @@
     },
     {
       "id": "zhipuai",
-      "displayName": "Zhipu AI (BYOK — API key from docs.z.ai)",
+      "displayName": "Zhipu AI (BYOK \u2014 API key from docs.z.ai)",
       "apiKeyEnvVar": "ZHIPU_API_KEY",
       "apiKeyLabel": "Zhipu API key",
       "models": [
         {
           "id": "zhipuai/glm-4.5",
-          "displayName": "GLM-4.5"
+          "displayName": "GLM-4.5",
+          "maxOutputTokens": 98304
         },
         {
           "id": "zhipuai/glm-4.5-air",
-          "displayName": "GLM-4.5-Air"
+          "displayName": "GLM-4.5-Air",
+          "maxOutputTokens": 98304
         },
         {
           "id": "zhipuai/glm-4.5-flash",
           "displayName": "GLM-4.5-Flash",
-          "recommendedForPdfImport": true
+          "recommendedForPdfImport": true,
+          "maxOutputTokens": 98304
         },
         {
           "id": "zhipuai/glm-4.5v",
-          "displayName": "GLM-4.5V"
+          "displayName": "GLM-4.5V",
+          "maxOutputTokens": 16384
         },
         {
           "id": "zhipuai/glm-4.6",
-          "displayName": "GLM-4.6"
+          "displayName": "GLM-4.6",
+          "maxOutputTokens": 131072
         }
       ]
     },
     {
       "id": "zhipuai-coding-plan",
-      "displayName": "Zhipu AI Coding Plan (BYOK — API key from docs.bigmodel.cn)",
+      "displayName": "Zhipu AI Coding Plan (BYOK \u2014 API key from docs.bigmodel.cn)",
       "apiKeyEnvVar": "ZHIPU_API_KEY",
       "apiKeyLabel": "Zhipu API key",
       "models": [

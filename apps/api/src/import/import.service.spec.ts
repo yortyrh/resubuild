@@ -152,6 +152,8 @@ describe('ImportService', () => {
     expect(runPdfImportWorkflow).toHaveBeenCalledWith(
       expect.objectContaining({
         onProgress: expect.any(Function),
+        // Output-token limit of the selected model, from the catalog.
+        maxOutputTokens: 16384,
       }),
     );
     expect(service.getJob(user, result.jobId).status).toBe('succeeded');

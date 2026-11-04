@@ -20,6 +20,12 @@ export interface TextImportWorkflowInput {
   modelId: string;
   apiKey: string;
   searchApiKey?: string;
+  /**
+   * Model's output-token limit (from the model catalog). Drafts of long CVs
+   * are large JSON documents; asking for the model's full budget avoids
+   * replies cut off mid-JSON. Omit when unknown (provider default applies).
+   */
+  maxOutputTokens?: number;
   onProgress?: (progress: ImportJobProgress) => void;
   finalize?: (draft: Record<string, unknown>) => Promise<string>;
   generateDraft?: (text: string) => Promise<Record<string, unknown>>;
@@ -41,6 +47,12 @@ export interface PdfImportWorkflowInput {
   modelId: string;
   apiKey: string;
   searchApiKey?: string;
+  /**
+   * Model's output-token limit (from the model catalog). Drafts of long CVs
+   * are large JSON documents; asking for the model's full budget avoids
+   * replies cut off mid-JSON. Omit when unknown (provider default applies).
+   */
+  maxOutputTokens?: number;
   onProgress?: (progress: ImportJobProgress) => void;
   finalize?: (draft: Record<string, unknown>) => Promise<string>;
   generateDraft?: (text: string) => Promise<Record<string, unknown>>;
@@ -58,6 +70,12 @@ export interface ImageImportWorkflowInput {
   modelId: string;
   apiKey: string;
   searchApiKey?: string;
+  /**
+   * Model's output-token limit (from the model catalog). Drafts of long CVs
+   * are large JSON documents; asking for the model's full budget avoids
+   * replies cut off mid-JSON. Omit when unknown (provider default applies).
+   */
+  maxOutputTokens?: number;
   onProgress?: (progress: ImportJobProgress) => void;
   finalize?: (draft: Record<string, unknown>) => Promise<string>;
   generateDraft?: (text: string) => Promise<Record<string, unknown>>;

@@ -10,6 +10,11 @@ export interface ModelsDevModel {
   modalities?: {
     output?: string[];
   };
+  limit?: {
+    context?: number;
+    /** Maximum tokens the model can generate in one reply. */
+    output?: number;
+  };
 }
 
 export interface ModelsDevProvider {

@@ -25,6 +25,8 @@ export interface ImportModelEntry {
   id: string;
   displayName: string;
   recommendedForPdfImport?: boolean;
+  /** Provider limit on generated tokens per reply (models.dev `limit.output`), when known. */
+  maxOutputTokens?: number;
 }
 
 export interface ImportProviderEntry {
@@ -139,4 +141,16 @@ export function listCatalogModelsForProvider(providerId: string, catalog: Import
     displayName,
     recommendedForPdfImport: recommendedForPdfImport ?? false,
   }));
+}
+
+/** Output-token limit of `modelId` in the catalog, or undefined when unknown. */
+export function getModelMaxOutputTokens(
+  catalog: ImportModelCatalog,
+  modelId: string,
+): number | undefined {
+  for (const provider of catalog.providers) {
+    const model = provider.models.find((entry) => entry.id === modelId);
+    if (model) return model.maxOutputTokens;
+  }
+  return undefined;
 }
