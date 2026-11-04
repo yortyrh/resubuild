@@ -193,8 +193,16 @@ async function interactiveCollect() {
       ],
     },
     {
-      title: 'Email (SMTP)',
-      keys: ['SMTP_URL', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD', 'MAIL_FROM'],
+      title: 'Email (Resend or SMTP)',
+      keys: [
+        'RESEND_API_KEY',
+        'SMTP_URL',
+        'SMTP_HOST',
+        'SMTP_PORT',
+        'SMTP_USER',
+        'SMTP_PASSWORD',
+        'MAIL_FROM',
+      ],
     },
     {
       title: 'Server',

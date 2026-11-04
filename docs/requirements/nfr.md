@@ -26,7 +26,7 @@ User data can always be exported as standard JSON Resume (REQ-EXP-007). That exp
 
 ### REQ-NFR-006 Self-hostable `[nfr]`
 
-The whole product runs from the repository's container setup (web, API, database, object storage), configured only through environment variables. It depends only on standard interfaces: any PostgreSQL server, any S3-compatible object store and any SMTP server; no hosted backend service is required. Optional integrations (social sign-in, AI, scraping, MCP) degrade gracefully when they are not configured.
+The whole product runs from the repository's container setup (web, API, database, object storage), configured only through environment variables. It depends only on standard interfaces: any PostgreSQL server, any S3-compatible object store and any SMTP server (or the Resend HTTPS API where outbound SMTP is blocked); no hosted backend service is required. Optional integrations (social sign-in, AI, scraping, MCP) degrade gracefully when they are not configured.
 
 - Local development runs every backing service in containers, including a mail catcher that shows every email the app sends.
 - Schema changes ship as versioned migrations that run before the API starts.

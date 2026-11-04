@@ -13,6 +13,7 @@ describe('readMailConfig', () => {
   it('returns no SMTP when nothing is configured', () => {
     expect(readMailConfig(config({}))).toEqual({
       smtp: null,
+      resend: null,
       from: 'Resubuild <no-reply@localhost>',
       appName: 'Resubuild',
       appUrl: undefined,
@@ -39,6 +40,15 @@ describe('readMailConfig', () => {
       port: 587,
       secure: false,
     });
+  });
+
+  it('reads RESEND_API_KEY alongside SMTP settings', () => {
+    expect(readMailConfig(config({ RESEND_API_KEY: ' re_123 ' })).resend).toEqual({
+      apiKey: 're_123',
+    });
+    expect(
+      readMailConfig(config({ RESEND_API_KEY: 're_123', SMTP_URL: 'smtp://x' })),
+    ).toMatchObject({ smtp: 'smtp://x', resend: { apiKey: 're_123' } });
   });
 
   it('uses MAIL_FROM, APP_NAME and APP_URL', () => {
@@ -100,17 +110,80 @@ describe('MailService', () => {
 
     expect(sent.delivered).toBe(false);
     expect(createTransport).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('SMTP not configured'));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Mail not configured'));
     expect(log).toHaveBeenCalledWith(expect.stringContaining('123456'));
     log.mockRestore();
     warn.mockRestore();
   });
 
-  it('refuses to start in production without SMTP', () => {
+  it('refuses to start in production without a mail transport', () => {
     const prev = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
-    expect(() => new MailService(config({})).onModuleInit()).toThrow(/SMTP is required/);
+    expect(() => new MailService(config({})).onModuleInit()).toThrow(/mail transport is required/);
     expect(() => new MailService(config({ SMTP_URL: 'smtp://x' })).onModuleInit()).not.toThrow();
+    expect(() =>
+      new MailService(config({ RESEND_API_KEY: 're_123' })).onModuleInit(),
+    ).not.toThrow();
     process.env.NODE_ENV = prev;
+  });
+
+  describe('Resend transport', () => {
+    const fetchMock = jest.fn();
+    const realFetch = global.fetch;
+
+    afterAll(() => {
+      global.fetch = realFetch;
+    });
+
+    beforeEach(() => {
+      fetchMock.mockReset();
+      global.fetch = fetchMock as unknown as typeof fetch;
+    });
+
+    const resendService = () =>
+      new MailService(
+        config({
+          RESEND_API_KEY: 're_123',
+          SMTP_HOST: 'localhost',
+          MAIL_FROM: 'R <r@x.test>',
+          APP_URL: 'https://app',
+        }),
+      );
+
+    it('posts the rendered email to the Resend API instead of SMTP', async () => {
+      fetchMock.mockResolvedValue(
+        new Response(JSON.stringify({ id: 'resend-id' }), { status: 200 }),
+      );
+      const service = resendService();
+      expect(service.isConfigured()).toBe(true);
+
+      const sent = await service.send('reset-password', 'user@x.test', {
+        url: 'https://app/reset?token=t',
+      });
+
+      expect(sent).toEqual({ messageId: 'resend-id', delivered: true });
+      expect(createTransport).not.toHaveBeenCalled();
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe('https://api.resend.com/emails');
+      expect(init.method).toBe('POST');
+      expect(init.headers).toMatchObject({ Authorization: 'Bearer re_123' });
+      expect(JSON.parse(init.body)).toEqual({
+        from: 'R <r@x.test>',
+        to: ['user@x.test'],
+        subject: 'Reset your Resubuild password',
+        html: expect.stringContaining('https://app/reset?token=t'),
+        text: expect.stringContaining('https://app/reset?token=t'),
+      });
+    });
+
+    it('throws with the Resend error message when the API rejects the email', async () => {
+      fetchMock.mockResolvedValue(
+        new Response(JSON.stringify({ message: 'The domain is not verified' }), { status: 403 }),
+      );
+
+      await expect(resendService().send('password-changed', 'user@x.test', {})).rejects.toThrow(
+        /HTTP 403\): The domain is not verified/,
+      );
+    });
   });
 });

@@ -88,7 +88,14 @@ export const MANIFEST_SCHEMA = {
     group: 'Storage',
   },
 
-  // Email (SMTP)
+  // Email (Resend HTTPS API or SMTP)
+  RESEND_API_KEY: {
+    required: false,
+    secret: true,
+    description:
+      'Resend API key. Sends over HTTPS instead of SMTP (for hosts that block outbound SMTP, e.g. Railway Free/Hobby). Takes precedence over SMTP_*.',
+    group: 'Email',
+  },
   SMTP_URL: {
     required: false,
     secret: true,
@@ -394,8 +401,9 @@ export const SERIALIZE_GROUPS = [
     ],
   },
   {
-    title: 'Email (SMTP)',
+    title: 'Email (Resend or SMTP)',
     keys: [
+      'RESEND_API_KEY',
       'SMTP_URL',
       'SMTP_HOST',
       'SMTP_PORT',
@@ -565,10 +573,10 @@ export function validateManifest(manifest, opts = {}) {
     }
   }
 
-  // 4. Email delivery needs an SMTP server
-  if (!manifest.SMTP_URL && !manifest.SMTP_HOST) {
+  // 4. Email delivery needs Resend or an SMTP server
+  if (!manifest.RESEND_API_KEY && !manifest.SMTP_URL && !manifest.SMTP_HOST) {
     errors.push(
-      'Configure SMTP: set SMTP_URL, or SMTP_HOST (plus SMTP_PORT/SMTP_USER/SMTP_PASSWORD).',
+      'Configure email: set RESEND_API_KEY, SMTP_URL, or SMTP_HOST (plus SMTP_PORT/SMTP_USER/SMTP_PASSWORD).',
     );
   }
 

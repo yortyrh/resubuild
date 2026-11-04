@@ -86,11 +86,12 @@ describe('validateManifest', () => {
     expect(errors).toContain('Missing required key: DATABASE_URL');
   });
 
-  it('requires an SMTP server (SMTP_URL or SMTP_HOST)', () => {
+  it('requires a mail transport (RESEND_API_KEY, SMTP_URL or SMTP_HOST)', () => {
     const manifest = { ...FULL_VALID_MANIFEST };
     delete manifest.SMTP_URL;
-    expect(validateManifest(manifest).errors.some((e) => e.includes('Configure SMTP'))).toBe(true);
+    expect(validateManifest(manifest).errors.some((e) => e.includes('Configure email'))).toBe(true);
     expect(validateManifest({ ...manifest, SMTP_HOST: 'smtp.example.com' }).valid).toBe(true);
+    expect(validateManifest({ ...manifest, RESEND_API_KEY: 're_123' }).valid).toBe(true);
   });
 
   it('rejects a BETTER_AUTH_SECRET shorter than 32 characters', () => {
