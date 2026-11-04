@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Questions-only mode ("q:")
+
+A message that starts with `q:` is a question only. Answer it, but change nothing: no file edits, no commits, no migrations, no installs, no data or infra changes. Reading files and running read-only commands is fine. If the answer suggests a change, describe it and wait for a separate request.
+
 ## Overview
 
 Resubuild: JSON Resume–based CV builder with AI import (PDF/DOCX/image/URL), MIT-format preview, PDF export, job-application tailoring, and an MCP server. pnpm + Turborepo monorepo, Node 26.x LTS managed by pnpm: root `package.json` `devEngines.runtime` pins the version, pnpm downloads it and runs every script with it, and `pnpm verify` enforces it via `scripts/check-node-version.mjs`. Upgrade with `pnpm runtime set node lts`, then bump `engines.node`, `.nvmrc` (editors/CI), `apps/{api,web}/Dockerfile` base images and `@types/node` together.
