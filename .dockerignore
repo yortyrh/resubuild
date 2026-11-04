@@ -13,6 +13,9 @@
 **/.idea
 **/docs
 **/scripts
+# Supabase → Postgres/S3 migration, run by the API pre-deploy step (see apps/api/Dockerfile)
+!scripts/migrate-from-supabase.mjs
+!scripts/lib/supabase-migration.mjs
 **/test
 **/tests
 **/*.spec.ts

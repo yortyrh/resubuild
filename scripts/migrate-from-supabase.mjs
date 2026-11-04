@@ -14,7 +14,12 @@
  * The target schema must exist first (`pnpm db:migrate` with DATABASE_URL).
  *
  * Usage:
- *   node scripts/migrate-from-supabase.mjs [--dry-run] [--skip-storage]
+ *   node scripts/migrate-from-supabase.mjs [--dry-run] [--skip-storage] [--if-configured]
+ *
+ * --if-configured exits 0 without doing anything when SOURCE_DATABASE_URL is
+ * unset. The API image ships this script as apps/api/scripts/ so a deploy's
+ * pre-deploy step can run it after the schema migrations; it stays a no-op
+ * until the SOURCE_* variables are set on the service.
  *
  * Environment:
  *   SOURCE_DATABASE_URL        Supabase Postgres (direct or session pooler, role postgres)
@@ -25,7 +30,10 @@
  *   SOURCE_S3_SECRET_ACCESS_KEY
  *   S3_ENDPOINT, S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_FORCE_PATH_STYLE
  *                              Target storage (same variables as the API)
- *   MEDIA_BUCKET, MCP_EXPORT_BUCKET  Bucket names (default media, mcp-exports; same on both sides)
+ *   SOURCE_MEDIA_BUCKET, SOURCE_MCP_EXPORT_BUCKET
+ *                              Source bucket names (default media, mcp-exports)
+ *   MEDIA_BUCKET, MCP_EXPORT_BUCKET  Target bucket names (default: the source names).
+ *                              Both may point at one bucket: media and export keys don't overlap.
  *
  * After migrating: set MCP_KEY_PEPPER to the old SUPABASE_SERVICE_ROLE_KEY if the
  * Supabase deployment ran without MCP_KEY_PEPPER, otherwise existing MCP keys stop
@@ -49,6 +57,7 @@ import {
 const args = new Set(process.argv.slice(2));
 const DRY_RUN = args.has('--dry-run');
 const SKIP_STORAGE = args.has('--skip-storage');
+const IF_CONFIGURED = args.has('--if-configured');
 const BATCH = 500;
 
 function requireEnv(name) {
@@ -227,22 +236,24 @@ async function objectExists(s3, bucket, key) {
   }
 }
 
-async function migrateBucket(sourceS3, targetS3, bucket) {
+async function migrateBucket(sourceS3, targetS3, sourceBucket, targetBucket) {
   let listed = 0;
   let copied = 0;
   let token;
   do {
     const page = await sourceS3.send(
-      new ListObjectsV2Command({ Bucket: bucket, ContinuationToken: token }),
+      new ListObjectsV2Command({ Bucket: sourceBucket, ContinuationToken: token }),
     );
     for (const object of page.Contents ?? []) {
       if (!object.Key || object.Key.endsWith('/.emptyFolderPlaceholder')) continue;
       listed++;
-      if (DRY_RUN || (await objectExists(targetS3, bucket, object.Key))) continue;
-      const source = await sourceS3.send(new GetObjectCommand({ Bucket: bucket, Key: object.Key }));
+      if (DRY_RUN || (await objectExists(targetS3, targetBucket, object.Key))) continue;
+      const source = await sourceS3.send(
+        new GetObjectCommand({ Bucket: sourceBucket, Key: object.Key }),
+      );
       await targetS3.send(
         new PutObjectCommand({
-          Bucket: bucket,
+          Bucket: targetBucket,
           Key: object.Key,
           Body: Buffer.from(await source.Body.transformToByteArray()),
           ContentType: source.ContentType,
@@ -252,8 +263,9 @@ async function migrateBucket(sourceS3, targetS3, bucket) {
     }
     token = page.IsTruncated ? page.NextContinuationToken : undefined;
   } while (token);
-  log(`  bucket ${bucket}: ${listed} objects${DRY_RUN ? '' : `, ${copied} copied`}`);
-  return { bucket, listed, copied };
+  const label = sourceBucket === targetBucket ? sourceBucket : `${sourceBucket} → ${targetBucket}`;
+  log(`  bucket ${label}: ${listed} objects${DRY_RUN ? '' : `, ${copied} copied`}`);
+  return { bucket: label, listed, copied };
 }
 
 async function verify(target, report, userIds) {
@@ -276,6 +288,10 @@ async function verify(target, report, userIds) {
 }
 
 async function main() {
+  if (IF_CONFIGURED && !process.env.SOURCE_DATABASE_URL?.trim()) {
+    log('SOURCE_DATABASE_URL is not set; skipping the Supabase migration.');
+    return;
+  }
   const source = new pg.Client({ connectionString: requireEnv('SOURCE_DATABASE_URL') });
   const target = new pg.Client({ connectionString: requireEnv('DATABASE_URL') });
   await source.connect();
@@ -291,11 +307,15 @@ async function main() {
       log('storage:');
       const sourceS3 = s3Client('SOURCE_');
       const targetS3 = s3Client('');
-      for (const bucket of new Set([
-        process.env.MEDIA_BUCKET?.trim() || 'media',
-        process.env.MCP_EXPORT_BUCKET?.trim() || 'mcp-exports',
-      ])) {
-        await migrateBucket(sourceS3, targetS3, bucket);
+      const env = (name) => process.env[name]?.trim() || undefined;
+      const sourceMedia = env('SOURCE_MEDIA_BUCKET') ?? 'media';
+      const sourceExports = env('SOURCE_MCP_EXPORT_BUCKET') ?? 'mcp-exports';
+      const buckets = new Map([
+        [sourceMedia, env('MEDIA_BUCKET') ?? sourceMedia],
+        [sourceExports, env('MCP_EXPORT_BUCKET') ?? sourceExports],
+      ]);
+      for (const [sourceBucket, targetBucket] of buckets) {
+        await migrateBucket(sourceS3, targetS3, sourceBucket, targetBucket);
       }
     }
 

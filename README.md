@@ -237,9 +237,11 @@ curl -f https://app.resubuild.dev/
 [`scripts/migrate-from-supabase.mjs`](scripts/migrate-from-supabase.mjs) copies a Supabase project into the new setup. It keeps the same user ids, so every row keeps its owner.
 
 1. Create the target schema: `DATABASE_URL=<target> pnpm db:migrate`.
-2. Export the source and target settings (see the script header): `SOURCE_DATABASE_URL`, `SOURCE_S3_*` (Supabase Storage S3 keys from **Project Settings → Storage**), plus the target `DATABASE_URL` and `S3_*`.
+2. Export the source and target settings (see the script header): `SOURCE_DATABASE_URL`, `SOURCE_S3_*` (Supabase Storage S3 keys from **Project Settings → Storage**), plus the target `DATABASE_URL` and `S3_*`. If the target bucket names differ from Supabase's `media` and `mcp-exports` (Railway Buckets get generated names), set `MEDIA_BUCKET` / `MCP_EXPORT_BUCKET` to the target names; both may point at the same bucket.
 3. Rehearse: `pnpm migrate:from-supabase --dry-run`.
 4. Migrate: `pnpm migrate:from-supabase`. It is idempotent and safe to re-run, and it prints per-table counts at the end.
+
+**On Railway (no local access to the databases):** the API image ships the script as `apps/api/scripts/migrate-from-supabase.mjs`. Set the api service's pre-deploy command to `sh -c 'node packages/db/dist/migrate.js && node apps/api/scripts/migrate-from-supabase.mjs --if-configured'` and add the `SOURCE_*` variables to the service. Each deploy then creates the schema and copies whatever is missing. `--if-configured` makes the step a no-op once you remove `SOURCE_DATABASE_URL`. Rows already in the target are skipped, not updated, so for the final cutover start from an empty target database.
 
 What moves: `auth.users` becomes `user`. Bcrypt password hashes keep working and are upgraded to scrypt on the next sign-in. GitHub, Google and LinkedIn identities become OAuth accounts. All application tables are copied, and so are the `media` and `mcp-exports` objects.
 

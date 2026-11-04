@@ -57,6 +57,12 @@ COPY --from=builder /app/apps ./apps
 # --ignore-scripts skips prepare/validate hooks that require git
 RUN pnpm install --prod --ignore-scripts
 
+# One-off Supabase → Postgres/S3 migration. Placed under apps/api so `pg` and
+# `@aws-sdk/client-s3` resolve from the API's production dependencies. The
+# pre-deploy step runs it with --if-configured (no-op without SOURCE_DATABASE_URL).
+COPY scripts/migrate-from-supabase.mjs ./apps/api/scripts/
+COPY scripts/lib/supabase-migration.mjs ./apps/api/scripts/lib/
+
 EXPOSE 3000
 
 CMD ["node", "apps/api/dist/main"]
