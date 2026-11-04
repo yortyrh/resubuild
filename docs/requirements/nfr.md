@@ -10,7 +10,7 @@
 
 ### REQ-NFR-002 Secrets stay on the server `[nfr]`
 
-The browser bundle never contains server credentials (database, admin, encryption or provider keys). User-provided API keys (AI, scraping, MCP) are stored encrypted or hashed and are never sent back in plain text.
+The browser bundle never contains server credentials (database, object storage, mail, session-signing, encryption or provider keys) and never talks to the database or object storage directly. User-provided API keys (AI, scraping, MCP) are stored encrypted or hashed and are never sent back in plain text.
 
 ### REQ-NFR-003 Safe rendering `[nfr]`
 
@@ -26,4 +26,8 @@ User data can always be exported as standard JSON Resume (REQ-EXP-007). That exp
 
 ### REQ-NFR-006 Self-hostable `[nfr]`
 
-The whole product runs from the repository's container setup (web, API, database), configured only through environment variables. Optional integrations (social sign-in, AI, scraping, MCP) degrade gracefully when they are not configured.
+The whole product runs from the repository's container setup (web, API, database, object storage), configured only through environment variables. It depends only on standard interfaces: any PostgreSQL server, any S3-compatible object store and any SMTP server; no hosted backend service is required. Optional integrations (social sign-in, AI, scraping, MCP) degrade gracefully when they are not configured.
+
+- Local development runs every backing service in containers, including a mail catcher that shows every email the app sends.
+- Schema changes ship as versioned migrations that run before the API starts.
+- Data from a previous deployment on a hosted backend can be migrated with the same user ids, so accounts and their data stay linked.

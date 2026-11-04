@@ -112,7 +112,10 @@ describe('Better Auth integration', () => {
     ).rejects.toThrow('Current password is required');
     await expect(
       service.changePassword(authUser, `Bearer ${token}`, 'wrong-pw', 'another-pw'),
-    ).rejects.toThrow();
+    ).rejects.toThrow('Current password is incorrect');
+    await expect(
+      service.changePassword(authUser, `Bearer ${token}`, 'secret123', 'tiny'),
+    ).rejects.toThrow('Password must be at least 6 characters');
     const changed = await service.changePassword(
       authUser,
       `Bearer ${token}`,

@@ -5,8 +5,19 @@ import type { AuthUser } from './auth-user.types';
 import { type Auth, BETTER_AUTH } from './better-auth';
 import type { AuthMeResponse } from './session.types';
 
+/** User-facing copy for Better Auth error codes (docs/requirements/auth.md REQ-AUTH-004). */
+const PASSWORD_ERROR_MESSAGES: Record<string, string> = {
+  INVALID_PASSWORD: 'Current password is incorrect',
+  PASSWORD_TOO_SHORT: 'Password must be at least 6 characters',
+  PASSWORD_TOO_LONG: 'Password must be at most 128 characters',
+};
+
 function errorMessage(error: unknown, fallback: string): string {
-  const e = error as { body?: { message?: unknown }; message?: unknown };
+  const e = error as { body?: { message?: unknown; code?: unknown }; message?: unknown };
+  const code = e?.body?.code;
+  if (typeof code === 'string' && PASSWORD_ERROR_MESSAGES[code]) {
+    return PASSWORD_ERROR_MESSAGES[code];
+  }
   const message = e?.body?.message ?? e?.message;
   return typeof message === 'string' && message ? message : fallback;
 }
