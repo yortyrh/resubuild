@@ -23,6 +23,6 @@
     "vitest": "^4.1.8"
   },
   "dependencies": {
-    "@mastra/core": "^1.38.0"
+    "@mastra/core": "^1.81.0"
   }
 }

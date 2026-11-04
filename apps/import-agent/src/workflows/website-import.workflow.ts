@@ -1,5 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { createEmptyResume, sanitizeAiTypographyDeep } from '@resubuild/types';
+import { resumeDraftSchema } from '../schemas/resume-draft.schema';
 import { normalizeDatesTool } from '../tools/normalize-dates.tool';
 import { validateResumeSchemaTool } from '../tools/validate-resume-schema.tool';
 import { webLookupTool } from '../tools/web-lookup.tool';
@@ -9,6 +10,7 @@ import {
 } from '../tools/website-import-tools';
 import type { ImportJobProgress, TextImportWorkflowResult } from '../types';
 import { toAgentModelConfig } from './agent-model-config';
+import { generateJson } from './llm-json';
 import { applySocialProfileDiscovery } from './social-profile-discovery';
 
 const MAX_REPAIR_ATTEMPTS = 3;
@@ -38,14 +40,13 @@ export interface WebsiteImportWorkflowInput {
   ) => Promise<Record<string, unknown>>;
 }
 
-function parseJsonFromAgentText(text: string): Record<string, unknown> {
-  const trimmed = text.trim();
-  const jsonStart = trimmed.indexOf('{');
-  const jsonEnd = trimmed.lastIndexOf('}');
-  if (jsonStart === -1 || jsonEnd === -1) {
-    throw new Error('Agent did not return JSON Resume');
-  }
-  return JSON.parse(trimmed.slice(jsonStart, jsonEnd + 1)) as Record<string, unknown>;
+function createRepairAgent(modelId: string, apiKey: string) {
+  return new Agent({
+    id: 'website-import-repair',
+    name: 'website-import-repair',
+    instructions: REPAIR_INSTRUCTIONS,
+    model: toAgentModelConfig(modelId, apiKey),
+  });
 }
 
 async function generateWebsiteDraft(
@@ -64,15 +65,19 @@ async function generateWebsiteDraft(
     tools,
   });
 
-  const response = await agent.generate(
+  return generateJson(
+    agent,
     `Import the CV/resume from this URL into JSON Resume JSON:\n${input.sourceUrl}\n\n` +
       'Start by loading the page with your page tool, then build complete JSON Resume data.',
     {
-      maxSteps: MAX_AGENT_STEPS,
+      schema: resumeDraftSchema,
+      generateOptions: { maxSteps: MAX_AGENT_STEPS },
+      // Separate structuring pass after the tool loop (tools + response format
+      // in one call is not supported by every provider).
+      structuredOutputOptions: { model: toAgentModelConfig(input.modelId, input.apiKey) },
+      fixAgent: createRepairAgent(input.modelId, input.apiKey),
     },
   );
-
-  return parseJsonFromAgentText(response.text);
 }
 
 async function generateRepair(
@@ -87,16 +92,7 @@ async function generateRepair(
     return repairDraft(draft, errors);
   }
 
-  const agent = new Agent({
-    id: 'website-import-repair',
-    name: 'website-import-repair',
-    instructions: REPAIR_INSTRUCTIONS,
-    model: toAgentModelConfig(modelId, apiKey),
-  });
-
-  const response = await agent.generate(prompt);
-
-  return parseJsonFromAgentText(response.text);
+  return generateJson(createRepairAgent(modelId, apiKey), prompt, { schema: resumeDraftSchema });
 }
 
 export async function runWebsiteImportWorkflow(

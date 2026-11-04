@@ -12,6 +12,7 @@ import type {
 import { extractPdfTextTool } from '../tools/extract-pdf-text.tool';
 import { fetchHtmlTool } from '../tools/fetch-html.tool';
 import { toAgentModelConfig } from './agent-model-config';
+import { generateJson } from './llm-json';
 
 function sanitizeJobSummary(summary: JobSummary): JobSummary {
   return {
@@ -71,16 +72,7 @@ async function generateJsonFromPrompt(
     model: toAgentModelConfig(modelId, apiKey),
   });
 
-  const response = await agent.generate(prompt);
-
-  const text = response.text.trim();
-  const jsonStart = text.indexOf('{');
-  const jsonEnd = text.lastIndexOf('}');
-  if (jsonStart === -1 || jsonEnd === -1) {
-    throw new Error('LLM did not return JSON');
-  }
-
-  return JSON.parse(text.slice(jsonStart, jsonEnd + 1)) as Record<string, unknown>;
+  return generateJson(agent, prompt);
 }
 
 export async function normalizeJobPostingText(

@@ -1,5 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { createEmptyResume, sanitizeAiTypographyDeep } from '@resubuild/types';
+import { resumeDraftSchema } from '../schemas/resume-draft.schema';
 import { extractPdfTextTool } from '../tools/extract-pdf-text.tool';
 import { normalizeDatesTool } from '../tools/normalize-dates.tool';
 import { transcribeImageResumeTool } from '../tools/transcribe-image-resume.tool';
@@ -14,6 +15,7 @@ import type {
   TextImportWorkflowResult,
 } from '../types';
 import { toAgentModelConfig } from './agent-model-config';
+import { generateJson } from './llm-json';
 import { applySocialProfileDiscovery } from './social-profile-discovery';
 
 const MAX_REPAIR_ATTEMPTS = 3;
@@ -48,16 +50,7 @@ async function generateJsonFromPrompt(
   }
 
   const agent = createAgent(modelId, apiKey, instructions);
-  const response = await agent.generate(prompt);
-
-  const text = response.text.trim();
-  const jsonStart = text.indexOf('{');
-  const jsonEnd = text.lastIndexOf('}');
-  if (jsonStart === -1 || jsonEnd === -1) {
-    throw new Error('LLM did not return JSON');
-  }
-
-  return JSON.parse(text.slice(jsonStart, jsonEnd + 1)) as Record<string, unknown>;
+  return generateJson(agent, prompt, { schema: resumeDraftSchema });
 }
 
 export async function runTextImportWorkflow(

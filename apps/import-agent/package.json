@@ -17,13 +17,14 @@
     "test": "vitest run --coverage"
   },
   "dependencies": {
-    "@mastra/core": "^1.38.0",
+    "@mastra/core": "^1.81.0",
     "@napi-rs/canvas": "^1.0.0",
     "@resubuild/import-models": "workspace:*",
     "@resubuild/schemas": "workspace:*",
     "@resubuild/types": "workspace:*",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
+    "jsonrepair": "^3.15.0",
     "mammoth": "^1.12.0",
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^6.0.227",
