@@ -59,6 +59,7 @@ async function generateWebsiteDraft(
   }
 
   const tools = buildWebsiteImportTools(input.toolsConfig);
+  let drafting = false;
   const agent = new Agent({
     id: 'website-import-agent',
     name: 'website-import-agent',
@@ -73,7 +74,18 @@ async function generateWebsiteDraft(
       'Start by loading the page with your page tool, then build complete JSON Resume data.',
     {
       schema: resumeDraftSchema,
-      generateOptions: { maxSteps: MAX_AGENT_STEPS, ...draftModelSettings(input.maxOutputTokens) },
+      generateOptions: {
+        maxSteps: MAX_AGENT_STEPS,
+        ...draftModelSettings(input.maxOutputTokens),
+        // The first tool results mean the page content is in: from here on
+        // the agent is drafting the résumé, not extracting it.
+        onStepFinish: (step: { toolResults?: unknown[] }) => {
+          if (!drafting && step.toolResults && step.toolResults.length > 0) {
+            drafting = true;
+            input.onProgress?.('drafting');
+          }
+        },
+      },
       // Separate structuring pass after the tool loop (tools + response format
       // in one call is not supported by every provider).
       structuredOutputOptions: { model: toAgentModelConfig(input.modelId, input.apiKey) },

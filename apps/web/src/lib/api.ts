@@ -409,7 +409,10 @@ export function saveImportLlmConfig(payload: {
 
 export interface PdfImportJobStatus {
   status: 'queued' | 'running' | 'succeeded' | 'failed';
+  /** Current step while queued/running; absent once the job has failed. */
   progress?: string;
+  /** Step that was running when the job failed. */
+  failedStep?: string;
   cvId?: string;
   previewData?: Record<string, unknown>;
   discoveredProfilesCount?: number;

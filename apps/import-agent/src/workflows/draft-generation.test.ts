@@ -87,4 +87,27 @@ describe('draft generation against the model', () => {
     });
     expect(options.structuredOutput.model).toBeDefined();
   });
+
+  it('website import reports drafting once the page content is loaded', async () => {
+    generate.mockImplementation(
+      async (_prompt: string, options: { onStepFinish?: (step: unknown) => void }) => {
+        options.onStepFinish?.({ toolResults: [] });
+        options.onStepFinish?.({ toolResults: [{ toolName: 'fetchHtml' }] });
+        options.onStepFinish?.({ toolResults: [{ toolName: 'webLookup' }] });
+        return { text: '', object: { basics: { name: 'Jo' } } };
+      },
+    );
+    const steps: string[] = [];
+
+    await runWebsiteImportWorkflow({
+      sourceUrl: 'https://jo.example.com',
+      modelId: 'openai/gpt-4o-mini',
+      apiKey: 'k',
+      toolsConfig: {},
+      onProgress: (step) => steps.push(step),
+    });
+
+    expect(steps.slice(0, 3)).toEqual(['extracting', 'drafting', 'verifying']);
+    expect(steps.filter((s) => s === 'drafting')).toHaveLength(1);
+  });
 });

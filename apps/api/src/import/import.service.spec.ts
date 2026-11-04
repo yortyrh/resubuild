@@ -228,7 +228,10 @@ describe('ImportService', () => {
       apiKey: 'sk-test',
       accountId: 'acc-1',
     });
-    jest.mocked(runPdfImportWorkflow).mockResolvedValue({ errors: ['/basics: invalid'] });
+    jest.mocked(runPdfImportWorkflow).mockImplementation(async ({ onProgress }) => {
+      onProgress?.('repairing');
+      return { errors: ['/basics: invalid'] };
+    });
 
     const result = await service.startPdfImport(user, {
       mimetype: 'application/pdf',
@@ -237,10 +240,37 @@ describe('ImportService', () => {
     } as Express.Multer.File);
 
     await new Promise((resolve) => setImmediate(resolve));
-    expect(service.getJob(user, result.jobId)).toMatchObject({
+    const job = service.getJob(user, result.jobId);
+    expect(job).toMatchObject({
       status: 'failed',
+      failedStep: 'repairing',
       errors: ['/basics: invalid'],
     });
+    // A failed job must not keep reporting an in-progress step.
+    expect(job.progress).toBeUndefined();
+  });
+
+  it('records the step that threw when the workflow fails', async () => {
+    aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+      modelId: 'openai/gpt-4o-mini',
+      apiKey: 'sk-test',
+      accountId: 'acc-1',
+    });
+    jest.mocked(runPdfImportWorkflow).mockImplementation(async ({ onProgress }) => {
+      onProgress?.('drafting');
+      throw new Error("Expected ',' or ']' after array element in JSON at position 9346");
+    });
+
+    const result = await service.startPdfImport(user, {
+      mimetype: 'application/pdf',
+      size: 100,
+      buffer: Buffer.from('%PDF'),
+    } as Express.Multer.File);
+
+    await new Promise((resolve) => setImmediate(resolve));
+    const job = service.getJob(user, result.jobId);
+    expect(job).toMatchObject({ status: 'failed', failedStep: 'drafting' });
+    expect(job.progress).toBeUndefined();
   });
 
   it('marks job failed with LLM settings hint on auth-like errors', async () => {

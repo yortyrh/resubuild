@@ -5,7 +5,10 @@ export interface ImportJobRecord {
   id: string;
   userId: string;
   status: ImportJobStatus;
+  /** Current pipeline step while `queued`/`running`; cleared once the job fails. */
   progress?: ImportJobProgress;
+  /** Step that was running when the job failed (for diagnostics). */
+  failedStep?: ImportJobProgress;
   cvId?: string;
   /** Normalized JSON Resume draft for client preview (website import, no CV created yet). */
   previewData?: Record<string, unknown>;
@@ -55,6 +58,27 @@ export class ImportJobStore {
       return null;
     }
     const next = { ...job, ...patch, updatedAt: Date.now() };
+    this.jobs.set(jobId, next);
+    return next;
+  }
+
+  /**
+   * Marks the job failed. The running step moves from `progress` to
+   * `failedStep`, so a failed job no longer reports itself as in progress.
+   */
+  fail(jobId: string, errors: string[]): ImportJobRecord | null {
+    const job = this.jobs.get(jobId);
+    if (!job) {
+      return null;
+    }
+    const { progress, ...rest } = job;
+    const next: ImportJobRecord = {
+      ...rest,
+      status: 'failed',
+      errors,
+      ...(progress ? { failedStep: progress } : {}),
+      updatedAt: Date.now(),
+    };
     this.jobs.set(jobId, next);
     return next;
   }

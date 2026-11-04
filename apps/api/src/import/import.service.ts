@@ -208,6 +208,7 @@ export class ImportService {
     return {
       status: job.status,
       progress: job.progress,
+      failedStep: job.failedStep,
       cvId: job.cvId,
       previewData: job.previewData,
       discoveredProfilesCount: job.discoveredProfilesCount,
@@ -461,7 +462,7 @@ export class ImportService {
   ) {
     if (result.errors.length > 0 || !result.draft) {
       const errors = result.errors.length ? result.errors : ['Import failed before preview'];
-      this.jobStore.update(jobId, { status: 'failed', errors });
+      this.jobStore.fail(jobId, errors);
       return;
     }
 
@@ -474,7 +475,7 @@ export class ImportService {
         err instanceof InvalidImportedResumeError
           ? err.message
           : 'Imported page did not produce valid JSON Resume data';
-      this.jobStore.update(jobId, { status: 'failed', errors: [message] });
+      this.jobStore.fail(jobId, [message]);
       return;
     }
 
@@ -521,7 +522,7 @@ export class ImportService {
     const errors = /auth|api key|401|403/i.test(message)
       ? ['Import failed. Update your AI agent settings and verify the API key.']
       : [message];
-    this.jobStore.update(jobId, { status: 'failed', errors });
+    this.jobStore.fail(jobId, errors);
   }
 
   private isDocxFile(file: Express.Multer.File): boolean {

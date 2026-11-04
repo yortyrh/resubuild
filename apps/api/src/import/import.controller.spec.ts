@@ -119,6 +119,7 @@ describe('ImportController', () => {
     service.getJob.mockReturnValue({
       status: 'running',
       progress: 'drafting',
+      failedStep: undefined,
       cvId: undefined,
       previewData: undefined,
       discoveredProfilesCount: undefined,
@@ -139,6 +140,7 @@ describe('ImportController', () => {
     service.getJob.mockReturnValue({
       status: 'succeeded',
       progress: 'finalizing',
+      failedStep: undefined,
       cvId: undefined,
       previewData: { basics: { name: 'Jane Doe' } },
       discoveredProfilesCount: 2,

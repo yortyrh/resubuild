@@ -35,6 +35,8 @@ External JSON Resume documents are normalized before creation: ids are stripped 
 AI imports extract the text (or transcribe an image with a vision-capable model), draft a JSON Resume, then run a verify-and-repair loop: schema validation, date normalization, optional web lookup.
 
 - The loop has a bounded number of retries (default 3). If it is exceeded, the job fails with all collected errors.
+- Job status reports the current step (extracting, drafting, verifying, repairing, …) while the job runs. A failed job no longer reports an in-progress step; it reports the step that was running when it failed.
+- Long résumés must not fail because the model's reply was cut off or slightly malformed: drafts request structured output and the model's full output budget, and malformed JSON is repaired before the job gives up.
 - The pipeline uses the user's own model and API key, never a deployment-wide default.
 
 ### REQ-IMP-007 Social profile discovery

@@ -30,5 +30,27 @@ describe('ImportJobStore', () => {
   it('returns null when updating unknown jobs', () => {
     const store = new ImportJobStore();
     expect(store.update('missing', { status: 'failed' })).toBeNull();
+    expect(store.fail('missing', ['x'])).toBeNull();
+  });
+
+  it('fail() records the running step as failedStep and clears progress', () => {
+    const store = new ImportJobStore();
+    const job = store.create('user-1');
+    store.update(job.id, { status: 'running', progress: 'drafting' });
+
+    const failed = store.fail(job.id, ['LLM returned malformed JSON']);
+
+    expect(failed).toMatchObject({
+      status: 'failed',
+      failedStep: 'drafting',
+      errors: ['LLM returned malformed JSON'],
+    });
+    expect(failed).not.toHaveProperty('progress');
+  });
+
+  it('fail() before any step leaves failedStep unset', () => {
+    const store = new ImportJobStore();
+    const job = store.create('user-1');
+    expect(store.fail(job.id, ['boom'])).not.toHaveProperty('failedStep');
   });
 });
