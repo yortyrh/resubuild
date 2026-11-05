@@ -66,7 +66,6 @@ export function ComposeHero() {
             <div className="space-y-1.5">
               {[95, 80, 88, 60, 92, 74, 85, 50].map((width, index) => (
                 <div
-                  // biome-ignore lint/suspicious/noArrayIndexKey: static decorative lines
                   key={index}
                   className="h-1.5 rounded-sm bg-[hsl(var(--foreground)/0.18)]"
                   style={{ width: `${width}%` }}
