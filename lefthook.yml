@@ -13,23 +13,14 @@ pre-commit:
 
 pre-push:
   commands:
-    env-schema:check:
-      # Fast drift gate: catches new KEY=value lines in
-      # apps/{api,web}/.env.example that are not registered in
-      # scripts/lib/env-prod-schema.mjs. Runs in <1s; fails fast before
-      # the full verify pipeline (~5min) so the named error points at
-      # the offending key.
-      # {all_files} opts out of lefthook's "no matching push files" skip
-      # so the check always runs.
-      run: ': {all_files}; pnpm env-schema:check'
-    verify:
-      # Lefthook skips pre-push commands when it finds no push-scoped files.
-      # {all_files} opts out of that skip so the full verify suite always runs.
-      # No Node version manager needed: pnpm downloads the Node pinned in
-      # root package.json `devEngines.runtime` and runs every script with it,
-      # whatever Node is on PATH.
-      env:
-        NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: anon-ci-placeholder-key
-        NEXT_PUBLIC_API_URL: http://localhost:3001
-      run: ': {all_files}; pnpm verify'
+    verified-commit:
+      # `git push` connects to the remote before this hook runs, so running
+      # `pnpm verify` here (minutes) left the SSH connection idle until GitHub
+      # dropped it. `pnpm push` (scripts/push.mjs) runs env-schema:check and
+      # verify first, records the verified HEAD in .git/, then pushes; this
+      # check only compares the pushed commits with that record (milliseconds).
+      # use_stdin passes git's "<local ref> <local sha> ..." lines through.
+      # {all_files} opts out of lefthook's "no matching push files" skip so the
+      # check always runs.
+      use_stdin: true
+      run: ': {all_files}; node scripts/check-push-stamp.mjs'

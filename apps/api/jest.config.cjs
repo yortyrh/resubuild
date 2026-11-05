@@ -19,8 +19,12 @@ module.exports = {
   // that `ts-jest` does not handle in `.mjs` mode; `babel-jest` will
   // rewrite the `export` statement to CJS for the Jest CJS runtime.
   transform: {
-    // ts-jest compiles with tsconfig.jest.json (CommonJS) — see that file.
-    '^.+\\.[tj]sx?$': ['ts-jest', { tsconfig: '<rootDir>/../tsconfig.jest.json' }],
+    // ts-jest compiles with tsconfig.jest.json (CommonJS, transpile-only) —
+    // see that file and test/jest/ts-jest-coverage-friendly.transform.cjs.
+    '^.+\\.[tj]sx?$': [
+      '<rootDir>/../test/jest/ts-jest-coverage-friendly.transform.cjs',
+      { tsconfig: '<rootDir>/../tsconfig.jest.json' },
+    ],
     // ESM-only packages (.mjs) are rewritten to CommonJS for Jest's CJS runtime.
     '^.+\\.mjs$': [
       'babel-jest',

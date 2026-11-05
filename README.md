@@ -259,7 +259,7 @@ From the repo root:
 - **`pnpm test:e2e`** — API integration tests in throw-away containers (needs Docker)
 - **`pnpm local:credentials`** — show local dev and E2E login details for this machine
 
-Git hooks (Lefthook): **pre-commit** (Biome + Prettier on staged files), **pre-push** (`pnpm verify`).
+Git hooks (Lefthook): **pre-commit** (Biome + Prettier on staged files), **pre-push** (accepts only commits verified by `pnpm push`). Push with `pnpm push [git push args...]`: it runs `pnpm verify` before git connects to the remote, then pushes.
 
 ### Toolchain memory budget
 
