@@ -5,6 +5,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import {
+  createWebProviderPool,
   extractDocxTextTool,
   runImageImportWorkflow,
   runPdfImportWorkflow,
@@ -21,6 +22,10 @@ import { ImportService } from './import.service';
 const testCatalog = catalog as ImportModelCatalog;
 
 jest.mock('@resubuild/import-agent', () => ({
+  createWebProviderPool: jest.fn((keys: Record<string, string | undefined>) => ({
+    keys,
+    hasSearch: Boolean(keys.tavily || keys.brave || keys.firecrawl),
+  })),
   runPdfImportWorkflow: jest.fn(),
   runTextImportWorkflow: jest.fn(),
   runWebsiteImportWorkflow: jest.fn(),
@@ -66,7 +71,6 @@ describe('ImportService', () => {
   let aiAgentCredentialService: { getActiveCredentials: jest.Mock };
   let catalogService: Pick<ImportModelsCatalogService, 'getCatalog'>;
   let schemaValidator: { validate: jest.Mock };
-  let webScrapeService: { getDecryptedConfig: jest.Mock };
 
   beforeEach(() => {
     jest
@@ -78,7 +82,6 @@ describe('ImportService', () => {
     aiAgentCredentialService = { getActiveCredentials: jest.fn() };
     catalogService = { getCatalog: () => testCatalog };
     schemaValidator = { validate: jest.fn() };
-    webScrapeService = { getDecryptedConfig: jest.fn().mockResolvedValue(null) };
 
     service = new ImportService(
       {
@@ -91,7 +94,6 @@ describe('ImportService', () => {
       aiAgentCredentialService as never,
       catalogService as never,
       schemaValidator as never,
-      webScrapeService as never,
     );
   });
 
@@ -162,6 +164,51 @@ describe('ImportService', () => {
     });
   });
 
+  it('passes the Firecrawl key for hosted OCR and the shared web providers to PDF import', async () => {
+    service = new ImportService(
+      {
+        get: jest.fn((key: string) => (key === 'FIRECRAWL_API_KEY' ? 'fc-test' : undefined)),
+      } as never,
+      aiAgentCredentialService as never,
+      catalogService as never,
+      schemaValidator as never,
+    );
+    aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
+      modelId: 'openai/gpt-4o-mini',
+      apiKey: 'sk-test',
+      accountId: 'acc-1',
+    });
+    jest
+      .mocked(runPdfImportWorkflow)
+      .mockResolvedValue({ draft: { basics: { name: 'Jane Doe' } }, errors: [] });
+    schemaValidator.validate.mockReturnValue(undefined);
+
+    await service.startPdfImport(user, {
+      mimetype: 'application/pdf',
+      size: 100,
+      buffer: Buffer.from('%PDF'),
+    } as Express.Multer.File);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(runPdfImportWorkflow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        firecrawlApiKey: 'fc-test',
+        webProviders: expect.objectContaining({
+          keys: { tavily: undefined, firecrawl: 'fc-test', brave: undefined },
+        }),
+      }),
+    );
+  });
+
+  it('builds one web provider pool per service and logs through Nest', () => {
+    const calls = jest.mocked(createWebProviderPool).mock.calls;
+    const [, options] = calls[calls.length - 1] ?? [];
+    expect(() => {
+      options?.logger?.log?.('web search served by brave');
+      options?.logger?.warn?.('web search: brave on cooldown');
+    }).not.toThrow();
+  });
+
   it('uses default max bytes when PDF_IMPORT_MAX_BYTES is unset', () => {
     expect(service.getMaxBytes()).toBe(5 * 1024 * 1024);
   });
@@ -177,7 +224,6 @@ describe('ImportService', () => {
       aiAgentCredentialService as never,
       catalogService as never,
       schemaValidator as never,
-      webScrapeService as never,
     );
 
     expect(service.getMaxBytes()).toBe(2048);
@@ -194,7 +240,6 @@ describe('ImportService', () => {
       aiAgentCredentialService as never,
       catalogService as never,
       schemaValidator as never,
-      webScrapeService as never,
     );
 
     await expect(
@@ -540,12 +585,19 @@ describe('ImportService', () => {
       );
     });
 
-    it('passes Tavily search key to website import workflow', async () => {
+    it('passes the deployment web providers to website import workflow', async () => {
       mockFetchHtml('<html><body>CV</body></html>');
-      webScrapeService.getDecryptedConfig.mockResolvedValue({
-        provider: 'tavily',
-        apiKey: 'tvly-test',
-      });
+      service = new ImportService(
+        {
+          get: jest.fn(
+            (key: string) =>
+              ({ TAVILY_API_KEY: 'tvly-test', BRAVE_SEARCH_API_KEY: ' brave-test ' })[key],
+          ),
+        } as never,
+        aiAgentCredentialService as never,
+        catalogService as never,
+        schemaValidator as never,
+      );
       aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
         modelId: 'openai/gpt-4o-mini',
         apiKey: 'sk-test',
@@ -555,7 +607,9 @@ describe('ImportService', () => {
         .mocked(runWebsiteImportWorkflow)
         .mockImplementation(async ({ onProgress, toolsConfig }) => {
           onProgress?.('extracting');
-          expect(toolsConfig?.searchApiKey).toBe('tvly-test');
+          expect(toolsConfig?.webProviders).toMatchObject({
+            keys: { tavily: 'tvly-test', brave: 'brave-test', firecrawl: undefined },
+          });
           return { draft: { basics: { name: 'HTML User' } }, errors: [] };
         });
 
@@ -708,7 +762,6 @@ describe('ImportService', () => {
         aiAgentCredentialService as never,
         catalogService as never,
         schemaValidator as never,
-        webScrapeService as never,
       );
 
       await expect(service.importFromUrl(user, 'https://example.com/data')).rejects.toBeInstanceOf(
@@ -781,7 +834,6 @@ describe('ImportService', () => {
         aiAgentCredentialService as never,
         catalogService as never,
         schemaValidator as never,
-        webScrapeService as never,
       );
 
       await expect(
@@ -848,7 +900,6 @@ describe('ImportService', () => {
         aiAgentCredentialService as never,
         catalogService as never,
         schemaValidator as never,
-        webScrapeService as never,
       );
 
       await expect(
@@ -878,11 +929,17 @@ describe('ImportService', () => {
       expect(service.getJob(user, result.jobId).errors).toEqual(['markdown parse failed']);
     });
 
-    it('passes Tavily search key to markdown import workflow', async () => {
-      webScrapeService.getDecryptedConfig.mockResolvedValue({
-        provider: 'tavily',
-        apiKey: 'tvly-test',
-      });
+    it('passes the deployment web providers to markdown import workflow', async () => {
+      service = new ImportService(
+        {
+          get: jest.fn((key: string) =>
+            key === 'BRAVE_SEARCH_API_KEY' ? 'brave-test' : undefined,
+          ),
+        } as never,
+        aiAgentCredentialService as never,
+        catalogService as never,
+        schemaValidator as never,
+      );
       aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
         modelId: 'openai/gpt-4o-mini',
         apiKey: 'sk-test',
@@ -902,7 +959,11 @@ describe('ImportService', () => {
 
       await new Promise((resolve) => setImmediate(resolve));
       expect(runTextImportWorkflow).toHaveBeenCalledWith(
-        expect.objectContaining({ searchApiKey: 'tvly-test' }),
+        expect.objectContaining({
+          webProviders: expect.objectContaining({
+            keys: expect.objectContaining({ brave: 'brave-test' }),
+          }),
+        }),
       );
       expect(service.getJob(user, result.jobId).status).toBe('succeeded');
     });
@@ -946,7 +1007,6 @@ describe('ImportService', () => {
         aiAgentCredentialService as never,
         catalogService as never,
         schemaValidator as never,
-        webScrapeService as never,
       );
 
       await expect(
@@ -974,7 +1034,6 @@ describe('ImportService', () => {
         aiAgentCredentialService as never,
         catalogService as never,
         schemaValidator as never,
-        webScrapeService as never,
       );
 
       await expect(
@@ -1088,7 +1147,6 @@ describe('ImportService', () => {
         aiAgentCredentialService as never,
         catalogService as never,
         schemaValidator as never,
-        webScrapeService as never,
       );
 
       await expect(
@@ -1117,7 +1175,6 @@ describe('ImportService', () => {
         aiAgentCredentialService as never,
         catalogService as never,
         schemaValidator as never,
-        webScrapeService as never,
       );
 
       await expect(

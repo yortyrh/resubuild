@@ -1,6 +1,7 @@
 import { createEmptyResume } from '@resubuild/types';
 import { describe, expect, it, vi } from 'vitest';
 import { discoverSocialProfilesTool } from './tools/discover-social-profiles.tool';
+import { createWebProviderPool } from './web-providers/web-provider-pool';
 import { runTextImportWorkflow } from './workflows/pdf-import.workflow';
 
 vi.mock('./tools/discover-social-profiles.tool', () => ({
@@ -70,14 +71,16 @@ describe('runTextImportWorkflow', () => {
       sourceText: 'Jane Doe\nSoftware Engineer at Acme Corp',
       modelId: 'openai/gpt-4o-mini',
       apiKey: 'test-key',
-      searchApiKey: 'search-key',
+      webProviders: createWebProviderPool({ brave: 'search-key' }),
       generateDraft: async () => ({
         ...createEmptyResume(),
         basics: { name: 'Jane Doe', profiles: [] },
       }),
     });
 
-    expect(discoverSocialProfilesTool).toHaveBeenCalled();
+    expect(discoverSocialProfilesTool).toHaveBeenCalledWith(
+      expect.objectContaining({ search: expect.any(Function) }),
+    );
     expect(result.discoveredProfilesCount).toBe(1);
     expect(result.draft?.basics).toMatchObject({
       profiles: [

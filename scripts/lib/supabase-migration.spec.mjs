@@ -95,6 +95,6 @@ describe('APP_TABLES', () => {
     expect(new Set(names).size).toBe(names.length);
     expect(names.indexOf('cv')).toBeLessThan(names.indexOf('cv_work'));
     expect(names.indexOf('ai_agent_account')).toBeLessThan(names.indexOf('ai_agent_preference'));
-    expect(names).toHaveLength(22);
+    expect(names).toHaveLength(21);
   });
 });

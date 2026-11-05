@@ -27,8 +27,3 @@ export const aiAgentKeys = {
 export const importKeys = {
   pdfJob: (jobId: string) => ['import', 'job', jobId] as const,
 };
-
-export const webScrapeKeys = {
-  all: ['web-scrape'] as const,
-  config: () => [...webScrapeKeys.all, 'config'] as const,
-};

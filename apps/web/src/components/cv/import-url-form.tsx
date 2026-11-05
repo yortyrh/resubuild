@@ -14,7 +14,6 @@ import { Label } from '@/components/ui/label';
 import { importCvFromUrl } from '@/lib/api';
 import type { ImportValidationSource } from '@/lib/import-validation-source';
 import { useAiAgentActive, usePdfImportJob } from '@/lib/queries/ai-agent-queries';
-import { useWebScrapeConfig } from '@/lib/queries/web-scrape-queries';
 import { useImportJsonPreview } from '@/lib/use-import-json-preview';
 import { useImportPreviewToasts } from '@/lib/use-import-preview-toasts';
 
@@ -42,7 +41,6 @@ function importUrlKindLabel(kind: ImportUrlKind): string {
 export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: ImportUrlFormProps) {
   const gravatarOptionId = useId();
   const { data: activeStatus } = useAiAgentActive();
-  const { data: scrapeStatus } = useWebScrapeConfig();
   const aiConfigured = activeStatus?.configured ?? false;
 
   const [urlInput, setUrlInput] = useState('');
@@ -192,10 +190,6 @@ export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: Imp
     await handleUrlFetch();
   };
 
-  const scrapeHint = scrapeStatus?.configured
-    ? `Page extraction: ${scrapeStatus.provider}`
-    : 'Page extraction: raw HTML (configure Firecrawl or Tavily in settings)';
-
   const settingsReturnTo = `${IMPORT_URL_RETURN_PATH}?returnLabel=${encodeURIComponent('Back to URL import')}`;
 
   return (
@@ -240,7 +234,6 @@ export function ImportUrlForm({ onImport, onCancel, pollIntervalMs = 2000 }: Imp
 
         <p className="text-muted-foreground text-sm">
           JSON Resume endpoints import immediately; HTML pages are converted by the AI agent.{' '}
-          {scrapeHint}.{' '}
           <Link
             href={`/dashboard/settings/ai-agent?returnTo=${encodeURIComponent(settingsReturnTo)}`}
             className="underline"

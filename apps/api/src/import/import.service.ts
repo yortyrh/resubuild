@@ -2,17 +2,19 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  createWebProviderPool,
   extractDocxTextTool,
   type ImportJobProgress,
   runImageImportWorkflow,
   runPdfImportWorkflow,
   runTextImportWorkflow,
   runWebsiteImportWorkflow,
-  type WebsiteImportToolsConfig,
+  type WebProviderPool,
 } from '@resubuild/import-agent';
 import { getModelMaxOutputTokens } from '@resubuild/import-models';
 import { InvalidImportedResumeError, prepareImportedResume } from '@resubuild/types';
@@ -20,7 +22,6 @@ import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.servic
 import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
-import { WebScrapeService } from '../web-scrape/web-scrape.service';
 import { ImportJobStore } from './import-job.store';
 import { resolveImportUrl, validateImportUrl } from './import-url.util';
 
@@ -42,14 +43,37 @@ export const DOCX_IMPORT_MIME_TYPES = new Set([
 @Injectable()
 export class ImportService {
   private readonly jobStore = new ImportJobStore();
+  private readonly logger = new Logger(ImportService.name);
+  /**
+   * Deployment-wide web search / page extraction providers, shared by every
+   * user. One instance per process so the round-robin rotation and the
+   * out-of-credit cooldowns span all jobs.
+   */
+  private readonly webProviders: WebProviderPool;
+  private readonly firecrawlApiKey: string | undefined;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly aiAgentCredentialService: AiAgentCredentialService,
     private readonly catalogService: ImportModelsCatalogService,
     private readonly schemaValidator: ResumeSchemaValidator,
-    private readonly webScrapeService: WebScrapeService,
-  ) {}
+  ) {
+    const key = (name: string) => this.configService.get<string>(name)?.trim() || undefined;
+    this.firecrawlApiKey = key('FIRECRAWL_API_KEY');
+    this.webProviders = createWebProviderPool(
+      {
+        tavily: key('TAVILY_API_KEY'),
+        firecrawl: this.firecrawlApiKey,
+        brave: key('BRAVE_SEARCH_API_KEY'),
+      },
+      {
+        logger: {
+          log: (message) => this.logger.debug(message),
+          warn: (message) => this.logger.warn(message),
+        },
+      },
+    );
+  }
 
   isEnabled(): boolean {
     return this.configService.get<string>('PDF_IMPORT_ENABLED', 'true') !== 'false';
@@ -97,7 +121,7 @@ export class ImportService {
 
     const job = this.jobStore.create(user.id);
     setImmediate(() => {
-      void this.runPdfJob(user, job.id, file.buffer, llmConfig.modelId, llmConfig.apiKey);
+      void this.runPdfJob(job.id, file.buffer, llmConfig.modelId, llmConfig.apiKey);
     });
 
     return { jobId: job.id };
@@ -127,7 +151,7 @@ export class ImportService {
 
     const job = this.jobStore.create(user.id);
     setImmediate(() => {
-      void this.runTextJob(user, job.id, sourceText, llmConfig.modelId, llmConfig.apiKey);
+      void this.runTextJob(job.id, sourceText, llmConfig.modelId, llmConfig.apiKey);
     });
 
     return { jobId: job.id };
@@ -153,7 +177,6 @@ export class ImportService {
     const job = this.jobStore.create(user.id);
     setImmediate(() => {
       void this.runImageJob(
-        user,
         job.id,
         file.buffer,
         file.mimetype,
@@ -193,7 +216,7 @@ export class ImportService {
 
     const job = this.jobStore.create(user.id);
     setImmediate(() => {
-      void this.runTextJob(user, job.id, sourceText, llmConfig.modelId, llmConfig.apiKey);
+      void this.runTextJob(job.id, sourceText, llmConfig.modelId, llmConfig.apiKey);
     });
 
     return { jobId: job.id };
@@ -282,10 +305,9 @@ export class ImportService {
       );
     }
 
-    const scrapeConfig = await this.webScrapeService.getDecryptedConfig(user);
     const job = this.jobStore.create(user.id);
     setImmediate(() => {
-      void this.runWebsiteJob(user, job.id, validated.toString(), llmConfig, scrapeConfig);
+      void this.runWebsiteJob(job.id, validated.toString(), llmConfig);
     });
 
     return { kind: 'job', jobId: job.id };
@@ -309,17 +331,6 @@ export class ImportService {
     }
 
     return prepared;
-  }
-
-  /** Tavily search/extract key from per-user web scrape settings (no server env fallback). */
-  private async resolveUserSearchApiKey(
-    user: AuthenticatedRequest['user'],
-  ): Promise<string | undefined> {
-    const scrapeConfig = await this.webScrapeService.getDecryptedConfig(user);
-    if (scrapeConfig?.provider === 'tavily') {
-      return scrapeConfig.apiKey;
-    }
-    return undefined;
   }
 
   private resolveApiKeyEnvVar(modelId: string): string | null {
@@ -359,23 +370,17 @@ export class ImportService {
     }
   }
 
-  private async runPdfJob(
-    user: AuthenticatedRequest['user'],
-    jobId: string,
-    pdfBuffer: Buffer,
-    modelId: string,
-    apiKey: string,
-  ) {
+  private async runPdfJob(jobId: string, pdfBuffer: Buffer, modelId: string, apiKey: string) {
     this.jobStore.update(jobId, { status: 'running', progress: 'extracting' });
 
     try {
-      const searchApiKey = await this.resolveUserSearchApiKey(user);
       const result = await this.withScopedApiKey(modelId, apiKey, async () => {
         return runPdfImportWorkflow({
           pdfBuffer,
           modelId,
           apiKey,
-          searchApiKey,
+          firecrawlApiKey: this.firecrawlApiKey,
+          webProviders: this.webProviders,
           maxOutputTokens: this.resolveMaxOutputTokens(modelId),
           onProgress: (progress: ImportJobProgress) => {
             this.jobStore.update(jobId, { progress });
@@ -390,7 +395,6 @@ export class ImportService {
   }
 
   private async runImageJob(
-    user: AuthenticatedRequest['user'],
     jobId: string,
     imageBuffer: Buffer,
     imageMimeType: string,
@@ -400,14 +404,13 @@ export class ImportService {
     this.jobStore.update(jobId, { status: 'running', progress: 'extracting' });
 
     try {
-      const searchApiKey = await this.resolveUserSearchApiKey(user);
       const result = await this.withScopedApiKey(modelId, apiKey, async () => {
         return runImageImportWorkflow({
           imageBuffer,
           imageMimeType,
           modelId,
           apiKey,
-          searchApiKey,
+          webProviders: this.webProviders,
           maxOutputTokens: this.resolveMaxOutputTokens(modelId),
           onProgress: (progress: ImportJobProgress) => {
             this.jobStore.update(jobId, { progress });
@@ -422,19 +425,11 @@ export class ImportService {
   }
 
   private async runWebsiteJob(
-    user: AuthenticatedRequest['user'],
     jobId: string,
     sourceUrl: string,
     llmConfig: { modelId: string; apiKey: string },
-    scrapeConfig: { provider: 'firecrawl' | 'tavily'; apiKey: string } | null,
   ) {
     this.jobStore.update(jobId, { status: 'running', progress: 'extracting' });
-
-    const toolsConfig: WebsiteImportToolsConfig = {
-      scrapeProvider: scrapeConfig?.provider ?? null,
-      scrapeApiKey: scrapeConfig?.apiKey,
-      searchApiKey: scrapeConfig?.provider === 'tavily' ? scrapeConfig.apiKey : undefined,
-    };
 
     try {
       const result = await this.withScopedApiKey(llmConfig.modelId, llmConfig.apiKey, async () => {
@@ -442,7 +437,7 @@ export class ImportService {
           sourceUrl,
           modelId: llmConfig.modelId,
           apiKey: llmConfig.apiKey,
-          toolsConfig,
+          toolsConfig: { webProviders: this.webProviders },
           maxOutputTokens: this.resolveMaxOutputTokens(llmConfig.modelId),
           onProgress: (progress: ImportJobProgress) => {
             this.jobStore.update(jobId, { progress });
@@ -487,23 +482,16 @@ export class ImportService {
     });
   }
 
-  private async runTextJob(
-    user: AuthenticatedRequest['user'],
-    jobId: string,
-    sourceText: string,
-    modelId: string,
-    apiKey: string,
-  ) {
+  private async runTextJob(jobId: string, sourceText: string, modelId: string, apiKey: string) {
     this.jobStore.update(jobId, { status: 'running', progress: 'drafting' });
 
     try {
-      const searchApiKey = await this.resolveUserSearchApiKey(user);
       const result = await this.withScopedApiKey(modelId, apiKey, async () => {
         return runTextImportWorkflow({
           sourceText,
           modelId,
           apiKey,
-          searchApiKey,
+          webProviders: this.webProviders,
           maxOutputTokens: this.resolveMaxOutputTokens(modelId),
           onProgress: (progress: ImportJobProgress) => {
             this.jobStore.update(jobId, { progress });

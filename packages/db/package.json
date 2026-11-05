@@ -23,7 +23,7 @@
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "drizzle-kit generate && prettier --write --log-level warn migrations",
     "db:migrate": "node dist/migrate.js"
   },
   "dependencies": {

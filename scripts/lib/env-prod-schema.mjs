@@ -314,6 +314,27 @@ export const MANIFEST_SCHEMA = {
     group: 'AI / PDF Import',
     default: 'true',
   },
+  TAVILY_API_KEY: {
+    required: false,
+    secret: true,
+    description:
+      'Tavily API key: web search (profile discovery, lookups) and URL-import page extraction. Rotated round-robin with the other web providers.',
+    group: 'AI / PDF Import',
+  },
+  FIRECRAWL_API_KEY: {
+    required: false,
+    secret: true,
+    description:
+      'Firecrawl API key: web search, URL-import page extraction and hosted OCR for scanned PDFs. Rotated round-robin with the other web providers.',
+    group: 'AI / PDF Import',
+  },
+  BRAVE_SEARCH_API_KEY: {
+    required: false,
+    secret: true,
+    description:
+      'Brave Search API key: web search (profile discovery, lookups). Rotated round-robin with the other web providers.',
+    group: 'AI / PDF Import',
+  },
 
   // Chromium / PDF export
   CHROMIUM_EXECUTABLE_PATH: {
@@ -455,6 +476,9 @@ export const SERIALIZE_GROUPS = [
       'PDF_IMPORT_MAX_BYTES',
       'PDF_IMPORT_ENABLED',
       'IMPORT_MODELS_CATALOG_SOURCE',
+      'TAVILY_API_KEY',
+      'FIRECRAWL_API_KEY',
+      'BRAVE_SEARCH_API_KEY',
     ],
   },
   { title: 'PDF Export (Chromium)', keys: ['CHROMIUM_EXECUTABLE_PATH'] },

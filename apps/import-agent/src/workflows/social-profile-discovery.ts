@@ -1,9 +1,10 @@
 import { discoverSocialProfilesTool } from '../tools/discover-social-profiles.tool';
 import type { ImportJobProgress } from '../types';
+import type { WebProviderPool } from '../web-providers/web-provider-pool';
 
 export interface ApplySocialProfileDiscoveryInput {
   draft: Record<string, unknown>;
-  searchApiKey: string | undefined;
+  webProviders: WebProviderPool | undefined;
   onProgress?: (progress: ImportJobProgress) => void;
   /**
    * Original source text (e.g. PDF or image transcription). When provided,
@@ -19,7 +20,7 @@ export async function applySocialProfileDiscovery(
   input.onProgress?.('discovering-profiles');
   const result = await discoverSocialProfilesTool({
     draft: input.draft,
-    searchApiKey: input.searchApiKey,
+    search: input.webProviders?.hasSearch ? input.webProviders.search : undefined,
     sourceText: input.sourceText,
   });
   return {

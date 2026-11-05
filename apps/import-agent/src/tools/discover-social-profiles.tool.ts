@@ -4,7 +4,6 @@ import {
 } from '../merge-discovered-profiles';
 import {
   buildSearchContextFromDraft,
-  DISCOVERY_SEARCH_TIMEOUT_MS,
   extractExistingProfileNetworks,
   MAX_DISCOVERY_QUERIES,
   MAX_RESULTS_PER_QUERY,
@@ -15,7 +14,8 @@ import {
 
 export interface DiscoverSocialProfilesInput {
   draft: Record<string, unknown>;
-  searchApiKey?: string;
+  /** Web search (the deployment's provider pool). Discovery is skipped without it. */
+  search?: SocialSearchFn;
   /**
    * Original source text (e.g. PDF or image transcription). When provided,
    * discovered candidates whose username does not appear in the source are
@@ -35,39 +35,7 @@ export interface SocialSearchHit {
   summary?: string;
 }
 
-export type SocialSearchFn = (
-  query: string,
-  apiKey: string,
-  maxResults: number,
-) => Promise<SocialSearchHit[]>;
-
-const defaultSearch: SocialSearchFn = async (query, apiKey, maxResults) => {
-  const response = await fetch('https://api.tavily.com/search', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      api_key: apiKey,
-      query,
-      max_results: maxResults,
-    }),
-    signal: AbortSignal.timeout(DISCOVERY_SEARCH_TIMEOUT_MS),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Web search failed (${response.status})`);
-  }
-
-  const body = (await response.json()) as {
-    results?: Array<{ url?: string; content?: string }>;
-  };
-
-  return (body.results ?? []).map((result) => ({
-    url: result.url,
-    summary: result.content,
-  }));
-};
+export type SocialSearchFn = (query: string, maxResults: number) => Promise<SocialSearchHit[]>;
 
 function acceptPlatformUrl(
   platform: SocialProfilePlatform,
@@ -108,9 +76,9 @@ function buildSourceMatcher(
 
 export async function discoverSocialProfilesTool(
   input: DiscoverSocialProfilesInput,
-  searchFn: SocialSearchFn = defaultSearch,
 ): Promise<DiscoverSocialProfilesResult> {
-  if (!input.searchApiKey?.trim()) {
+  const searchFn = input.search;
+  if (!searchFn) {
     return { skipped: true, draft: input.draft, discoveredProfilesCount: 0 };
   }
 
@@ -134,7 +102,7 @@ export async function discoverSocialProfilesTool(
   for (const platform of platformsToSearch) {
     try {
       const query = platform.buildQuery(context);
-      const hits = await searchFn(query, input.searchApiKey, MAX_RESULTS_PER_QUERY);
+      const hits = await searchFn(query, MAX_RESULTS_PER_QUERY);
 
       for (const hit of hits) {
         const candidate = acceptPlatformUrl(platform, hit.url);

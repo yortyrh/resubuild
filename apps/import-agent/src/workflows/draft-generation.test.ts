@@ -9,8 +9,6 @@ vi.mock('@mastra/core/agent', () => ({
   },
 }));
 
-vi.mock('../tools/web-lookup.tool', () => ({ webLookupTool: vi.fn(async () => ({})) }));
-
 vi.mock('../tools/discover-social-profiles.tool', () => ({
   discoverSocialProfilesTool: vi.fn(async ({ draft }: { draft: Record<string, unknown> }) => ({
     skipped: true,

@@ -10,7 +10,7 @@
 
 ### REQ-NFR-002 Secrets stay on the server `[nfr]`
 
-The browser bundle never contains server credentials (database, object storage, mail, session-signing, encryption or provider keys) and never talks to the database or object storage directly. User-provided API keys (AI, scraping, MCP) are stored encrypted or hashed and are never sent back in plain text.
+The browser bundle never contains server credentials (database, object storage, mail, session-signing, encryption or provider keys) and never talks to the database or object storage directly. User-provided API keys (AI, MCP) are stored encrypted or hashed and are never sent back in plain text.
 
 ### REQ-NFR-003 Safe rendering `[nfr]`
 

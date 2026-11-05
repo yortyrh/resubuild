@@ -20,7 +20,6 @@ import { McpModule } from './mcp/mcp.module';
 import { McpAuthModule } from './mcp/mcp-auth.module';
 import { MediaModule } from './media/media.module';
 import { StorageModule } from './storage/storage.module';
-import { WebScrapeModule } from './web-scrape/web-scrape.module';
 
 @Module({
   imports: [
@@ -50,7 +49,6 @@ import { WebScrapeModule } from './web-scrape/web-scrape.module';
     ImportLlmConfigModule,
     ImportModule,
     ApplicationModule,
-    WebScrapeModule,
     McpAuthModule,
     McpModule,
   ],

@@ -1,3 +1,5 @@
+import type { WebProviderPool } from './web-providers/web-provider-pool';
+
 export type ImportJobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
 
 export type ImportJobProgress =
@@ -19,7 +21,8 @@ export interface TextImportWorkflowInput {
   sourceText: string;
   modelId: string;
   apiKey: string;
-  searchApiKey?: string;
+  /** Deployment-wide web search/extract providers (profile discovery). */
+  webProviders?: WebProviderPool;
   /**
    * Model's output-token limit (from the model catalog). Drafts of long CVs
    * are large JSON documents; asking for the model's full budget avoids
@@ -46,7 +49,10 @@ export interface PdfImportWorkflowInput {
   pdfBuffer: Buffer;
   modelId: string;
   apiKey: string;
-  searchApiKey?: string;
+  /** Firecrawl key for anydoc hosted OCR of scanned pages (keyless when absent). */
+  firecrawlApiKey?: string;
+  /** Deployment-wide web search/extract providers (profile discovery). */
+  webProviders?: WebProviderPool;
   /**
    * Model's output-token limit (from the model catalog). Drafts of long CVs
    * are large JSON documents; asking for the model's full budget avoids
@@ -69,7 +75,8 @@ export interface ImageImportWorkflowInput {
   imageMimeType: string;
   modelId: string;
   apiKey: string;
-  searchApiKey?: string;
+  /** Deployment-wide web search/extract providers (profile discovery). */
+  webProviders?: WebProviderPool;
   /**
    * Model's output-token limit (from the model catalog). Drafts of long CVs
    * are large JSON documents; asking for the model's full budget avoids
