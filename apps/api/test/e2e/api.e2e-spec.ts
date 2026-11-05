@@ -821,7 +821,7 @@ describe('E2E — free import wizard (guest)', () => {
 
   afterAll(async () => {
     await app.close();
-    for (const key of Object.keys(env)) delete process.env[key];
+    for (const key of Object.keys(env)) process.env[key] = '';
   });
 
   it('is open without a session while the guest models have budget, then switches off', async () => {
@@ -863,7 +863,7 @@ describe('E2E — free import wizard (guest)', () => {
   });
 
   it('stays closed when no guest models are configured', async () => {
-    delete process.env.AI_GUEST_MODELS;
+    process.env.AI_GUEST_MODELS = '';
     const plain = await createE2eApp();
     try {
       await request(plain.getHttpServer()).get('/public/import/status').expect(200, {

@@ -45,6 +45,12 @@ function disableRyukOnPodman(): void {
 export const BLANK_OPTIONAL_ENV: Record<string, string> = {
   AI_INCLUDED_MODELS: '',
   AI_INCLUDED_USER_MONTHLY_TOKEN_LIMIT: '',
+  AI_GUEST_MODELS: '',
+  AI_GUEST_IMPORT_ENABLED: '',
+  AI_GUEST_IMPORTS_PER_IP_PER_DAY: '',
+  TURNSTILE_SITE_KEY: '',
+  TURNSTILE_SECRET_KEY: '',
+  TRUST_PROXY: '',
 };
 
 export default async function globalSetup() {

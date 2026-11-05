@@ -48,7 +48,7 @@ export interface IncludedStatus {
 }
 
 /**
- * App-funded (included) models. Which provider and model serve
+ * App-funded models (included and guest pools). Which provider and model serve
  * a run is an operator detail: nothing here is returned to clients, so models
  * can be swapped (e.g. for a smaller fine-tuned one) without users noticing.
  */

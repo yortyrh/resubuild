@@ -128,7 +128,6 @@ describe('HostedModelsService', () => {
       const fresh = new HostedModelsService(
         config as never,
         { poolTotals: async () => new Map(), userTotal: async () => 0, record: jest.fn() } as never,
-        { getCatalog: () => catalog as ImportModelCatalog } as never,
       );
       await expect(fresh.guestHasCapacity()).resolves.toBe(false);
       await expect(fresh.acquireGuest()).rejects.toBeInstanceOf(ServiceUnavailableException);
