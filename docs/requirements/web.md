@@ -5,7 +5,7 @@
 Anonymous visitors at `/` see a marketing page instead of being redirected to login.
 
 - Sections:
-  - hero with the PDF→structured-CV transformation and calls to action (try it, see how it works)
+  - hero with the PDF→structured-CV transformation and calls to action (try it, see how it works, and "Import your CV free" while the free import wizard is open, REQ-IMP-011)
   - features (with a link to `/features`)
   - how it works (Import → Edit → Export)
   - JSON Resume open-standard callout

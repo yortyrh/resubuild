@@ -798,6 +798,81 @@ describe('E2E — included AI (app-funded models)', () => {
   });
 });
 
+describe('E2E — free import wizard (guest)', () => {
+  let app: INestApplication;
+  const env = {
+    AI_GUEST_MODELS: JSON.stringify([
+      {
+        id: 'e2e-guest',
+        model: 'openai/gpt-5-mini',
+        apiKey: 'sk-e2e-guest',
+        monthlyTokenLimit: 1000,
+      },
+    ]),
+  };
+
+  beforeAll(async () => {
+    Object.assign(process.env, env);
+    app = await createE2eApp();
+  });
+
+  afterAll(async () => {
+    await app.close();
+    for (const key of Object.keys(env)) delete process.env[key];
+  });
+
+  it('is open without a session while the guest models have budget, then switches off', async () => {
+    const server = app.getHttpServer();
+
+    await request(server).get('/public/import/status').expect(200, { enabled: true });
+
+    await request(server)
+      .post('/public/import/file')
+      .attach('file', Buffer.from('PK'), { filename: 'cv.zip', contentType: 'application/zip' })
+      .expect(400);
+
+    await request(server)
+      .get('/public/import/jobs/00000000-0000-0000-0000-000000000000')
+      .set('x-guest-import-token', 'not-a-token')
+      .expect(404);
+
+    const { AiUsageRepository } =
+      require('../../src/ai-hosted/ai-usage.repository') as typeof import('../../src/ai-hosted/ai-usage.repository');
+    const { usagePeriod } =
+      require('../../src/ai-hosted/usage-period') as typeof import('../../src/ai-hosted/usage-period');
+    await app
+      .get(AiUsageRepository)
+      .record(
+        { inputTokens: 900, outputTokens: 100, totalTokens: 1000 },
+        { pool: 'guest', entryId: 'e2e-guest', period: usagePeriod() },
+      );
+
+    // The pool caches usage briefly; a fresh app reads the spent budget.
+    await app.close();
+    app = await createE2eApp();
+    const closed = app.getHttpServer();
+    await request(closed).get('/public/import/status').expect(200, { enabled: false });
+    const refused = await request(closed)
+      .post('/public/import/file')
+      .attach('file', Buffer.from('# Jane'), { filename: 'cv.md', contentType: 'text/markdown' })
+      .expect(503);
+    expect(refused.body).toMatchObject({ code: 'GUEST_IMPORT_UNAVAILABLE' });
+  });
+
+  it('stays closed when no guest models are configured', async () => {
+    delete process.env.AI_GUEST_MODELS;
+    const plain = await createE2eApp();
+    try {
+      await request(plain.getHttpServer()).get('/public/import/status').expect(200, {
+        enabled: false,
+      });
+    } finally {
+      await plain.close();
+      Object.assign(process.env, env);
+    }
+  });
+});
+
 describe('E2E — import LLM config', () => {
   let app: INestApplication;
   let accessToken: string;

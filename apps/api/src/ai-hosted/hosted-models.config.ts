@@ -107,6 +107,8 @@ export function parseTokenLimit(raw: string | undefined, envName: string, fallba
 @Injectable()
 export class HostedModelsConfigService {
   readonly includedModels: HostedModelEntry[];
+  /** Models that run anonymous imports in the sign-up wizard. */
+  readonly guestModels: HostedModelEntry[];
   /** Monthly tokens each user may spend on the included models (0 = included tier off). */
   readonly includedUserMonthlyTokenLimit: number;
 
@@ -114,6 +116,10 @@ export class HostedModelsConfigService {
     this.includedModels = parseHostedModelPool(
       configService.get<string>('AI_INCLUDED_MODELS'),
       'AI_INCLUDED_MODELS',
+    );
+    this.guestModels = parseHostedModelPool(
+      configService.get<string>('AI_GUEST_MODELS'),
+      'AI_GUEST_MODELS',
     );
     this.includedUserMonthlyTokenLimit = parseTokenLimit(
       configService.get<string>('AI_INCLUDED_USER_MONTHLY_TOKEN_LIMIT'),
@@ -126,6 +132,6 @@ export class HostedModelsConfigService {
   }
 
   pool(name: HostedPoolName): HostedModelEntry[] {
-    return name === 'included' ? this.includedModels : [];
+    return name === 'included' ? this.includedModels : this.guestModels;
   }
 }

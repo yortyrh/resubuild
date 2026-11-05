@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -558,6 +559,21 @@ describe('ImportService', () => {
       await new Promise((resolve) => setImmediate(resolve));
       const job = service.getJob(user, result.kind === 'job' ? result.jobId : '');
       expect(job.previewData).toMatchObject({ basics: { name: 'HTML User' } });
+    });
+
+    it('explains HTML pages need AI when none is configured, but keeps quota errors', async () => {
+      mockFetchHtml('<html><body>CV</body></html>');
+      aiAgentCredentialService.getActiveCredentials.mockRejectedValue(
+        new UnprocessableEntityException('not configured'),
+      );
+      await expect(service.importFromUrl(user, 'https://example.com/profile')).rejects.toThrow(
+        /not JSON Resume data/,
+      );
+
+      mockFetchHtml('<html><body>CV</body></html>');
+      const quota = new HttpException('quota', 429);
+      aiAgentCredentialService.getActiveCredentials.mockRejectedValue(quota);
+      await expect(service.importFromUrl(user, 'https://example.com/profile')).rejects.toBe(quota);
     });
 
     it('marks website import job failed on workflow errors', async () => {

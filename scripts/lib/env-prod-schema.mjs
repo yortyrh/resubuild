@@ -348,6 +348,44 @@ export const MANIFEST_SCHEMA = {
       'Monthly tokens each user may spend on AI_INCLUDED_MODELS (0 or unset turns included AI off).',
     group: 'AI / PDF Import',
   },
+  AI_GUEST_MODELS: {
+    required: false,
+    secret: true,
+    description:
+      'App-funded models for the free import wizard (visitors before sign-up): same JSON format as AI_INCLUDED_MODELS. The wizard switches off when every entry used its monthly budget.',
+    group: 'AI / PDF Import',
+  },
+  AI_GUEST_IMPORT_ENABLED: {
+    required: false,
+    description:
+      'Set to false to turn the free import wizard off (default true when AI_GUEST_MODELS is set).',
+    group: 'AI / PDF Import',
+    default: 'true',
+  },
+  AI_GUEST_IMPORTS_PER_IP_PER_DAY: {
+    required: false,
+    description: 'Free imports per visitor IP per UTC day (0 = unlimited; default 3).',
+    group: 'AI / PDF Import',
+    default: '3',
+  },
+  TURNSTILE_SITE_KEY: {
+    required: false,
+    description:
+      'Cloudflare Turnstile site key for the free import wizard (set with TURNSTILE_SECRET_KEY).',
+    group: 'AI / PDF Import',
+  },
+  TURNSTILE_SECRET_KEY: {
+    required: false,
+    secret: true,
+    description: 'Cloudflare Turnstile secret key; the API verifies wizard challenges with it.',
+    group: 'AI / PDF Import',
+  },
+  TRUST_PROXY: {
+    required: false,
+    description:
+      'Express "trust proxy" when the API runs behind a reverse proxy (true, hop count such as 1, or subnets), so per-IP limits see the client address.',
+    group: 'Server',
+  },
 
   // Chromium / PDF export
   CHROMIUM_EXECUTABLE_PATH: {
@@ -450,7 +488,7 @@ export const SERIALIZE_GROUPS = [
   },
   {
     title: 'Server (NestJS API)',
-    keys: ['PORT', 'CORS_ORIGIN', 'APP_URL', 'WEB_URL', 'PUBLIC_API_URL'],
+    keys: ['PORT', 'CORS_ORIGIN', 'APP_URL', 'WEB_URL', 'PUBLIC_API_URL', 'TRUST_PROXY'],
   },
   {
     title: 'Auth (Better Auth)',
@@ -494,6 +532,11 @@ export const SERIALIZE_GROUPS = [
       'BRAVE_SEARCH_API_KEY',
       'AI_INCLUDED_MODELS',
       'AI_INCLUDED_USER_MONTHLY_TOKEN_LIMIT',
+      'AI_GUEST_MODELS',
+      'AI_GUEST_IMPORT_ENABLED',
+      'AI_GUEST_IMPORTS_PER_IP_PER_DAY',
+      'TURNSTILE_SITE_KEY',
+      'TURNSTILE_SECRET_KEY',
     ],
   },
   { title: 'PDF Export (Chromium)', keys: ['CHROMIUM_EXECUTABLE_PATH'] },

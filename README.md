@@ -156,6 +156,8 @@ Requires a real provider API key in AI agent settings. `pnpm setup:env` generate
 
 Instead of their own key, users can run on app-funded models: set `AI_INCLUDED_MODELS` (JSON list of models with the deployment's keys and a monthly token budget each) and `AI_INCLUDED_USER_MONTHLY_TOKEN_LIMIT` (tokens per user per month) in `apps/api/.env`. Users without a key then use "Resubuild included AI" until their monthly allowance or the models' budgets run out. See `apps/api/.env.example`.
 
+Visitors can also try an import before signing up at `/import`: set `AI_GUEST_MODELS` (same format, with its own monthly budgets), and for production a Cloudflare Turnstile pair (`TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`) plus `TRUST_PROXY` behind a reverse proxy. The wizard closes itself when the guest budget is spent; `AI_GUEST_IMPORTS_PER_IP_PER_DAY` limits imports per visitor.
+
 1. Open `/dashboard/settings/import-llm`, pick provider → model → API key, and save.
 2. Generate sample PDFs if needed: `pnpm samples:pdf`
 3. On `/dashboard/cv/new`, use **Import PDF** with a file from `.samples/resumes/pdf/`.

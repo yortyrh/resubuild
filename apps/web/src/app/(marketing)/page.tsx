@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { HomeRedirect } from '@/components/auth/home-redirect';
+import { GuestImportCta } from '@/components/guest-import/guest-import-cta';
 import { MarketingFaq } from '@/components/landing/faq';
 import { MarketingFeatures } from '@/components/landing/features';
 import { MarketingFooter } from '@/components/landing/footer';
@@ -47,6 +48,7 @@ export default function MarketingPage() {
                   <Link href="/login" className="landing-btn-primary px-8 py-3.5 text-base">
                     Try the live demo
                   </Link>
+                  <GuestImportCta className="landing-btn-secondary px-8 py-3.5 text-base" />
                   <Link
                     href="#how-it-works"
                     className="landing-btn-secondary px-8 py-3.5 text-base"

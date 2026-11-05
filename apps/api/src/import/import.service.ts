@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -43,6 +44,16 @@ export const IMAGE_IMPORT_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'imag
 export const DOCX_IMPORT_MIME_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]);
+
+/**
+ * Who an import job belongs to and how it gets model credentials: a signed-in
+ * user (their AI selection) or a guest of the sign-up wizard (guest pool).
+ */
+export interface ImportOwner {
+  /** `user.id`, or a guest owner key; only this owner can read the job. */
+  id: string;
+  resolveCredentials(): Promise<ActiveAiAgentCredentials>;
+}
 
 @Injectable()
 export class ImportService {
@@ -108,12 +119,12 @@ export class ImportService {
     );
   }
 
-  async startPdfImport(user: AuthenticatedRequest['user'], file: Express.Multer.File) {
+  async startPdfImportAs(owner: ImportOwner, file: Express.Multer.File) {
     if (!this.isEnabled()) {
       throw new ForbiddenException('PDF import is disabled');
     }
 
-    const llmConfig = await this.aiAgentCredentialService.getActiveCredentials(user);
+    const llmConfig = await owner.resolveCredentials();
 
     if (file.mimetype !== 'application/pdf') {
       throw new BadRequestException('Only PDF files are supported');
@@ -123,7 +134,7 @@ export class ImportService {
       throw new BadRequestException(`PDF exceeds maximum size of ${this.getMaxBytes()} bytes`);
     }
 
-    const job = this.jobStore.create(user.id);
+    const job = this.jobStore.create(owner.id);
     setImmediate(() => {
       void this.runPdfJob(job.id, file.buffer, llmConfig);
     });
@@ -131,12 +142,12 @@ export class ImportService {
     return { jobId: job.id };
   }
 
-  async startMarkdownImport(user: AuthenticatedRequest['user'], file: Express.Multer.File) {
+  async startMarkdownImportAs(owner: ImportOwner, file: Express.Multer.File) {
     if (!this.isEnabled()) {
       throw new ForbiddenException('Markdown import is disabled');
     }
 
-    const llmConfig = await this.aiAgentCredentialService.getActiveCredentials(user);
+    const llmConfig = await owner.resolveCredentials();
 
     if (!MARKDOWN_MIME_TYPES.has(file.mimetype)) {
       throw new BadRequestException('Only Markdown files are supported');
@@ -153,7 +164,7 @@ export class ImportService {
       throw new BadRequestException('Markdown file is empty');
     }
 
-    const job = this.jobStore.create(user.id);
+    const job = this.jobStore.create(owner.id);
     setImmediate(() => {
       void this.runTextJob(job.id, sourceText, llmConfig);
     });
@@ -161,12 +172,12 @@ export class ImportService {
     return { jobId: job.id };
   }
 
-  async startImageImport(user: AuthenticatedRequest['user'], file: Express.Multer.File) {
+  async startImageImportAs(owner: ImportOwner, file: Express.Multer.File) {
     if (!this.isEnabled()) {
       throw new ForbiddenException('Image import is disabled');
     }
 
-    const llmConfig = await this.aiAgentCredentialService.getActiveCredentials(user);
+    const llmConfig = await owner.resolveCredentials();
 
     if (!IMAGE_IMPORT_MIME_TYPES.has(file.mimetype)) {
       throw new BadRequestException('Only PNG, JPEG, and WebP images are supported');
@@ -178,7 +189,7 @@ export class ImportService {
       );
     }
 
-    const job = this.jobStore.create(user.id);
+    const job = this.jobStore.create(owner.id);
     setImmediate(() => {
       void this.runImageJob(job.id, file.buffer, file.mimetype, llmConfig);
     });
@@ -186,12 +197,12 @@ export class ImportService {
     return { jobId: job.id };
   }
 
-  async startDocxImport(user: AuthenticatedRequest['user'], file: Express.Multer.File) {
+  async startDocxImportAs(owner: ImportOwner, file: Express.Multer.File) {
     if (!this.isEnabled()) {
       throw new ForbiddenException('DOCX import is disabled');
     }
 
-    const llmConfig = await this.aiAgentCredentialService.getActiveCredentials(user);
+    const llmConfig = await owner.resolveCredentials();
 
     if (!this.isDocxFile(file)) {
       throw new BadRequestException('Only DOCX files are supported');
@@ -212,7 +223,7 @@ export class ImportService {
       );
     }
 
-    const job = this.jobStore.create(user.id);
+    const job = this.jobStore.create(owner.id);
     setImmediate(() => {
       void this.runTextJob(job.id, sourceText, llmConfig);
     });
@@ -220,8 +231,33 @@ export class ImportService {
     return { jobId: job.id };
   }
 
+  startPdfImport(user: AuthenticatedRequest['user'], file: Express.Multer.File) {
+    return this.startPdfImportAs(this.userOwner(user), file);
+  }
+  startMarkdownImport(user: AuthenticatedRequest['user'], file: Express.Multer.File) {
+    return this.startMarkdownImportAs(this.userOwner(user), file);
+  }
+  startImageImport(user: AuthenticatedRequest['user'], file: Express.Multer.File) {
+    return this.startImageImportAs(this.userOwner(user), file);
+  }
+  startDocxImport(user: AuthenticatedRequest['user'], file: Express.Multer.File) {
+    return this.startDocxImportAs(this.userOwner(user), file);
+  }
+
+  private userOwner(user: AuthenticatedRequest['user']): ImportOwner {
+    return {
+      id: user.id,
+      resolveCredentials: () => this.aiAgentCredentialService.getActiveCredentials(user),
+    };
+  }
+
   getJob(user: AuthenticatedRequest['user'], jobId: string) {
-    const job = this.jobStore.get(jobId, user.id);
+    return this.getJobFor(user.id, jobId);
+  }
+
+  /** Job status for its owner (`user.id`, or a guest owner key). */
+  getJobFor(ownerId: string, jobId: string) {
+    const job = this.jobStore.get(jobId, ownerId);
     if (!job) {
       throw new NotFoundException('Import job not found');
     }
@@ -237,10 +273,11 @@ export class ImportService {
     };
   }
 
-  async importFromUrl(
-    user: AuthenticatedRequest['user'],
-    rawUrl: string,
-  ): Promise<ImportFromUrlResponse> {
+  importFromUrl(user: AuthenticatedRequest['user'], rawUrl: string) {
+    return this.importFromUrlAs(this.userOwner(user), rawUrl);
+  }
+
+  async importFromUrlAs(owner: ImportOwner, rawUrl: string): Promise<ImportFromUrlResponse> {
     const validated = validateImportUrl(rawUrl);
     const url = resolveImportUrl(validated);
 
@@ -294,16 +331,18 @@ export class ImportService {
       throw new ForbiddenException('Website import is disabled');
     }
 
-    let llmConfig: Awaited<ReturnType<AiAgentCredentialService['getActiveCredentials']>>;
+    let llmConfig: ActiveAiAgentCredentials;
     try {
-      llmConfig = await this.aiAgentCredentialService.getActiveCredentials(user);
-    } catch {
+      llmConfig = await owner.resolveCredentials();
+    } catch (error) {
+      // Quota / availability errors (429, 503) keep their own message.
+      if (!(error instanceof UnprocessableEntityException)) throw error;
       throw new BadRequestException(
         'This page is not JSON Resume data. Configure an AI agent account in settings to import HTML or markdown pages.',
       );
     }
 
-    const job = this.jobStore.create(user.id);
+    const job = this.jobStore.create(owner.id);
     setImmediate(() => {
       void this.runWebsiteJob(job.id, validated.toString(), llmConfig);
     });

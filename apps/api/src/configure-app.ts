@@ -16,13 +16,23 @@ export function configureApp(app: INestApplication): void {
       .map((o) => o.trim())
       .filter(Boolean) ?? ['http://localhost:3000'],
     credentials: false,
-    allowedHeaders: ['Authorization', 'Content-Type'],
+    // Turnstile token and guest job token of the anonymous import wizard.
+    allowedHeaders: [
+      'Authorization',
+      'Content-Type',
+      'cf-turnstile-response',
+      'x-guest-import-token',
+    ],
     exposedHeaders: ['Content-Disposition', 'set-auth-token'],
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   });
 
-  // After CORS (so /api/auth answers preflight requests), before the body parsers.
   const express = app as NestExpressApplication;
+  // Behind a reverse proxy, `req.ip` must come from X-Forwarded-For (per-IP guest limits).
+  const trustProxy = parseTrustProxy(process.env.TRUST_PROXY);
+  if (trustProxy !== undefined) express.set('trust proxy', trustProxy);
+
+  // After CORS (so /api/auth answers preflight requests), before the body parsers.
   const auth = app.get<Auth>(BETTER_AUTH);
   express.getHttpAdapter().getInstance().all(`${AUTH_BASE_PATH}/*splat`, toNodeHandler(auth));
   express.useBodyParser('json');
@@ -35,4 +45,17 @@ export function configureApp(app: INestApplication): void {
       forbidNonWhitelisted: true,
     }),
   );
+}
+
+/**
+ * Express `trust proxy` from env: `true`/`false`, a hop count, or a list of
+ * addresses/subnets. Undefined when unset (Express default: no proxy trusted).
+ */
+export function parseTrustProxy(raw: string | undefined): boolean | number | string | undefined {
+  const value = raw?.trim();
+  if (!value) return undefined;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  if (/^\d+$/.test(value)) return Number(value);
+  return value;
 }

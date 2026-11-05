@@ -11,6 +11,7 @@ import { CvExportModule } from './cv-export/cv-export.module';
 import { DatabaseModule } from './database/database.module';
 import { DatabaseExceptionFilter } from './database/database-exception.filter';
 import { ExportStorageModule } from './export-storage/export-storage.module';
+import { GuestImportModule } from './guest-import/guest-import.module';
 import { HealthController } from './health/health.controller';
 import { ImportModule } from './import/import.module';
 import { ImportLlmConfigModule } from './import-llm-config/import-llm-config.module';
@@ -48,6 +49,7 @@ import { StorageModule } from './storage/storage.module';
     AiAgentModule,
     ImportLlmConfigModule,
     ImportModule,
+    GuestImportModule,
     ApplicationModule,
     McpAuthModule,
     McpModule,

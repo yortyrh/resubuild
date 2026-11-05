@@ -8,5 +8,6 @@ import { ImportService } from './import.service';
   imports: [AiAgentModule],
   controllers: [ImportController],
   providers: [ImportService, ResumeSchemaValidator],
+  exports: [ImportService],
 })
 export class ImportModule {}

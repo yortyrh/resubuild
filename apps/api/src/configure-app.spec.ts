@@ -1,6 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { BETTER_AUTH } from './auth/better-auth';
-import { configureApp } from './configure-app';
+import { configureApp, parseTrustProxy } from './configure-app';
 
 describe('configureApp', () => {
   const originalCors = process.env.CORS_ORIGIN;
@@ -18,6 +18,7 @@ describe('configureApp', () => {
       useBodyParser: jest.fn((type: string) => order.push(`body:${type}`)),
       enableCors: jest.fn(() => order.push('cors')),
       useGlobalPipes: jest.fn(() => order.push('pipes')),
+      set: jest.fn(),
     };
     return { app, express, order };
   }
@@ -46,5 +47,46 @@ describe('configureApp', () => {
     expect(app.enableCors).toHaveBeenCalledWith(
       expect.objectContaining({ origin: ['http://localhost:3000'] }),
     );
+  });
+
+  it('allows the guest import headers in CORS', () => {
+    const { app } = fakeApp();
+    configureApp(app as never);
+    expect(app.enableCors).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allowedHeaders: expect.arrayContaining(['cf-turnstile-response', 'x-guest-import-token']),
+      }),
+    );
+  });
+
+  it('trusts the proxy only when TRUST_PROXY is set', () => {
+    const original = process.env.TRUST_PROXY;
+    try {
+      delete process.env.TRUST_PROXY;
+      const plain = fakeApp();
+      configureApp(plain.app as never);
+      expect(plain.app.set).not.toHaveBeenCalled();
+
+      process.env.TRUST_PROXY = '1';
+      const proxied = fakeApp();
+      configureApp(proxied.app as never);
+      expect(proxied.app.set).toHaveBeenCalledWith('trust proxy', 1);
+    } finally {
+      if (original === undefined) delete process.env.TRUST_PROXY;
+      else process.env.TRUST_PROXY = original;
+    }
+  });
+});
+
+describe('parseTrustProxy', () => {
+  it.each([
+    [undefined, undefined],
+    ['', undefined],
+    ['true', true],
+    ['false', false],
+    ['2', 2],
+    ['loopback, 10.0.0.0/8', 'loopback, 10.0.0.0/8'],
+  ])('parses %p', (raw, expected) => {
+    expect(parseTrustProxy(raw)).toEqual(expected);
   });
 });

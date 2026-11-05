@@ -21,6 +21,7 @@ Every user-authored Markdown/HTML is sanitized before it is rendered in the app 
 Every upload and fetched URL has a size limit and a timeout. AI pipelines have bounded retries and bounded web searches, so a single job cannot run without limit.
 
 - App-funded AI spend is bounded by monthly token budgets per model and per user (REQ-IMP-010).
+- Anonymous AI work (the free import wizard) also needs a bot challenge when configured and is limited per client IP per day (REQ-IMP-011).
 
 ### REQ-NFR-005 Open data `[nfr]`
 

@@ -59,6 +59,7 @@ export interface IncludedStatus {
 export class HostedModelsService {
   private readonly logger = new Logger(HostedModelsService.name);
   private readonly includedPool: HostedModelPool;
+  private readonly guestPool: HostedModelPool;
 
   constructor(
     private readonly config: HostedModelsConfigService,
@@ -66,6 +67,7 @@ export class HostedModelsService {
     private readonly catalogService: ImportModelsCatalogService,
   ) {
     this.includedPool = new HostedModelPool('included', config.includedModels, usage);
+    this.guestPool = new HostedModelPool('guest', config.guestModels, usage);
   }
 
   get includedEnabled(): boolean {
@@ -139,6 +141,19 @@ export class HostedModelsService {
       );
     }
     return this.acquire(this.includedPool, userId);
+  }
+
+  /** Whether guest models are configured and at least one has budget left this month. */
+  async guestHasCapacity(): Promise<boolean> {
+    return this.guestPool.configured && (await this.guestPool.hasCapacity());
+  }
+
+  /** Credentials for one anonymous wizard import on the guest models (pool budget only). */
+  acquireGuest(): Promise<HostedCredentials> {
+    if (!this.guestPool.configured) {
+      return Promise.reject(new ServiceUnavailableException('Free AI import is not available'));
+    }
+    return this.acquire(this.guestPool);
   }
 
   private async acquire(pool: HostedModelPool, userId?: string): Promise<HostedCredentials> {

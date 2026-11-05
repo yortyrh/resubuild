@@ -16,6 +16,7 @@ const entry = (id: string, modelId = 'openai/gpt-5-mini'): HostedModelEntry => (
 function setup(options: { userTotal?: number; poolTotals?: Record<string, number> } = {}) {
   const config = {
     includedModels: [entry('oa-1'), entry('oa-2')],
+    guestModels: [entry('g-1', 'anthropic/claude-haiku-4-5')],
     includedUserMonthlyTokenLimit: 500,
     includedEnabled: true,
   };
@@ -106,5 +107,41 @@ describe('HostedModelsService', () => {
     const { service, config } = setup();
     config.includedEnabled = false;
     await expect(service.acquireIncluded('u1')).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  describe('guest pool', () => {
+    it('reports capacity from the guest models budget', async () => {
+      await expect(setup().service.guestHasCapacity()).resolves.toBe(true);
+      await expect(setup({ poolTotals: { 'g-1': 1000 } }).service.guestHasCapacity()).resolves.toBe(
+        false,
+      );
+    });
+
+    it('meters guest runs on the pool only (no user)', async () => {
+      const { service, usage } = setup();
+      const credentials = await service.acquireGuest();
+      expect(credentials).toMatchObject({ pool: 'guest', entryId: 'g-1' });
+      await credentials.usageMeter.record({ inputTokens: 1, outputTokens: 1, totalTokens: 2 });
+      expect(usage.record).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ pool: 'guest', entryId: 'g-1', userId: undefined }),
+      );
+    });
+
+    it('is unavailable without guest models or budget', async () => {
+      const { service, config } = setup();
+      config.guestModels = [];
+      const fresh = new HostedModelsService(
+        config as never,
+        { poolTotals: async () => new Map(), userTotal: async () => 0, record: jest.fn() } as never,
+        { getCatalog: () => catalog as ImportModelCatalog } as never,
+      );
+      await expect(fresh.guestHasCapacity()).resolves.toBe(false);
+      await expect(fresh.acquireGuest()).rejects.toBeInstanceOf(ServiceUnavailableException);
+      await expect(
+        setup({ poolTotals: { 'g-1': 5000 } }).service.acquireGuest(),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(service).toBeDefined();
+    });
   });
 });

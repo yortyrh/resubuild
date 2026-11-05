@@ -77,3 +77,13 @@ A deployment can fund AI for signed-in users who have no API key of their own. T
 - Every model call on included AI counts its input and output tokens against both the model's budget and the user's allowance. Counts reset at the start of each UTC month. A job can overshoot a budget by at most its own tokens.
 - When the user's allowance is used up, new AI jobs are refused (HTTP 429) with the reset date and a pointer to adding their own key. When every included model used its budget, new jobs are refused (HTTP 503).
 - AI settings show the included models, this month's usage against the allowance and the reset date. Calls with the user's own key are not counted.
+
+### REQ-IMP-011 Free import wizard (before sign-up)
+
+Visitors can import a CV at `/import` without an account, to see the result before signing up. The import runs on app-funded guest models configured in the server environment, each with a monthly token budget.
+
+- The visitor uploads a file (PDF, Word, Markdown, image) or links a page, follows the import progress and previews the result. Plain JSON Resume pages need no AI and are shown right away.
+- To keep the CV the visitor creates an account or signs in. The preview stays in that browser (for up to a week) across OAuth redirects and email verification, and is saved as a new CV on the first signed-in visit, which then opens in the editor.
+- Each import is protected by a Cloudflare Turnstile challenge when configured, and limited per visitor IP per UTC day (default 3). Plain JSON Resume pages do not count. Behind a reverse proxy, the API trusts the forwarded client address only when configured to.
+- Only the visitor who started an import can read it: the job is tied to a random token returned once to that browser.
+- Guest model calls count against the guest models' monthly budgets (REQ-IMP-010 rotation and cooldown rules apply). When every guest model used its budget, or the operator turns the wizard off, the wizard closes: the landing page hides its call to action, `/import` points to sign-up, and the API refuses new imports (HTTP 503). Regular sign-up always stays open.

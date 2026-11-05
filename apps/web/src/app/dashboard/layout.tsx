@@ -4,6 +4,7 @@ import { DashboardBreadcrumbProvider } from '@/components/dashboard/dashboard-br
 import { DashboardSidebarProvider } from '@/components/dashboard/dashboard-sidebar-context';
 import { DashboardSidebarShell } from '@/components/dashboard/dashboard-sidebar-shell';
 import { DashboardTopBar } from '@/components/dashboard/dashboard-top-bar';
+import { PendingGuestImportSaver } from '@/components/guest-import/pending-guest-import-saver';
 import { AuthenticatedProviders } from '@/components/providers/authenticated-providers';
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <AuthenticatedProviders>
       <SessionGate>
+        <PendingGuestImportSaver />
         <DashboardBreadcrumbProvider>
           <DashboardSidebarProvider>
             <div className="min-h-screen md:grid md:grid-cols-[auto_1fr]">
