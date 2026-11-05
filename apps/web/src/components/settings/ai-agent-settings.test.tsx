@@ -42,7 +42,7 @@ function renderSettings() {
 describe('AiAgentSettings', () => {
   beforeEach(() => {
     mockGetAiAgentActive.mockResolvedValue({ configured: false });
-    mockGetAiAgentIncluded.mockResolvedValue({ enabled: false, available: false, models: [] });
+    mockGetAiAgentIncluded.mockResolvedValue({ enabled: false, available: false });
   });
 
   afterEach(() => {
@@ -213,7 +213,10 @@ describe('AiAgentSettings', () => {
     expect(labelInput).toHaveAttribute('data-1p-ignore', 'true');
     expect(labelInput).toHaveAttribute('data-lpignore', 'true');
     expect(labelInput).toHaveValue('');
-    expect(keyInput).toHaveAttribute('autocomplete', 'new-password');
+    // A password field would make Chrome offer saved logins whatever the hints say.
+    expect(keyInput).toHaveAttribute('type', 'text');
+    expect(keyInput).toHaveClass('[-webkit-text-security:disc]');
+    expect(keyInput).toHaveAttribute('autocomplete', 'off');
     expect(keyInput).toHaveAttribute('data-1p-ignore', 'true');
     expect(keyInput).toHaveValue('');
 
@@ -313,9 +316,6 @@ describe('AiAgentSettings', () => {
       enabled: true,
       available: true,
       usage: { used: 0, limit: 200000, remaining: 200000, resetsAt: '2026-12-01T00:00:00Z' },
-      models: [
-        { providerId: 'openai', providerDisplayName: 'OpenAI', modelDisplayName: 'GPT-5 Mini' },
-      ],
     });
     mockSetAiAgentActive.mockResolvedValue({ configured: true, source: 'included' });
 

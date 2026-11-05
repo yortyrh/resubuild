@@ -6,8 +6,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type { ModelTokenUsage, UsageMeter } from '@resubuild/import-agent';
-import { modelDisplayNames, toProviderOptions } from '@resubuild/import-models';
-import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
+import { toProviderOptions } from '@resubuild/import-models';
 import { AiUsageRepository } from './ai-usage.repository';
 import { HostedModelPool, HostedPoolExhaustedError } from './hosted-model-pool';
 import {
@@ -33,12 +32,6 @@ export interface HostedCredentials {
   onRunError(error: unknown): void;
 }
 
-export interface HostedModelSummary {
-  providerId: string;
-  providerDisplayName: string;
-  modelDisplayName: string;
-}
-
 export interface IncludedUsage {
   used: number;
   limit: number;
@@ -52,9 +45,13 @@ export interface IncludedStatus {
   /** At least one included model has budget left this month. */
   available: boolean;
   usage?: IncludedUsage;
-  models: HostedModelSummary[];
 }
 
+/**
+ * App-funded (included) models. Which provider and model serve
+ * a run is an operator detail: nothing here is returned to clients, so models
+ * can be swapped (e.g. for a smaller fine-tuned one) without users noticing.
+ */
 @Injectable()
 export class HostedModelsService {
   private readonly logger = new Logger(HostedModelsService.name);
@@ -64,7 +61,6 @@ export class HostedModelsService {
   constructor(
     private readonly config: HostedModelsConfigService,
     private readonly usage: AiUsageRepository,
-    private readonly catalogService: ImportModelsCatalogService,
   ) {
     this.includedPool = new HostedModelPool('included', config.includedModels, usage);
     this.guestPool = new HostedModelPool('guest', config.guestModels, usage);
@@ -72,24 +68,6 @@ export class HostedModelsService {
 
   get includedEnabled(): boolean {
     return this.config.includedEnabled;
-  }
-
-  /** Distinct models of a pool with display names (for settings and the top bar). */
-  describeModels(entries: HostedModelEntry[]): HostedModelSummary[] {
-    const seen = new Set<string>();
-    const catalog = this.catalogService.getCatalog();
-    const models: HostedModelSummary[] = [];
-    for (const entry of entries) {
-      if (seen.has(entry.modelId)) continue;
-      seen.add(entry.modelId);
-      const names = modelDisplayNames(catalog, entry.modelId);
-      models.push({
-        providerId: entry.providerId,
-        providerDisplayName: names.providerDisplayName,
-        modelDisplayName: names.modelDisplayName,
-      });
-    }
-    return models;
   }
 
   async getIncludedUsage(userId: string, now = new Date()): Promise<IncludedUsage> {
@@ -105,7 +83,7 @@ export class HostedModelsService {
 
   async getIncludedStatus(userId: string): Promise<IncludedStatus> {
     if (!this.includedEnabled) {
-      return { enabled: false, available: false, models: [] };
+      return { enabled: false, available: false };
     }
     const [usage, withBudget] = await Promise.all([
       this.getIncludedUsage(userId),
@@ -115,7 +93,6 @@ export class HostedModelsService {
       enabled: true,
       available: withBudget.length > 0,
       usage,
-      models: this.describeModels(this.config.includedModels),
     };
   }
 

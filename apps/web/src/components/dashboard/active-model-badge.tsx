@@ -1,6 +1,6 @@
 'use client';
 
-import { TriangleAlert } from 'lucide-react';
+import { Sparkles, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { ProviderIcon } from '@/components/ai/provider-icon';
 import { formatTokens } from '@/lib/ai-model-display';
@@ -47,17 +47,12 @@ export function ActiveModelBadge({ compact = false }: { compact?: boolean }) {
         </Link>
       );
     }
-    const label = `AI model: ${active.displayName ?? 'Included AI'}`;
+    // The models behind included AI are an operator detail: name and allowance only.
+    const label = `AI: ${active.displayName ?? 'Included AI'}`;
+    const full = remaining ? `${label}, ${remaining} tokens left this month` : label;
     return (
-      <Link
-        href={SETTINGS_HREF}
-        className={base}
-        aria-label={remaining ? `${label}, ${remaining} tokens left this month` : label}
-        title={`${label}${active.modelDisplayName ? ` (${active.modelDisplayName})` : ''}${
-          remaining ? ` — ${remaining} tokens left this month` : ''
-        }`}
-      >
-        <ProviderIcon providerId={active.providerId} className="size-4" />
+      <Link href={SETTINGS_HREF} className={base} aria-label={full} title={full}>
+        <Sparkles className="size-4 shrink-0" aria-hidden />
         <span className={cn('truncate', compact && 'sr-only')}>
           {active.displayName ?? 'Included AI'}
         </span>

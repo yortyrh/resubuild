@@ -76,7 +76,8 @@ A deployment can fund AI for signed-in users who have no API key of their own. T
 - Runs rotate round-robin across the included models. A model that used its monthly budget is skipped; one whose key the provider rejects, bills out or rate-limits is skipped for a cooldown period.
 - Every model call on included AI counts its input and output tokens against both the model's budget and the user's allowance. Counts reset at the start of each UTC month. A job can overshoot a budget by at most its own tokens.
 - When the user's allowance is used up, new AI jobs are refused (HTTP 429) with the reset date and a pointer to adding their own key. When every included model used its budget, new jobs are refused (HTTP 503).
-- AI settings show the included models, this month's usage against the allowance and the reset date. Calls with the user's own key are not counted.
+- AI settings show this month's usage against the allowance and the reset date. Calls with the user's own key are not counted.
+- Which provider and model serve included AI and the free import wizard (REQ-IMP-011) is never shown to users or returned by the API, so the operator can swap models (for example for a smaller fine-tuned one) without users noticing. Provider errors on these runs reach the user only as a generic "try again" message; the details go to the server log.
 
 ### REQ-IMP-011 Free import wizard (before sign-up)
 

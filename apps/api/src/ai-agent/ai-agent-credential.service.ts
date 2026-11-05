@@ -1,6 +1,7 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable, Logger, UnprocessableEntityException } from '@nestjs/common';
 import { type UsageMeter, withModelRunContext } from '@resubuild/import-agent';
 import { toProviderOptions } from '@resubuild/import-models';
+import { providerErrorStatus } from '../ai-hosted/hosted-model-pool';
 import { HostedModelsService } from '../ai-hosted/hosted-models.service';
 import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { AiAgentRepository, type AiAgentSource } from './ai-agent.repository';
@@ -29,9 +30,23 @@ export type AiAgentSelection =
 export const AI_NOT_CONFIGURED_MESSAGE =
   'Active AI agent configuration is required — add an account in AI agent settings';
 
+const hostedRunLogger = new Logger('HostedAiRun');
+
+/** Shown instead of provider errors on app-funded runs (which never reveal the model). */
+export const HOSTED_AI_ERROR_MESSAGE =
+  'The AI service could not finish this request. Please try again in a few minutes.';
+
+/** An error raised by a model provider call (AI SDK errors carry `AI_*` names or an HTTP status). */
+export function isModelProviderError(error: unknown): boolean {
+  if (providerErrorStatus(error) !== undefined) return true;
+  return error instanceof Error && error.name.startsWith('AI_');
+}
+
 /**
  * Run `action` (a workflow) with the credentials' model options and usage
  * meter applied to every model call, reporting provider failures to the pool.
+ * Provider errors on app-funded runs are replaced by a generic message, since
+ * they can name the provider or model.
  */
 export async function runWithAiCredentials<T>(
   llm: ActiveAiAgentCredentials,
@@ -44,6 +59,13 @@ export async function runWithAiCredentials<T>(
     );
   } catch (error) {
     llm.onRunError?.(error);
+    if (llm.source === 'included' && isModelProviderError(error)) {
+      // Keep the real cause in the server log only.
+      hostedRunLogger.warn(
+        `App-funded model call failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw new Error(HOSTED_AI_ERROR_MESSAGE);
+    }
     throw error;
   }
 }

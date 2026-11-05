@@ -1,6 +1,4 @@
 import { HttpException, ServiceUnavailableException } from '@nestjs/common';
-import type { ImportModelCatalog } from '@resubuild/import-models';
-import catalog from '@resubuild/import-models/catalog.json';
 import type { HostedModelEntry } from './hosted-models.config';
 import { HostedModelsService, INCLUDED_QUOTA_EXCEEDED } from './hosted-models.service';
 
@@ -25,23 +23,20 @@ function setup(options: { userTotal?: number; poolTotals?: Record<string, number
     poolTotals: jest.fn(async () => new Map(Object.entries(options.poolTotals ?? {}))),
     userTotal: jest.fn(async () => options.userTotal ?? 0),
   };
-  const catalogService = { getCatalog: () => catalog as ImportModelCatalog };
-  const service = new HostedModelsService(config as never, usage as never, catalogService as never);
+  const service = new HostedModelsService(config as never, usage as never);
   return { service, usage, config };
 }
 
 describe('HostedModelsService', () => {
-  it('reports included status with usage and distinct models', async () => {
+  it('reports included status with usage but never the models behind it', async () => {
     const { service } = setup({ userTotal: 120 });
     const status = await service.getIncludedStatus('u1');
     expect(status).toMatchObject({
       enabled: true,
       available: true,
       usage: { used: 120, limit: 500, remaining: 380 },
-      models: [
-        { providerId: 'openai', providerDisplayName: 'OpenAI', modelDisplayName: 'GPT-5 Mini' },
-      ],
     });
+    expect(JSON.stringify(status)).not.toMatch(/openai|gpt|sk-/i);
     expect(status.usage?.resetsAt).toMatch(/^\d{4}-\d{2}-01T00:00:00.000Z$/);
   });
 
@@ -51,7 +46,6 @@ describe('HostedModelsService', () => {
     await expect(service.getIncludedStatus('u1')).resolves.toEqual({
       enabled: false,
       available: false,
-      models: [],
     });
   });
 

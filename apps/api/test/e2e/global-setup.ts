@@ -41,6 +41,12 @@ function disableRyukOnPodman(): void {
   }
 }
 
+/** Optional features that tests switch on explicitly; empty means off. */
+export const BLANK_OPTIONAL_ENV: Record<string, string> = {
+  AI_INCLUDED_MODELS: '',
+  AI_INCLUDED_USER_MONTHLY_TOKEN_LIMIT: '',
+};
+
 export default async function globalSetup() {
   disableRyukOnPodman();
   const infra = await startE2eInfra();
@@ -61,6 +67,9 @@ export default async function globalSetup() {
     AUTH_EMAIL_VERIFICATION_ENABLED: 'true',
     AUTH_PASSWORDLESS_ENABLED: 'true',
     IMPORT_MODELS_CATALOG_SOURCE: 'static',
+    // Blank (not unset) so values from a developer's apps/api/.env never leak
+    // into the run: ConfigService reads process.env before the .env file.
+    ...BLANK_OPTIONAL_ENV,
   });
 
   // Seed with the same code as `pnpm samples:seed` (plain ESM in scripts/).

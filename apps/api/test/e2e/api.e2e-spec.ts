@@ -739,7 +739,7 @@ describe('E2E — included AI (app-funded models)', () => {
 
   afterAll(async () => {
     await app.close();
-    for (const key of Object.keys(env)) delete process.env[key];
+    for (const key of Object.keys(env)) process.env[key] = '';
   });
 
   it('serves users without their own key from the included models, up to their allowance', async () => {
@@ -754,8 +754,9 @@ describe('E2E — included AI (app-funded models)', () => {
       enabled: true,
       available: true,
       usage: { limit: 1000 },
-      models: [{ providerId: 'openai', providerDisplayName: 'OpenAI' }],
     });
+    // Which models serve included AI is an operator detail.
+    expect(JSON.stringify(included.body)).not.toMatch(/openai|gpt|e2e-openai/i);
 
     const active = await request(server).get('/ai/agents/active').set('Authorization', auth);
     expect(active.body).toMatchObject({
@@ -763,6 +764,8 @@ describe('E2E — included AI (app-funded models)', () => {
       source: 'included',
       displayName: 'Resubuild included AI',
     });
+    expect(active.body).not.toHaveProperty('providerId');
+    expect(active.body).not.toHaveProperty('modelId');
 
     await request(server)
       .put('/ai/agents/active')
