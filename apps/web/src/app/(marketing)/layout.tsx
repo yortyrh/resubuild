@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import { JsonLd } from '@/components/seo/json-ld';
 import { siteConfig } from '@/lib/site';
-import './globals.css';
-import '@/components/landing/landing-animations.css';
+import '@/components/landing/landing.css';
 
 export const metadata: Metadata = {
   title: siteConfig.title,

@@ -5,12 +5,14 @@
 Anonymous visitors at `/` see a marketing page instead of being redirected to login.
 
 - Sections:
-  - hero with the PDF→structured-CV transformation and calls to action (try it, see how it works, and "Import your CV free" while the free import wizard is open, REQ-IMP-011)
-  - features (with a link to `/features`)
-  - how it works (Import → Edit → Export)
-  - JSON Resume open-standard callout
+  - a sticky pill navigation (section links that mark the section in view, Features, Log in, Get started free); on small screens the links move into a menu
+  - hero with the PDF→editable-CV promise, calls to action (try the live demo, and "Import your CV free" while the free import wizard is open, REQ-IMP-011), and a proof strip of three panes: the CV you have, the entry in the page editor, and the printed page. One highlight is typed in the editor and appears on the page; with reduced motion both show the finished text
+  - how it works, numbered (Import → Edit on the page → Export PDF)
+  - the page editor (plain-text bullets, paste splitting, Markdown, fields where they print)
+  - ownership: private data, the open JSON Resume format, bring your own AI key, MCP access
+  - tailoring a copy for each job (only claims REQ-APP-003, REQ-APP-005 and REQ-APP-006 behavior)
   - FAQ
-  - footer
+  - closing call to action and footer
 - Signed-in visitors go to the dashboard.
 - Exactly one `h1`, one `main` landmark, and a correct heading outline.
 
@@ -48,11 +50,11 @@ Login, register, CV list, applications, every editor section and the preview wor
 
 - Header actions collapse to icon-only buttons on small screens. These buttons keep accessible labels.
 - Tables become stacked cards on small screens.
-- Auth pages center their card in the viewport.
+- Auth pages center their card in the viewport; on large screens a sample CV page sits beside the form.
 
 ### REQ-WEB-007 Settings
 
-The settings area groups the following:
+The settings area groups the following, with a shared sub-navigation (`/dashboard/settings` opens the first item):
 
 - Security (REQ-AUTH-004)
 - AI provider settings (REQ-IMP-008)

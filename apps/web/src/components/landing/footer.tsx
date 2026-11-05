@@ -1,47 +1,53 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { Band } from '@/components/landing/band';
 import logoSvg from '@/components/landing/logo-vectorized.svg';
+
+const links = [
+  { href: '/features', label: 'Features' },
+  { href: '/login', label: 'Live demo' },
+  { href: '/login', label: 'Sign in' },
+] as const;
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-[var(--landing-border)] py-14">
-      <div className="mx-auto flex max-w-7xl flex-col items-start gap-8 px-6 sm:flex-row sm:items-center sm:justify-between">
+    <footer className="border-border border-t py-12">
+      <Band className="flex flex-col items-start gap-8 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-3">
           <Image
             src={logoSvg}
             alt="Resubuild"
             width={2172}
             height={724}
-            className="landing-logo-lockup-sm"
-            sizes="140px"
+            className="h-9 w-auto"
+            sizes="120px"
           />
-          <span className="text-sm text-[var(--landing-muted)]">
+          <p className="text-muted-foreground text-sm">
             © {new Date().getFullYear()} Resubuild. Built on the open JSON Resume standard.
-          </span>
+          </p>
         </div>
-        <nav className="flex flex-wrap gap-6 text-sm">
-          <Link
-            href="/dashboard"
-            className="text-[var(--landing-muted)] hover:text-[var(--landing-ink)]"
-          >
-            Live demo
-          </Link>
-          <a
-            href="https://github.com/yortyrh/resubuild"
-            className="text-[var(--landing-muted)] hover:text-[var(--landing-ink)]"
-            rel="noreferrer noopener"
-            target="_blank"
-          >
-            GitHub
-          </a>
-          <Link
-            href="/login"
-            className="text-[var(--landing-muted)] hover:text-[var(--landing-ink)]"
-          >
-            Sign in
-          </Link>
+        <nav aria-label="Footer">
+          <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            {links.map(({ href, label }) => (
+              <li key={label}>
+                <Link href={href} className="text-muted-foreground hover:text-foreground">
+                  {label}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <a
+                href="https://github.com/yortyrh/resubuild"
+                className="text-muted-foreground hover:text-foreground"
+                rel="noreferrer noopener"
+                target="_blank"
+              >
+                GitHub
+              </a>
+            </li>
+          </ul>
         </nav>
-      </div>
+      </Band>
     </footer>
   );
 }

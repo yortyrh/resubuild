@@ -49,7 +49,7 @@ export function SecuritySettings({ backHref, backLabel }: SecuritySettingsProps 
       : (changePassword.error?.message ?? null);
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
+    <div className="max-w-md space-y-6">
       {backHref ? (
         <a
           href={backHref}

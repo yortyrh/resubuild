@@ -22,6 +22,7 @@ beforeAll(() => {
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn() }),
+  usePathname: () => '/',
 }));
 
 // `auth-session` is a `'use client'` module; importing `hasSession` from a
@@ -47,6 +48,7 @@ describe('MarketingPage', () => {
     const headings = screen.getAllByRole('heading', { level: 1 });
     expect(headings).toHaveLength(1);
     expect(headings[0]).toHaveTextContent(/Drop in a PDF/i);
+    expect(headings[0]).toHaveTextContent(/CV you can edit/i);
 
     const primaryCtas = screen.getAllByRole('link', { name: /Try the live demo/i });
     expect(primaryCtas.length).toBeGreaterThanOrEqual(1);
@@ -59,14 +61,22 @@ describe('MarketingPage', () => {
     expect(loginLinks.some((link) => link.getAttribute('href') === '/login')).toBe(true);
   });
 
-  it('renders the header "Get Started Free" CTA pointing to /register with the primary button style', () => {
+  it('renders the header "Get started free" CTA pointing to /register', () => {
     render(<MarketingPage />);
 
-    // The header CTA is the registration entry point and uses the primary
-    // pill button styling via the landing-btn-primary utility class.
-    const registerCta = screen.getByRole('link', { name: /Get Started Free/i });
+    const registerCta = screen.getByRole('link', { name: /Get started free/i });
     expect(registerCta).toHaveAttribute('href', '/register');
-    expect(registerCta.className).toContain('landing-btn-primary');
+    expect(registerCta.className).toContain('bg-primary');
+  });
+
+  it('numbers only the real sequence: the three how-it-works steps', () => {
+    render(<MarketingPage />);
+
+    const steps = screen
+      .getByRole('heading', { level: 2, name: /three steps/i })
+      .closest('section')
+      ?.querySelectorAll('ol > li');
+    expect(steps).toHaveLength(3);
   });
 
   it('mounts HomeRedirect as a client island so signed-in visitors get redirected after hydration', () => {

@@ -13,7 +13,7 @@ describe('FeaturesPage', () => {
 
     expect(screen.getByRole('link', { name: /Resubuild/i })).toHaveAttribute('href', '/');
     expect(
-      screen.getByRole('heading', { level: 2, name: /Every tool for a Polished CV/i }),
+      screen.getByRole('heading', { level: 1, name: /Every tool for a polished CV/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: /Import a PDF CV/i })).toBeInTheDocument();
     expect(screen.queryByRole('video')).not.toBeInTheDocument();

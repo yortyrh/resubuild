@@ -26,14 +26,12 @@ export const metadata: Metadata = {
 
 export default function GuestImportPage() {
   return (
-    <div className="landing-page landing-grid-bg min-h-screen">
+    <div className="landing-root min-h-screen">
       <MarketingHeader />
-      <main id="main-content" className="mx-auto max-w-4xl px-6 py-12">
-        <h1 className="font-sans text-3xl font-extrabold tracking-tight sm:text-4xl">
-          {importTitle}
-        </h1>
-        <p className="mt-3 max-w-2xl text-[var(--landing-muted)]">{importDescription}</p>
-        <div className="surface-soft text-card-foreground mt-8 p-6">
+      <main id="main-content" className="mx-auto max-w-4xl px-5 py-14 sm:px-8 sm:py-20">
+        <h1 className="display text-[3rem] sm:text-[4rem]">{importTitle}</h1>
+        <p className="text-muted-foreground mt-4 max-w-2xl text-lg">{importDescription}</p>
+        <div className="surface-soft text-card-foreground mt-10 p-6 sm:p-8">
           <GuestImportWizard />
         </div>
       </main>

@@ -3,10 +3,10 @@ import type { RecordingEntry } from '@/lib/recordings';
 
 export function FeatureCard({ id, title, caption }: RecordingEntry) {
   return (
-    <article className="landing-feature-detail-card">
+    <article className="flex flex-col gap-3">
       <FeatureIllustration id={id} />
-      <h3 className="landing-feature-detail-title">{title}</h3>
-      <p className="landing-feature-detail-desc">{caption}</p>
+      <h3 className="wide mt-2 text-xl font-semibold">{title}</h3>
+      <p className="text-muted-foreground">{caption}</p>
     </article>
   );
 }

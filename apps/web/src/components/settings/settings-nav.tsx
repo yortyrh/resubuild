@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot, PlugZap } from 'lucide-react';
+import { Bot, PlugZap, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -8,9 +8,10 @@ import { cn } from '@/lib/utils';
 const items = [
   { href: '/dashboard/settings/ai-agent', label: 'AI model', icon: Bot },
   { href: '/dashboard/settings/mcp', label: 'MCP access', icon: PlugZap },
+  { href: '/dashboard/settings/security', label: 'Security', icon: ShieldCheck },
 ] as const;
 
-/** Sub-navigation shared by the settings pages linked from the user menu. */
+/** Sub-navigation shared by the settings pages (REQ-WEB-007). */
 export function SettingsNav() {
   const pathname = usePathname();
 
