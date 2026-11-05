@@ -67,3 +67,13 @@ Web search and page extraction use deployment-wide providers configured in the s
 - Every provider with a key takes part. Search uses Brave, Tavily and Firecrawl; page extraction uses Firecrawl and Tavily.
 - Calls rotate round-robin across the configured providers to spread spend. A failing provider hands the call to the next one; a provider that reports no credit, a rate limit or a rejected key is skipped for a cooldown period.
 - Without providers, URL import falls back to raw page fetch, and web lookup and profile discovery are skipped without failing.
+
+### REQ-IMP-010 Included AI (app-funded models)
+
+A deployment can fund AI for signed-in users who have no API key of their own. The operator lists models in the server environment, each with its own key and a monthly token budget, and sets a monthly token allowance per user.
+
+- Users with no account of their own use the included models by default. Users with accounts can switch between "Resubuild included AI" and their own accounts; the choice is kept.
+- Runs rotate round-robin across the included models. A model that used its monthly budget is skipped; one whose key the provider rejects, bills out or rate-limits is skipped for a cooldown period.
+- Every model call on included AI counts its input and output tokens against both the model's budget and the user's allowance. Counts reset at the start of each UTC month. A job can overshoot a budget by at most its own tokens.
+- When the user's allowance is used up, new AI jobs are refused (HTTP 429) with the reset date and a pointer to adding their own key. When every included model used its budget, new jobs are refused (HTTP 503).
+- AI settings show the included models, this month's usage against the allowance and the reset date. Calls with the user's own key are not counted.

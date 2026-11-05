@@ -714,6 +714,90 @@ describe('E2E — AI agent catalog', () => {
   });
 });
 
+describe('E2E — included AI (app-funded models)', () => {
+  let app: INestApplication;
+  let accessToken: string;
+  const fixture = loadFixture();
+  const env = {
+    AI_INCLUDED_MODELS: JSON.stringify([
+      {
+        id: 'e2e-openai',
+        model: 'openai/gpt-5-mini',
+        apiKey: 'sk-e2e-included',
+        monthlyTokenLimit: 1_000_000,
+        options: { reasoningEffort: 'low' },
+      },
+    ]),
+    AI_INCLUDED_USER_MONTHLY_TOKEN_LIMIT: '1000',
+  };
+
+  beforeAll(async () => {
+    Object.assign(process.env, env);
+    app = await createE2eApp();
+    accessToken = await signIn(app, fixture.e2eUser);
+  });
+
+  afterAll(async () => {
+    await app.close();
+    for (const key of Object.keys(env)) delete process.env[key];
+  });
+
+  it('serves users without their own key from the included models, up to their allowance', async () => {
+    const auth = `Bearer ${accessToken}`;
+    const server = app.getHttpServer();
+
+    const included = await request(server)
+      .get('/ai/agents/included')
+      .set('Authorization', auth)
+      .expect(200);
+    expect(included.body).toMatchObject({
+      enabled: true,
+      available: true,
+      usage: { limit: 1000 },
+      models: [{ providerId: 'openai', providerDisplayName: 'OpenAI' }],
+    });
+
+    const active = await request(server).get('/ai/agents/active').set('Authorization', auth);
+    expect(active.body).toMatchObject({
+      configured: true,
+      source: 'included',
+      displayName: 'Resubuild included AI',
+    });
+
+    await request(server)
+      .put('/ai/agents/active')
+      .set('Authorization', auth)
+      .send({ source: 'included' })
+      .expect(200);
+
+    // Use up the allowance, then a new AI job is refused with 429.
+    const { AiUsageRepository } =
+      require('../../src/ai-hosted/ai-usage.repository') as typeof import('../../src/ai-hosted/ai-usage.repository');
+    const { usagePeriod } =
+      require('../../src/ai-hosted/usage-period') as typeof import('../../src/ai-hosted/usage-period');
+    const me = await request(server).get('/auth/me').set('Authorization', auth).expect(200);
+    await app
+      .get(AiUsageRepository)
+      .record(
+        { inputTokens: 900, outputTokens: 100, totalTokens: 1000 },
+        { pool: 'included', entryId: 'e2e-openai', period: usagePeriod(), userId: me.body.user.id },
+      );
+
+    const refused = await request(server)
+      .post('/cv/import/markdown')
+      .set('Authorization', auth)
+      .attach('file', Buffer.from('# Jane Doe\n\nEngineer'), {
+        filename: 'cv.md',
+        contentType: 'text/markdown',
+      })
+      .expect(429);
+    expect(refused.body).toMatchObject({ code: 'AI_INCLUDED_QUOTA_EXCEEDED' });
+
+    const exhausted = await request(server).get('/ai/agents/active').set('Authorization', auth);
+    expect(exhausted.body).toMatchObject({ configured: false, exhausted: true });
+  });
+});
+
 describe('E2E — import LLM config', () => {
   let app: INestApplication;
   let accessToken: string;

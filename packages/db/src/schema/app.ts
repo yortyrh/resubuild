@@ -330,13 +330,59 @@ export const aiAgentAccount = pgTable(
   ],
 );
 
-export const aiAgentPreference = pgTable('ai_agent_preference', {
-  user_id: userId().primaryKey(),
-  active_account_id: uuid('active_account_id').references(() => aiAgentAccount.id, {
-    onDelete: 'set null',
-  }),
-  updated_at: updatedAt(),
-});
+export const aiAgentPreference = pgTable(
+  'ai_agent_preference',
+  {
+    user_id: userId().primaryKey(),
+    active_account_id: uuid('active_account_id').references(() => aiAgentAccount.id, {
+      onDelete: 'set null',
+    }),
+    /** `account`: the user's own key (`active_account_id`); `included`: the app-funded models. */
+    active_source: text('active_source')
+      .$type<'account' | 'included'>()
+      .notNull()
+      .default('account'),
+    updated_at: updatedAt(),
+  },
+  (t) => [
+    check('ai_agent_preference_source_check', sql`${t.active_source} in ('account', 'included')`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// App-funded AI usage (monthly token counters, UTC calendar months 'YYYY-MM')
+// ---------------------------------------------------------------------------
+
+const tokenCount = (name: string) => bigint(name, { mode: 'number' }).notNull().default(0);
+
+/** Tokens spent per hosted pool model (`pool` = guest | included, `entry_id` from env config). */
+export const aiPoolUsageMonthly = pgTable(
+  'ai_pool_usage_monthly',
+  {
+    pool: text('pool').notNull(),
+    entry_id: text('entry_id').notNull(),
+    period: text('period').notNull(),
+    input_tokens: tokenCount('input_tokens'),
+    output_tokens: tokenCount('output_tokens'),
+    total_tokens: tokenCount('total_tokens'),
+    updated_at: updatedAt(),
+  },
+  (t) => [primaryKey({ columns: [t.pool, t.entry_id, t.period] })],
+);
+
+/** Tokens a user spent on the included (app-funded) models. */
+export const aiUserUsageMonthly = pgTable(
+  'ai_user_usage_monthly',
+  {
+    user_id: userId(),
+    period: text('period').notNull(),
+    input_tokens: tokenCount('input_tokens'),
+    output_tokens: tokenCount('output_tokens'),
+    total_tokens: tokenCount('total_tokens'),
+    updated_at: updatedAt(),
+  },
+  (t) => [primaryKey({ columns: [t.user_id, t.period] })],
+);
 
 // ---------------------------------------------------------------------------
 // Job applications

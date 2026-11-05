@@ -49,3 +49,12 @@ export function describeModelOptions(
     .filter((field) => options[field.key] !== undefined && options[field.key] !== '')
     .map((field) => `${field.label}: ${options[field.key]}`);
 }
+
+/** Compact token count, e.g. 950 → "950", 12_300 → "12.3k", 2_000_000 → "2M". */
+export function formatTokens(count: number): string {
+  const format = (value: number, unit: string) =>
+    `${Number.isInteger(value) ? value : value.toFixed(1).replace(/\.0$/, '')}${unit}`;
+  if (count >= 1_000_000) return format(count / 1_000_000, 'M');
+  if (count >= 1_000) return format(count / 1_000, 'k');
+  return String(Math.max(0, Math.round(count)));
+}

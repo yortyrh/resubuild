@@ -25,6 +25,8 @@ export * from './web-providers';
 export {
   type ModelProviderOptions,
   type ModelRunContext,
+  type ModelTokenUsage,
+  type UsageMeter,
   withModelRunContext,
 } from './workflows/agent-model-config';
 export {

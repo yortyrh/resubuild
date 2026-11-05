@@ -15,13 +15,13 @@ import {
   runTextImportWorkflow,
   runWebsiteImportWorkflow,
   type WebProviderPool,
-  withModelRunContext,
 } from '@resubuild/import-agent';
 import { getModelMaxOutputTokens } from '@resubuild/import-models';
 import { InvalidImportedResumeError, prepareImportedResume } from '@resubuild/types';
 import {
   type ActiveAiAgentCredentials,
   AiAgentCredentialService,
+  runWithAiCredentials,
 } from '../ai-agent/ai-agent-credential.service';
 import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
@@ -331,9 +331,9 @@ export class ImportService {
     return prepared;
   }
 
-  /** Run a workflow with the account's model options (reasoning effort…) applied. */
+  /** Run a workflow with the model options and, for app-funded models, token metering. */
   private withModelRun<T>(llm: ActiveAiAgentCredentials, action: () => Promise<T>): Promise<T> {
-    return withModelRunContext({ providerOptions: llm.providerOptions }, action);
+    return runWithAiCredentials(llm, action);
   }
 
   /** Output-token limit of the selected model, so long CVs are not cut off mid-JSON. */

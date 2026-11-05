@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryProvider } from '@/components/providers/query-provider';
 
 const mockGetAiAgentProviders = vi.fn();
@@ -10,6 +10,8 @@ const mockGetAiAgentAccounts = vi.fn();
 const mockCreateAiAgentAccount = vi.fn();
 const mockUpdateAiAgentAccount = vi.fn();
 const mockSetAiAgentActive = vi.fn();
+const mockGetAiAgentActive = vi.fn();
+const mockGetAiAgentIncluded = vi.fn();
 
 vi.mock('@/lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api')>();
@@ -18,7 +20,8 @@ vi.mock('@/lib/api', async (importOriginal) => {
     getAiAgentProviders: (...args: unknown[]) => mockGetAiAgentProviders(...args),
     getAiAgentModels: (...args: unknown[]) => mockGetAiAgentModels(...args),
     getAiAgentAccounts: (...args: unknown[]) => mockGetAiAgentAccounts(...args),
-    getAiAgentActive: vi.fn(),
+    getAiAgentActive: (...args: unknown[]) => mockGetAiAgentActive(...args),
+    getAiAgentIncluded: (...args: unknown[]) => mockGetAiAgentIncluded(...args),
     createAiAgentAccount: (...args: unknown[]) => mockCreateAiAgentAccount(...args),
     updateAiAgentAccount: (...args: unknown[]) => mockUpdateAiAgentAccount(...args),
     deleteAiAgentAccount: vi.fn(),
@@ -37,6 +40,11 @@ function renderSettings() {
 }
 
 describe('AiAgentSettings', () => {
+  beforeEach(() => {
+    mockGetAiAgentActive.mockResolvedValue({ configured: false });
+    mockGetAiAgentIncluded.mockResolvedValue({ enabled: false, available: false, models: [] });
+  });
+
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -295,5 +303,28 @@ describe('AiAgentSettings', () => {
 
     await user.type(screen.getByLabelText('Label (optional)'), 'Personal');
     expect(screen.getByRole('button', { name: 'Save' })).not.toBeDisabled();
+  });
+
+  it('offers included AI when the server has it and switches to it', async () => {
+    mockGetAiAgentProviders.mockResolvedValue([anthropicProvider]);
+    mockGetAiAgentAccounts.mockResolvedValue([opusAccount]);
+    mockGetAiAgentActive.mockResolvedValue({ configured: true, source: 'account' });
+    mockGetAiAgentIncluded.mockResolvedValue({
+      enabled: true,
+      available: true,
+      usage: { used: 0, limit: 200000, remaining: 200000, resetsAt: '2026-12-01T00:00:00Z' },
+      models: [
+        { providerId: 'openai', providerDisplayName: 'OpenAI', modelDisplayName: 'GPT-5 Mini' },
+      ],
+    });
+    mockSetAiAgentActive.mockResolvedValue({ configured: true, source: 'included' });
+
+    const user = userEvent.setup({ delay: null });
+    renderSettings();
+
+    expect(await screen.findByText('Resubuild included AI')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your API keys' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Use included AI' }));
+    await waitFor(() => expect(mockSetAiAgentActive.mock.calls[0]?.[0]).toBe('included'));
   });
 });

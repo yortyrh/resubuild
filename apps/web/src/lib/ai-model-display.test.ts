@@ -3,6 +3,7 @@ import type { AiModelOptionField } from '@/lib/api';
 import {
   defaultAccountName,
   describeModelOptions,
+  formatTokens,
   pruneModelOptions,
   shortProviderName,
   visibleOptionFields,
@@ -68,5 +69,13 @@ describe('ai-model-display', () => {
       'Speed: fast',
     ]);
     expect(describeModelOptions(fields, undefined)).toEqual([]);
+  });
+
+  it('formats token counts compactly', () => {
+    expect(formatTokens(950)).toBe('950');
+    expect(formatTokens(12_300)).toBe('12.3k');
+    expect(formatTokens(200_000)).toBe('200k');
+    expect(formatTokens(2_000_000)).toBe('2M');
+    expect(formatTokens(-5)).toBe('0');
   });
 });

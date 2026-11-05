@@ -69,6 +69,38 @@ describe('AiAgentRepository', () => {
     });
   });
 
+  describe('preference source', () => {
+    it('defaults to account with no active account', async () => {
+      await expect(repository.getPreference(user)).resolves.toEqual({
+        activeAccountId: null,
+        source: 'account',
+      });
+    });
+
+    it('selects included models while keeping the account, and switches back', async () => {
+      const created = await create(user, 'Work');
+      await repository.setIncludedSource(user);
+      await expect(repository.getPreference(user)).resolves.toEqual({
+        activeAccountId: created.id,
+        source: 'included',
+      });
+
+      await repository.setActiveAccount(user, created.id);
+      await expect(repository.getPreference(user)).resolves.toEqual({
+        activeAccountId: created.id,
+        source: 'account',
+      });
+    });
+
+    it('stores the choice per user', async () => {
+      await repository.setIncludedSource(user);
+      await expect(repository.getPreference(other)).resolves.toEqual({
+        activeAccountId: null,
+        source: 'account',
+      });
+    });
+  });
+
   describe('active status', () => {
     it('is unconfigured when there is no preference', async () => {
       await expect(repository.getActiveStatus(user)).resolves.toEqual({ configured: false });

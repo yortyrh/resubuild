@@ -20,6 +20,8 @@ Every user-authored Markdown/HTML is sanitized before it is rendered in the app 
 
 Every upload and fetched URL has a size limit and a timeout. AI pipelines have bounded retries and bounded web searches, so a single job cannot run without limit.
 
+- App-funded AI spend is bounded by monthly token budgets per model and per user (REQ-IMP-010).
+
 ### REQ-NFR-005 Open data `[nfr]`
 
 User data can always be exported as standard JSON Resume (REQ-EXP-007). That export can be imported again without loss of content (REQ-IMP-005).

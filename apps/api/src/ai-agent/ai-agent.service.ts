@@ -14,28 +14,41 @@ import {
   InvalidModelOptionsError,
   listCatalogModelsForProvider,
   listCatalogProviders,
+  type ModelDisplayNames,
   type ModelOptions,
+  modelDisplayNames,
   parseMastraModelId,
   resolveProviderId,
-  shortProviderName,
   toProviderOptions,
   validateImportModelId,
   validateModelOptions,
 } from '@resubuild/import-models';
+import {
+  HostedModelsService,
+  INCLUDED_DISPLAY_NAME,
+  type IncludedStatus,
+  type IncludedUsage,
+} from '../ai-hosted/hosted-models.service';
 import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
-import type { AiAgentAccountSummary, AiAgentActiveStatus } from './ai-agent.repository';
+import type {
+  AiAgentAccountSummary,
+  AiAgentActiveStatus,
+  AiAgentSource,
+} from './ai-agent.repository';
 import { AiAgentRepository } from './ai-agent.repository';
-
-export interface ModelDisplayNames {
-  providerDisplayName: string;
-  modelDisplayName: string;
-  /** `label` when set, otherwise "Provider · Model". */
-  displayName: string;
-}
+import { AiAgentCredentialService } from './ai-agent-credential.service';
 
 export type AiAgentAccountView = AiAgentAccountSummary & ModelDisplayNames;
-export type AiAgentActiveView = AiAgentActiveStatus & Partial<ModelDisplayNames>;
+export type AiAgentActiveView = AiAgentActiveStatus &
+  Partial<ModelDisplayNames> & {
+    /** Which AI runs use: the user's own account or the included models. */
+    source?: AiAgentSource;
+    /** Included models only: this month's usage against the user's limit. */
+    usage?: IncludedUsage;
+    /** Included models only: no budget left (user limit or every pool model). */
+    exhausted?: boolean;
+  };
 
 export const DUPLICATE_MODEL_LABEL_MESSAGE =
   'You already have an account for this model without a label — add a label to tell them apart';
@@ -46,6 +59,8 @@ export class AiAgentService {
     private readonly repository: AiAgentRepository,
     private readonly configService: ConfigService,
     private readonly catalogService: ImportModelsCatalogService,
+    private readonly credentials: AiAgentCredentialService,
+    private readonly hostedModels: HostedModelsService,
   ) {}
 
   listProviders() {
@@ -61,39 +76,67 @@ export class AiAgentService {
   }
 
   async listAccounts(user: AuthenticatedRequest['user']): Promise<AiAgentAccountView[]> {
-    const accounts = await this.repository.listAccounts(user);
-    return accounts.map((account) => this.toAccountView(account));
+    const [accounts, selection] = await Promise.all([
+      this.repository.listAccounts(user),
+      this.credentials.resolveSelection(user),
+    ]);
+    return accounts.map((account) => ({
+      ...this.toAccountView(account),
+      isActive: selection.kind === 'account' && selection.accountId === account.id,
+    }));
   }
 
   async getActiveStatus(user: AuthenticatedRequest['user']): Promise<AiAgentActiveView> {
-    return this.toActiveView(await this.repository.getActiveStatus(user));
+    const selection = await this.credentials.resolveSelection(user);
+    if (selection.kind === 'included') {
+      return this.includedActiveView(await this.hostedModels.getIncludedStatus(user.id));
+    }
+    if (selection.kind === 'none') {
+      return { configured: false };
+    }
+    return { ...this.toActiveView(await this.repository.getActiveStatus(user)), source: 'account' };
   }
 
   async setActiveAccount(
     user: AuthenticatedRequest['user'],
     accountId: string,
   ): Promise<AiAgentActiveView> {
-    return this.toActiveView(await this.repository.setActiveAccount(user, accountId));
+    await this.repository.setActiveAccount(user, accountId);
+    return this.getActiveStatus(user);
+  }
+
+  /** Use the app-funded included models for the user's AI runs. */
+  async selectIncluded(user: AuthenticatedRequest['user']): Promise<AiAgentActiveView> {
+    if (!this.hostedModels.includedEnabled) {
+      throw new BadRequestException('Included AI is not available on this server');
+    }
+    await this.repository.setIncludedSource(user);
+    return this.getActiveStatus(user);
+  }
+
+  getIncludedStatus(user: AuthenticatedRequest['user']): Promise<IncludedStatus> {
+    return this.hostedModels.getIncludedStatus(user.id);
+  }
+
+  private includedActiveView(status: IncludedStatus): AiAgentActiveView {
+    const exhausted = !status.available || (status.usage?.remaining ?? 0) <= 0;
+    const providers = [...new Set(status.models.map((model) => model.providerId))];
+    const single = status.models.length === 1 ? status.models[0] : undefined;
+    return {
+      configured: !exhausted,
+      source: 'included',
+      ...(providers.length === 1 ? { providerId: providers[0] } : {}),
+      providerDisplayName: single?.providerDisplayName ?? 'Resubuild',
+      modelDisplayName: status.models.map((model) => model.modelDisplayName).join(', '),
+      displayName: INCLUDED_DISPLAY_NAME,
+      usage: status.usage,
+      exhausted,
+    };
   }
 
   /** Provider and model names for `modelId` (falls back to the raw ids off-catalog). */
   displayNames(modelId: string, label?: string | null): ModelDisplayNames {
-    const found = findCatalogModel(this.catalogService.getCatalog(), modelId);
-    let providerDisplayName: string;
-    let modelDisplayName: string;
-    if (found) {
-      providerDisplayName = shortProviderName(found.provider.displayName);
-      modelDisplayName = found.model.displayName;
-    } else {
-      const slash = modelId.indexOf('/');
-      providerDisplayName = slash > 0 ? modelId.slice(0, slash) : modelId;
-      modelDisplayName = slash > 0 ? modelId.slice(slash + 1) : modelId;
-    }
-    return {
-      providerDisplayName,
-      modelDisplayName,
-      displayName: label?.trim() || `${providerDisplayName} · ${modelDisplayName}`,
-    };
+    return modelDisplayNames(this.catalogService.getCatalog(), modelId, label);
   }
 
   private toAccountView(account: AiAgentAccountSummary): AiAgentAccountView {

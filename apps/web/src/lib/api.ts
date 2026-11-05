@@ -327,8 +327,31 @@ export interface AiAgentAccount extends AiModelDisplayNames {
   updatedAt: string;
 }
 
+export interface AiIncludedUsage {
+  used: number;
+  limit: number;
+  remaining: number;
+  /** When the monthly allowance resets (ISO timestamp). */
+  resetsAt: string;
+}
+
+export interface AiIncludedStatus {
+  /** The server offers app-funded models. */
+  enabled: boolean;
+  /** At least one included model has budget left this month. */
+  available: boolean;
+  usage?: AiIncludedUsage;
+  models: { providerId: string; providerDisplayName: string; modelDisplayName: string }[];
+}
+
 export interface AiAgentActiveStatus extends Partial<AiModelDisplayNames> {
   configured: boolean;
+  /** `account`: the user's own key; `included`: the app-funded models. */
+  source?: 'account' | 'included';
+  /** Included models only. */
+  usage?: AiIncludedUsage;
+  /** Included models only: no allowance or budget left this month. */
+  exhausted?: boolean;
   accountId?: string;
   label?: string | null;
   providerId?: string;
@@ -395,11 +418,18 @@ export function getAiAgentActive() {
   return apiFetch<AiAgentActiveStatus>('/ai/agents/active');
 }
 
-export function setAiAgentActive(accountId: string) {
+/** Make an account (by id) or the included models (`'included'`) the active AI. */
+export function setAiAgentActive(selection: string | 'included') {
   return apiFetch<AiAgentActiveStatus>('/ai/agents/active', {
     method: 'PUT',
-    body: JSON.stringify({ accountId }),
+    body: JSON.stringify(
+      selection === 'included' ? { source: 'included' } : { accountId: selection },
+    ),
   });
+}
+
+export function getAiAgentIncluded() {
+  return apiFetch<AiIncludedStatus>('/ai/agents/included');
 }
 
 export function getImportLlmProviders() {

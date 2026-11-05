@@ -22,6 +22,7 @@ export const aiAgentKeys = {
   models: (providerId: string) => [...aiAgentKeys.all, 'models', providerId] as const,
   accounts: () => [...aiAgentKeys.all, 'accounts'] as const,
   active: () => [...aiAgentKeys.all, 'active'] as const,
+  included: () => [...aiAgentKeys.all, 'included'] as const,
 };
 
 export const importKeys = {

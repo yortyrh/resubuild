@@ -12,6 +12,7 @@ vi.mock('@mastra/core/agent', () => ({
 import {
   createModelAgent,
   currentModelRunContext,
+  readTokenUsage,
   withModelRunContext,
   withRunProviderOptions,
 } from './agent-model-config';
@@ -88,5 +89,53 @@ describe('createModelAgent', () => {
     await agent.generate('hi');
     expect(generateMock).toHaveBeenCalledWith('hi');
     expect(currentModelRunContext()).toEqual({});
+  });
+});
+
+describe('readTokenUsage', () => {
+  it('prefers totalUsage over the last step usage', () => {
+    expect(
+      readTokenUsage({
+        totalUsage: { inputTokens: 100, outputTokens: 50, totalTokens: 150 },
+        usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+      }),
+    ).toEqual({ inputTokens: 100, outputTokens: 50, totalTokens: 150 });
+  });
+
+  it('derives the total and ignores missing usage', () => {
+    expect(readTokenUsage({ usage: { inputTokens: 10, outputTokens: 5 } })).toEqual({
+      inputTokens: 10,
+      outputTokens: 5,
+      totalTokens: 15,
+    });
+    expect(readTokenUsage({ text: 'x' })).toBeNull();
+    expect(readTokenUsage(undefined)).toBeNull();
+    expect(readTokenUsage({ usage: { inputTokens: Number.NaN } })).toBeNull();
+  });
+});
+
+describe('usage metering', () => {
+  it('records the tokens of every generate call in the run', async () => {
+    generateMock.mockResolvedValue({
+      text: 'ok',
+      totalUsage: { inputTokens: 7, outputTokens: 3, totalTokens: 10 },
+    });
+    const recorded: unknown[] = [];
+    await withModelRunContext(
+      { usageMeter: { record: (usage) => void recorded.push(usage) } },
+      async () => {
+        const agent = createModelAgent('openai/gpt-5', 'k', {
+          id: 'a',
+          name: 'a',
+          instructions: 'x',
+        });
+        await agent.generate('one');
+        await agent.generate('two');
+      },
+    );
+    expect(recorded).toEqual([
+      { inputTokens: 7, outputTokens: 3, totalTokens: 10 },
+      { inputTokens: 7, outputTokens: 3, totalTokens: 10 },
+    ]);
   });
 });

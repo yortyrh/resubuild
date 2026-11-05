@@ -41,8 +41,17 @@ describe('AiAgentService', () => {
   >;
   let configService: { get: jest.Mock };
   let catalogService: Pick<ImportModelsCatalogService, 'getCatalog'>;
+  let credentials: { resolveSelection: jest.Mock };
+  let hostedModels: {
+    includedEnabled: boolean;
+    getIncludedStatus: jest.Mock;
+  };
 
   beforeEach(() => {
+    credentials = {
+      resolveSelection: jest.fn().mockResolvedValue({ kind: 'account', accountId: 'acc-1' }),
+    };
+    hostedModels = { includedEnabled: false, getIncludedStatus: jest.fn() };
     catalogService = {
       getCatalog: () => testCatalog,
     };
@@ -63,6 +72,8 @@ describe('AiAgentService', () => {
       repository as never,
       configService as never,
       catalogService as never,
+      credentials as never,
+      hostedModels as never,
     );
   });
 
@@ -327,6 +338,8 @@ describe('AiAgentService', () => {
       repository as never,
       configService as never,
       catalogService as never,
+      credentials as never,
+      hostedModels as never,
     );
 
     await expect(
@@ -507,7 +520,7 @@ describe('AiAgentService', () => {
       await expect(service.getActiveStatus(user)).resolves.toMatchObject({
         displayName: 'OpenAI · GPT-5',
       });
-      repository.getActiveStatus.mockResolvedValue({ configured: false });
+      credentials.resolveSelection.mockResolvedValue({ kind: 'none' });
       await expect(service.getActiveStatus(user)).resolves.toEqual({ configured: false });
     });
 
@@ -544,6 +557,66 @@ describe('AiAgentService', () => {
       await expect(service.updateAccount(user, 'acc-1', { label: '' })).resolves.toMatchObject({
         id: 'acc-1',
       });
+    });
+  });
+
+  describe('included models', () => {
+    const includedStatus = {
+      enabled: true,
+      available: true,
+      usage: { used: 100, limit: 1000, remaining: 900, resetsAt: '2026-12-01T00:00:00.000Z' },
+      models: [
+        { providerId: 'openai', providerDisplayName: 'OpenAI', modelDisplayName: 'GPT-5 Mini' },
+      ],
+    };
+
+    it('reports the included models as the active AI with usage', async () => {
+      credentials.resolveSelection.mockResolvedValue({ kind: 'included' });
+      hostedModels.getIncludedStatus.mockResolvedValue(includedStatus);
+
+      await expect(service.getActiveStatus(user)).resolves.toEqual({
+        configured: true,
+        source: 'included',
+        providerId: 'openai',
+        providerDisplayName: 'OpenAI',
+        modelDisplayName: 'GPT-5 Mini',
+        displayName: 'Resubuild included AI',
+        usage: includedStatus.usage,
+        exhausted: false,
+      });
+    });
+
+    it('is not configured once the monthly allowance is used up', async () => {
+      credentials.resolveSelection.mockResolvedValue({ kind: 'included' });
+      hostedModels.getIncludedStatus.mockResolvedValue({
+        ...includedStatus,
+        usage: { ...includedStatus.usage, used: 1000, remaining: 0 },
+      });
+
+      await expect(service.getActiveStatus(user)).resolves.toMatchObject({
+        configured: false,
+        exhausted: true,
+      });
+    });
+
+    it('marks no account active while included models are selected', async () => {
+      credentials.resolveSelection.mockResolvedValue({ kind: 'included' });
+      repository.listAccounts.mockResolvedValue([
+        { id: 'acc-1', label: null, modelId: 'openai/gpt-5', isActive: true },
+      ] as never);
+
+      const [account] = await service.listAccounts(user);
+      expect(account.isActive).toBe(false);
+    });
+
+    it('selects included models only when the server offers them', async () => {
+      (repository as unknown as { setIncludedSource: jest.Mock }).setIncludedSource = jest.fn();
+      await expect(service.selectIncluded(user)).rejects.toBeInstanceOf(BadRequestException);
+
+      hostedModels.includedEnabled = true;
+      credentials.resolveSelection.mockResolvedValue({ kind: 'included' });
+      hostedModels.getIncludedStatus.mockResolvedValue(includedStatus);
+      await expect(service.selectIncluded(user)).resolves.toMatchObject({ source: 'included' });
     });
   });
 });

@@ -13,7 +13,6 @@ import {
   runPrepareApplicationWorkflow,
   runUpdateApplicationWorkflow,
   type TailorCvPatch,
-  withModelRunContext,
 } from '@resubuild/import-agent';
 import type { JobApplicationRow, JobSourceType, Resume } from '@resubuild/types';
 import {
@@ -26,6 +25,7 @@ import {
 import {
   type ActiveAiAgentCredentials,
   AiAgentCredentialService,
+  runWithAiCredentials,
 } from '../ai-agent/ai-agent-credential.service';
 import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { CvService } from '../cv/cv.service';
@@ -680,7 +680,7 @@ export class ApplicationService {
         }
       }
 
-      const result = await withModelRunContext({ providerOptions: llm.providerOptions }, async () =>
+      const result = await runWithAiCredentials(llm, async () =>
         runPrepareApplicationWorkflow({
           sourceType,
           url: intake.url,
@@ -890,7 +890,7 @@ export class ApplicationService {
       const jobRawText = originalRow.job_raw_text!.trim();
       const jobSummary = this.buildJobSummaryFromRow(originalRow);
 
-      const result = await withModelRunContext({ providerOptions: llm.providerOptions }, async () =>
+      const result = await runWithAiCredentials(llm, async () =>
         runUpdateApplicationWorkflow({
           jobSummary,
           jobRawText,

@@ -62,6 +62,15 @@ export class AiAgentController {
 
   @Put('active')
   setActive(@Req() req: AuthenticatedRequest, @Body() body: SetActiveAiAgentAccountDto) {
-    return this.aiAgentService.setActiveAccount(req.user, body.accountId);
+    if (body.source === 'included') {
+      return this.aiAgentService.selectIncluded(req.user);
+    }
+    return this.aiAgentService.setActiveAccount(req.user, body.accountId as string);
+  }
+
+  /** Included (app-funded) models: availability, models and this month's usage. */
+  @Get('included')
+  getIncluded(@Req() req: AuthenticatedRequest) {
+    return this.aiAgentService.getIncludedStatus(req.user);
   }
 }

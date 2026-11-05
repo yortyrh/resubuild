@@ -4,6 +4,7 @@ import { Check, KeyRound, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { ProviderIcon } from '@/components/ai/provider-icon';
+import { IncludedAiCard } from '@/components/settings/included-ai-card';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,6 +25,8 @@ import {
 import type { AiAgentAccount, AiModelOptionField, AiModelOptions } from '@/lib/api';
 import {
   useAiAgentAccounts,
+  useAiAgentActive,
+  useAiAgentIncluded,
   useAiAgentModels,
   useAiAgentProviders,
   useCreateAiAgentAccount,
@@ -70,6 +73,9 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
     isLoading: accountsLoading,
     error: accountsError,
   } = useAiAgentAccounts();
+
+  const { data: included } = useAiAgentIncluded();
+  const { data: active } = useAiAgentActive();
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [editingAccount, setEditingAccount] = useState<AiAgentAccount | null>(null);
@@ -212,12 +218,12 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
     }
   };
 
-  const handleSetActive = async (accountId: string) => {
+  const handleSetActive = async (selection: string | 'included') => {
     setError(null);
     setSuccess(null);
     try {
-      await setActiveAccount.mutateAsync(accountId);
-      setSuccess('Active account updated.');
+      await setActiveAccount.mutateAsync(selection);
+      setSuccess(selection === 'included' ? 'Now using included AI.' : 'Active account updated.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to set active account');
     }
@@ -268,9 +274,18 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
         </p>
       ) : null}
 
+      {included?.enabled ? (
+        <IncludedAiCard
+          status={included}
+          isActive={active?.source === 'included'}
+          busy={saving}
+          onSelect={() => void handleSetActive('included')}
+        />
+      ) : null}
+
       <section className="surface-soft text-card-foreground space-y-3 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-medium">Accounts</h2>
+          <h2 className="font-medium">{included?.enabled ? 'Your API keys' : 'Accounts'}</h2>
           <Button type="button" size="sm" onClick={openCreateDialog}>
             Add account
           </Button>

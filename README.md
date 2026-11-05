@@ -154,6 +154,8 @@ Regenerate sample PDFs from JSON fixtures: `pnpm samples:pdf` (builds `@resubuil
 
 Requires a real provider API key in AI agent settings. `pnpm setup:env` generates `AI_AGENT_ENCRYPTION_KEY`. Optional `TAVILY_API_KEY`, `FIRECRAWL_API_KEY` and `BRAVE_SEARCH_API_KEY` in `apps/api/.env` enable web search (profile discovery) and URL-import page extraction for all users; the API rotates between the configured providers round-robin and falls back to the next one when one fails or runs out of credit. PDF and DOCX files are converted locally with [`@firecrawl/anydoc`](https://github.com/firecrawl/anydoc); only scanned PDFs go to Firecrawl's hosted OCR (keyless, or with `FIRECRAWL_API_KEY` for higher limits).
 
+Instead of their own key, users can run on app-funded models: set `AI_INCLUDED_MODELS` (JSON list of models with the deployment's keys and a monthly token budget each) and `AI_INCLUDED_USER_MONTHLY_TOKEN_LIMIT` (tokens per user per month) in `apps/api/.env`. Users without a key then use "Resubuild included AI" until their monthly allowance or the models' budgets run out. See `apps/api/.env.example`.
+
 1. Open `/dashboard/settings/import-llm`, pick provider → model → API key, and save.
 2. Generate sample PDFs if needed: `pnpm samples:pdf`
 3. On `/dashboard/cv/new`, use **Import PDF** with a file from `.samples/resumes/pdf/`.

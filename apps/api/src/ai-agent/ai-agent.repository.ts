@@ -12,6 +12,8 @@ import {
   tryDecryptSecret,
 } from './ai-agent-crypto.util';
 
+export type AiAgentSource = 'account' | 'included';
+
 export interface AiAgentAccountRow {
   id: string;
   user_id: string;
@@ -74,14 +76,42 @@ export class AiAgentRepository {
     return key;
   }
 
-  private async getActiveAccountId(user: AuthenticatedRequest['user']): Promise<string | null> {
+  /**
+   * The user's AI selection as stored: `source` says whether runs use their own
+   * account (`activeAccountId`) or the app-funded included models. The account
+   * id is kept while `included` is selected so switching back is one step.
+   */
+  async getPreference(
+    user: AuthenticatedRequest['user'],
+  ): Promise<{ activeAccountId: string | null; source: AiAgentSource }> {
     const rows = await this.db
-      .select({ active_account_id: aiAgentPreference.active_account_id })
+      .select({
+        active_account_id: aiAgentPreference.active_account_id,
+        active_source: aiAgentPreference.active_source,
+      })
       .from(aiAgentPreference)
       .where(eq(aiAgentPreference.user_id, user.id))
       .limit(1);
 
-    return rows[0]?.active_account_id ?? null;
+    return {
+      activeAccountId: rows[0]?.active_account_id ?? null,
+      source: rows[0]?.active_source ?? 'account',
+    };
+  }
+
+  private async getActiveAccountId(user: AuthenticatedRequest['user']): Promise<string | null> {
+    return (await this.getPreference(user)).activeAccountId;
+  }
+
+  /** Select the app-funded included models (keeps the stored account id). */
+  async setIncludedSource(user: AuthenticatedRequest['user']): Promise<void> {
+    await this.db
+      .insert(aiAgentPreference)
+      .values({ user_id: user.id, active_source: 'included' })
+      .onConflictDoUpdate({
+        target: aiAgentPreference.user_id,
+        set: { active_source: 'included' },
+      });
   }
 
   private toSummary(row: AiAgentAccountRow, activeAccountId: string | null): AiAgentAccountSummary {
@@ -229,10 +259,10 @@ export class AiAgentRepository {
   ): Promise<void> {
     await this.db
       .insert(aiAgentPreference)
-      .values({ user_id: user.id, active_account_id: accountId })
+      .values({ user_id: user.id, active_account_id: accountId, active_source: 'account' })
       .onConflictDoUpdate({
         target: aiAgentPreference.user_id,
-        set: { active_account_id: accountId },
+        set: { active_account_id: accountId, active_source: 'account' },
       });
   }
 

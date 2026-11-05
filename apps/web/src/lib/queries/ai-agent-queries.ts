@@ -6,6 +6,7 @@ import {
   deleteAiAgentAccount,
   getAiAgentAccounts,
   getAiAgentActive,
+  getAiAgentIncluded,
   getAiAgentModels,
   getAiAgentProviders,
   getPdfImportJob,
@@ -19,6 +20,7 @@ import { AI_MODELS_STALE_TIME_MS } from '@/lib/queries/query-client';
 function invalidateAiAgentLists(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: aiAgentKeys.accounts() });
   void queryClient.invalidateQueries({ queryKey: aiAgentKeys.active() });
+  void queryClient.invalidateQueries({ queryKey: aiAgentKeys.included() });
 }
 
 export function useAiAgentProviders() {
@@ -48,6 +50,14 @@ export function useAiAgentActive() {
   return useQuery({
     queryKey: aiAgentKeys.active(),
     queryFn: getAiAgentActive,
+  });
+}
+
+/** App-funded "included" models: availability, models and this month's usage. */
+export function useAiAgentIncluded() {
+  return useQuery({
+    queryKey: aiAgentKeys.included(),
+    queryFn: getAiAgentIncluded,
   });
 }
 

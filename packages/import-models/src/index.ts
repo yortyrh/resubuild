@@ -190,3 +190,36 @@ export function findCatalogModel(
 export function shortProviderName(displayName: string): string {
   return displayName.replace(/\s*\(BYOK[^)]*\)\s*$/, '').trim() || displayName;
 }
+
+export interface ModelDisplayNames {
+  /** e.g. "Anthropic" */
+  providerDisplayName: string;
+  /** e.g. "Claude Opus 4.5" */
+  modelDisplayName: string;
+  /** `label` when set, otherwise "Provider · Model". */
+  displayName: string;
+}
+
+/** Provider and model names for `modelId` (raw id segments when it is not in the catalog). */
+export function modelDisplayNames(
+  catalog: ImportModelCatalog,
+  modelId: string,
+  label?: string | null,
+): ModelDisplayNames {
+  const found = findCatalogModel(catalog, modelId);
+  let providerDisplayName: string;
+  let modelDisplayName: string;
+  if (found) {
+    providerDisplayName = shortProviderName(found.provider.displayName);
+    modelDisplayName = found.model.displayName;
+  } else {
+    const slash = modelId.indexOf('/');
+    providerDisplayName = slash > 0 ? modelId.slice(0, slash) : modelId;
+    modelDisplayName = slash > 0 ? modelId.slice(slash + 1) : modelId;
+  }
+  return {
+    providerDisplayName,
+    modelDisplayName,
+    displayName: label?.trim() || `${providerDisplayName} · ${modelDisplayName}`,
+  };
+}

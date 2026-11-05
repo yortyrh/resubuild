@@ -335,6 +335,19 @@ export const MANIFEST_SCHEMA = {
       'Brave Search API key: web search (profile discovery, lookups). Rotated round-robin with the other web providers.',
     group: 'AI / PDF Import',
   },
+  AI_INCLUDED_MODELS: {
+    required: false,
+    secret: true,
+    description:
+      'App-funded models for signed-in users without their own key: JSON array of {id, model, apiKey, monthlyTokenLimit, options?}. Rotated round-robin; each entry stops at its monthly token budget.',
+    group: 'AI / PDF Import',
+  },
+  AI_INCLUDED_USER_MONTHLY_TOKEN_LIMIT: {
+    required: false,
+    description:
+      'Monthly tokens each user may spend on AI_INCLUDED_MODELS (0 or unset turns included AI off).',
+    group: 'AI / PDF Import',
+  },
 
   // Chromium / PDF export
   CHROMIUM_EXECUTABLE_PATH: {
@@ -479,6 +492,8 @@ export const SERIALIZE_GROUPS = [
       'TAVILY_API_KEY',
       'FIRECRAWL_API_KEY',
       'BRAVE_SEARCH_API_KEY',
+      'AI_INCLUDED_MODELS',
+      'AI_INCLUDED_USER_MONTHLY_TOKEN_LIMIT',
     ],
   },
   { title: 'PDF Export (Chromium)', keys: ['CHROMIUM_EXECUTABLE_PATH'] },

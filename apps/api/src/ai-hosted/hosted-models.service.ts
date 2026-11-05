@@ -1,0 +1,184 @@
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import type { ModelTokenUsage, UsageMeter } from '@resubuild/import-agent';
+import { modelDisplayNames, toProviderOptions } from '@resubuild/import-models';
+import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
+import { AiUsageRepository } from './ai-usage.repository';
+import { HostedModelPool, HostedPoolExhaustedError } from './hosted-model-pool';
+import {
+  type HostedModelEntry,
+  HostedModelsConfigService,
+  type HostedPoolName,
+} from './hosted-models.config';
+import { usagePeriod, usagePeriodResetsAt } from './usage-period';
+
+export const INCLUDED_QUOTA_EXCEEDED = 'AI_INCLUDED_QUOTA_EXCEEDED';
+export const INCLUDED_DISPLAY_NAME = 'Resubuild included AI';
+
+/** Model call credentials for one run on an app-funded model. */
+export interface HostedCredentials {
+  pool: HostedPoolName;
+  entryId: string;
+  modelId: string;
+  apiKey: string;
+  providerOptions?: Record<string, Record<string, unknown>>;
+  /** Counts the run's tokens against the pool entry (and the user, for `included`). */
+  usageMeter: UsageMeter;
+  /** Call when the run fails, so a rejected or rate-limited key cools down. */
+  onRunError(error: unknown): void;
+}
+
+export interface HostedModelSummary {
+  providerId: string;
+  providerDisplayName: string;
+  modelDisplayName: string;
+}
+
+export interface IncludedUsage {
+  used: number;
+  limit: number;
+  remaining: number;
+  /** When the monthly counter resets (start of next UTC month). */
+  resetsAt: string;
+}
+
+export interface IncludedStatus {
+  enabled: boolean;
+  /** At least one included model has budget left this month. */
+  available: boolean;
+  usage?: IncludedUsage;
+  models: HostedModelSummary[];
+}
+
+@Injectable()
+export class HostedModelsService {
+  private readonly logger = new Logger(HostedModelsService.name);
+  private readonly includedPool: HostedModelPool;
+
+  constructor(
+    private readonly config: HostedModelsConfigService,
+    private readonly usage: AiUsageRepository,
+    private readonly catalogService: ImportModelsCatalogService,
+  ) {
+    this.includedPool = new HostedModelPool('included', config.includedModels, usage);
+  }
+
+  get includedEnabled(): boolean {
+    return this.config.includedEnabled;
+  }
+
+  /** Distinct models of a pool with display names (for settings and the top bar). */
+  describeModels(entries: HostedModelEntry[]): HostedModelSummary[] {
+    const seen = new Set<string>();
+    const catalog = this.catalogService.getCatalog();
+    const models: HostedModelSummary[] = [];
+    for (const entry of entries) {
+      if (seen.has(entry.modelId)) continue;
+      seen.add(entry.modelId);
+      const names = modelDisplayNames(catalog, entry.modelId);
+      models.push({
+        providerId: entry.providerId,
+        providerDisplayName: names.providerDisplayName,
+        modelDisplayName: names.modelDisplayName,
+      });
+    }
+    return models;
+  }
+
+  async getIncludedUsage(userId: string, now = new Date()): Promise<IncludedUsage> {
+    const limit = this.config.includedUserMonthlyTokenLimit;
+    const used = await this.usage.userTotal(userId, usagePeriod(now));
+    return {
+      used,
+      limit,
+      remaining: Math.max(0, limit - used),
+      resetsAt: usagePeriodResetsAt(now),
+    };
+  }
+
+  async getIncludedStatus(userId: string): Promise<IncludedStatus> {
+    if (!this.includedEnabled) {
+      return { enabled: false, available: false, models: [] };
+    }
+    const [usage, withBudget] = await Promise.all([
+      this.getIncludedUsage(userId),
+      this.includedPool.entriesWithBudget(),
+    ]);
+    return {
+      enabled: true,
+      available: withBudget.length > 0,
+      usage,
+      models: this.describeModels(this.config.includedModels),
+    };
+  }
+
+  /**
+   * Credentials for one run on the included models: checks the user's monthly
+   * limit, then picks the next pool entry with budget.
+   */
+  async acquireIncluded(userId: string): Promise<HostedCredentials> {
+    if (!this.includedEnabled) {
+      throw new ServiceUnavailableException('Included AI is not available on this server');
+    }
+    const usage = await this.getIncludedUsage(userId);
+    if (usage.remaining <= 0) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          error: 'Too Many Requests',
+          code: INCLUDED_QUOTA_EXCEEDED,
+          resetsAt: usage.resetsAt,
+          message: `You have used this month's included AI (resets ${usage.resetsAt.slice(0, 10)}). Add your own API key in AI settings to continue.`,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    return this.acquire(this.includedPool, userId);
+  }
+
+  private async acquire(pool: HostedModelPool, userId?: string): Promise<HostedCredentials> {
+    let entry: HostedModelEntry;
+    try {
+      entry = await pool.acquire();
+    } catch (error) {
+      if (error instanceof HostedPoolExhaustedError) {
+        throw new ServiceUnavailableException(
+          pool.name === 'included'
+            ? "Included AI has reached this month's budget. Add your own API key in AI settings to continue."
+            : 'Free AI import is not available right now',
+        );
+      }
+      throw error;
+    }
+
+    const period = usagePeriod();
+    return {
+      pool: pool.name,
+      entryId: entry.id,
+      modelId: entry.modelId,
+      apiKey: entry.apiKey,
+      providerOptions: toProviderOptions(entry.providerId, entry.options),
+      usageMeter: {
+        record: async (tokens: ModelTokenUsage) => {
+          pool.noteUsage(entry.id, tokens.totalTokens);
+          try {
+            await this.usage.record(tokens, { pool: pool.name, entryId: entry.id, period, userId });
+          } catch (error) {
+            // Never fail the user's job over accounting; the counter only under-reports.
+            this.logger.error(
+              `Could not record ${tokens.totalTokens} ${pool.name} AI tokens for ${entry.id}: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
+          }
+        },
+      },
+      onRunError: (error: unknown) => pool.reportFailure(entry.id, error),
+    };
+  }
+}

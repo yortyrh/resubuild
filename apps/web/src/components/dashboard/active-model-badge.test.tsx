@@ -64,4 +64,29 @@ describe('ActiveModelBadge', () => {
     render(<ActiveModelBadge />);
     expect(screen.getByRole('link', { name: 'Re-enter AI key' })).toBeInTheDocument();
   });
+
+  it('shows included AI with the tokens left this month', () => {
+    mockActive({
+      configured: true,
+      source: 'included',
+      providerId: 'openai',
+      displayName: 'Resubuild included AI',
+      modelDisplayName: 'GPT-5 Mini',
+      usage: { used: 50_000, limit: 200_000, remaining: 150_000, resetsAt: '2026-12-01T00:00:00Z' },
+      exhausted: false,
+    });
+    render(<ActiveModelBadge />);
+    expect(
+      screen.getByRole('link', {
+        name: 'AI model: Resubuild included AI, 150k tokens left this month',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('· 150k left')).toBeInTheDocument();
+  });
+
+  it('warns when included AI is used up', () => {
+    mockActive({ configured: false, source: 'included', exhausted: true });
+    render(<ActiveModelBadge />);
+    expect(screen.getByRole('link', { name: 'Included AI used up' })).toBeInTheDocument();
+  });
 });
