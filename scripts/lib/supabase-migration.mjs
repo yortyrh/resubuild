@@ -26,7 +26,6 @@ export const APP_TABLES = Object.freeze([
   { name: 'media' },
   { name: 'ai_agent_account' },
   { name: 'ai_agent_preference', key: ['user_id'] },
-  { name: 'web_scrape_config', key: ['user_id'] },
   { name: 'job_application', selfRef: 'source_application_id' },
   { name: 'user_settings', key: ['user_id'] },
   { name: 'mcp_api_key', key: ['user_id'] },

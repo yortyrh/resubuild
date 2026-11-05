@@ -12,9 +12,9 @@ describe('discoverSocialProfilesTool', () => {
     work: [{ name: 'Acme Corp' }],
   };
 
-  it('skips when search key is absent', async () => {
+  it('skips when no search provider is available', async () => {
     const searchFn = vi.fn();
-    const result = await discoverSocialProfilesTool({ draft: baseDraft }, searchFn);
+    const result = await discoverSocialProfilesTool({ draft: baseDraft });
 
     expect(result).toEqual({
       skipped: true,
@@ -35,10 +35,7 @@ describe('discoverSocialProfilesTool', () => {
       return [];
     });
 
-    const result = await discoverSocialProfilesTool(
-      { draft: baseDraft, searchApiKey: 'test-key' },
-      searchFn,
-    );
+    const result = await discoverSocialProfilesTool({ draft: baseDraft, search: searchFn });
 
     expect(result.skipped).toBe(false);
     expect(result.discoveredProfilesCount).toBeGreaterThan(0);
@@ -65,7 +62,7 @@ describe('discoverSocialProfilesTool', () => {
     };
 
     const searchFn = vi.fn().mockResolvedValue([{ url: 'https://github.com/other-user' }]);
-    const result = await discoverSocialProfilesTool({ draft, searchApiKey: 'test-key' }, searchFn);
+    const result = await discoverSocialProfilesTool({ draft, search: searchFn });
 
     const profiles = (result.draft.basics as { profiles?: Array<{ url: string }> }).profiles;
     expect(profiles).toEqual([
@@ -75,10 +72,7 @@ describe('discoverSocialProfilesTool', () => {
 
   it('tolerates search errors without failing', async () => {
     const searchFn = vi.fn().mockRejectedValue(new Error('timeout'));
-    const result = await discoverSocialProfilesTool(
-      { draft: baseDraft, searchApiKey: 'test-key' },
-      searchFn,
-    );
+    const result = await discoverSocialProfilesTool({ draft: baseDraft, search: searchFn });
 
     expect(result.skipped).toBe(false);
     expect(result.discoveredProfilesCount).toBe(0);
@@ -87,10 +81,7 @@ describe('discoverSocialProfilesTool', () => {
 
   it('rejects off-platform URLs', async () => {
     const searchFn = vi.fn().mockResolvedValue([{ url: 'https://example.com/jane-doe' }]);
-    const result = await discoverSocialProfilesTool(
-      { draft: baseDraft, searchApiKey: 'test-key' },
-      searchFn,
-    );
+    const result = await discoverSocialProfilesTool({ draft: baseDraft, search: searchFn });
 
     expect(result.discoveredProfilesCount).toBe(0);
   });
@@ -109,14 +100,11 @@ describe('discoverSocialProfilesTool', () => {
       return [];
     });
 
-    const result = await discoverSocialProfilesTool(
-      {
-        draft: baseDraft,
-        searchApiKey: 'test-key',
-        sourceText: 'Jane Doe — yorty — yortyrh',
-      },
-      searchFn,
-    );
+    const result = await discoverSocialProfilesTool({
+      draft: baseDraft,
+      search: searchFn,
+      sourceText: 'Jane Doe — yorty — yortyrh',
+    });
 
     const profiles = (
       result.draft.basics as { profiles?: Array<{ network: string; username?: string }> }
@@ -133,14 +121,11 @@ describe('discoverSocialProfilesTool', () => {
       return [];
     });
 
-    const result = await discoverSocialProfilesTool(
-      {
-        draft: baseDraft,
-        searchApiKey: 'test-key',
-        sourceText: 'Yorty — yortyrh — yorty',
-      },
-      searchFn,
-    );
+    const result = await discoverSocialProfilesTool({
+      draft: baseDraft,
+      search: searchFn,
+      sourceText: 'Yorty — yortyrh — yorty',
+    });
 
     const profiles = (
       result.draft.basics as { profiles?: Array<{ network: string; username?: string }> }

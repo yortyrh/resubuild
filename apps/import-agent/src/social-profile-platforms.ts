@@ -101,7 +101,6 @@ export const SOCIAL_PROFILE_PLATFORMS: readonly SocialProfilePlatform[] = [
 
 export const MAX_DISCOVERY_QUERIES = 5;
 export const MAX_RESULTS_PER_QUERY = 3;
-export const DISCOVERY_SEARCH_TIMEOUT_MS = 8_000;
 
 const NETWORK_ALIASES: Record<string, SocialNetworkKey> = {
   linkedin: 'linkedin',

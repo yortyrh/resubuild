@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { createWebProviderPool } from '../web-providers/web-provider-pool';
 import { fetchHtmlTool } from './fetch-html.tool';
-import { firecrawlScrapeTool } from './firecrawl-scrape.tool';
-import { tavilyExtractTool } from './tavily-extract.tool';
+import { webLookupTool } from './web-lookup.tool';
 import { buildWebsiteImportTools } from './website-import-tools';
 
 describe('fetchHtmlTool', () => {
@@ -10,50 +10,41 @@ describe('fetchHtmlTool', () => {
   });
 });
 
-describe('firecrawlScrapeTool', () => {
-  it('returns markdown from scrape API', async () => {
-    const scrapeFn = vi.fn().mockResolvedValue({ markdown: '# CV\nJane' });
-    const result = await firecrawlScrapeTool(
-      { url: 'https://example.com/cv', apiKey: 'fc-test' },
-      scrapeFn,
-    );
-    expect(result.format).toBe('markdown');
-    expect(result.content).toContain('Jane');
+describe('webLookupTool', () => {
+  it('skips when no search is available', async () => {
+    await expect(webLookupTool({ query: 'Acme Corp' })).resolves.toEqual({ skipped: true });
   });
-});
 
-describe('tavilyExtractTool', () => {
-  it('returns markdown from extract API', async () => {
-    const extractFn = vi.fn().mockResolvedValue({ content: '# CV\nJane' });
-    const result = await tavilyExtractTool(
-      { url: 'https://example.com/cv', apiKey: 'tvly-test' },
-      extractFn,
-    );
-    expect(result.format).toBe('markdown');
-    expect(result.content).toContain('Jane');
+  it('returns the first search hit', async () => {
+    const search = vi.fn().mockResolvedValue([{ url: 'https://acme.example', summary: 'Acme' }]);
+    await expect(webLookupTool({ query: 'Acme Corp', search })).resolves.toEqual({
+      skipped: false,
+      url: 'https://acme.example',
+      summary: 'Acme',
+    });
+    expect(search).toHaveBeenCalledWith('Acme Corp', 1);
   });
 });
 
 describe('buildWebsiteImportTools', () => {
-  it('exposes only Firecrawl when configured', () => {
+  it('exposes markdown extraction and web lookup when both are configured', () => {
     const tools = buildWebsiteImportTools({
-      scrapeProvider: 'firecrawl',
-      scrapeApiKey: 'fc-key',
-    });
-    expect(Object.keys(tools)).toEqual(['scrape_page_markdown']);
-  });
-
-  it('exposes only Tavily extract when configured', () => {
-    const tools = buildWebsiteImportTools({
-      scrapeProvider: 'tavily',
-      scrapeApiKey: 'tvly-key',
-      searchApiKey: 'tvly-key',
+      webProviders: createWebProviderPool({ firecrawl: 'fc-key', brave: 'brave-key' }),
     });
     expect(Object.keys(tools).sort()).toEqual(['extract_page_markdown', 'web_lookup']);
   });
 
+  it('falls back to HTML fetch when only search is configured', () => {
+    const tools = buildWebsiteImportTools({
+      webProviders: createWebProviderPool({ brave: 'brave-key' }),
+    });
+    expect(Object.keys(tools).sort()).toEqual(['fetch_page_html', 'web_lookup']);
+  });
+
   it('exposes HTML fetch when no provider is configured', () => {
-    const tools = buildWebsiteImportTools({});
-    expect(Object.keys(tools)).toEqual(['fetch_page_html']);
+    expect(Object.keys(buildWebsiteImportTools({}))).toEqual(['fetch_page_html']);
+    expect(
+      Object.keys(buildWebsiteImportTools({ webProviders: createWebProviderPool({}) })),
+    ).toEqual(['fetch_page_html']);
   });
 });

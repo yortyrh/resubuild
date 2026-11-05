@@ -1,0 +1,1 @@
+DROP TABLE "web_scrape_config" CASCADE;

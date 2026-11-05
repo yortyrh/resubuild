@@ -5,7 +5,6 @@ import { extractPdfTextTool } from '../tools/extract-pdf-text.tool';
 import { normalizeDatesTool } from '../tools/normalize-dates.tool';
 import { transcribeImageResumeTool } from '../tools/transcribe-image-resume.tool';
 import { validateResumeSchemaTool } from '../tools/validate-resume-schema.tool';
-import { webLookupTool } from '../tools/web-lookup.tool';
 import type {
   ImageImportWorkflowInput,
   ImageImportWorkflowResult,
@@ -86,23 +85,11 @@ async function runTextImportWorkflowInner(
     input.onProgress?.('verifying');
     draft = normalizeDatesTool(draft);
 
-    const companyNames = Array.isArray(draft.work)
-      ? draft.work
-          .map((entry) =>
-            entry && typeof entry === 'object' ? (entry as { name?: string }).name : undefined,
-          )
-          .filter((name): name is string => Boolean(name))
-      : [];
-
-    for (const company of companyNames.slice(0, 3)) {
-      await webLookupTool({ query: company, searchApiKey: input.searchApiKey });
-    }
-
     const validation = validateResumeSchemaTool(draft);
     if (validation.valid) {
       const discovery = await applySocialProfileDiscovery({
         draft,
-        searchApiKey: input.searchApiKey,
+        webProviders: input.webProviders,
         onProgress: input.onProgress,
         sourceText: input.sourceText,
       });
@@ -159,13 +146,14 @@ export async function runPdfImportWorkflow(
   const extracted = await extractPdfTextTool(input.pdfBuffer, {
     modelId: input.modelId,
     apiKey: input.apiKey,
+    firecrawlApiKey: input.firecrawlApiKey,
   });
 
   return runTextImportWorkflow({
     sourceText: extracted.text,
     modelId: input.modelId,
     apiKey: input.apiKey,
-    searchApiKey: input.searchApiKey,
+    webProviders: input.webProviders,
     maxOutputTokens: input.maxOutputTokens,
     onProgress: input.onProgress,
     finalize: input.finalize,
@@ -191,7 +179,7 @@ export async function runImageImportWorkflow(
     sourceText,
     modelId: input.modelId,
     apiKey: input.apiKey,
-    searchApiKey: input.searchApiKey,
+    webProviders: input.webProviders,
     maxOutputTokens: input.maxOutputTokens,
     onProgress: input.onProgress,
     finalize: input.finalize,

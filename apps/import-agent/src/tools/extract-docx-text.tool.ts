@@ -1,16 +1,17 @@
-import mammoth from 'mammoth';
+import { convertDocumentToMarkdown } from './convert-document.tool';
 
 export interface ExtractDocxTextResult {
   text: string;
 }
 
+/** Word (.docx) → Markdown with anydoc, keeping headings, lists, tables and links. */
 export async function extractDocxTextTool(docxBuffer: Buffer): Promise<ExtractDocxTextResult> {
-  const result = await mammoth.extractRawText({ buffer: docxBuffer });
-  const text = result.value.trim();
-
-  if (!text) {
-    throw new Error('No extractable text found in DOCX');
+  try {
+    return { text: await convertDocumentToMarkdown(docxBuffer, 'docx') };
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'empty') {
+      throw new Error('No extractable text found in DOCX');
+    }
+    throw error;
   }
-
-  return { text };
 }

@@ -54,5 +54,5 @@ Login, register, CV list, applications, every editor section and the preview wor
 The settings area groups the following:
 
 - Security (REQ-AUTH-004)
-- AI provider and scraping settings (REQ-IMP-008, REQ-IMP-009)
+- AI provider settings (REQ-IMP-008)
 - the MCP key (REQ-MCP-002)

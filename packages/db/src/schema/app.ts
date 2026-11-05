@@ -333,18 +333,6 @@ export const aiAgentPreference = pgTable('ai_agent_preference', {
   updated_at: updatedAt(),
 });
 
-export const webScrapeConfig = pgTable(
-  'web_scrape_config',
-  {
-    user_id: userId().primaryKey(),
-    provider: text('provider').notNull(),
-    api_key_encrypted: text('api_key_encrypted').notNull(),
-    created_at: createdAt(),
-    updated_at: updatedAt(),
-  },
-  (t) => [check('web_scrape_config_provider_check', sql`${t.provider} in ('firecrawl', 'tavily')`)],
-);
-
 // ---------------------------------------------------------------------------
 // Job applications
 // ---------------------------------------------------------------------------

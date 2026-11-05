@@ -17,6 +17,7 @@ Import from file accepts JSON Resume (`.json`), PDF, Markdown, Word (`.docx`), a
 
 - JSON is validated and normalized locally and needs no AI.
 - Every other format runs as a background AI job that the client follows until it succeeds or fails.
+- PDF and Word files are converted to Markdown on the server (headings, lists, tables and links kept). Only PDFs with scanned or image-only pages are sent to a hosted OCR service. The links behind icons or labels in a PDF (for example a "LinkedIn" icon) are kept with their URLs. If the document still yields no text, the user's vision model transcribes the pages as a last resort. Password-protected files fail with a clear error.
 - Size limits are enforced before upload (for example about 1 MB for JSON and 5 MB for PDF), with a clear error.
 
 ### REQ-IMP-004 URL import
@@ -24,7 +25,7 @@ Import from file accepts JSON Resume (`.json`), PDF, Markdown, Word (`.docx`), a
 Import from URL accepts a direct JSON Resume URL (imported without AI) or a web page (AI job).
 
 - Invalid URLs are rejected without starting a job.
-- Page content is extracted with the user's configured scraping provider when present, otherwise from the raw page.
+- Page content is extracted as Markdown with the deployment's page-extraction providers when configured (REQ-IMP-009), otherwise from the raw page.
 
 ### REQ-IMP-005 JSON Resume normalization
 
@@ -32,7 +33,7 @@ External JSON Resume documents are normalized before creation: ids are stripped 
 
 ### REQ-IMP-006 AI import pipeline
 
-AI imports extract the text (or transcribe an image with a vision-capable model), draft a JSON Resume, then run a verify-and-repair loop: schema validation, date normalization, optional web lookup.
+AI imports extract the text (or transcribe an image with a vision-capable model), draft a JSON Resume, then run a verify-and-repair loop: schema validation and date normalization. The loop spends no web searches; URL imports may search the web only when the agent asks for it.
 
 - The loop has a bounded number of retries (default 3). If it is exceeded, the job fails with all collected errors.
 - Job status reports the current step (extracting, drafting, verifying, repairing, …) while the job runs. A failed job no longer reports an in-progress step; it reports the step that was running when it failed.
@@ -41,7 +42,7 @@ AI imports extract the text (or transcribe an image with a vision-capable model)
 
 ### REQ-IMP-007 Social profile discovery
 
-When web search is configured and the draft has a name, the import searches the public web for the person's profiles on supported networks (LinkedIn, GitHub, X, and others) and merges valid ones into the draft without overwriting existing profiles.
+When a web search provider is configured (REQ-IMP-009) and the draft has a name, the import searches the public web for the person's profiles on supported networks (LinkedIn, GitHub, X, and others) and merges valid ones into the draft without overwriting existing profiles.
 
 - Search is bounded per job: at most 5 queries of up to 3 results each, and the search for a network stops once a profile is found.
 - Merged profiles have a network, an HTTPS URL, and a username.
@@ -54,6 +55,10 @@ AI import and job-application preparation stay disabled until the user configure
 - The key is validated before activation and stored encrypted. It is never returned in plain text.
 - The model catalog can be refreshed from a public model registry, and only lists chat-capable models the runtime supports.
 
-### REQ-IMP-009 Web scraping and search settings
+### REQ-IMP-009 Web search and page-extraction providers
 
-Users can optionally save a page-extraction / web-search provider and its API key (stored encrypted) in AI settings. Without it, URL import falls back to raw page fetch, and web lookup and profile discovery are skipped without failing.
+Web search and page extraction use deployment-wide providers configured in the server environment (Tavily, Firecrawl, Brave Search), shared by all users. Users do not configure scraping or search keys.
+
+- Every provider with a key takes part. Search uses Brave, Tavily and Firecrawl; page extraction uses Firecrawl and Tavily.
+- Calls rotate round-robin across the configured providers to spread spend. A failing provider hands the call to the next one; a provider that reports no credit, a rate limit or a rejected key is skipped for a cooldown period.
+- Without providers, URL import falls back to raw page fetch, and web lookup and profile discovery are skipped without failing.

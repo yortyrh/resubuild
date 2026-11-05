@@ -36,10 +36,6 @@ vi.mock('@/lib/queries/ai-agent-queries', () => ({
   usePdfImportJob: () => ({ data: undefined, error: undefined }),
 }));
 
-vi.mock('@/lib/queries/web-scrape-queries', () => ({
-  useWebScrapeConfig: () => ({ data: { configured: false } }),
-}));
-
 vi.mock('@/components/cv/json-resume-editor', () => ({
   formatJsonForEditor: (text: string) => text,
   JsonResumeEditor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
