@@ -1,9 +1,9 @@
 {
-  "//": "Jest (ts-jest) only: emit CommonJS so dynamic import() becomes require() inside Jest's CJS VM. Type-checking uses tsconfig.json (nodenext). isolatedModules is off so decorator metadata has no typeof guards (keeps branch coverage meaningful).",
+  "//": "Jest (ts-jest) only: emit CommonJS so dynamic import() becomes require() inside Jest's CJS VM. isolatedModules makes ts-jest transpile-only (type-checking is `pnpm typecheck`, using tsconfig.json with nodenext); the decorator-metadata guards it emits are excluded from coverage by test/jest/ts-jest-coverage-friendly.transform.cjs.",
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "module": "commonjs",
     "moduleResolution": "node10",
-    "isolatedModules": false
+    "isolatedModules": true
   }
 }
