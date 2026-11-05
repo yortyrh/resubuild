@@ -486,7 +486,14 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
               <Input
                 id={apiKeyInputId}
                 name="ai-provider-secret"
-                type="password"
+                // Not type="password": Chrome's password manager offers saved logins on
+                // every password field and ignores autocomplete hints. A text field masked
+                // with CSS is never treated as a credential.
+                type="text"
+                className="[-webkit-text-security:disc]"
+                spellCheck={false}
+                autoCapitalize="off"
+                autoCorrect="off"
                 value={apiKey}
                 onChange={(event) => setApiKey(event.target.value)}
                 placeholder={
@@ -494,7 +501,6 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
                 }
                 aria-describedby={apiKeyHintId}
                 {...NO_AUTOFILL}
-                autoComplete="new-password"
               />
               <p id={apiKeyHintId} className="sr-only">
                 {canKeepExistingKey
