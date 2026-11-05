@@ -42,7 +42,7 @@ function renderSettings() {
 describe('AiAgentSettings', () => {
   beforeEach(() => {
     mockGetAiAgentActive.mockResolvedValue({ configured: false });
-    mockGetAiAgentIncluded.mockResolvedValue({ enabled: false, available: false, models: [] });
+    mockGetAiAgentIncluded.mockResolvedValue({ enabled: false, available: false });
   });
 
   afterEach(() => {
@@ -316,9 +316,6 @@ describe('AiAgentSettings', () => {
       enabled: true,
       available: true,
       usage: { used: 0, limit: 200000, remaining: 200000, resetsAt: '2026-12-01T00:00:00Z' },
-      models: [
-        { providerId: 'openai', providerDisplayName: 'OpenAI', modelDisplayName: 'GPT-5 Mini' },
-      ],
     });
     mockSetAiAgentActive.mockResolvedValue({ configured: true, source: 'included' });
 

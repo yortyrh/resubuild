@@ -118,16 +118,12 @@ export class AiAgentService {
     return this.hostedModels.getIncludedStatus(user.id);
   }
 
+  /** Included AI as the active AI: name and usage only, never the models behind it. */
   private includedActiveView(status: IncludedStatus): AiAgentActiveView {
     const exhausted = !status.available || (status.usage?.remaining ?? 0) <= 0;
-    const providers = [...new Set(status.models.map((model) => model.providerId))];
-    const single = status.models.length === 1 ? status.models[0] : undefined;
     return {
       configured: !exhausted,
       source: 'included',
-      ...(providers.length === 1 ? { providerId: providers[0] } : {}),
-      providerDisplayName: single?.providerDisplayName ?? 'Resubuild',
-      modelDisplayName: status.models.map((model) => model.modelDisplayName).join(', '),
       displayName: INCLUDED_DISPLAY_NAME,
       usage: status.usage,
       exhausted,

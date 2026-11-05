@@ -1,6 +1,6 @@
 'use client';
 
-import { ProviderIcon } from '@/components/ai/provider-icon';
+import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatTokens } from '@/lib/ai-model-display';
 import type { AiIncludedStatus } from '@/lib/api';
@@ -12,7 +12,10 @@ export interface IncludedAiCardProps {
   onSelect: () => void;
 }
 
-/** The app-funded "included" models: what they run on, this month's usage, and a switch. */
+/**
+ * The app-funded "included" AI: this month's usage and a switch. Which models
+ * serve it is never shown, so the operator can change them freely.
+ */
 export function IncludedAiCard({ status, isActive, busy, onSelect }: IncludedAiCardProps) {
   const usage = status.usage;
   const percent = usage && usage.limit > 0 ? Math.min(100, (usage.used / usage.limit) * 100) : 0;
@@ -28,7 +31,8 @@ export function IncludedAiCard({ status, isActive, busy, onSelect }: IncludedAiC
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 id="included-ai" className="font-medium">
+          <h2 id="included-ai" className="flex items-center gap-1.5 font-medium">
+            <Sparkles className="size-4" aria-hidden />
             Resubuild included AI
             {isActive ? (
               <span className="bg-primary/10 text-primary ml-2 rounded px-2 py-0.5 text-xs">
@@ -46,20 +50,6 @@ export function IncludedAiCard({ status, isActive, busy, onSelect }: IncludedAiC
           </Button>
         ) : null}
       </div>
-
-      {status.models.length > 0 ? (
-        <ul className="flex flex-wrap gap-3 text-sm" aria-label="Included models">
-          {status.models.map((model) => (
-            <li
-              key={`${model.providerId}-${model.modelDisplayName}`}
-              className="flex items-center gap-1.5"
-            >
-              <ProviderIcon providerId={model.providerId} title={model.providerDisplayName} />
-              {model.providerDisplayName} · {model.modelDisplayName}
-            </li>
-          ))}
-        </ul>
-      ) : null}
 
       {usage ? (
         <div className="space-y-1">

@@ -69,16 +69,14 @@ describe('ActiveModelBadge', () => {
     mockActive({
       configured: true,
       source: 'included',
-      providerId: 'openai',
       displayName: 'Resubuild included AI',
-      modelDisplayName: 'GPT-5 Mini',
       usage: { used: 50_000, limit: 200_000, remaining: 150_000, resetsAt: '2026-12-01T00:00:00Z' },
       exhausted: false,
     });
     render(<ActiveModelBadge />);
     expect(
       screen.getByRole('link', {
-        name: 'AI model: Resubuild included AI, 150k tokens left this month',
+        name: 'AI: Resubuild included AI, 150k tokens left this month',
       }),
     ).toBeInTheDocument();
     expect(screen.getByText('· 150k left')).toBeInTheDocument();

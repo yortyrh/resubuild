@@ -565,21 +565,15 @@ describe('AiAgentService', () => {
       enabled: true,
       available: true,
       usage: { used: 100, limit: 1000, remaining: 900, resetsAt: '2026-12-01T00:00:00.000Z' },
-      models: [
-        { providerId: 'openai', providerDisplayName: 'OpenAI', modelDisplayName: 'GPT-5 Mini' },
-      ],
     };
 
-    it('reports the included models as the active AI with usage', async () => {
+    it('reports included AI as the active AI with usage, without its models', async () => {
       credentials.resolveSelection.mockResolvedValue({ kind: 'included' });
       hostedModels.getIncludedStatus.mockResolvedValue(includedStatus);
 
       await expect(service.getActiveStatus(user)).resolves.toEqual({
         configured: true,
         source: 'included',
-        providerId: 'openai',
-        providerDisplayName: 'OpenAI',
-        modelDisplayName: 'GPT-5 Mini',
         displayName: 'Resubuild included AI',
         usage: includedStatus.usage,
         exhausted: false,

@@ -341,7 +341,6 @@ export interface AiIncludedStatus {
   /** At least one included model has budget left this month. */
   available: boolean;
   usage?: AiIncludedUsage;
-  models: { providerId: string; providerDisplayName: string; modelDisplayName: string }[];
 }
 
 export interface AiAgentActiveStatus extends Partial<AiModelDisplayNames> {

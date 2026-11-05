@@ -1,6 +1,11 @@
 import { UnprocessableEntityException } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../auth/session-auth.guard';
-import { AiAgentCredentialService, runWithAiCredentials } from './ai-agent-credential.service';
+import {
+  AiAgentCredentialService,
+  HOSTED_AI_ERROR_MESSAGE,
+  isModelProviderError,
+  runWithAiCredentials,
+} from './ai-agent-credential.service';
 
 jest.mock('@resubuild/import-agent', () => ({
   withModelRunContext: jest.fn((_context: unknown, action: () => Promise<unknown>) => action()),
@@ -151,5 +156,36 @@ describe('runWithAiCredentials', () => {
     await expect(
       runWithAiCredentials({ source: 'account', modelId: 'm/x', apiKey: 'k' }, async () => 42),
     ).resolves.toBe(42);
+  });
+
+  it('hides provider errors of app-funded runs behind a generic message', async () => {
+    const providerError = Object.assign(new Error('claude-haiku-5-5: overloaded'), {
+      name: 'AI_APICallError',
+      statusCode: 529,
+    });
+    await expect(
+      runWithAiCredentials({ source: 'included', modelId: 'm/x', apiKey: 'k' }, async () => {
+        throw providerError;
+      }),
+    ).rejects.toThrow(HOSTED_AI_ERROR_MESSAGE);
+  });
+
+  it('keeps provider errors of the user own key as they are', async () => {
+    const providerError = Object.assign(new Error('invalid x-api-key'), { statusCode: 401 });
+    await expect(
+      runWithAiCredentials({ source: 'account', modelId: 'm/x', apiKey: 'k' }, async () => {
+        throw providerError;
+      }),
+    ).rejects.toBe(providerError);
+  });
+});
+
+describe('isModelProviderError', () => {
+  it('recognises AI SDK and HTTP errors only', () => {
+    expect(isModelProviderError({ statusCode: 429 })).toBe(true);
+    expect(isModelProviderError(Object.assign(new Error('x'), { name: 'AI_RetryError' }))).toBe(
+      true,
+    );
+    expect(isModelProviderError(new Error('Could not extract text from PDF'))).toBe(false);
   });
 });

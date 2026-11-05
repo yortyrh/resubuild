@@ -9,16 +9,14 @@ const status: AiIncludedStatus = {
   enabled: true,
   available: true,
   usage: { used: 50_000, limit: 200_000, remaining: 150_000, resetsAt: '2026-12-01T00:00:00Z' },
-  models: [{ providerId: 'openai', providerDisplayName: 'OpenAI', modelDisplayName: 'GPT-5 Mini' }],
 };
 
 describe('IncludedAiCard', () => {
   afterEach(() => cleanup());
 
-  it('shows the models and the monthly usage', () => {
+  it('shows the monthly usage', () => {
     render(<IncludedAiCard status={status} isActive onSelect={vi.fn()} />);
     expect(screen.getByText('Active')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'OpenAI' })).toBeInTheDocument();
     expect(screen.getByText(/50k of 200k tokens used this month/)).toBeInTheDocument();
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50000');
     expect(screen.queryByRole('button', { name: 'Use included AI' })).not.toBeInTheDocument();
