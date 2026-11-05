@@ -122,6 +122,7 @@ function buildModelEntry(
   return {
     id: fullId,
     displayName: model.name ?? modelKey,
+    ...(model.reasoning ? { reasoning: true } : {}),
     ...(Number.isInteger(maxOutputTokens) && (maxOutputTokens as number) > 0
       ? { maxOutputTokens }
       : {}),

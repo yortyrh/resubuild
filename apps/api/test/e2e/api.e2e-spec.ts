@@ -661,6 +661,57 @@ describe('E2E — AI agent catalog', () => {
 
     expect(response.body).toMatchObject({ configured: false });
   });
+
+  it('stores model options, names accounts and needs a label for a duplicate model', async () => {
+    const auth = `Bearer ${accessToken}`;
+    const server = app.getHttpServer();
+
+    const providers = await request(server).get('/ai/agents/providers').set('Authorization', auth);
+    const openai = providers.body.find((provider: { id: string }) => provider.id === 'openai');
+    expect(openai.modelOptions.map((field: { key: string }) => field.key)).toContain(
+      'reasoningEffort',
+    );
+
+    const created = await request(server)
+      .post('/ai/agents/accounts')
+      .set('Authorization', auth)
+      .send({
+        modelId: 'openai/gpt-5',
+        apiKey: 'sk-e2e',
+        modelOptions: { reasoningEffort: 'high' },
+      })
+      .expect(201);
+    expect(created.body).toMatchObject({
+      label: null,
+      modelOptions: { reasoningEffort: 'high' },
+      displayName: 'OpenAI · GPT-5',
+    });
+
+    try {
+      await request(server)
+        .post('/ai/agents/accounts')
+        .set('Authorization', auth)
+        .send({ modelId: 'openai/gpt-5', apiKey: 'sk-e2e' })
+        .expect(409);
+
+      await request(server)
+        .post('/ai/agents/accounts')
+        .set('Authorization', auth)
+        .send({ modelId: 'openai/gpt-5', apiKey: 'sk-e2e', modelOptions: { effort: 'max' } })
+        .expect(400);
+
+      const active = await request(server)
+        .get('/ai/agents/active')
+        .set('Authorization', auth)
+        .expect(200);
+      expect(active.body).toMatchObject({ configured: true, displayName: 'OpenAI · GPT-5' });
+    } finally {
+      await request(server)
+        .delete(`/ai/agents/accounts/${created.body.id}`)
+        .set('Authorization', auth)
+        .expect(200);
+    }
+  });
 });
 
 describe('E2E — import LLM config', () => {

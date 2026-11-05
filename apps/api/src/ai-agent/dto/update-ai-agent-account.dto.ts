@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional, IsString, Matches } from 'class-validator';
+import { IsBoolean, IsObject, IsOptional, IsString, Matches } from 'class-validator';
 
 export class UpdateAiAgentAccountDto {
   @IsOptional()
@@ -21,4 +21,12 @@ export class UpdateAiAgentAccountDto {
   @Transform(({ value }) => (typeof value === 'string' ? value === 'true' : value))
   @IsBoolean()
   keepExistingApiKey?: boolean;
+
+  /**
+   * Provider options (reasoning effort, thinking…). Omitted or empty keys use the
+   * provider default; checked against the provider's option list in the service.
+   */
+  @IsOptional()
+  @IsObject()
+  modelOptions?: Record<string, string | number>;
 }

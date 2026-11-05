@@ -315,6 +315,11 @@ export const aiAgentAccount = pgTable(
     provider_id: text('provider_id').notNull(),
     model_id: text('model_id').notNull(),
     api_key_encrypted: text('api_key_encrypted').notNull(),
+    /** Provider options (reasoning effort, thinking…); unset keys use the provider default. */
+    model_options: jsonb('model_options')
+      .$type<Record<string, string | number>>()
+      .notNull()
+      .default({}),
     created_at: createdAt(),
     updated_at: updatedAt(),
   },

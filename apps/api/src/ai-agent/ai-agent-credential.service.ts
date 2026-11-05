@@ -1,4 +1,5 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import { toProviderOptions } from '@resubuild/import-models';
 import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { AiAgentRepository } from './ai-agent.repository';
 
@@ -6,6 +7,8 @@ export interface ActiveAiAgentCredentials {
   modelId: string;
   apiKey: string;
   accountId: string;
+  /** Mastra `providerOptions` from the account's model options; undefined = provider defaults. */
+  providerOptions?: Record<string, Record<string, unknown>>;
 }
 
 @Injectable()
@@ -26,6 +29,7 @@ export class AiAgentCredentialService {
       modelId: account.modelId,
       apiKey: account.apiKey,
       accountId: account.id,
+      providerOptions: toProviderOptions(account.providerId, account.modelOptions),
     };
   }
 }

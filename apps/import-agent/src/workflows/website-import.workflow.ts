@@ -1,4 +1,3 @@
-import { Agent } from '@mastra/core/agent';
 import { createEmptyResume, sanitizeAiTypographyDeep } from '@resubuild/types';
 import { resumeDraftSchema } from '../schemas/resume-draft.schema';
 import { normalizeDatesTool } from '../tools/normalize-dates.tool';
@@ -8,7 +7,7 @@ import {
   type WebsiteImportToolsConfig,
 } from '../tools/website-import-tools';
 import type { ImportJobProgress, TextImportWorkflowResult } from '../types';
-import { toAgentModelConfig } from './agent-model-config';
+import { createModelAgent, toAgentModelConfig } from './agent-model-config';
 import { draftModelSettings, generateJson } from './llm-json';
 import { applySocialProfileDiscovery } from './social-profile-discovery';
 
@@ -42,11 +41,10 @@ export interface WebsiteImportWorkflowInput {
 }
 
 function createRepairAgent(modelId: string, apiKey: string) {
-  return new Agent({
+  return createModelAgent(modelId, apiKey, {
     id: 'website-import-repair',
     name: 'website-import-repair',
     instructions: REPAIR_INSTRUCTIONS,
-    model: toAgentModelConfig(modelId, apiKey),
   });
 }
 
@@ -59,11 +57,10 @@ async function generateWebsiteDraft(
 
   const tools = buildWebsiteImportTools(input.toolsConfig);
   let drafting = false;
-  const agent = new Agent({
+  const agent = createModelAgent(input.modelId, input.apiKey, {
     id: 'website-import-agent',
     name: 'website-import-agent',
     instructions: WEBSITE_DRAFT_INSTRUCTIONS,
-    model: toAgentModelConfig(input.modelId, input.apiKey),
     tools,
   });
 

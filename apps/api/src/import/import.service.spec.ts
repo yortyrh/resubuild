@@ -11,6 +11,7 @@ import {
   runPdfImportWorkflow,
   runTextImportWorkflow,
   runWebsiteImportWorkflow,
+  withModelRunContext,
 } from '@resubuild/import-agent';
 import type { ImportModelCatalog } from '@resubuild/import-models';
 import catalog from '@resubuild/import-models/catalog.json';
@@ -31,6 +32,7 @@ jest.mock('@resubuild/import-agent', () => ({
   runWebsiteImportWorkflow: jest.fn(),
   runImageImportWorkflow: jest.fn(),
   extractDocxTextTool: jest.fn(),
+  withModelRunContext: jest.fn((_context: unknown, action: () => Promise<unknown>) => action()),
 }));
 
 function mockFetchJsonResume(body: Record<string, unknown>, contentType = 'application/json') {
@@ -434,16 +436,18 @@ describe('ImportService', () => {
     });
   });
 
-  it('restores a previous provider API key env var after the job finishes', async () => {
+  it('keeps the user key out of process.env and applies the account model options', async () => {
     process.env.OPENAI_API_KEY = 'existing-key';
     aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
       modelId: 'openai/gpt-4o-mini',
       apiKey: 'sk-test',
       accountId: 'acc-1',
+      providerOptions: { openai: { reasoningEffort: 'high' } },
     });
-    jest.mocked(runPdfImportWorkflow).mockResolvedValue({
-      draft: { basics: { name: 'Jane Doe' } },
-      errors: [],
+    let keyDuringRun: string | undefined;
+    jest.mocked(runPdfImportWorkflow).mockImplementation(async () => {
+      keyDuringRun = process.env.OPENAI_API_KEY;
+      return { draft: { basics: { name: 'Jane Doe' } }, errors: [] };
     });
     schemaValidator.validate.mockReturnValue(undefined);
 
@@ -454,8 +458,13 @@ describe('ImportService', () => {
     } as Express.Multer.File);
 
     await new Promise((resolve) => setImmediate(resolve));
-    expect(process.env.OPENAI_API_KEY).toBe('existing-key');
+    expect(keyDuringRun).toBe('existing-key');
+    expect(withModelRunContext).toHaveBeenCalledWith(
+      { providerOptions: { openai: { reasoningEffort: 'high' } } },
+      expect.any(Function),
+    );
     expect(service.getJob(user, result.jobId).status).toBe('succeeded');
+    delete process.env.OPENAI_API_KEY;
   });
 
   it('handles non-error workflow rejections', async () => {
@@ -1295,8 +1304,8 @@ describe('ImportService', () => {
     });
   });
 
-  describe('resolveApiKeyEnvVar', () => {
-    it('returns null when model not found in catalog', async () => {
+  describe('off-catalog models', () => {
+    it('still runs the import when the model is not in the catalog', async () => {
       aiAgentCredentialService.getActiveCredentials.mockResolvedValue({
         modelId: 'unknown/model',
         apiKey: 'sk-test',

@@ -1,4 +1,3 @@
-import { Agent } from '@mastra/core/agent';
 import { createEmptyResume, sanitizeAiTypographyDeep } from '@resubuild/types';
 import { resumeDraftSchema } from '../schemas/resume-draft.schema';
 import { extractPdfTextTool } from '../tools/extract-pdf-text.tool';
@@ -13,7 +12,7 @@ import type {
   TextImportWorkflowInput,
   TextImportWorkflowResult,
 } from '../types';
-import { toAgentModelConfig } from './agent-model-config';
+import { createModelAgent } from './agent-model-config';
 import { draftModelSettings, generateJson } from './llm-json';
 import { applySocialProfileDiscovery } from './social-profile-discovery';
 
@@ -29,11 +28,10 @@ const REPAIR_INSTRUCTIONS = `You repair JSON Resume documents to satisfy schema 
 Return only valid JSON. Preserve factual content from the draft unless fixing shape or dates.`;
 
 function createAgent(modelId: string, apiKey: string, instructions: string) {
-  return new Agent({
+  return createModelAgent(modelId, apiKey, {
     id: 'pdf-import-agent',
     name: 'pdf-import-agent',
     instructions,
-    model: toAgentModelConfig(modelId, apiKey),
   });
 }
 

@@ -1,6 +1,5 @@
-import { Agent } from '@mastra/core/agent';
 import { sanitizeAiTypography } from '@resubuild/types';
-import { toAgentModelConfig } from '../workflows/agent-model-config';
+import { createModelAgent } from '../workflows/agent-model-config';
 
 const TRANSCRIBE_INSTRUCTIONS = `Transcribe all visible resume text from the image.
 Return plain text only, preserving section headings, bullet lists, and paragraph breaks.
@@ -12,11 +11,10 @@ export async function transcribeImageResumeTool(
   modelId: string,
   apiKey: string,
 ): Promise<string> {
-  const agent = new Agent({
+  const agent = createModelAgent(modelId, apiKey, {
     id: 'resume-image-transcriber',
     name: 'resume-image-transcriber',
     instructions: TRANSCRIBE_INSTRUCTIONS,
-    model: toAgentModelConfig(modelId, apiKey),
   });
 
   const response = await agent.generate([

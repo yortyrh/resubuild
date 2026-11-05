@@ -1,4 +1,3 @@
-import { Agent } from '@mastra/core/agent';
 import { sanitizeAiTypography } from '@resubuild/types';
 import type {
   CvSummaryForRanking,
@@ -11,7 +10,7 @@ import type {
 } from '../prepare-application.types';
 import { extractPdfTextTool } from '../tools/extract-pdf-text.tool';
 import { fetchHtmlTool } from '../tools/fetch-html.tool';
-import { toAgentModelConfig } from './agent-model-config';
+import { createModelAgent } from './agent-model-config';
 import { generateJson } from './llm-json';
 
 function sanitizeJobSummary(summary: JobSummary): JobSummary {
@@ -65,11 +64,10 @@ async function generateJsonFromPrompt(
     return generate(prompt);
   }
 
-  const agent = new Agent({
+  const agent = createModelAgent(modelId, apiKey, {
     id: 'prepare-application-agent',
     name: 'prepare-application-agent',
     instructions,
-    model: toAgentModelConfig(modelId, apiKey),
   });
 
   return generateJson(agent, prompt);
@@ -126,12 +124,11 @@ export async function normalizeJobPostingText(
       return input.transcribeImage(input.imageBuffer, input.imageMimeType ?? 'image/png');
     }
 
-    const agent = new Agent({
+    const agent = createModelAgent(input.modelId, input.apiKey, {
       id: 'job-image-transcriber',
       name: 'job-image-transcriber',
       instructions:
         'Transcribe all visible job posting text from the image. Return plain text only, preserving paragraphs.',
-      model: toAgentModelConfig(input.modelId, input.apiKey),
     });
 
     const response = await agent.generate([

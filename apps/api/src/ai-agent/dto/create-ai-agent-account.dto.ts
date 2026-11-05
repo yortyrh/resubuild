@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Matches } from 'class-validator';
+import { IsObject, IsOptional, IsString, Matches } from 'class-validator';
 
 export class CreateAiAgentAccountDto {
   @IsOptional()
@@ -13,4 +13,12 @@ export class CreateAiAgentAccountDto {
 
   @IsString()
   apiKey!: string;
+
+  /**
+   * Provider options (reasoning effort, thinking…). Omitted or empty keys use the
+   * provider default; checked against the provider's option list in the service.
+   */
+  @IsOptional()
+  @IsObject()
+  modelOptions?: Record<string, string | number>;
 }

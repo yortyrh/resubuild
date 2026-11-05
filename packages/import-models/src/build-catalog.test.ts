@@ -21,6 +21,7 @@ const miniRegistry: ModelsDevRegistry = {
       'gpt-no-limit': {
         id: 'gpt-no-limit',
         name: 'GPT without limit metadata',
+        reasoning: true,
         modalities: { output: ['text'] },
         limit: { output: 0 },
       },
@@ -66,6 +67,13 @@ describe('buildImportModelCatalog', () => {
     expect(byId['openai/gpt-no-limit']).not.toHaveProperty('maxOutputTokens');
     expect(getModelMaxOutputTokens(catalog, 'openai/gpt-4o-mini')).toBe(16384);
     expect(getModelMaxOutputTokens(catalog, 'openai/missing')).toBeUndefined();
+  });
+
+  it('keeps the models.dev reasoning flag', () => {
+    const catalog = buildImportModelCatalog(miniRegistry);
+    const byId = Object.fromEntries(catalog.providers[0].models.map((m) => [m.id, m]));
+    expect(byId['openai/gpt-no-limit'].reasoning).toBe(true);
+    expect(byId['openai/gpt-4o-mini']).not.toHaveProperty('reasoning');
   });
 
   it('skips providers with no chat models', () => {

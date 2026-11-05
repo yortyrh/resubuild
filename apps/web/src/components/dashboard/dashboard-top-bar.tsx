@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { type ReactNode, useState } from 'react';
 import { CvApplicationEditorBreadcrumb } from '@/components/cv/cv-application-editor-breadcrumb';
 import { CvEditorBreadcrumb } from '@/components/cv/cv-editor-breadcrumb';
+import { ActiveModelBadge } from '@/components/dashboard/active-model-badge';
 import {
   DashboardBreadcrumbProvider,
   useDashboardBreadcrumb,
@@ -56,6 +57,7 @@ export function DashboardTopBar({ actions }: { actions?: ReactNode }) {
         <div className="min-w-0 flex-1">
           <DashboardBreadcrumb breadcrumb={breadcrumb} genericCrumbs={genericCrumbs} />
         </div>
+        <ActiveModelBadge compact />
         {actions ? <div className="ml-auto flex items-center gap-2">{actions}</div> : null}
       </header>
     );
@@ -84,6 +86,7 @@ export function DashboardTopBar({ actions }: { actions?: ReactNode }) {
       <div className="min-w-0 flex-1">
         <DashboardBreadcrumb breadcrumb={breadcrumb} genericCrumbs={genericCrumbs} />
       </div>
+      <ActiveModelBadge />
       {actions ? <div className="ml-auto flex items-center gap-2">{actions}</div> : null}
     </header>
   );

@@ -1,0 +1,1 @@
+ALTER TABLE "ai_agent_account" ADD COLUMN "model_options" jsonb DEFAULT '{}'::jsonb NOT NULL;

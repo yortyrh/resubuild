@@ -53,7 +53,12 @@ AI import and job-application preparation stay disabled until the user configure
 
 - The flow is provider first, then model (chosen from a server-provided catalog, not free text), then API key. Labels name the expected key (for example "OpenAI API key").
 - The key is validated before activation and stored encrypted. It is never returned in plain text.
-- The model catalog can be refreshed from a public model registry, and only lists chat-capable models the runtime supports.
+- The model catalog can be refreshed from a public model registry, and only lists chat-capable models the runtime supports. It marks reasoning models.
+- Each account can set the provider's model options: reasoning effort, extended thinking and its token budget, thinking level, reasoning summary, verbosity, service tier or speed, depending on the provider. Every option defaults to "provider default", which sends nothing so the provider's own default applies. Reasoning-only options are offered for reasoning models only. The key check on save sends the chosen options, so a combination the model rejects is reported then. Every AI workflow run on the account (import, application preparation) uses its options.
+- The key is passed to the model call directly, never through the process environment, so concurrent jobs with different keys cannot mix them up.
+- The label is optional. Without one, an account is shown as "Provider · Model" (for example "Anthropic · Claude Opus 4.5"); the dialog shows that default name and the user's other accounts. A second account for a model that already has an unlabeled account needs a label.
+- The label and API key fields are never filled in by the browser or a password manager. When editing, the dialog states that a key is saved (or that it can no longer be read) and keeps it unless a new key is entered.
+- The account list shows each account's provider logo, name, model and the options that are set.
 
 ### REQ-IMP-009 Web search and page-extraction providers
 

@@ -273,36 +273,67 @@ export function deleteCv(id: string) {
   return apiFetch<void>(`/cv/${id}`, { method: 'DELETE' });
 }
 
+/** Stored per-account provider options; a missing key means the provider default. */
+export type AiModelOptions = Record<string, string | number>;
+
+interface AiModelOptionFieldBase {
+  key: string;
+  label: string;
+  description: string;
+  /** Only meaningful for reasoning models. */
+  reasoningOnly: boolean;
+  /** Shown only when another option has one of these values. */
+  dependsOn?: { key: string; values: string[] };
+}
+
+export type AiModelOptionField =
+  | (AiModelOptionFieldBase & { kind: 'enum'; values: string[] })
+  | (AiModelOptionFieldBase & { kind: 'integer'; min: number; max: number });
+
 export interface AiAgentProvider {
   id: string;
   displayName: string;
   apiKeyEnvVar: string;
   apiKeyLabel: string;
+  modelOptions: AiModelOptionField[];
 }
 
 export interface AiAgentModel {
   id: string;
   displayName: string;
   recommendedForPdfImport: boolean;
+  /** The model can reason/think before answering. */
+  reasoning: boolean;
 }
 
-export interface AiAgentAccount {
+export interface AiModelDisplayNames {
+  /** e.g. "Anthropic" */
+  providerDisplayName: string;
+  /** e.g. "Claude Opus 4.5" */
+  modelDisplayName: string;
+  /** The label when set, otherwise "Provider · Model". */
+  displayName: string;
+}
+
+export interface AiAgentAccount extends AiModelDisplayNames {
   id: string;
   label: string | null;
   providerId: string;
   modelId: string;
+  modelOptions: AiModelOptions;
   isActive: boolean;
   reconfigurationRequired?: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface AiAgentActiveStatus {
+export interface AiAgentActiveStatus extends Partial<AiModelDisplayNames> {
   configured: boolean;
   accountId?: string;
   label?: string | null;
   providerId?: string;
   modelId?: string;
+  modelOptions?: AiModelOptions;
   configuredAt?: string;
   reconfigurationRequired?: boolean;
 }
@@ -328,7 +359,12 @@ export function getAiAgentAccounts() {
   return apiFetch<AiAgentAccount[]>('/ai/agents/accounts');
 }
 
-export function createAiAgentAccount(payload: { label?: string; modelId: string; apiKey: string }) {
+export function createAiAgentAccount(payload: {
+  label?: string;
+  modelId: string;
+  apiKey: string;
+  modelOptions?: AiModelOptions;
+}) {
   return apiFetch<AiAgentAccount>('/ai/agents/accounts', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -342,6 +378,7 @@ export function updateAiAgentAccount(
     modelId?: string;
     apiKey?: string;
     keepExistingApiKey?: boolean;
+    modelOptions?: AiModelOptions;
   },
 ) {
   return apiFetch<AiAgentAccount>(`/ai/agents/accounts/${id}`, {

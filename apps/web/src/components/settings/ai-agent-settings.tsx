@@ -1,7 +1,9 @@
 'use client';
 
+import { Check, KeyRound, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
+import { ProviderIcon } from '@/components/ai/provider-icon';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -13,7 +15,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { AiAgentAccount } from '@/lib/api';
+import {
+  defaultAccountName,
+  describeModelOptions,
+  pruneModelOptions,
+  visibleOptionFields,
+} from '@/lib/ai-model-display';
+import type { AiAgentAccount, AiModelOptionField, AiModelOptions } from '@/lib/api';
 import {
   useAiAgentAccounts,
   useAiAgentModels,
@@ -26,6 +34,18 @@ import {
 
 type DialogMode = 'create' | 'edit' | null;
 
+/** Keeps browsers and password managers from filling the label and API key fields. */
+const NO_AUTOFILL = {
+  autoComplete: 'off',
+  'data-1p-ignore': 'true',
+  'data-lpignore': 'true',
+  'data-bwignore': 'true',
+  'data-form-type': 'other',
+} as const;
+
+const DUPLICATE_LABEL_HINT =
+  'You already have an account for this model without a label. Add a label to tell them apart.';
+
 export interface AiAgentSettingsProps {
   backHref?: string;
   backLabel?: string;
@@ -36,6 +56,9 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
   const providerSelectId = useId();
   const modelSelectId = useId();
   const apiKeyInputId = useId();
+  const labelHintId = useId();
+  const apiKeyHintId = useId();
+  const optionIdPrefix = useId();
 
   const {
     data: providers = [],
@@ -55,6 +78,7 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
   const [label, setLabel] = useState('');
   const [apiKeyLabel, setApiKeyLabel] = useState('API key');
   const [apiKey, setApiKey] = useState('');
+  const [modelOptions, setModelOptions] = useState<AiModelOptions>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AiAgentAccount | null>(null);
@@ -67,6 +91,23 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
   const updateAccount = useUpdateAiAgentAccount();
   const deleteAccount = useDeleteAiAgentAccount();
   const setActiveAccount = useSetAiAgentActive();
+
+  const provider = providers.find((entry) => entry.id === selectedProvider);
+  const model = models.find((entry) => entry.id === selectedModel);
+  const optionFields: AiModelOptionField[] = provider?.modelOptions ?? [];
+  const reasoning = model?.reasoning ?? false;
+  const shownOptionFields = visibleOptionFields(optionFields, reasoning, modelOptions);
+
+  const defaultName =
+    provider && model ? defaultAccountName(provider.displayName, model.displayName) : null;
+  const otherAccounts = useMemo(
+    () => accounts.filter((account) => account.id !== editingAccount?.id),
+    [accounts, editingAccount],
+  );
+  const needsLabel =
+    Boolean(selectedModel) &&
+    !label.trim() &&
+    otherAccounts.some((account) => account.modelId === selectedModel && !account.label?.trim());
 
   const loading = providersLoading || accountsLoading;
   const loadError = providersError ?? accountsError;
@@ -84,6 +125,8 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
     setSelectedModel('');
     setLabel('');
     setApiKey('');
+    setApiKeyLabel('API key');
+    setModelOptions({});
     setError(null);
     setSuccess(null);
   };
@@ -95,18 +138,45 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
     setSelectedModel(account.modelId);
     setLabel(account.label ?? '');
     setApiKey('');
+    setModelOptions(account.modelOptions ?? {});
     setError(null);
     setSuccess(null);
-    const provider = providers.find((entry) => entry.id === account.providerId);
-    setApiKeyLabel(provider?.apiKeyLabel ?? 'API key');
+    const accountProvider = providers.find((entry) => entry.id === account.providerId);
+    setApiKeyLabel(accountProvider?.apiKeyLabel ?? 'API key');
   };
 
   const handleProviderChange = (providerId: string) => {
     setSelectedProvider(providerId);
     setSelectedModel('');
-    const provider = providers.find((entry) => entry.id === providerId);
-    setApiKeyLabel(provider?.apiKeyLabel ?? 'API key');
+    // Options are provider-specific.
+    setModelOptions({});
+    const nextProvider = providers.find((entry) => entry.id === providerId);
+    setApiKeyLabel(nextProvider?.apiKeyLabel ?? 'API key');
   };
+
+  const handleModelChange = (modelId: string) => {
+    setSelectedModel(modelId);
+    const nextModel = models.find((entry) => entry.id === modelId);
+    setModelOptions((current) =>
+      pruneModelOptions(optionFields, nextModel?.reasoning ?? false, current),
+    );
+  };
+
+  const setOption = (field: AiModelOptionField, raw: string) => {
+    setModelOptions((current) => {
+      const next = { ...current };
+      if (raw === '') {
+        delete next[field.key];
+      } else {
+        next[field.key] = field.kind === 'integer' ? Number(raw) : raw;
+      }
+      return pruneModelOptions(optionFields, reasoning, next);
+    });
+  };
+
+  // Until the model list loads we cannot tell reasoning models apart: send as is.
+  const optionsToSave = () =>
+    model ? pruneModelOptions(optionFields, reasoning, modelOptions) : modelOptions;
 
   const handleSaveDialog = async () => {
     setError(null);
@@ -117,14 +187,16 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
           label: label.trim() || undefined,
           modelId: selectedModel,
           apiKey: apiKey.trim(),
+          modelOptions: optionsToSave(),
         });
         setSuccess('AI agent account created.');
       } else if (editingAccount) {
         await updateAccount.mutateAsync({
           id: editingAccount.id,
           payload: {
-            label: label.trim() || undefined,
+            label: label.trim(),
             modelId: selectedModel || undefined,
+            modelOptions: optionsToSave(),
             ...(apiKey.trim()
               ? { apiKey: apiKey.trim() }
               : editingAccount.reconfigurationRequired
@@ -215,18 +287,33 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
                 key={account.id}
                 className="surface-soft text-card-foreground flex flex-wrap items-center justify-between gap-3 px-3 py-2"
               >
-                <div>
-                  <p className="font-medium">
-                    {account.label || account.providerId}
-                    {account.isActive ? (
-                      <span className="bg-primary/10 text-primary ml-2 rounded px-2 py-0.5 text-xs">
-                        Active
-                      </span>
-                    ) : null}
-                  </p>
-                  <p className="text-muted-foreground text-sm">
-                    {account.providerId} · {account.modelId}
-                  </p>
+                <div className="flex min-w-0 items-start gap-3">
+                  <ProviderIcon
+                    providerId={account.providerId}
+                    title={account.providerDisplayName}
+                    className="mt-0.5 size-5"
+                  />
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      {account.displayName}
+                      {account.isActive ? (
+                        <span className="bg-primary/10 text-primary ml-2 rounded px-2 py-0.5 text-xs">
+                          Active
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      {account.label
+                        ? `${account.providerDisplayName} · ${account.modelDisplayName}`
+                        : account.modelId}
+                    </p>
+                    <AccountOptionChips
+                      fields={
+                        providers.find((entry) => entry.id === account.providerId)?.modelOptions
+                      }
+                      options={account.modelOptions}
+                    />
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {!account.isActive ? (
@@ -289,10 +376,33 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
               <Label htmlFor={labelInputId}>Label (optional)</Label>
               <Input
                 id={labelInputId}
+                name="ai-account-label"
                 value={label}
                 onChange={(event) => setLabel(event.target.value)}
-                placeholder="Work Anthropic"
+                placeholder={defaultName ?? 'e.g. Work or Personal'}
+                aria-describedby={labelHintId}
+                aria-invalid={needsLabel || undefined}
+                {...NO_AUTOFILL}
               />
+              <div id={labelHintId} className="text-muted-foreground space-y-1 text-xs">
+                <p>
+                  {defaultName ? (
+                    <>
+                      Without a label this account is shown as{' '}
+                      <span className="text-foreground font-medium">“{defaultName}”</span>.
+                    </>
+                  ) : (
+                    'Without a label the account is shown by provider and model, e.g. “Anthropic · Claude Opus 4.5”.'
+                  )}{' '}
+                  Add one only to tell apart accounts that use the same model.
+                </p>
+                {otherAccounts.length > 0 ? (
+                  <p>
+                    Your accounts: {otherAccounts.map((account) => account.displayName).join(', ')}
+                  </p>
+                ) : null}
+                {needsLabel ? <p className="text-destructive">{DUPLICATE_LABEL_HINT}</p> : null}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -319,28 +429,78 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
                 className="bg-background w-full rounded-md border px-3 py-2 text-sm"
                 value={selectedModel}
                 disabled={!selectedProvider}
-                onChange={(event) => setSelectedModel(event.target.value)}
+                onChange={(event) => handleModelChange(event.target.value)}
               >
                 <option value="">Select a model</option>
                 {models.map((model) => (
                   <option key={model.id} value={model.id}>
                     {model.displayName}
+                    {model.reasoning ? ' — reasoning' : ''}
                   </option>
                 ))}
               </select>
             </div>
 
+            {shownOptionFields.length > 0 ? (
+              <fieldset className="space-y-3">
+                <legend className="text-sm font-medium">
+                  {reasoning ? 'Reasoning and model options' : 'Model options'}
+                </legend>
+                <p className="text-muted-foreground text-xs">
+                  Leave an option on “Provider default” to use what the provider chooses.
+                </p>
+                {shownOptionFields.map((field) => (
+                  <ModelOptionInput
+                    key={field.key}
+                    id={`${optionIdPrefix}-${field.key}`}
+                    field={field}
+                    value={modelOptions[field.key]}
+                    onChange={(raw) => setOption(field, raw)}
+                  />
+                ))}
+              </fieldset>
+            ) : null}
+
             <div className="space-y-2">
               <Label htmlFor={apiKeyInputId}>{apiKeyLabel}</Label>
+              {dialogMode === 'edit' && editingAccount ? (
+                canKeepExistingKey ? (
+                  <p className="flex items-start gap-2 rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+                    <KeyRound className="mt-0.5 size-4 shrink-0" aria-hidden />
+                    <span>
+                      <span className="inline-flex items-center gap-1 font-medium">
+                        <Check className="size-3.5" aria-hidden />
+                        API key saved
+                      </span>{' '}
+                      — stored encrypted and never shown. Leave the field empty to keep it, or paste
+                      a new key to replace it.
+                    </span>
+                  </p>
+                ) : (
+                  <p className="flex items-start gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-950">
+                    <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+                    The saved key can no longer be read. Enter your API key again.
+                  </p>
+                )
+              ) : null}
               <Input
                 id={apiKeyInputId}
+                name="ai-provider-secret"
                 type="password"
                 value={apiKey}
                 onChange={(event) => setApiKey(event.target.value)}
                 placeholder={
-                  canKeepExistingKey ? 'Leave blank to keep existing key' : 'Enter API key'
+                  canKeepExistingKey ? 'Saved key (hidden) — type to replace' : 'Paste your API key'
                 }
+                aria-describedby={apiKeyHintId}
+                {...NO_AUTOFILL}
+                autoComplete="new-password"
               />
+              <p id={apiKeyHintId} className="sr-only">
+                {canKeepExistingKey
+                  ? 'An API key is already saved for this account.'
+                  : 'No API key is saved for this account yet.'}
+              </p>
             </div>
           </div>
 
@@ -353,6 +513,7 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
               disabled={
                 !selectedModel ||
                 saving ||
+                needsLabel ||
                 (dialogMode === 'create' && !apiKey.trim()) ||
                 (dialogMode === 'edit' && !apiKey.trim() && !canKeepExistingKey)
               }
@@ -369,8 +530,8 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
           <DialogHeader>
             <DialogTitle>Delete account?</DialogTitle>
             <DialogDescription>
-              This removes the saved credentials for{' '}
-              {deleteTarget?.label || deleteTarget?.providerId}. This cannot be undone.
+              This removes the saved credentials for {deleteTarget?.displayName}. This cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -388,6 +549,78 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function AccountOptionChips({
+  fields,
+  options,
+}: {
+  fields?: AiModelOptionField[];
+  options?: AiModelOptions;
+}) {
+  const chips = describeModelOptions(fields ?? [], options);
+  if (chips.length === 0) return null;
+  return (
+    <ul className="mt-1 flex flex-wrap gap-1" aria-label="Model options">
+      {chips.map((chip) => (
+        <li key={chip} className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-xs">
+          {chip}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ModelOptionInput({
+  id,
+  field,
+  value,
+  onChange,
+}: {
+  id: string;
+  field: AiModelOptionField;
+  value: string | number | undefined;
+  onChange: (raw: string) => void;
+}) {
+  const hintId = `${id}-hint`;
+  return (
+    <div className="space-y-1">
+      <Label htmlFor={id}>{field.label}</Label>
+      {field.kind === 'enum' ? (
+        <select
+          id={id}
+          className="bg-background w-full rounded-md border px-3 py-2 text-sm"
+          value={value === undefined ? '' : String(value)}
+          onChange={(event) => onChange(event.target.value)}
+          aria-describedby={hintId}
+        >
+          <option value="">Provider default</option>
+          {field.values.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <Input
+          id={id}
+          type="number"
+          inputMode="numeric"
+          min={field.min}
+          max={field.max}
+          step={1}
+          value={value === undefined ? '' : String(value)}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="Provider default"
+          aria-describedby={hintId}
+          {...NO_AUTOFILL}
+        />
+      )}
+      <p id={hintId} className="text-muted-foreground text-xs">
+        {field.description}
+      </p>
     </div>
   );
 }

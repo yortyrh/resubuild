@@ -13,6 +13,7 @@ import {
   runPrepareApplicationWorkflow,
   runUpdateApplicationWorkflow,
   type TailorCvPatch,
+  withModelRunContext,
 } from '@resubuild/import-agent';
 import type { JobApplicationRow, JobSourceType, Resume } from '@resubuild/types';
 import {
@@ -22,14 +23,16 @@ import {
   sanitizeAiTypography,
   sanitizeAiTypographyDeep,
 } from '@resubuild/types';
-import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
+import {
+  type ActiveAiAgentCredentials,
+  AiAgentCredentialService,
+} from '../ai-agent/ai-agent-credential.service';
 import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { CvService } from '../cv/cv.service';
 import { CvCloneService } from '../cv/cv-clone.service';
 import { CvNormalizedRepository } from '../cv/cv-normalized.repository';
 import { buildCoverLetterExportFilename } from '../cv-export/cv-export.util';
 import { PDF_IMPORT_MAX_BYTES_DEFAULT } from '../import/import.service';
-import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import { ApplicationRepository } from './application.repository';
 import { ApplicationPrepareStore, type PrepareIntakeSnapshot } from './application-prepare.store';
 import {
@@ -62,7 +65,6 @@ export class ApplicationService {
     private readonly configService: ConfigService,
     private readonly repository: ApplicationRepository,
     private readonly aiAgentCredentialService: AiAgentCredentialService,
-    private readonly catalogService: ImportModelsCatalogService,
     private readonly normalizedRepo: CvNormalizedRepository,
     private readonly cvService: CvService,
     private readonly cvCloneService: CvCloneService,
@@ -98,7 +100,7 @@ export class ApplicationService {
       intake: this.buildIntakeSnapshot(intake, sourceType),
     });
 
-    this.enqueuePrepareJob(user, row.id, intake, sourceType, llmConfig.modelId, llmConfig.apiKey);
+    this.enqueuePrepareJob(user, row.id, intake, sourceType, llmConfig);
 
     return { applicationId: row.id, status: 'queued' as const };
   }
@@ -146,14 +148,7 @@ export class ApplicationService {
       this.prepareStore.update(id, { progress: undefined, errors: [] });
 
       const intake = this.intakeFromSnapshot(storeRecord.intake);
-      this.enqueuePrepareJob(
-        user,
-        id,
-        intake,
-        storeRecord.intake.sourceType,
-        llmConfig.modelId,
-        llmConfig.apiKey,
-      );
+      this.enqueuePrepareJob(user, id, intake, storeRecord.intake.sourceType, llmConfig);
 
       return { applicationId: id, status: 'queued' as const };
     }
@@ -197,8 +192,7 @@ export class ApplicationService {
           {
             message: row.user_message ?? undefined,
           },
-          llmConfig.modelId,
-          llmConfig.apiKey,
+          llmConfig,
         );
       });
 
@@ -225,8 +219,7 @@ export class ApplicationService {
       id,
       textIntake,
       sourceType,
-      llmConfig.modelId,
-      llmConfig.apiKey,
+      llmConfig,
       resolvedSource ?? undefined,
     );
 
@@ -379,7 +372,7 @@ export class ApplicationService {
     this.prepareStore.init(draft.id, user.id);
 
     setImmediate(() => {
-      void this.runUpdateJob(user, draft.id, row, intake, llmConfig.modelId, llmConfig.apiKey);
+      void this.runUpdateJob(user, draft.id, row, intake, llmConfig);
     });
 
     return {
@@ -650,20 +643,11 @@ export class ApplicationService {
     applicationId: string,
     intake: PrepareApplicationIntake,
     sourceType: JobSourceType,
-    modelId: string,
-    apiKey: string,
+    llm: ActiveAiAgentCredentials,
     forcedSource?: ResolvedApplicationSource,
   ): void {
     setImmediate(() => {
-      void this.runPrepareJob(
-        user,
-        applicationId,
-        intake,
-        sourceType,
-        modelId,
-        apiKey,
-        forcedSource,
-      );
+      void this.runPrepareJob(user, applicationId, intake, sourceType, llm, forcedSource);
     });
   }
 
@@ -672,10 +656,10 @@ export class ApplicationService {
     applicationId: string,
     intake: PrepareApplicationIntake,
     sourceType: JobSourceType,
-    modelId: string,
-    apiKey: string,
+    llm: ActiveAiAgentCredentials,
     forcedSource?: ResolvedApplicationSource,
   ): Promise<void> {
+    const { modelId, apiKey } = llm;
     if (this.prepareStore.isCancelled(applicationId)) {
       return;
     }
@@ -696,7 +680,7 @@ export class ApplicationService {
         }
       }
 
-      const result = await this.withScopedApiKey(modelId, apiKey, async () =>
+      const result = await withModelRunContext({ providerOptions: llm.providerOptions }, async () =>
         runPrepareApplicationWorkflow({
           sourceType,
           url: intake.url,
@@ -862,9 +846,9 @@ export class ApplicationService {
     draftApplicationId: string,
     originalRow: JobApplicationRow,
     intake: UpdateApplicationIntake,
-    modelId: string,
-    apiKey: string,
+    llm: ActiveAiAgentCredentials,
   ): Promise<void> {
+    const { modelId, apiKey } = llm;
     if (this.prepareStore.isCancelled(draftApplicationId)) {
       return;
     }
@@ -906,7 +890,7 @@ export class ApplicationService {
       const jobRawText = originalRow.job_raw_text!.trim();
       const jobSummary = this.buildJobSummaryFromRow(originalRow);
 
-      const result = await this.withScopedApiKey(modelId, apiKey, async () =>
+      const result = await withModelRunContext({ providerOptions: llm.providerOptions }, async () =>
         runUpdateApplicationWorkflow({
           jobSummary,
           jobRawText,
@@ -1058,38 +1042,6 @@ export class ApplicationService {
 
     const sanitized = sanitizeAiTypographyDeep(next) as Resume;
     await this.normalizedRepo.replaceNormalizedCv(scope, cloneCvId, sanitized);
-  }
-
-  private resolveApiKeyEnvVar(modelId: string): string | null {
-    for (const provider of this.catalogService.getCatalog().providers) {
-      if (provider.models.some((model) => model.id === modelId)) {
-        return provider.apiKeyEnvVar;
-      }
-    }
-    return null;
-  }
-
-  private async withScopedApiKey<T>(
-    modelId: string,
-    apiKey: string,
-    action: () => Promise<T>,
-  ): Promise<T> {
-    const envVar = this.resolveApiKeyEnvVar(modelId);
-    if (!envVar) {
-      return action();
-    }
-
-    const previous = process.env[envVar];
-    process.env[envVar] = apiKey;
-    try {
-      return await action();
-    } finally {
-      if (previous === undefined) {
-        delete process.env[envVar];
-      } else {
-        process.env[envVar] = previous;
-      }
-    }
   }
 }
 

@@ -19,6 +19,7 @@ export interface AiAgentAccountRow {
   provider_id: string;
   model_id: string;
   api_key_encrypted: string;
+  model_options: Record<string, string | number>;
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +29,7 @@ export interface AiAgentAccountSummary {
   label: string | null;
   providerId: string;
   modelId: string;
+  modelOptions: Record<string, string | number>;
   isActive: boolean;
   reconfigurationRequired?: boolean;
   createdAt: string;
@@ -40,6 +42,7 @@ export interface AiAgentActiveStatus {
   label?: string | null;
   providerId?: string;
   modelId?: string;
+  modelOptions?: Record<string, string | number>;
   configuredAt?: string;
   reconfigurationRequired?: boolean;
 }
@@ -47,6 +50,7 @@ export interface AiAgentActiveStatus {
 export interface DecryptedAiAgentAccount {
   id: string;
   modelId: string;
+  modelOptions: Record<string, string | number>;
   apiKey: string;
   providerId: string;
   label: string | null;
@@ -87,6 +91,7 @@ export class AiAgentRepository {
       label: row.label,
       providerId: row.provider_id,
       modelId: row.model_id,
+      modelOptions: row.model_options ?? {},
       isActive: row.id === activeAccountId,
       ...(apiKey ? {} : { reconfigurationRequired: true }),
       createdAt: row.created_at,
@@ -125,7 +130,12 @@ export class AiAgentRepository {
 
   async createAccount(
     user: AuthenticatedRequest['user'],
-    input: { label?: string | null; modelId: string; apiKey: string },
+    input: {
+      label?: string | null;
+      modelId: string;
+      apiKey: string;
+      modelOptions?: Record<string, string | number>;
+    },
   ): Promise<AiAgentAccountSummary> {
     const parsed = parseMastraModelId(input.modelId);
     const providerId = resolveProviderId(parsed);
@@ -139,6 +149,7 @@ export class AiAgentRepository {
         provider_id: providerId,
         model_id: input.modelId,
         api_key_encrypted: encrypted,
+        model_options: input.modelOptions ?? {},
       })
       .returning();
 
@@ -154,11 +165,19 @@ export class AiAgentRepository {
   async updateAccount(
     user: AuthenticatedRequest['user'],
     accountId: string,
-    input: { label?: string | null; modelId?: string; apiKey?: string },
+    input: {
+      label?: string | null;
+      modelId?: string;
+      apiKey?: string;
+      modelOptions?: Record<string, string | number>;
+    },
   ): Promise<AiAgentAccountSummary> {
     const existing = await this.getAccountRow(user, accountId);
     const updates: Partial<
-      Pick<AiAgentAccountRow, 'label' | 'model_id' | 'provider_id' | 'api_key_encrypted'>
+      Pick<
+        AiAgentAccountRow,
+        'label' | 'model_id' | 'provider_id' | 'api_key_encrypted' | 'model_options'
+      >
     > = {};
 
     if (input.label !== undefined) {
@@ -169,6 +188,10 @@ export class AiAgentRepository {
       const parsed = parseMastraModelId(input.modelId);
       updates.model_id = input.modelId;
       updates.provider_id = resolveProviderId(parsed);
+    }
+
+    if (input.modelOptions !== undefined) {
+      updates.model_options = input.modelOptions;
     }
 
     if (input.apiKey) {
@@ -246,6 +269,7 @@ export class AiAgentRepository {
         label: row.label,
         providerId: row.provider_id,
         modelId: row.model_id,
+        modelOptions: row.model_options ?? {},
         configuredAt: row.updated_at,
         reconfigurationRequired: true,
       };
@@ -257,6 +281,7 @@ export class AiAgentRepository {
       label: row.label,
       providerId: row.provider_id,
       modelId: row.model_id,
+      modelOptions: row.model_options ?? {},
       configuredAt: row.updated_at,
     };
   }
@@ -284,6 +309,7 @@ export class AiAgentRepository {
       return {
         id: row.id,
         modelId: row.model_id,
+        modelOptions: row.model_options ?? {},
         apiKey: decryptSecret(row.api_key_encrypted, this.getEncryptionKey()),
         providerId: row.provider_id,
         label: row.label,
@@ -315,6 +341,7 @@ export class AiAgentRepository {
       return {
         id: row.id,
         modelId: row.model_id,
+        modelOptions: row.model_options ?? {},
         apiKey: decryptSecret(row.api_key_encrypted, this.getEncryptionKey()),
         providerId: row.provider_id,
         label: row.label,

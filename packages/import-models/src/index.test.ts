@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import catalog from '../catalog.json';
 import {
+  findCatalogModel,
   getProviderApiKeyLabel,
   type ImportModelCatalog,
   InvalidImportModelError,
@@ -9,6 +10,7 @@ import {
   listCatalogProviders,
   parseMastraModelId,
   resolveProviderId,
+  shortProviderName,
   validateImportModelId,
 } from './index';
 
@@ -73,6 +75,22 @@ describe('catalog helpers', () => {
   it('lists models for a provider', () => {
     const models = listCatalogModelsForProvider('google', testCatalog);
     expect(models.some((entry) => entry.id === 'google/gemini-2.5-flash')).toBe(true);
+  });
+
+  it('exposes model option fields per provider and the reasoning flag per model', () => {
+    const openai = listCatalogProviders(testCatalog).find((entry) => entry.id === 'openai');
+    expect(openai?.modelOptions.map((field) => field.key)).toContain('reasoningEffort');
+    const models = listCatalogModelsForProvider('openai', testCatalog);
+    expect(models.every((entry) => typeof entry.reasoning === 'boolean')).toBe(true);
+  });
+
+  it('finds a model with its provider and shortens provider names', () => {
+    const found = findCatalogModel(testCatalog, 'google/gemini-2.5-flash');
+    expect(found?.provider.id).toBe('google');
+    expect(found?.model.id).toBe('google/gemini-2.5-flash');
+    expect(findCatalogModel(testCatalog, 'google/missing')).toBeNull();
+    expect(shortProviderName('OpenAI (BYOK — API key from platform.openai.com)')).toBe('OpenAI');
+    expect(shortProviderName('Custom')).toBe('Custom');
   });
 
   it('resolves provider id from gateway form', () => {

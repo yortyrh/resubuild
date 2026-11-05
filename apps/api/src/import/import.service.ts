@@ -15,10 +15,14 @@ import {
   runTextImportWorkflow,
   runWebsiteImportWorkflow,
   type WebProviderPool,
+  withModelRunContext,
 } from '@resubuild/import-agent';
 import { getModelMaxOutputTokens } from '@resubuild/import-models';
 import { InvalidImportedResumeError, prepareImportedResume } from '@resubuild/types';
-import { AiAgentCredentialService } from '../ai-agent/ai-agent-credential.service';
+import {
+  type ActiveAiAgentCredentials,
+  AiAgentCredentialService,
+} from '../ai-agent/ai-agent-credential.service';
 import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { ImportModelsCatalogService } from '../import-models-catalog/import-models-catalog.service';
 import { ResumeSchemaValidator } from '../validation/resume-schema.validator';
@@ -121,7 +125,7 @@ export class ImportService {
 
     const job = this.jobStore.create(user.id);
     setImmediate(() => {
-      void this.runPdfJob(job.id, file.buffer, llmConfig.modelId, llmConfig.apiKey);
+      void this.runPdfJob(job.id, file.buffer, llmConfig);
     });
 
     return { jobId: job.id };
@@ -151,7 +155,7 @@ export class ImportService {
 
     const job = this.jobStore.create(user.id);
     setImmediate(() => {
-      void this.runTextJob(job.id, sourceText, llmConfig.modelId, llmConfig.apiKey);
+      void this.runTextJob(job.id, sourceText, llmConfig);
     });
 
     return { jobId: job.id };
@@ -176,13 +180,7 @@ export class ImportService {
 
     const job = this.jobStore.create(user.id);
     setImmediate(() => {
-      void this.runImageJob(
-        job.id,
-        file.buffer,
-        file.mimetype,
-        llmConfig.modelId,
-        llmConfig.apiKey,
-      );
+      void this.runImageJob(job.id, file.buffer, file.mimetype, llmConfig);
     });
 
     return { jobId: job.id };
@@ -216,7 +214,7 @@ export class ImportService {
 
     const job = this.jobStore.create(user.id);
     setImmediate(() => {
-      void this.runTextJob(job.id, sourceText, llmConfig.modelId, llmConfig.apiKey);
+      void this.runTextJob(job.id, sourceText, llmConfig);
     });
 
     return { jobId: job.id };
@@ -333,13 +331,9 @@ export class ImportService {
     return prepared;
   }
 
-  private resolveApiKeyEnvVar(modelId: string): string | null {
-    for (const provider of this.catalogService.getCatalog().providers) {
-      if (provider.models.some((model) => model.id === modelId)) {
-        return provider.apiKeyEnvVar;
-      }
-    }
-    return null;
+  /** Run a workflow with the account's model options (reasoning effort…) applied. */
+  private withModelRun<T>(llm: ActiveAiAgentCredentials, action: () => Promise<T>): Promise<T> {
+    return withModelRunContext({ providerOptions: llm.providerOptions }, action);
   }
 
   /** Output-token limit of the selected model, so long CVs are not cut off mid-JSON. */
@@ -347,34 +341,12 @@ export class ImportService {
     return getModelMaxOutputTokens(this.catalogService.getCatalog(), modelId);
   }
 
-  private async withScopedApiKey<T>(
-    modelId: string,
-    apiKey: string,
-    action: () => Promise<T>,
-  ): Promise<T> {
-    const envVar = this.resolveApiKeyEnvVar(modelId);
-    if (!envVar) {
-      return action();
-    }
-
-    const previous = process.env[envVar];
-    process.env[envVar] = apiKey;
-    try {
-      return await action();
-    } finally {
-      if (previous === undefined) {
-        delete process.env[envVar];
-      } else {
-        process.env[envVar] = previous;
-      }
-    }
-  }
-
-  private async runPdfJob(jobId: string, pdfBuffer: Buffer, modelId: string, apiKey: string) {
+  private async runPdfJob(jobId: string, pdfBuffer: Buffer, llm: ActiveAiAgentCredentials) {
+    const { modelId, apiKey } = llm;
     this.jobStore.update(jobId, { status: 'running', progress: 'extracting' });
 
     try {
-      const result = await this.withScopedApiKey(modelId, apiKey, async () => {
+      const result = await this.withModelRun(llm, async () => {
         return runPdfImportWorkflow({
           pdfBuffer,
           modelId,
@@ -398,13 +370,13 @@ export class ImportService {
     jobId: string,
     imageBuffer: Buffer,
     imageMimeType: string,
-    modelId: string,
-    apiKey: string,
+    llm: ActiveAiAgentCredentials,
   ) {
+    const { modelId, apiKey } = llm;
     this.jobStore.update(jobId, { status: 'running', progress: 'extracting' });
 
     try {
-      const result = await this.withScopedApiKey(modelId, apiKey, async () => {
+      const result = await this.withModelRun(llm, async () => {
         return runImageImportWorkflow({
           imageBuffer,
           imageMimeType,
@@ -427,12 +399,12 @@ export class ImportService {
   private async runWebsiteJob(
     jobId: string,
     sourceUrl: string,
-    llmConfig: { modelId: string; apiKey: string },
+    llmConfig: ActiveAiAgentCredentials,
   ) {
     this.jobStore.update(jobId, { status: 'running', progress: 'extracting' });
 
     try {
-      const result = await this.withScopedApiKey(llmConfig.modelId, llmConfig.apiKey, async () => {
+      const result = await this.withModelRun(llmConfig, async () => {
         return runWebsiteImportWorkflow({
           sourceUrl,
           modelId: llmConfig.modelId,
@@ -482,11 +454,12 @@ export class ImportService {
     });
   }
 
-  private async runTextJob(jobId: string, sourceText: string, modelId: string, apiKey: string) {
+  private async runTextJob(jobId: string, sourceText: string, llm: ActiveAiAgentCredentials) {
+    const { modelId, apiKey } = llm;
     this.jobStore.update(jobId, { status: 'running', progress: 'drafting' });
 
     try {
-      const result = await this.withScopedApiKey(modelId, apiKey, async () => {
+      const result = await this.withModelRun(llm, async () => {
         return runTextImportWorkflow({
           sourceText,
           modelId,

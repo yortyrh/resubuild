@@ -23,6 +23,11 @@ export {
 export * from './types';
 export * from './web-providers';
 export {
+  type ModelProviderOptions,
+  type ModelRunContext,
+  withModelRunContext,
+} from './workflows/agent-model-config';
+export {
   createPdfImportWorkflow,
   createResumeChatWorkflow,
   runImageImportWorkflow,

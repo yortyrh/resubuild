@@ -66,6 +66,7 @@
         {
           "id": "openai/gpt-5",
           "displayName": "GPT-5",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
@@ -75,11 +76,13 @@
         {
           "id": "openai/gpt-5-mini",
           "displayName": "GPT-5 Mini",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
           "id": "openai/gpt-5-nano",
           "displayName": "GPT-5 Nano",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
@@ -89,6 +92,7 @@
         {
           "id": "openai/o1",
           "displayName": "o1",
+          "reasoning": true,
           "maxOutputTokens": 100000
         },
         {
@@ -102,11 +106,13 @@
         {
           "id": "openai/o1-pro",
           "displayName": "o1-pro",
+          "reasoning": true,
           "maxOutputTokens": 100000
         },
         {
           "id": "openai/o3",
           "displayName": "o3",
+          "reasoning": true,
           "maxOutputTokens": 100000
         },
         {
@@ -116,16 +122,19 @@
         {
           "id": "openai/o3-mini",
           "displayName": "o3-mini",
+          "reasoning": true,
           "maxOutputTokens": 100000
         },
         {
           "id": "openai/o3-pro",
           "displayName": "o3-pro",
+          "reasoning": true,
           "maxOutputTokens": 100000
         },
         {
           "id": "openai/o4-mini",
           "displayName": "o4-mini",
+          "reasoning": true,
           "maxOutputTokens": 100000
         },
         {
@@ -184,6 +193,7 @@
         {
           "id": "anthropic/claude-sonnet-4-5-20250929",
           "displayName": "Claude Sonnet 4.5",
+          "reasoning": true,
           "maxOutputTokens": 64000
         }
       ]
@@ -205,27 +215,32 @@
         {
           "id": "google/gemini-2.5-flash",
           "displayName": "Gemini 2.5 Flash",
+          "reasoning": true,
           "recommendedForPdfImport": true,
           "maxOutputTokens": 65536
         },
         {
           "id": "google/gemini-2.5-flash-lite",
           "displayName": "Gemini 2.5 Flash-Lite",
+          "reasoning": true,
           "maxOutputTokens": 65536
         },
         {
           "id": "google/gemini-2.5-pro",
           "displayName": "Gemini 2.5 Pro",
+          "reasoning": true,
           "maxOutputTokens": 65536
         },
         {
           "id": "google/gemini-flash-latest",
           "displayName": "Gemini Flash Latest",
+          "reasoning": true,
           "maxOutputTokens": 65536
         },
         {
           "id": "google/gemini-flash-lite-latest",
           "displayName": "Gemini Flash-Lite Latest",
+          "reasoning": true,
           "maxOutputTokens": 65536
         }
       ]
@@ -265,11 +280,13 @@
         {
           "id": "groq/openai/gpt-oss-120b",
           "displayName": "GPT OSS 120B",
+          "reasoning": true,
           "maxOutputTokens": 65536
         },
         {
           "id": "groq/openai/gpt-oss-20b",
           "displayName": "GPT OSS 20B",
+          "reasoning": true,
           "maxOutputTokens": 65536
         },
         {
@@ -354,6 +371,7 @@
         {
           "id": "mistral/magistral-medium-latest",
           "displayName": "Magistral Medium (latest)",
+          "reasoning": true,
           "maxOutputTokens": 16384
         },
         {
@@ -383,6 +401,7 @@
         {
           "id": "mistral/mistral-medium-latest",
           "displayName": "Mistral Medium (latest)",
+          "reasoning": true,
           "maxOutputTokens": 262144
         },
         {
@@ -402,6 +421,7 @@
         {
           "id": "mistral/mistral-small-latest",
           "displayName": "Mistral Small (latest)",
+          "reasoning": true,
           "maxOutputTokens": 256000
         },
         {
@@ -440,6 +460,7 @@
         {
           "id": "openrouter/anthropic/claude-opus-4.1",
           "displayName": "Claude Opus 4.1 (latest)",
+          "reasoning": true,
           "maxOutputTokens": 32000
         },
         {
@@ -449,6 +470,7 @@
         {
           "id": "openrouter/anthropic/claude-sonnet-4.5",
           "displayName": "Claude Sonnet 4.5 (latest)",
+          "reasoning": true,
           "maxOutputTokens": 64000
         },
         {
@@ -464,21 +486,25 @@
         {
           "id": "openrouter/deepseek/deepseek-chat-v3.1",
           "displayName": "DeepSeek V3.1",
+          "reasoning": true,
           "maxOutputTokens": 147456
         },
         {
           "id": "openrouter/deepseek/deepseek-v3.1-terminus",
           "displayName": "DeepSeek V3.1 Terminus",
+          "reasoning": true,
           "maxOutputTokens": 147456
         },
         {
           "id": "openrouter/google/gemini-2.5-flash",
           "displayName": "Gemini 2.5 Flash",
+          "reasoning": true,
           "maxOutputTokens": 65535
         },
         {
           "id": "openrouter/google/gemini-2.5-pro",
           "displayName": "Gemini 2.5 Pro",
+          "reasoning": true,
           "maxOutputTokens": 65536
         },
         {
@@ -506,21 +532,25 @@
         {
           "id": "openrouter/z-ai/glm-4.5",
           "displayName": "GLM-4.5",
+          "reasoning": true,
           "maxOutputTokens": 98304
         },
         {
           "id": "openrouter/z-ai/glm-4.5-air",
           "displayName": "GLM-4.5-Air",
+          "reasoning": true,
           "maxOutputTokens": 98304
         },
         {
           "id": "openrouter/z-ai/glm-4.5v",
           "displayName": "GLM-4.5V",
+          "reasoning": true,
           "maxOutputTokens": 16384
         },
         {
           "id": "openrouter/z-ai/glm-4.6",
           "displayName": "GLM-4.6",
+          "reasoning": true,
           "maxOutputTokens": 131072
         },
         {
@@ -542,6 +572,7 @@
         {
           "id": "openrouter/openai/gpt-5",
           "displayName": "GPT-5",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
@@ -551,11 +582,13 @@
         {
           "id": "openrouter/openai/gpt-5-mini",
           "displayName": "GPT-5 Mini",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
           "id": "openrouter/openai/gpt-5-nano",
           "displayName": "GPT-5 Nano",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
@@ -565,16 +598,19 @@
         {
           "id": "openrouter/openai/gpt-oss-120b",
           "displayName": "gpt-oss-120b",
+          "reasoning": true,
           "maxOutputTokens": 65536
         },
         {
           "id": "openrouter/openai/gpt-oss-20b",
           "displayName": "gpt-oss-20b",
+          "reasoning": true,
           "maxOutputTokens": 117964
         },
         {
           "id": "openrouter/nousresearch/hermes-4-405b",
           "displayName": "Hermes 4 405B",
+          "reasoning": true,
           "maxOutputTokens": 117964
         },
         {
@@ -636,6 +672,7 @@
         {
           "id": "openrouter/qwen/qwen3-235b-a22b-thinking-2507",
           "displayName": "Qwen3 235B A22B Thinking 2507",
+          "reasoning": true,
           "maxOutputTokens": 16384
         },
         {
@@ -668,6 +705,7 @@
         {
           "id": "openrouter/rekaai/reka-flash-3",
           "displayName": "Reka Flash 3",
+          "reasoning": true,
           "maxOutputTokens": 58982
         }
       ]
@@ -722,6 +760,7 @@
         {
           "id": "cerebras/gpt-oss-120b",
           "displayName": "GPT OSS 120B",
+          "reasoning": true,
           "recommendedForPdfImport": true,
           "maxOutputTokens": 40960
         }
@@ -769,6 +808,7 @@
         {
           "id": "cortecs/gemini-2.5-pro",
           "displayName": "Gemini 2.5 Pro",
+          "reasoning": true,
           "recommendedForPdfImport": true,
           "maxOutputTokens": 65535
         },
@@ -780,6 +820,7 @@
         {
           "id": "cortecs/gpt-oss-120b",
           "displayName": "GPT Oss 120b",
+          "reasoning": true,
           "maxOutputTokens": 131000
         },
         {
@@ -798,6 +839,7 @@
         {
           "id": "cortecs/qwen3-32b",
           "displayName": "Qwen3 32B",
+          "reasoning": true,
           "maxOutputTokens": 16384
         },
         {
@@ -841,6 +883,7 @@
         {
           "id": "fastrouter/anthropic/claude-opus-4.1",
           "displayName": "Claude Opus 4.1",
+          "reasoning": true,
           "maxOutputTokens": 32000
         },
         {
@@ -854,22 +897,26 @@
         {
           "id": "fastrouter/google/gemini-2.5-flash",
           "displayName": "Gemini 2.5 Flash",
+          "reasoning": true,
           "recommendedForPdfImport": true,
           "maxOutputTokens": 65536
         },
         {
           "id": "fastrouter/google/gemini-2.5-pro",
           "displayName": "Gemini 2.5 Pro",
+          "reasoning": true,
           "maxOutputTokens": 65536
         },
         {
           "id": "fastrouter/openai/gpt-oss-120b",
           "displayName": "GPT OSS 120B",
+          "reasoning": true,
           "maxOutputTokens": 32768
         },
         {
           "id": "fastrouter/openai/gpt-oss-20b",
           "displayName": "GPT OSS 20B",
+          "reasoning": true,
           "maxOutputTokens": 32768
         },
         {
@@ -880,21 +927,25 @@
         {
           "id": "fastrouter/openai/gpt-5",
           "displayName": "GPT-5",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
           "id": "fastrouter/openai/gpt-5-mini",
           "displayName": "GPT-5 Mini",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
           "id": "fastrouter/openai/gpt-5-nano",
           "displayName": "GPT-5 Nano",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
           "id": "fastrouter/x-ai/grok-4",
           "displayName": "Grok 4",
+          "reasoning": true,
           "maxOutputTokens": 64000
         },
         {
@@ -916,6 +967,7 @@
         {
           "id": "fireworks-ai/accounts/fireworks/models/gpt-oss-120b",
           "displayName": "GPT OSS 120B",
+          "reasoning": true,
           "recommendedForPdfImport": true,
           "maxOutputTokens": 32768
         },
@@ -1163,6 +1215,7 @@
         {
           "id": "huggingface/deepseek-ai/DeepSeek-R1-0528",
           "displayName": "DeepSeek-R1-0528",
+          "reasoning": true,
           "maxOutputTokens": 32768
         },
         {
@@ -1179,6 +1232,7 @@
         {
           "id": "huggingface/Qwen/Qwen3-235B-A22B-Thinking-2507",
           "displayName": "Qwen3-235B-A22B-Thinking-2507",
+          "reasoning": true,
           "maxOutputTokens": 81920
         },
         {
@@ -1297,6 +1351,7 @@
         {
           "id": "lmstudio/openai/gpt-oss-20b",
           "displayName": "GPT OSS 20B",
+          "reasoning": true,
           "maxOutputTokens": 32768
         },
         {
@@ -1321,12 +1376,14 @@
         {
           "id": "lucidquery/lucidnova-rf1-100b",
           "displayName": "LucidNova RF1 100B",
+          "reasoning": true,
           "recommendedForPdfImport": true,
           "maxOutputTokens": 8000
         },
         {
           "id": "lucidquery/lucidquery-nexus-coder",
           "displayName": "LucidQuery Nexus Coder",
+          "reasoning": true,
           "maxOutputTokens": 60000
         }
       ]
@@ -1340,6 +1397,7 @@
         {
           "id": "modelscope/ZhipuAI/GLM-4.5",
           "displayName": "GLM-4.5",
+          "reasoning": true,
           "maxOutputTokens": 98304
         },
         {
@@ -1356,6 +1414,7 @@
         {
           "id": "modelscope/Qwen/Qwen3-30B-A3B-Thinking-2507",
           "displayName": "Qwen3 30B A3B Thinking 2507",
+          "reasoning": true,
           "maxOutputTokens": 32768
         },
         {
@@ -1366,6 +1425,7 @@
         {
           "id": "modelscope/Qwen/Qwen3-235B-A22B-Thinking-2507",
           "displayName": "Qwen3-235B-A22B-Thinking-2507",
+          "reasoning": true,
           "maxOutputTokens": 131072
         }
       ]
@@ -1480,36 +1540,43 @@
         {
           "id": "opencode/claude-opus-4-1",
           "displayName": "Claude Opus 4.1",
+          "reasoning": true,
           "maxOutputTokens": 32000
         },
         {
           "id": "opencode/claude-sonnet-4",
           "displayName": "Claude Sonnet 4",
+          "reasoning": true,
           "maxOutputTokens": 64000
         },
         {
           "id": "opencode/claude-sonnet-4-5",
           "displayName": "Claude Sonnet 4.5",
+          "reasoning": true,
           "maxOutputTokens": 64000
         },
         {
           "id": "opencode/glm-4.6",
           "displayName": "GLM-4.6",
+          "reasoning": true,
           "maxOutputTokens": 131072
         },
         {
           "id": "opencode/gpt-5",
           "displayName": "GPT-5",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
           "id": "opencode/gpt-5-codex",
           "displayName": "GPT-5 Codex",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
           "id": "opencode/grok-code",
           "displayName": "Grok Code Fast 1",
+          "reasoning": true,
           "maxOutputTokens": 256000
         },
         {
@@ -1544,6 +1611,7 @@
         {
           "id": "perplexity/sonar-reasoning-pro",
           "displayName": "Sonar Reasoning Pro",
+          "reasoning": true,
           "maxOutputTokens": 4096
         }
       ]
@@ -1610,6 +1678,7 @@
         {
           "id": "submodel/deepseek-ai/DeepSeek-R1-0528",
           "displayName": "DeepSeek R1 0528",
+          "reasoning": true,
           "maxOutputTokens": 163840
         },
         {
@@ -1621,6 +1690,7 @@
         {
           "id": "submodel/deepseek-ai/DeepSeek-V3.1",
           "displayName": "DeepSeek V3.1",
+          "reasoning": true,
           "maxOutputTokens": 163840
         },
         {
@@ -1631,11 +1701,13 @@
         {
           "id": "submodel/zai-org/GLM-4.5-FP8",
           "displayName": "GLM 4.5 FP8",
+          "reasoning": true,
           "maxOutputTokens": 131072
         },
         {
           "id": "submodel/openai/gpt-oss-120b",
           "displayName": "GPT OSS 120B",
+          "reasoning": true,
           "maxOutputTokens": 32768
         },
         {
@@ -1646,6 +1718,7 @@
         {
           "id": "submodel/Qwen/Qwen3-235B-A22B-Thinking-2507",
           "displayName": "Qwen3 235B A22B Thinking 2507",
+          "reasoning": true,
           "maxOutputTokens": 131072
         },
         {
@@ -1693,6 +1766,7 @@
         {
           "id": "synthetic/hf:openai/gpt-oss-120b",
           "displayName": "GPT OSS 120B",
+          "reasoning": true,
           "maxOutputTokens": 65536
         },
         {
@@ -1750,6 +1824,7 @@
         {
           "id": "togetherai/deepseek-ai/DeepSeek-R1",
           "displayName": "DeepSeek R1",
+          "reasoning": true,
           "maxOutputTokens": 163839
         },
         {
@@ -1760,6 +1835,7 @@
         {
           "id": "togetherai/openai/gpt-oss-120b",
           "displayName": "GPT OSS 120B",
+          "reasoning": true,
           "maxOutputTokens": 131072
         },
         {
@@ -1790,6 +1866,7 @@
         {
           "id": "upstage/solar-pro2",
           "displayName": "solar-pro2",
+          "reasoning": true,
           "maxOutputTokens": 8192
         }
       ]
@@ -1841,6 +1918,7 @@
         {
           "id": "vercel/deepseek/deepseek-r1",
           "displayName": "DeepSeek-R1",
+          "reasoning": true,
           "maxOutputTokens": 32768
         },
         {
@@ -1854,21 +1932,25 @@
         {
           "id": "vercel/google/gemini-2.5-flash",
           "displayName": "Gemini 2.5 Flash",
+          "reasoning": true,
           "maxOutputTokens": 65535
         },
         {
           "id": "vercel/google/gemini-2.5-pro",
           "displayName": "Gemini 2.5 Pro",
+          "reasoning": true,
           "maxOutputTokens": 65535
         },
         {
           "id": "vercel/openai/gpt-oss-120b",
           "displayName": "GPT OSS 120B",
+          "reasoning": true,
           "maxOutputTokens": 131072
         },
         {
           "id": "vercel/openai/gpt-oss-20b",
           "displayName": "GPT OSS 20B",
+          "reasoning": true,
           "maxOutputTokens": 8192
         },
         {
@@ -1904,21 +1986,25 @@
         {
           "id": "vercel/openai/gpt-5",
           "displayName": "GPT-5",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
           "id": "vercel/openai/gpt-5-mini",
           "displayName": "GPT-5 Mini",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
           "id": "vercel/openai/gpt-5-nano",
           "displayName": "GPT-5 Nano",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
           "id": "vercel/openai/gpt-5-codex",
           "displayName": "GPT-5-Codex",
+          "reasoning": true,
           "maxOutputTokens": 128000
         },
         {
@@ -1996,21 +2082,25 @@
         {
           "id": "vercel/openai/o1",
           "displayName": "o1",
+          "reasoning": true,
           "maxOutputTokens": 100000
         },
         {
           "id": "vercel/openai/o3",
           "displayName": "o3",
+          "reasoning": true,
           "maxOutputTokens": 100000
         },
         {
           "id": "vercel/openai/o3-mini",
           "displayName": "o3-mini",
+          "reasoning": true,
           "maxOutputTokens": 100000
         },
         {
           "id": "vercel/openai/o4-mini",
           "displayName": "o4-mini",
+          "reasoning": true,
           "maxOutputTokens": 100000
         },
         {
@@ -2079,27 +2169,32 @@
         {
           "id": "zai/glm-4.5",
           "displayName": "GLM-4.5",
+          "reasoning": true,
           "maxOutputTokens": 98304
         },
         {
           "id": "zai/glm-4.5-air",
           "displayName": "GLM-4.5-Air",
+          "reasoning": true,
           "maxOutputTokens": 98304
         },
         {
           "id": "zai/glm-4.5-flash",
           "displayName": "GLM-4.5-Flash",
+          "reasoning": true,
           "recommendedForPdfImport": true,
           "maxOutputTokens": 98304
         },
         {
           "id": "zai/glm-4.5v",
           "displayName": "GLM-4.5V",
+          "reasoning": true,
           "maxOutputTokens": 16384
         },
         {
           "id": "zai/glm-4.6",
           "displayName": "GLM-4.6",
+          "reasoning": true,
           "maxOutputTokens": 131072
         }
       ]
@@ -2126,27 +2221,32 @@
         {
           "id": "zhipuai/glm-4.5",
           "displayName": "GLM-4.5",
+          "reasoning": true,
           "maxOutputTokens": 98304
         },
         {
           "id": "zhipuai/glm-4.5-air",
           "displayName": "GLM-4.5-Air",
+          "reasoning": true,
           "maxOutputTokens": 98304
         },
         {
           "id": "zhipuai/glm-4.5-flash",
           "displayName": "GLM-4.5-Flash",
+          "reasoning": true,
           "recommendedForPdfImport": true,
           "maxOutputTokens": 98304
         },
         {
           "id": "zhipuai/glm-4.5v",
           "displayName": "GLM-4.5V",
+          "reasoning": true,
           "maxOutputTokens": 16384
         },
         {
           "id": "zhipuai/glm-4.6",
           "displayName": "GLM-4.6",
+          "reasoning": true,
           "maxOutputTokens": 131072
         }
       ]

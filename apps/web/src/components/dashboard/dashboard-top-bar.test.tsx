@@ -28,6 +28,18 @@ vi.mock('@/lib/queries/auth-queries', () => ({
   useAuthMe: () => ({ data: undefined }),
 }));
 
+vi.mock('@/lib/queries/ai-agent-queries', () => ({
+  useAiAgentActive: () => ({
+    isLoading: false,
+    data: {
+      configured: true,
+      providerId: 'openai',
+      modelId: 'openai/gpt-5',
+      displayName: 'OpenAI · GPT-5',
+    },
+  }),
+}));
+
 function mockMatchMedia(isMobile: boolean) {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -97,6 +109,13 @@ describe('DashboardTopBar', () => {
     mockMatchMedia(false);
     render(<DashboardTopBar />, { wrapper: Providers });
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Dashboard');
+  });
+
+  it('shows the active AI model with a link to AI settings', () => {
+    mockMatchMedia(false);
+    render(<DashboardTopBar />, { wrapper: Providers });
+    const badge = screen.getByRole('link', { name: /AI model: OpenAI · GPT-5/ });
+    expect(badge).toHaveAttribute('href', '/dashboard/settings/ai-agent');
   });
 
   it('renders a sidebar toggle button on tablet/desktop', () => {

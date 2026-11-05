@@ -37,6 +37,7 @@ The site provides a favicon (16/32/48), PWA icons (including maskable and Apple 
 
 Signed-in pages share one shell: navigation (CVs, Applications, Settings) and the user menu.
 
+- The top bar always shows the active AI model (provider logo and account name) and links to the AI provider settings (REQ-IMP-008). Without a usable account it shows a "Set up AI" link instead. On small screens only the logo shows; the name stays available to screen readers.
 - On small screens the navigation becomes a slim top bar with a menu.
 - While the session loads, the shell shows a skeleton with the same layout.
 - App chrome never appears in print output.

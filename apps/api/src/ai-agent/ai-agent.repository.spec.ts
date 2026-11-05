@@ -39,6 +39,36 @@ describe('AiAgentRepository', () => {
     return row;
   }
 
+  describe('model options', () => {
+    it('stores, returns and updates model options per account', async () => {
+      const created = await repository.createAccount(user, {
+        label: 'Thinking',
+        modelId: 'anthropic/claude-sonnet-4-5-20250929',
+        apiKey: 'sk-a',
+        modelOptions: { thinking: 'enabled', budgetTokens: 4096 },
+      });
+      expect(created.modelOptions).toEqual({ thinking: 'enabled', budgetTokens: 4096 });
+      await expect(repository.getDecryptedActiveAccount(user)).resolves.toMatchObject({
+        modelOptions: { thinking: 'enabled', budgetTokens: 4096 },
+      });
+
+      const updated = await repository.updateAccount(user, created.id, {
+        modelOptions: { effort: 'low' },
+      });
+      expect(updated.modelOptions).toEqual({ effort: 'low' });
+    });
+
+    it('defaults to no options and never leaks options across users', async () => {
+      const mine = await create(user, 'Mine');
+      expect(mine.modelOptions).toEqual({});
+      await expect(
+        repository.updateAccount(other, mine.id, { modelOptions: { reasoningEffort: 'high' } }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      const [row] = await repository.listAccounts(user);
+      expect(row.modelOptions).toEqual({});
+    });
+  });
+
   describe('active status', () => {
     it('is unconfigured when there is no preference', async () => {
       await expect(repository.getActiveStatus(user)).resolves.toEqual({ configured: false });

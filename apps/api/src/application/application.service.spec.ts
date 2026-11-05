@@ -49,6 +49,7 @@ jest.mock('@resubuild/import-agent', () => {
     ...actual,
     runPrepareApplicationWorkflow: jest.fn(),
     runUpdateApplicationWorkflow: jest.fn(),
+    withModelRunContext: jest.fn((_context: unknown, action: () => Promise<unknown>) => action()),
   };
 });
 

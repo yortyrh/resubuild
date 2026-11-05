@@ -33,6 +33,22 @@ describe('AiAgentCredentialService', () => {
     });
   });
 
+  it('maps the account model options to provider options', async () => {
+    repository.getDecryptedActiveAccount.mockResolvedValue({
+      id: 'acc-1',
+      modelId: 'anthropic/claude-sonnet-4-5-20250929',
+      apiKey: 'sk-test',
+      providerId: 'anthropic',
+      modelOptions: { thinking: 'enabled', budgetTokens: 4096 },
+      label: null,
+      updatedAt: 'now',
+    });
+
+    await expect(service.getActiveCredentials(user)).resolves.toMatchObject({
+      providerOptions: { anthropic: { thinking: { type: 'enabled', budgetTokens: 4096 } } },
+    });
+  });
+
   it('throws when no active account', async () => {
     repository.getDecryptedActiveAccount.mockResolvedValue(null);
 

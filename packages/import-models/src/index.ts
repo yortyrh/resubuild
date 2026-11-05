@@ -15,16 +15,33 @@ export {
   modelsDevGateway,
 } from './fetch-via-gateway';
 export {
+  describeModelOptions,
+  getModelOptionFields,
+  InvalidModelOptionsError,
+  MODEL_OPTIONS_BY_PROVIDER,
+  type ModelOptionEnumField,
+  type ModelOptionField,
+  type ModelOptionIntegerField,
+  type ModelOptions,
+  type ModelOptionValue,
+  toProviderOptions,
+  validateModelOptions,
+} from './model-options';
+export {
   MODELS_DEV_API_URL,
   type ModelsDevModel,
   type ModelsDevProvider,
   type ModelsDevRegistry,
 } from './models-dev';
 
+import { getModelOptionFields } from './model-options';
+
 export interface ImportModelEntry {
   id: string;
   displayName: string;
   recommendedForPdfImport?: boolean;
+  /** Model can reason/think before answering (models.dev `reasoning`). */
+  reasoning?: boolean;
   /** Provider limit on generated tokens per reply (models.dev `limit.output`), when known. */
   maxOutputTokens?: number;
 }
@@ -127,6 +144,7 @@ export function listCatalogProviders(catalog: ImportModelCatalog) {
     displayName,
     apiKeyEnvVar,
     apiKeyLabel,
+    modelOptions: getModelOptionFields(id),
   }));
 }
 
@@ -136,10 +154,11 @@ export function listCatalogModelsForProvider(providerId: string, catalog: Import
     return [];
   }
 
-  return provider.models.map(({ id, displayName, recommendedForPdfImport }) => ({
+  return provider.models.map(({ id, displayName, recommendedForPdfImport, reasoning }) => ({
     id,
     displayName,
     recommendedForPdfImport: recommendedForPdfImport ?? false,
+    reasoning: reasoning ?? false,
   }));
 }
 
@@ -153,4 +172,21 @@ export function getModelMaxOutputTokens(
     if (model) return model.maxOutputTokens;
   }
   return undefined;
+}
+
+/** Provider and model entries for `modelId`, or null when not in the catalog. */
+export function findCatalogModel(
+  catalog: ImportModelCatalog,
+  modelId: string,
+): { provider: ImportProviderEntry; model: ImportModelEntry } | null {
+  for (const provider of catalog.providers) {
+    const model = provider.models.find((entry) => entry.id === modelId);
+    if (model) return { provider, model };
+  }
+  return null;
+}
+
+/** Provider name without the catalog's "(BYOK — …)" hint, e.g. "OpenAI". */
+export function shortProviderName(displayName: string): string {
+  return displayName.replace(/\s*\(BYOK[^)]*\)\s*$/, '').trim() || displayName;
 }
