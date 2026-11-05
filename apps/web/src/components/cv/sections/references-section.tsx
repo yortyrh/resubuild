@@ -1,8 +1,10 @@
 'use client';
 
 import type { ResumeReference } from '@resubuild/types';
+import { ComposerBlock, EntryComposer } from '@/components/cv/composer/entry-composer';
+import { InlineField } from '@/components/cv/composer/inline-field';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { TextField } from '@/components/cv/form-fields';
+import { MarkdownEditor } from '@/components/cv/markdown-editor';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
@@ -33,22 +35,24 @@ export function ReferencesSection() {
         body: <MarkdownView value={item.reference} variant="block" />,
       })}
       renderForm={(item, onChange) => (
-        <>
-          <TextField
+        <EntryComposer>
+          <InlineField
             label="Name"
-            description="Reference full name."
+            tone="title"
+            placeholder="Full name of the reference"
             value={item.name}
             onChange={(name) => onChange({ ...item, name })}
           />
-          <TextField
-            label="Reference"
-            markdown="block"
-            multiline
-            description="Recommendation text."
-            value={item.reference}
-            onChange={(reference) => onChange({ ...item, reference })}
-          />
-        </>
+          <ComposerBlock label="Reference">
+            <MarkdownEditor
+              deferUntilFocus
+              ariaLabel="Reference"
+              placeholder="What they said about working with you."
+              value={item.reference ?? ''}
+              onChange={(reference) => onChange({ ...item, reference })}
+            />
+          </ComposerBlock>
+        </EntryComposer>
       )}
     />
   );

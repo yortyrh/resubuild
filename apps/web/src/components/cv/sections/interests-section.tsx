@@ -1,8 +1,9 @@
 'use client';
 
 import type { ResumeInterest } from '@resubuild/types';
+import { EntryComposer } from '@/components/cv/composer/entry-composer';
+import { InlineField } from '@/components/cv/composer/inline-field';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { TextField } from '@/components/cv/form-fields';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
@@ -34,18 +35,22 @@ export function InterestsSection() {
         body: <TagsList label="Keywords" values={item.keywords ?? []} />,
       })}
       renderForm={(item, onChange) => (
-        <>
-          <TextField
-            label="Name"
+        <EntryComposer>
+          <InlineField
+            label="Interest"
+            tone="title"
+            placeholder="Interest, e.g. Climbing"
             value={item.name}
             onChange={(name) => onChange({ ...item, name })}
           />
           <TagsInput
+            variant="inline"
             label="Keywords"
+            placeholder="Details, e.g. Bouldering, Alpine routes"
             values={item.keywords ?? []}
             onChange={(keywords) => onChange({ ...item, keywords })}
           />
-        </>
+        </EntryComposer>
       )}
     />
   );

@@ -1,6 +1,10 @@
 'use client';
 
 import type { ResumeProject } from '@resubuild/types';
+import { BulletListField } from '@/components/cv/composer/bullet-list-field';
+import { ComposerBlock, ComposerRow, EntryComposer } from '@/components/cv/composer/entry-composer';
+import { InlineDateField } from '@/components/cv/composer/inline-date-field';
+import { InlineField } from '@/components/cv/composer/inline-field';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import {
   formatDateRange,
@@ -9,9 +13,8 @@ import {
   validateRequiredStartDate,
 } from '@/components/cv/cv-section-helpers';
 import { linkedEntityLabel } from '@/components/cv/external-link';
-import { StringListField, TextField } from '@/components/cv/form-fields';
-import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
+import { MarkdownEditor } from '@/components/cv/markdown-editor';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { MetadataFieldGroup, MetadataTextField } from '@/components/cv/metadata-field';
 import { TagsInput } from '@/components/cv/tags-input';
@@ -47,7 +50,7 @@ export function ProjectsSection() {
         const projectLabel = item.name || 'Project';
         return {
           title: <span>{linkedEntityLabel(projectLabel, item.url) ?? projectLabel}</span>,
-          meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
+          meta: formatDateRange(item.startDate, item.endDate),
           body: (
             <>
               <MarkdownView value={item.description} variant="block" />
@@ -63,65 +66,106 @@ export function ProjectsSection() {
         };
       }}
       renderForm={(item, onChange, context) => (
-        <>
-          <TextField
-            label="Name"
-            value={item.name}
-            onChange={(name) => onChange({ ...item, name })}
+        <EntryComposer>
+          <ComposerRow
+            left={
+              <InlineField
+                label="Project name"
+                tone="title"
+                value={item.name}
+                onChange={(name) => onChange({ ...item, name })}
+              />
+            }
+            right={
+              <>
+                <InlineDateField
+                  label="Start date"
+                  required
+                  value={item.startDate}
+                  error={context?.fieldErrors.startDate}
+                  onChange={(startDate) => onChange({ ...item, startDate })}
+                />
+                <span aria-hidden className="text-page-ink-muted">
+                  –
+                </span>
+                <InlineDateField
+                  label="End date"
+                  emptyHint="Present"
+                  value={item.endDate}
+                  onChange={(endDate) => onChange({ ...item, endDate })}
+                />
+              </>
+            }
           />
-          <TextField
-            label="Description"
-            markdown="block"
-            multiline
-            value={item.description}
-            onChange={(description) => onChange({ ...item, description })}
+          <ComposerRow
+            className="text-[0.875rem]"
+            left={
+              <>
+                <InlineField
+                  label="Entity"
+                  placeholder="Company or client"
+                  value={item.entity}
+                  onChange={(entity) => onChange({ ...item, entity })}
+                  className="flex-[1_1_9rem]"
+                />
+                <InlineField
+                  label="Type"
+                  placeholder="Type, e.g. Open source"
+                  value={item.type}
+                  onChange={(type) => onChange({ ...item, type })}
+                  className="flex-[1_1_9rem]"
+                />
+              </>
+            }
+            right={
+              <InlineField
+                label="Project URL"
+                type="url"
+                tone="meta"
+                align="right"
+                value={item.url}
+                onChange={(url) => onChange({ ...item, url })}
+                className="w-56"
+              />
+            }
           />
-          <TextField
-            label="URL"
-            type="url"
-            value={item.url}
-            onChange={(url) => onChange({ ...item, url })}
-          />
-          <TextField
-            label="Entity"
-            value={item.entity}
-            onChange={(entity) => onChange({ ...item, entity })}
-          />
-          <TextField
-            label="Type"
-            value={item.type}
-            onChange={(type) => onChange({ ...item, type })}
-          />
-          <IsoDateField
-            label="Start date"
-            required
-            value={item.startDate}
-            error={context?.fieldErrors.startDate}
-            onChange={(startDate) => onChange({ ...item, startDate })}
-          />
-          <IsoDateField
-            label="End date"
-            value={item.endDate}
-            onChange={(endDate) => onChange({ ...item, endDate })}
-          />
-          <TagsInput
-            label="Roles"
-            values={item.roles ?? []}
-            onChange={(roles) => onChange({ ...item, roles })}
-          />
-          <TagsInput
-            label="Keywords"
-            values={item.keywords ?? []}
-            onChange={(keywords) => onChange({ ...item, keywords })}
-          />
-          <StringListField
-            label="Highlights"
-            description="Quantifiable achievement bullets saved with this entry on Save."
-            markdown
-            values={item.highlights ?? []}
-            onChange={(highlights) => onChange({ ...item, highlights })}
-          />
-        </>
+          <ComposerBlock label="Description">
+            <MarkdownEditor
+              deferUntilFocus
+              ariaLabel="Description"
+              placeholder="What the project is and why it mattered."
+              value={item.description ?? ''}
+              onChange={(description) => onChange({ ...item, description })}
+            />
+          </ComposerBlock>
+          <ComposerBlock label="Roles">
+            <TagsInput
+              variant="inline"
+              label="Roles"
+              placeholder="Lead developer, Designer"
+              values={item.roles ?? []}
+              onChange={(roles) => onChange({ ...item, roles })}
+            />
+          </ComposerBlock>
+          <ComposerBlock label="Keywords">
+            <TagsInput
+              variant="inline"
+              label="Keywords"
+              placeholder="TypeScript, Postgres"
+              values={item.keywords ?? []}
+              onChange={(keywords) => onChange({ ...item, keywords })}
+            />
+          </ComposerBlock>
+          <ComposerBlock label="Highlights" hint="One result per bullet.">
+            <BulletListField
+              label="Highlights"
+              itemLabel="Highlight"
+              placeholder="Reached 2,000 GitHub stars in the first year"
+              values={item.highlights ?? []}
+              onChange={(highlights) => onChange({ ...item, highlights })}
+            />
+          </ComposerBlock>
+        </EntryComposer>
       )}
     />
   );

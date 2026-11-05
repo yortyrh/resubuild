@@ -3,17 +3,26 @@
 import type { ResumeWork } from '@resubuild/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
+import { BulletListField } from '@/components/cv/composer/bullet-list-field';
+import {
+  ComposerBlock,
+  ComposerExtra,
+  ComposerRow,
+  ComposerSeparator,
+  EntryComposer,
+} from '@/components/cv/composer/entry-composer';
+import { InlineDateField } from '@/components/cv/composer/inline-date-field';
+import { InlineField } from '@/components/cv/composer/inline-field';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import {
   formatDateRange,
   highlightBody,
-  positionEntityView,
+  printedEntryView,
   trimStringList,
   validateRequiredStartDate,
 } from '@/components/cv/cv-section-helpers';
-import { StringListField, TextField } from '@/components/cv/form-fields';
-import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
+import { MarkdownEditor } from '@/components/cv/markdown-editor';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { cvWorkApi } from '@/lib/cv-item-api';
@@ -69,90 +78,126 @@ export function WorkSection() {
         onMove: handleMoveToVolunteer,
       }}
       renderView={(item) => {
-        const { title, subtitle } = positionEntityView(
-          item.position,
+        const { title, subtitle } = printedEntryView(
           item.name,
           item.url,
+          item.location,
+          item.position,
           'Work entry',
         );
         return {
           title,
           subtitle,
-          meta: (
-            <div>
-              <div>{formatDateRange(item.startDate, item.endDate)}</div>
-              {item.location ? <div>{item.location}</div> : null}
-            </div>
-          ),
+          meta: formatDateRange(item.startDate, item.endDate),
           body: (
             <>
-              <div className="space-y-3">
-                <MarkdownView value={item.summary} variant="block" />
-                <MarkdownView value={item.description} variant="block" />
-              </div>
+              <MarkdownView value={item.summary} variant="block" />
               {highlightBody(item.highlights, { markdown: true })}
+              {item.description?.trim() ? (
+                <div className="border-page-rule text-page-ink-muted mt-2 border-l-2 pl-3">
+                  <p className="font-sans text-xs font-medium">Description, not printed</p>
+                  <MarkdownView value={item.description} variant="block" />
+                </div>
+              ) : null}
             </>
           ),
         };
       }}
       renderForm={(item, onChange, context) => (
-        <>
-          <TextField
-            label="Company"
-            value={item.name}
-            onChange={(name) => onChange({ ...item, name })}
+        <EntryComposer>
+          <ComposerRow
+            left={
+              <>
+                <InlineField
+                  label="Company"
+                  tone="title"
+                  value={item.name}
+                  onChange={(name) => onChange({ ...item, name })}
+                  className="w-auto max-w-full flex-[1_1_12rem]"
+                />
+                <ComposerSeparator show={Boolean(item.name && item.location)} />
+                <InlineField
+                  label="Location"
+                  value={item.location}
+                  onChange={(location) => onChange({ ...item, location })}
+                  className="flex-[1_1_8rem]"
+                />
+              </>
+            }
+            right={
+              <>
+                <InlineDateField
+                  label="Start date"
+                  required
+                  value={item.startDate}
+                  error={context?.fieldErrors.startDate}
+                  onChange={(startDate) => onChange({ ...item, startDate })}
+                />
+                <span aria-hidden className="text-page-ink-muted">
+                  –
+                </span>
+                <InlineDateField
+                  label="End date"
+                  emptyHint="Present"
+                  value={item.endDate}
+                  onChange={(endDate) => onChange({ ...item, endDate })}
+                />
+              </>
+            }
           />
-          <TextField
-            label="Position"
-            value={item.position}
-            onChange={(position) => onChange({ ...item, position })}
+          <ComposerRow
+            left={
+              <InlineField
+                label="Position"
+                tone="subtitle"
+                value={item.position}
+                onChange={(position) => onChange({ ...item, position })}
+              />
+            }
+            right={
+              <InlineField
+                label="Company website"
+                type="url"
+                tone="meta"
+                align="right"
+                value={item.url}
+                onChange={(url) => onChange({ ...item, url })}
+                className="w-56"
+              />
+            }
           />
-          <TextField
-            label="Location"
-            value={item.location}
-            onChange={(location) => onChange({ ...item, location })}
-          />
-          <TextField
-            label="URL"
-            type="url"
-            value={item.url}
-            onChange={(url) => onChange({ ...item, url })}
-          />
-          <IsoDateField
-            label="Start date"
-            required
-            value={item.startDate}
-            error={context?.fieldErrors.startDate}
-            onChange={(startDate) => onChange({ ...item, startDate })}
-          />
-          <IsoDateField
-            label="End date"
-            value={item.endDate}
-            onChange={(endDate) => onChange({ ...item, endDate })}
-          />
-          <TextField
-            label="Summary"
-            description="2–3 sentence elevator pitch for this role."
-            markdown="block"
-            multiline
-            value={item.summary}
-            onChange={(summary) => onChange({ ...item, summary })}
-          />
-          <TextField
+          <ComposerBlock label="Summary" hint="Two or three sentences about the role.">
+            <MarkdownEditor
+              deferUntilFocus
+              ariaLabel="Summary"
+              placeholder="What the role was and what you owned."
+              value={item.summary ?? ''}
+              onChange={(summary) => onChange({ ...item, summary })}
+            />
+          </ComposerBlock>
+          <ComposerBlock label="Highlights" hint="One achievement per bullet.">
+            <BulletListField
+              label="Highlights"
+              itemLabel="Highlight"
+              placeholder="Cut checkout latency by 40% by moving pricing to the edge"
+              values={item.highlights ?? []}
+              onChange={(highlights) => onChange({ ...item, highlights })}
+            />
+          </ComposerBlock>
+          <ComposerExtra
             label="Description"
-            markdown="block"
-            multiline
-            value={item.description}
-            onChange={(description) => onChange({ ...item, description })}
-          />
-          <StringListField
-            label="Highlights"
-            description="Quantifiable achievement bullets saved with this entry on Save."
-            markdown
-            values={item.highlights ?? []}
-            onChange={(highlights) => onChange({ ...item, highlights })}
-          />
-        </>
+            hint="Kept with the entry, not printed by the template."
+            defaultOpen={Boolean(item.description?.trim())}
+          >
+            <MarkdownEditor
+              deferUntilFocus
+              ariaLabel="Description"
+              placeholder="Context about the company or team."
+              value={item.description ?? ''}
+              onChange={(description) => onChange({ ...item, description })}
+            />
+          </ComposerExtra>
+        </EntryComposer>
       )}
     />
   );

@@ -35,10 +35,10 @@ describe('highlightBody', () => {
     expect(container.textContent).toContain('CS101');
   });
 
-  it('renders a title above the bullet list', () => {
+  it('renders bullets without a caption by default, like the printed CV', () => {
     const { container } = render(highlightBody(['Shipped v2'], { markdown: true }));
 
-    expect(container.textContent).toContain('Highlights');
+    expect(container.textContent).not.toContain('Highlights');
     expect(container.textContent).toContain('Shipped v2');
     expect(container.querySelector('ul')).not.toBeNull();
   });

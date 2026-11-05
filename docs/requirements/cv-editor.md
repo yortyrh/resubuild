@@ -9,10 +9,11 @@ The editor has one view per section (Basics, Social profiles, Work, Volunteer, E
 
 ### REQ-EDIT-002 View, edit, create, delete
 
-Each section shows its entries in a resume-like read view.
+Each section shows its entries on a white page set in the export template's typeface and layout, so the section reads like the printed CV.
 
-- Edit replaces the entry in place with a form until Save or Cancel; Create opens a form at the end of the section; Delete asks for confirmation.
-- The view shows every field the form can edit.
+- Edit replaces the entry in place with a page composer until Save or Cancel: the fields sit where they print (organization and dates on the first line, role in italics below, bullets as a list) and are set in the same type. Create opens the composer at the end of the page; Escape cancels; Delete asks for confirmation.
+- The view shows every field the form can edit. Fields the template does not print (the work description) are marked as not printed.
+- While an entry is being edited the list does not re-sort; it re-sorts after Save.
 
 ### REQ-EDIT-003 Required dates
 
@@ -20,19 +21,29 @@ Saving a Work, Volunteer, Education, or Project entry requires a start date. Awa
 
 ### REQ-EDIT-004 Markdown fields
 
-Summaries, descriptions, highlights, and reference text are authored as Markdown.
+Summaries, descriptions, highlights, and reference text are stored as Markdown.
 
+- Summaries, descriptions, and reference text are edited with the rich Markdown editor. It loads only when the field is focused; until then the field shows its rendered text.
+- Highlights and courses are edited as plain text, one field per bullet. Markdown typed by hand or written by AI (for example `**40%**` or a link) is kept as text, shown rendered while the bullet is not focused, and rendered in the read view and the export.
 - In the read view they are rendered as formatted, sanitized HTML, the same way in every section.
 - Links (Markdown links and URL fields) open in a new tab.
 - CV fields allow only a limited grammar: no headings, code blocks, or images. Cover letters allow the full grammar.
 
 ### REQ-EDIT-005 String lists
 
-Keywords (skills, interests) and roles (projects) are edited as tags and shown as read-only tags in the read view. Highlights and courses are edited as ordered rows inside the parent form, which can be extended from the keyboard and removed individually.
+Keywords (skills, interests) and roles (projects) are edited as tags and shown as read-only tags in the read view. Enter or a comma adds a tag, Backspace in the empty field removes the last one, and pasting a comma-separated list adds each item.
+
+Highlights and courses are edited as ordered bullets inside the parent entry:
+
+- Enter splits the bullet at the cursor and starts the next one; it never submits the form.
+- Backspace at the start of a bullet joins it to the previous one; Delete at the end joins the next one.
+- Alt+Up and Alt+Down move a bullet; Up and Down at the edges move between bullets.
+- Pasting several lines creates one bullet per line, without leading list markers (`-`, `*`, `•`, `1.`).
+- Each bullet can be removed individually.
 
 ### REQ-EDIT-006 Basics
 
-- Label is shown before Summary, with guidance that it is a job title.
+- The header is edited as it prints: name, headline (the JSON Resume `label`, a job title), and the contact line, followed by location and Summary.
 - Location uses structured fields; the country is chosen from an ISO-code list.
 - Social profiles are edited in their own section. The network field suggests known networks but accepts free text; known networks show their brand icon.
 - The languages field is a searchable list.

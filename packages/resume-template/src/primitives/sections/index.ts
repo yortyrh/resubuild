@@ -27,7 +27,7 @@ import {
   iconPhone,
   TEMPLATE_URL_LINK_CLASS,
 } from '../icons';
-import { renderMarkdownField } from '../markdown';
+import { renderInlineMarkdownField, renderMarkdownField } from '../markdown';
 
 export interface SectionRenderContext {
   headingStyle: HeadingStyle;
@@ -87,7 +87,7 @@ function employerDateRow(employerHtml: string, dateRange: string): string {
 function markdownBulletList(items: string[] | undefined): string {
   if (!hasItems(items)) return '';
   const listItems = items;
-  const lis = listItems.map((item) => `<li>${renderMarkdownField(item)}</li>`).join('');
+  const lis = listItems.map((item) => `<li>${renderInlineMarkdownField(item)}</li>`).join('');
   return `<ul class="mt-1 list-disc pl-5 space-y-0.5 text-neutral-900">${lis}</ul>`;
 }
 

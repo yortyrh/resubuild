@@ -3,17 +3,20 @@
 import type { ResumeVolunteer } from '@resubuild/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
+import { BulletListField } from '@/components/cv/composer/bullet-list-field';
+import { ComposerBlock, ComposerRow, EntryComposer } from '@/components/cv/composer/entry-composer';
+import { InlineDateField } from '@/components/cv/composer/inline-date-field';
+import { InlineField } from '@/components/cv/composer/inline-field';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import {
   formatDateRange,
   highlightBody,
-  positionEntityView,
+  printedEntryView,
   trimStringList,
   validateRequiredStartDate,
 } from '@/components/cv/cv-section-helpers';
-import { StringListField, TextField } from '@/components/cv/form-fields';
-import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
+import { MarkdownEditor } from '@/components/cv/markdown-editor';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { cvVolunteerApi } from '@/lib/cv-item-api';
@@ -76,16 +79,17 @@ export function VolunteerSection() {
         onMove: handleMoveToWork,
       }}
       renderView={(item) => {
-        const { title, subtitle } = positionEntityView(
-          item.position,
+        const { title, subtitle } = printedEntryView(
           item.organization,
           item.url,
+          undefined,
+          item.position,
           'Volunteer entry',
         );
         return {
           title,
           subtitle,
-          meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
+          meta: formatDateRange(item.startDate, item.endDate),
           body: (
             <>
               <MarkdownView value={item.summary} variant="block" />
@@ -95,50 +99,77 @@ export function VolunteerSection() {
         };
       }}
       renderForm={(item, onChange, context) => (
-        <>
-          <TextField
-            label="Organization"
-            value={item.organization}
-            onChange={(organization) => onChange({ ...item, organization })}
+        <EntryComposer>
+          <ComposerRow
+            left={
+              <InlineField
+                label="Organization"
+                tone="title"
+                value={item.organization}
+                onChange={(organization) => onChange({ ...item, organization })}
+              />
+            }
+            right={
+              <>
+                <InlineDateField
+                  label="Start date"
+                  required
+                  value={item.startDate}
+                  error={context?.fieldErrors.startDate}
+                  onChange={(startDate) => onChange({ ...item, startDate })}
+                />
+                <span aria-hidden className="text-page-ink-muted">
+                  –
+                </span>
+                <InlineDateField
+                  label="End date"
+                  emptyHint="Present"
+                  value={item.endDate}
+                  onChange={(endDate) => onChange({ ...item, endDate })}
+                />
+              </>
+            }
           />
-          <TextField
-            label="Position"
-            value={item.position}
-            onChange={(position) => onChange({ ...item, position })}
+          <ComposerRow
+            left={
+              <InlineField
+                label="Position"
+                tone="subtitle"
+                value={item.position}
+                onChange={(position) => onChange({ ...item, position })}
+              />
+            }
+            right={
+              <InlineField
+                label="Organization website"
+                type="url"
+                tone="meta"
+                align="right"
+                value={item.url}
+                onChange={(url) => onChange({ ...item, url })}
+                className="w-56"
+              />
+            }
           />
-          <TextField
-            label="URL"
-            type="url"
-            value={item.url}
-            onChange={(url) => onChange({ ...item, url })}
-          />
-          <IsoDateField
-            label="Start date"
-            required
-            value={item.startDate}
-            error={context?.fieldErrors.startDate}
-            onChange={(startDate) => onChange({ ...item, startDate })}
-          />
-          <IsoDateField
-            label="End date"
-            value={item.endDate}
-            onChange={(endDate) => onChange({ ...item, endDate })}
-          />
-          <TextField
-            label="Summary"
-            markdown="block"
-            multiline
-            value={item.summary}
-            onChange={(summary) => onChange({ ...item, summary })}
-          />
-          <StringListField
-            label="Highlights"
-            description="Quantifiable achievement bullets saved with this entry on Save."
-            markdown
-            values={item.highlights ?? []}
-            onChange={(highlights) => onChange({ ...item, highlights })}
-          />
-        </>
+          <ComposerBlock label="Summary">
+            <MarkdownEditor
+              deferUntilFocus
+              ariaLabel="Summary"
+              placeholder="What the organization does and what you did there."
+              value={item.summary ?? ''}
+              onChange={(summary) => onChange({ ...item, summary })}
+            />
+          </ComposerBlock>
+          <ComposerBlock label="Highlights" hint="One contribution per bullet.">
+            <BulletListField
+              label="Highlights"
+              itemLabel="Highlight"
+              placeholder="Taught 30 students weekly Python lessons"
+              values={item.highlights ?? []}
+              onChange={(highlights) => onChange({ ...item, highlights })}
+            />
+          </ComposerBlock>
+        </EntryComposer>
       )}
     />
   );

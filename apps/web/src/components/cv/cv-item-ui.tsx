@@ -1,11 +1,10 @@
 'use client';
 
-import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronUp, GripVertical, Pencil, Plus } from 'lucide-react';
 import { type ButtonHTMLAttributes, type ReactNode, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { scheduleScrollAndFocusSectionForm } from '@/lib/focus-section-form';
-
-const resumeItemActionsClassName = 'divider-soft mt-4 flex gap-2 border-t pt-4';
+import { cn } from '@/lib/utils';
 
 interface DeleteItemDialogProps {
   open: boolean;
@@ -42,13 +41,13 @@ export function DeleteItemDialog({
   return (
     <dialog
       ref={dialogRef}
-      className="bg-background ring-border/50 fixed left-1/2 top-1/2 w-[min(100%,24rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl p-6 shadow-lg ring-1 backdrop:bg-black/50"
+      className="bg-background text-foreground ring-border fixed left-1/2 top-1/2 w-[min(100%,26rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg p-6 shadow-[0_24px_48px_-12px_hsl(218_15%_10%/0.3)] ring-1 backdrop:bg-[hsl(218_15%_10%/0.55)] backdrop:backdrop-blur-[2px]"
       onCancel={(e) => {
         e.preventDefault();
         onCancel();
       }}
     >
-      <h2 className="text-lg font-semibold">{title}</h2>
+      <h2 className="wide text-xl font-semibold">{title}</h2>
       <p className="text-muted-foreground mt-2 text-sm">{description}</p>
       <div className="mt-6 flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={confirming}>
@@ -99,13 +98,13 @@ export function MoveItemDialog({
   return (
     <dialog
       ref={dialogRef}
-      className="bg-background ring-border/50 fixed left-1/2 top-1/2 w-[min(100%,24rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl p-6 shadow-lg ring-1 backdrop:bg-black/50"
+      className="bg-background text-foreground ring-border fixed left-1/2 top-1/2 w-[min(100%,26rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg p-6 shadow-[0_24px_48px_-12px_hsl(218_15%_10%/0.3)] ring-1 backdrop:bg-[hsl(218_15%_10%/0.55)] backdrop:backdrop-blur-[2px]"
       onCancel={(e) => {
         e.preventDefault();
         onCancel();
       }}
     >
-      <h2 className="text-lg font-semibold">{title}</h2>
+      <h2 className="wide text-xl font-semibold">{title}</h2>
       <p className="text-muted-foreground mt-2 text-sm">{description}</p>
       <div className="mt-6 flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={confirming}>
@@ -162,39 +161,46 @@ export function ResumeItemRow({
 
   return (
     <article
-      className={`surface-soft text-card-foreground p-4 ${isDragging ? 'ring-primary/30 opacity-60 ring-2' : ''}`}
+      className={cn(
+        'cv-entry group/entry relative -mx-3 rounded-md px-3 py-2.5 transition-colors',
+        'focus-within:bg-[hsl(var(--primary)/0.035)] hover:bg-[hsl(var(--primary)/0.035)]',
+        isDragging && 'ring-primary/30 bg-page opacity-70 ring-2',
+      )}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start gap-2">
         {reorder?.dragHandleProps ? (
           <button
             type="button"
-            className="text-muted-foreground hover:text-foreground mt-0.5 shrink-0 cursor-grab touch-none active:cursor-grabbing"
+            className="text-page-ink-muted hover:text-page-ink -ml-1 mt-0.5 shrink-0 cursor-grab touch-none rounded-sm active:cursor-grabbing"
             aria-label={`Reorder ${reorder.sectionLabel}`}
             {...reorder.dragHandleProps}
           >
-            <GripVertical className="size-5" aria-hidden />
+            <GripVertical className="size-4" aria-hidden />
           </button>
         ) : null}
         <div className="min-w-0 flex-1">
-          <div className="font-semibold">{title}</div>
-          {subtitle ? (
-            <div className="text-muted-foreground mt-0 text-sm font-normal leading-snug">
-              {subtitle}
+          <div className="flex flex-col gap-x-6 gap-y-0.5 sm:flex-row sm:items-baseline sm:justify-between">
+            <div className="min-w-0">
+              <div className="font-bold">{title}</div>
+              {subtitle ? <div className="italic leading-snug">{subtitle}</div> : null}
             </div>
-          ) : null}
+            {meta ? (
+              <div className="text-page-ink-muted shrink-0 text-[0.875rem] tabular-nums sm:text-right">
+                {meta}
+              </div>
+            ) : null}
+          </div>
+          {children ? <div className="mt-1">{children}</div> : null}
         </div>
-        {meta ? (
-          <div className="text-muted-foreground shrink-0 text-right text-sm">{meta}</div>
-        ) : null}
       </div>
-      {children ? <div className="mt-3">{children}</div> : null}
-      <div className={resumeItemActionsClassName}>
+      <div className="cv-entry-actions mt-1.5 flex flex-wrap items-center gap-1 font-sans">
         {reorder ? (
-          <div className="mr-auto flex gap-1">
+          <>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
+              className="size-8 px-0"
               aria-label={moveUpLabel}
               disabled={!reorder.canMoveUp}
               onClick={reorder.onMoveUp}
@@ -203,20 +209,25 @@ export function ResumeItemRow({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
+              className="size-8 px-0"
               aria-label={moveDownLabel}
               disabled={!reorder.canMoveDown}
               onClick={reorder.onMoveDown}
             >
               <ChevronDown className="size-4" aria-hidden />
             </Button>
-          </div>
+          </>
         ) : null}
+        <Button type="button" variant="ghost" size="sm" onClick={onEdit}>
+          <Pencil className="size-3.5" aria-hidden />
+          Edit
+        </Button>
         {secondaryAction ? (
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={secondaryAction.onClick}
             disabled={secondaryAction.disabled}
@@ -224,11 +235,14 @@ export function ResumeItemRow({
             {secondaryAction.label}
           </Button>
         ) : null}
-        <Button type="button" variant="outline" size="sm" onClick={onEdit}>
-          Edit
-        </Button>
         {onDelete ? (
-          <Button type="button" variant="destructive" size="sm" onClick={onDelete}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive ml-auto"
+            onClick={onDelete}
+          >
             Delete
           </Button>
         ) : null}
@@ -244,6 +258,27 @@ interface ResumeItemFormProps {
   onSave: () => void;
   onCancel: () => void;
 }
+
+function ComposerActions({ saving, onCancel }: { saving: boolean; onCancel: () => void }) {
+  return (
+    <div className="border-page-rule flex items-center justify-between gap-3 border-t px-3 py-2.5 font-sans sm:px-4">
+      <p className="text-page-ink-muted hidden text-xs sm:block">
+        Enter starts a new bullet. Markdown like **bold** shows in the PDF.
+      </p>
+      <div className="ml-auto flex gap-2">
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
+          Cancel
+        </Button>
+        <Button type="submit" size="sm" disabled={saving}>
+          {saving ? 'Saving…' : 'Save'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+const composerFormClassName =
+  'cv-entry-form composer bg-page ring-primary/45 -mx-3 rounded-md ring-2 sm:-mx-4';
 
 export function ResumeItemForm({
   children,
@@ -261,24 +296,23 @@ export function ResumeItemForm({
   return (
     <form
       ref={formRef}
-      className="surface-soft text-card-foreground p-4"
+      className={composerFormClassName}
       onSubmit={(event) => {
         event.preventDefault();
         if (!saving) {
           onSave();
         }
       }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && !saving) {
+          event.preventDefault();
+          onCancel();
+        }
+      }}
     >
-      <div className="space-y-4">{children}</div>
-      {error ? <p className="text-destructive mt-3 text-sm">{error}</p> : null}
-      <div className={resumeItemActionsClassName}>
-        <Button type="submit" disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
-        </Button>
-      </div>
+      <div className="space-y-2 px-3 pb-3 pt-5 sm:px-4">{children}</div>
+      {error ? <p className="text-destructive px-4 pb-2 font-sans text-sm">{error}</p> : null}
+      <ComposerActions saving={saving} onCancel={onCancel} />
     </form>
   );
 }
@@ -315,34 +349,38 @@ export function SectionCreateForm({
 
   if (!open) {
     return (
-      <Button type="button" className="mt-4" onClick={onOpen}>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="cv-add-entry text-page-ink-muted hover:text-primary hover:border-primary/50 focus-visible:ring-primary/30 border-page-rule mt-3 flex w-full items-center gap-2 rounded-md border border-dashed px-3 py-3 font-sans text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2"
+      >
+        <Plus className="size-4" aria-hidden />
         {label}
-      </Button>
+      </button>
     );
   }
 
   return (
     <form
       ref={formRef}
-      className="surface-soft text-card-foreground mt-4 p-4"
+      aria-label={label}
+      className={cn(composerFormClassName, 'mt-3')}
       onSubmit={(event) => {
         event.preventDefault();
         if (!saving) {
           onSave();
         }
       }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && !saving) {
+          event.preventDefault();
+          onCancel();
+        }
+      }}
     >
-      <h4 className="mb-4 text-base font-semibold">{label}</h4>
-      <div className="space-y-4">{children}</div>
-      {error ? <p className="text-destructive mt-3 text-sm">{error}</p> : null}
-      <div className={resumeItemActionsClassName}>
-        <Button type="submit" disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
-        </Button>
-      </div>
+      <div className="space-y-2 px-3 pb-3 pt-5 sm:px-4">{children}</div>
+      {error ? <p className="text-destructive px-4 pb-2 font-sans text-sm">{error}</p> : null}
+      <ComposerActions saving={saving} onCancel={onCancel} />
     </form>
   );
 }

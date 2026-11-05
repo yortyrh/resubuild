@@ -1,11 +1,13 @@
 'use client';
 
 import type { ResumeAward } from '@resubuild/types';
+import { ComposerBlock, ComposerRow, EntryComposer } from '@/components/cv/composer/entry-composer';
+import { InlineDateField } from '@/components/cv/composer/inline-date-field';
+import { InlineField } from '@/components/cv/composer/inline-field';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { validateRequiredDateOnCreate } from '@/components/cv/cv-section-helpers';
-import { TextField } from '@/components/cv/form-fields';
-import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
+import { MarkdownEditor } from '@/components/cv/markdown-editor';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { cvAwardApi } from '@/lib/cv-item-api';
@@ -38,32 +40,43 @@ export function AwardsSection() {
         body: <MarkdownView value={item.summary} variant="block" />,
       })}
       renderForm={(item, onChange, context) => (
-        <>
-          <TextField
-            label="Title"
-            value={item.title}
-            onChange={(title) => onChange({ ...item, title })}
+        <EntryComposer>
+          <ComposerRow
+            left={
+              <InlineField
+                label="Award title"
+                tone="title"
+                value={item.title}
+                onChange={(title) => onChange({ ...item, title })}
+              />
+            }
+            right={
+              <InlineDateField
+                label="Date"
+                required={context?.mode === 'create'}
+                value={item.date}
+                error={context?.fieldErrors.date}
+                onChange={(date) => onChange({ ...item, date })}
+              />
+            }
           />
-          <IsoDateField
-            label="Date"
-            required={context?.mode === 'create'}
-            value={item.date}
-            error={context?.fieldErrors.date}
-            onChange={(date) => onChange({ ...item, date })}
-          />
-          <TextField
+          <InlineField
             label="Awarder"
+            tone="meta"
+            placeholder="Awarded by"
             value={item.awarder}
             onChange={(awarder) => onChange({ ...item, awarder })}
           />
-          <TextField
-            label="Summary"
-            markdown="block"
-            multiline
-            value={item.summary}
-            onChange={(summary) => onChange({ ...item, summary })}
-          />
-        </>
+          <ComposerBlock label="Summary">
+            <MarkdownEditor
+              deferUntilFocus
+              ariaLabel="Summary"
+              placeholder="Why you received it."
+              value={item.summary ?? ''}
+              onChange={(summary) => onChange({ ...item, summary })}
+            />
+          </ComposerBlock>
+        </EntryComposer>
       )}
     />
   );

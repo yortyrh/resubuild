@@ -1,8 +1,9 @@
 'use client';
 
 import type { ResumeLanguage } from '@resubuild/types';
+import { EntryComposer } from '@/components/cv/composer/entry-composer';
+import { InlineField } from '@/components/cv/composer/inline-field';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { TextField } from '@/components/cv/form-fields';
 import { LanguageField } from '@/components/cv/language-field';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
@@ -33,18 +34,22 @@ export function LanguagesSection() {
         subtitle: item.fluency || undefined,
       })}
       renderForm={(item, onChange) => (
-        <>
-          <LanguageField
-            label="Language"
-            value={item.language}
-            onChange={(language) => onChange({ ...item, language })}
-          />
-          <TextField
+        <EntryComposer className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
+          <div className="font-sans">
+            <LanguageField
+              label="Language"
+              value={item.language}
+              onChange={(language) => onChange({ ...item, language })}
+            />
+          </div>
+          <InlineField
             label="Fluency"
+            tone="subtitle"
+            placeholder="Fluency, e.g. Native speaker"
             value={item.fluency}
             onChange={(fluency) => onChange({ ...item, fluency })}
           />
-        </>
+        </EntryComposer>
       )}
     />
   );

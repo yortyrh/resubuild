@@ -40,6 +40,10 @@ export interface MarkdownEditorProps {
    * authoring surfaces like the cover letter or job description.
    */
   freeForm?: boolean;
+  /** Focus the editor once it mounts (used when it is activated on demand). */
+  autoFocus?: boolean;
+  /** Accessible name for the editable region. */
+  ariaLabel?: string;
 }
 
 export interface MarkdownEditorHandle {
@@ -76,7 +80,16 @@ const ToolbarContents: FC<ToolbarContentsProps> = ({ variant, freeForm = false }
 
 export const MarkdownEditorImpl = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
   function MarkdownEditorImpl(
-    { value = '', onChange, variant = 'block', placeholder, className, freeForm = false },
+    {
+      value = '',
+      onChange,
+      variant = 'block',
+      placeholder,
+      className,
+      freeForm = false,
+      autoFocus = false,
+      ariaLabel,
+    },
     ref,
   ) {
     const editorRef = useRef<MDXEditorMethods>(null);
@@ -122,9 +135,10 @@ export const MarkdownEditorImpl = forwardRef<MarkdownEditorHandle, MarkdownEdito
     );
 
     return (
-      <div
+      <fieldset
+        aria-label={ariaLabel}
         className={cn(
-          'rich-text-editor',
+          'rich-text-editor min-w-0',
           variant === 'inline' && 'rich-text-editor--inline',
           className,
         )}
@@ -134,6 +148,7 @@ export const MarkdownEditorImpl = forwardRef<MarkdownEditorHandle, MarkdownEdito
           markdown={value}
           onChange={onChange}
           placeholder={placeholder}
+          autoFocus={autoFocus ? { defaultSelection: 'rootEnd' } : false}
           contentEditableClassName={cn(
             variant === 'inline' && 'mdxeditor-content--inline',
             variant === 'block' && 'prose prose-sm max-w-none',
@@ -146,7 +161,7 @@ export const MarkdownEditorImpl = forwardRef<MarkdownEditorHandle, MarkdownEdito
           className="mdxeditor-theme"
           plugins={plugins}
         />
-      </div>
+      </fieldset>
     );
   },
 );

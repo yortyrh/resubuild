@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export const metadataLabelClassName =
-  'text-muted-foreground bg-muted/60 inline-flex min-h-7 shrink-0 items-center justify-center rounded px-2 py-1 text-xs font-medium uppercase tracking-wide';
+  'text-muted-foreground inline-flex min-h-7 shrink-0 items-center font-sans text-xs font-medium';
 
 export const metadataRowClassName = 'flex flex-wrap items-center gap-x-3 gap-y-2 text-sm';
 

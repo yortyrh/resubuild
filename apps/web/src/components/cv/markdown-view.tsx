@@ -1,6 +1,6 @@
 'use client';
 
-import type { ComponentPropsWithoutRef } from 'react';
+import { type ComponentPropsWithoutRef, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
@@ -26,7 +26,17 @@ const markdownSanitizeSchema: Parameters<typeof rehypeSanitize>[0] = {
   strip: [],
 };
 
-export function MarkdownView({ value, variant = 'block', className = '' }: MarkdownViewProps) {
+const remarkPlugins = [remarkGfm];
+const rehypePlugins: NonNullable<Parameters<typeof ReactMarkdown>[0]['rehypePlugins']> = [
+  [rehypeSanitize, markdownSanitizeSchema],
+];
+const components = { a: SafeLink };
+
+export const MarkdownView = memo(function MarkdownView({
+  value,
+  variant = 'block',
+  className = '',
+}: MarkdownViewProps) {
   if (!value?.trim()) {
     return null;
   }
@@ -44,12 +54,12 @@ export function MarkdownView({ value, variant = 'block', className = '' }: Markd
   return (
     <div className={classes}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[rehypeSanitize, markdownSanitizeSchema]]}
-        components={{ a: SafeLink }}
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
+        components={components}
       >
         {value}
       </ReactMarkdown>
     </div>
   );
-}
+});

@@ -155,7 +155,7 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
 
   if (editing) {
     return (
-      <>
+      <div className="cv-paper px-5 py-5 text-[0.9375rem] leading-[1.45] sm:px-8 sm:py-7">
         <ResumeItemForm
           saving={saving}
           error={error}
@@ -172,7 +172,7 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
           onCancel={handleCropCancel}
           confirming={cropApplying}
         />
-      </>
+      </div>
     );
   }
 
@@ -215,7 +215,7 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
   }
 
   return (
-    <>
+    <div className="cv-paper px-5 py-5 text-[0.9375rem] leading-[1.45] sm:px-8 sm:py-7">
       <input
         ref={profilePhotoInputRef}
         type="file"
@@ -234,12 +234,12 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
               onDelete={handleDeletePhoto}
             />
             <div className="min-w-0 flex-1 space-y-1">
-              <div className="text-xl">{basics.name || 'Untitled'}</div>
+              <div className="text-2xl tracking-tight">{basics.name || 'Untitled'}</div>
               {basics.label ? (
-                <div className="text-muted-foreground font-normal">{basics.label}</div>
+                <div className="text-[1.0625rem] font-normal">{basics.label}</div>
               ) : null}
               {contactSegments.length > 0 ? (
-                <p className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-normal">
+                <p className="text-page-ink-muted flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.8125rem] font-normal">
                   {contactSegments.map((segment, i) => (
                     <span key={`contact-${i}`} className="inline-flex items-center">
                       {i > 0 ? (
@@ -257,7 +257,11 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
         }
         onEdit={startEdit}
       >
-        <MarkdownView value={basics.summary} variant="block" />
+        {basics.summary ? (
+          <div className="border-page-rule mt-3 border-t pt-3">
+            <MarkdownView value={basics.summary} variant="block" />
+          </div>
+        ) : null}
       </ResumeItemRow>
       <ProfilePhotoCropDialog
         open={cropDialogOpen}
@@ -267,6 +271,6 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
         onCancel={handleCropCancel}
         confirming={cropApplying}
       />
-    </>
+    </div>
   );
 }

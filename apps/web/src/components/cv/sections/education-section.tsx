@@ -1,6 +1,15 @@
 'use client';
 
 import type { ResumeEducation } from '@resubuild/types';
+import { BulletListField } from '@/components/cv/composer/bullet-list-field';
+import {
+  ComposerBlock,
+  ComposerRow,
+  ComposerSeparator,
+  EntryComposer,
+} from '@/components/cv/composer/entry-composer';
+import { InlineDateField } from '@/components/cv/composer/inline-date-field';
+import { InlineField } from '@/components/cv/composer/inline-field';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import {
   formatDateRange,
@@ -9,8 +18,6 @@ import {
   validateRequiredStartDate,
 } from '@/components/cv/cv-section-helpers';
 import { linkedEntityLabel } from '@/components/cv/external-link';
-import { StringListField, TextField } from '@/components/cv/form-fields';
-import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { cvEducationApi } from '@/lib/cv-item-api';
@@ -41,68 +48,102 @@ export function EducationSection() {
       sortItems={sortDateRangeSectionItems}
       renderView={(item) => {
         const institutionLabel = item.institution || 'Education entry';
-        const subtitle = [item.studyType, item.area].filter(Boolean).join(' — ');
+        const subtitle = [item.studyType, item.area].filter(Boolean).join(', ');
         return {
           title: <span>{linkedEntityLabel(institutionLabel, item.url) ?? institutionLabel}</span>,
-          subtitle: subtitle || undefined,
-          meta: (
-            <div>
-              <div>{formatDateRange(item.startDate, item.endDate)}</div>
-              {item.score ? <div>Score: {item.score}</div> : null}
-            </div>
-          ),
+          subtitle: subtitle ? (
+            <span className="font-bold not-italic">
+              {subtitle}
+              {item.score ? <span className="font-normal">, {item.score}</span> : null}
+            </span>
+          ) : undefined,
+          meta: formatDateRange(item.startDate, item.endDate),
           body: highlightBody(item.courses, { title: 'Courses' }),
         };
       }}
       renderForm={(item, onChange, context) => (
-        <>
-          <TextField
-            label="Institution"
-            value={item.institution}
-            onChange={(institution) => onChange({ ...item, institution })}
+        <EntryComposer>
+          <ComposerRow
+            left={
+              <InlineField
+                label="Institution"
+                tone="title"
+                value={item.institution}
+                onChange={(institution) => onChange({ ...item, institution })}
+              />
+            }
+            right={
+              <>
+                <InlineDateField
+                  label="Start date"
+                  required
+                  value={item.startDate}
+                  error={context?.fieldErrors.startDate}
+                  onChange={(startDate) => onChange({ ...item, startDate })}
+                />
+                <span aria-hidden className="text-page-ink-muted">
+                  –
+                </span>
+                <InlineDateField
+                  label="End date"
+                  emptyHint="Present"
+                  value={item.endDate}
+                  onChange={(endDate) => onChange({ ...item, endDate })}
+                />
+              </>
+            }
           />
-          <TextField
-            label="Area"
-            description='e.g. "Computer Science".'
-            value={item.area}
-            onChange={(area) => onChange({ ...item, area })}
+          <ComposerRow
+            left={
+              <>
+                <InlineField
+                  label="Study type"
+                  tone="title"
+                  placeholder="Degree, e.g. Bachelor of Science"
+                  value={item.studyType}
+                  onChange={(studyType) => onChange({ ...item, studyType })}
+                  className="flex-[1_1_10rem]"
+                />
+                <ComposerSeparator show={Boolean(item.studyType && item.area)} />
+                <InlineField
+                  label="Area"
+                  tone="title"
+                  placeholder="Area, e.g. Computer Science"
+                  value={item.area}
+                  onChange={(area) => onChange({ ...item, area })}
+                  className="flex-[1_1_10rem]"
+                />
+              </>
+            }
+            right={
+              <InlineField
+                label="Score"
+                tone="meta"
+                align="right"
+                placeholder="Score, e.g. 3.8 GPA"
+                value={item.score}
+                onChange={(score) => onChange({ ...item, score })}
+                className="w-40"
+              />
+            }
           />
-          <TextField
-            label="Study type"
-            description='e.g. "Bachelor".'
-            value={item.studyType}
-            onChange={(studyType) => onChange({ ...item, studyType })}
-          />
-          <TextField
-            label="URL"
+          <InlineField
+            label="Institution website"
             type="url"
+            tone="meta"
             value={item.url}
             onChange={(url) => onChange({ ...item, url })}
           />
-          <IsoDateField
-            label="Start date"
-            required
-            value={item.startDate}
-            error={context?.fieldErrors.startDate}
-            onChange={(startDate) => onChange({ ...item, startDate })}
-          />
-          <IsoDateField
-            label="End date"
-            value={item.endDate}
-            onChange={(endDate) => onChange({ ...item, endDate })}
-          />
-          <TextField
-            label="Score"
-            value={item.score}
-            onChange={(score) => onChange({ ...item, score })}
-          />
-          <StringListField
-            label="Courses"
-            description="Notable courses saved with this entry on Save."
-            values={item.courses ?? []}
-            onChange={(courses) => onChange({ ...item, courses })}
-          />
-        </>
+          <ComposerBlock label="Courses" hint="One course per bullet.">
+            <BulletListField
+              label="Courses"
+              itemLabel="Course"
+              placeholder="Distributed Systems"
+              values={item.courses ?? []}
+              onChange={(courses) => onChange({ ...item, courses })}
+            />
+          </ComposerBlock>
+        </EntryComposer>
       )}
     />
   );

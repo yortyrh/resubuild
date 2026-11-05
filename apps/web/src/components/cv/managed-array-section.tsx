@@ -23,6 +23,7 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -217,20 +218,17 @@ export function ManagedArraySection<T extends WithItemId>({
     [sortItems],
   );
 
-  const handleEditDraftChange = useCallback(
-    (next: T) => {
-      setDraft(next);
-      setFieldErrors({});
-      if (sortItems && editingId) {
-        onItemsChange(applySortedItems(mergeItemById(items, next)));
-      }
-    },
-    [applySortedItems, editingId, items, onItemsChange, sortItems],
-  );
+  // The draft stays local while typing: pushing it into the whole CV on each
+  // keystroke re-rendered every entry and re-sorted the list under the cursor.
+  // The list is merged and re-sorted once, on save.
+  const handleEditDraftChange = useCallback((next: T) => {
+    setDraft(next);
+    setFieldErrors((current) => (Object.keys(current).length > 0 ? {} : current));
+  }, []);
 
   const handleCreateDraftChange = useCallback((next: T) => {
     setCreateDraft(next);
-    setFieldErrors({});
+    setFieldErrors((current) => (Object.keys(current).length > 0 ? {} : current));
   }, []);
 
   const runValidation = (item: T, mode: 'create' | 'edit'): boolean => {
@@ -506,6 +504,15 @@ export function ManagedArraySection<T extends WithItemId>({
     return rowElement();
   };
 
+  // View rows only depend on the saved items, so typing in a draft re-renders
+  // the composer alone.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handlers only close over the listed state and stable setters
+  const viewRows = useMemo(
+    () =>
+      new Map(items.map((item, index) => [item.id ?? `row-${index}`, renderViewRow(item, index)])),
+    [items, renderView, reorderEnabled, actionsDisabled, crossSectionMove, reorder, entityLabel],
+  );
+
   if (needsHydration && sectionLoading) {
     return (
       <div
@@ -536,41 +543,51 @@ export function ManagedArraySection<T extends WithItemId>({
         {renderForm(draft, handleEditDraftChange, { fieldErrors, mode: 'edit' })}
       </ResumeItemForm>
     ) : (
-      <div key={itemKey}>{renderViewRow(item, index)}</div>
+      <div key={itemKey}>{viewRows.get(itemKey)}</div>
     );
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
-      {items.length === 0 && editingId === null && !creating ? (
-        <p className="text-muted-foreground text-sm">No entries yet.</p>
-      ) : null}
+      <div className="cv-paper cv-section-page px-5 py-5 text-[0.9375rem] leading-[1.45] sm:px-8 sm:py-7">
+        {items.length === 0 && editingId === null && !creating ? (
+          <p className="text-page-ink-muted font-sans text-sm">
+            No entries yet. Add one below and it appears here as it will print.
+          </p>
+        ) : null}
 
-      {reorderEnabled ? (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-            {itemList}
-          </SortableContext>
-        </DndContext>
-      ) : (
-        itemList
-      )}
+        <div className="space-y-2">
+          {reorderEnabled ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+                {itemList}
+              </SortableContext>
+            </DndContext>
+          ) : (
+            itemList
+          )}
+        </div>
 
-      <SectionCreateForm
-        label={addLabel}
-        open={creating && createDraft !== null}
-        onOpen={startCreate}
-        saving={actionsDisabled}
-        error={error}
-        onSave={saveCreate}
-        onCancel={cancelCreate}
-      >
-        {createDraft
-          ? renderForm(createDraft, handleCreateDraftChange, { fieldErrors, mode: 'create' })
-          : null}
-      </SectionCreateForm>
+        <SectionCreateForm
+          label={addLabel}
+          open={creating && createDraft !== null}
+          onOpen={startCreate}
+          saving={actionsDisabled}
+          error={error}
+          onSave={saveCreate}
+          onCancel={cancelCreate}
+        >
+          {createDraft
+            ? renderForm(createDraft, handleCreateDraftChange, { fieldErrors, mode: 'create' })
+            : null}
+        </SectionCreateForm>
+      </div>
 
       <DeleteItemDialog
         open={deleteId !== null}

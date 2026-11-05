@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderMarkdownField } from './render-markdown-field';
+import { renderInlineMarkdownField, renderMarkdownField } from './render-markdown-field';
 import { renderResumeHtml } from './render-resume-html';
 import { sampleResume } from './templates/capd-factory';
 
@@ -74,5 +74,30 @@ describe('renderMarkdownField', () => {
     expect(html).toContain('<h1>x</h1>');
     expect(html).not.toContain('style=');
     expect(html).not.toContain('color:red');
+  });
+});
+
+describe('renderInlineMarkdownField', () => {
+  it('renders bullet markdown inline, without a paragraph wrapper', () => {
+    const html = renderInlineMarkdownField(
+      'Cut latency by **40%** with [edge](https://example.com)',
+    );
+    expect(html).toBe(
+      'Cut latency by <strong>40%</strong> with <a href="https://example.com">edge</a>',
+    );
+  });
+
+  it('keeps strikethrough and strips scripts', () => {
+    const html = renderInlineMarkdownField('~~old~~ new <script>alert(1)</script>');
+    expect(html).toContain('<del>old</del>');
+    expect(html).not.toContain('<script');
+  });
+
+  it('prints highlights as plain list items in the export', () => {
+    const html = renderResumeHtml(
+      { ...sampleResume, work: [{ name: 'Acme', highlights: ['Shipped **v2**'] }] },
+      'left',
+    );
+    expect(html).toContain('<li>Shipped <strong>v2</strong></li>');
   });
 });

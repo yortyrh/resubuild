@@ -1,1 +1,1 @@
-export { renderMarkdownField } from '../render-markdown-field';
+export { renderInlineMarkdownField, renderMarkdownField } from '../render-markdown-field';

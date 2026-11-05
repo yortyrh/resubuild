@@ -2,70 +2,72 @@
 @plugin 'tailwindcss-animate';
 @plugin '@tailwindcss/typography';
 
+/* Resubuild design tokens (see apps/web/DESIGN.md).
+   The page ground is the "desk" (cool grey); panels are "paper"; the CV page
+   itself is always white with dark ink, in both color schemes. "Pencil" is the
+   proofreader's blue used for actions and focus; "marker" is reserved for
+   AI-changed (tailored) text. Values are HSL triplets for `hsl(var(--x) / a)`. */
 :root {
+  --desk: 216 16% 94%;
   --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
+  --foreground: 218 15% 10%;
   --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-  /* Accent (indigo) — primary action, focus ring, active nav state. */
-  --primary: 244 70% 55%;
+  --card-foreground: 218 15% 10%;
+  --primary: 224 74% 47%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  /* Soft accent tint — active/selected states (e.g. active nav item). */
-  --accent: 244 70% 96%;
-  --accent-foreground: 244 70% 25%;
-  --destructive: 0 84.2% 60.2%;
-  --border: 240 6% 93%;
-  --input: 240 6% 91%;
-  --ring: 244 70% 55%;
+  --secondary: 214 13% 90%;
+  --secondary-foreground: 218 15% 10%;
+  --muted: 214 13% 90%;
+  --muted-foreground: 221 11% 40%;
+  --accent: 224 74% 95%;
+  --accent-foreground: 224 74% 32%;
+  --destructive: 0 68% 48%;
+  --border: 215 14% 83%;
+  --input: 215 14% 80%;
+  --ring: 224 74% 47%;
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
+  --popover-foreground: 218 15% 10%;
+  --marker: 48 87% 62%;
+  --success: 152 55% 34%;
+  --warning: 36 90% 45%;
 
-  /* Marketing-only tokens (paper + ink + indigo rule). The marketing
-     route group layers these on top of the existing semantic tokens so
-     the landing page reads as a paper-and-ink document, not a generic
-     SaaS surface. They MUST stay scoped to the (marketing) route group
-     and MUST NOT bleed into the dashboard or auth chrome. */
-  --marketing-paper: 0 0% 100%;
-  --marketing-ink: 240 10% 9%;
-  --marketing-rule: 244 30% 55%;
-  --marketing-display-font: var(--font-display), Georgia, serif;
-  --marketing-mono-font: var(--font-geist-mono);
+  /* The printed page: fixed in both schemes so the CV reads like the PDF. */
+  --page: 0 0% 100%;
+  --page-ink: 218 15% 10%;
+  --page-ink-muted: 221 11% 40%;
+  --page-rule: 215 14% 85%;
+
+  --radius: 0.5rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    /* Lightened indigo for contrast against the dark surface. */
-    --primary: 244 80% 70%;
-    --primary-foreground: 240 10% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 244 50% 22%;
-    --accent-foreground: 244 80% 90%;
-    --destructive: 0 62.8% 30.6%;
-    --border: 240 4% 22%;
-    --input: 240 4% 20%;
-    --ring: 244 80% 70%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-
-    /* Dark-mode marketing tokens. */
-    --marketing-paper: 240 10% 5%;
-    --marketing-ink: 0 0% 98%;
-    --marketing-rule: 244 40% 65%;
+    --desk: 214 17% 8%;
+    --background: 213 16% 11%;
+    --foreground: 214 18% 92%;
+    --card: 213 16% 11%;
+    --card-foreground: 214 18% 92%;
+    --primary: 222 86% 73%;
+    --primary-foreground: 218 15% 10%;
+    --secondary: 214 14% 16%;
+    --secondary-foreground: 214 18% 92%;
+    --muted: 214 14% 16%;
+    --muted-foreground: 218 12% 65%;
+    --accent: 224 40% 20%;
+    --accent-foreground: 222 86% 85%;
+    --destructive: 0 70% 58%;
+    --border: 216 15% 19%;
+    --input: 216 15% 24%;
+    --ring: 222 86% 73%;
+    --popover: 213 16% 13%;
+    --popover-foreground: 214 18% 92%;
+    --success: 152 50% 55%;
+    --warning: 40 90% 60%;
   }
 }
 
 @theme inline {
+  --color-desk: hsl(var(--desk));
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
@@ -84,15 +86,39 @@
   --color-ring: hsl(var(--ring));
   --color-popover: hsl(var(--popover));
   --color-popover-foreground: hsl(var(--popover-foreground));
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-display: var(--marketing-display-font);
+  --color-marker: hsl(var(--marker));
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-page: hsl(var(--page));
+  --color-page-ink: hsl(var(--page-ink));
+  --color-page-ink-muted: hsl(var(--page-ink-muted));
+  --color-page-rule: hsl(var(--page-rule));
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Same stack as the export template (packages/resume-template document.ts). */
+  --font-resume: Georgia, Cambria, 'Times New Roman', Times, serif;
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
 }
 
 body {
-  background: hsl(var(--background));
+  background: hsl(var(--desk));
   color: hsl(var(--foreground));
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 /* `@tailwindcss/typography` ships with hardcoded light-mode colors and only
@@ -162,6 +188,20 @@ html body[data-scroll-locked] {
   padding: 0 !important;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @media print {
   .no-print {
     display: none !important;
@@ -169,12 +209,45 @@ html body[data-scroll-locked] {
 }
 
 @layer utilities {
-  .surface-soft {
-    border-radius: 0.75rem;
-    background-color: hsl(var(--muted) / 0.35);
+  /* Panel on the desk: white paper with a hairline rule. `surface-soft` is the
+     historical name and stays as the panel utility used across the dashboard. */
+  .surface-soft,
+  .paper {
+    border-radius: var(--radius);
+    background-color: hsl(var(--card));
+    box-shadow: 0 0 0 1px hsl(var(--border));
+  }
+
+  /* The CV page: white in both schemes, set in the export template's serif. */
+  .cv-paper {
+    border-radius: calc(var(--radius) * 0.5);
+    background-color: hsl(var(--page));
+    color: hsl(var(--page-ink));
+    font-family: var(--font-resume);
     box-shadow:
-      0 1px 2px 0 rgb(0 0 0 / 0.04),
-      inset 0 0 0 1px hsl(var(--border) / 0.55);
+      0 0 0 1px hsl(var(--page-rule)),
+      0 1px 2px hsl(218 15% 10% / 0.06);
+    color-scheme: light;
+  }
+
+  /* Condensed, heavy display setting for headlines. */
+  .display {
+    font-family: var(--font-display);
+    font-stretch: 78%;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 0.98;
+  }
+
+  .wide {
+    font-stretch: 90%;
+    letter-spacing: -0.01em;
+  }
+
+  /* Text added or changed by AI tailoring. */
+  .marker-text {
+    background-image: linear-gradient(transparent 55%, hsl(var(--marker) / 0.75) 55%);
+    box-decoration-break: clone;
   }
 
   .divider-soft {
@@ -327,7 +400,7 @@ html body[data-scroll-locked] {
 .rich-text-editor .mdxeditor [class*='_contentEditable']:not([class*='_placeholder']),
 .rich-text-editor .mdxeditor [contenteditable='true'] {
   padding: 0.75rem !important;
-  background-color: white !important;
+  background-color: hsl(var(--background)) !important;
   border: 1px solid hsl(var(--input)) !important;
   border-radius: 0.375rem !important;
 }
@@ -346,7 +419,7 @@ html body[data-scroll-locked] {
 .rich-text-editor--inline .mdxeditor [contenteditable='true'] {
   padding: 0.5rem !important;
   min-height: 2.5rem;
-  background-color: white !important;
+  background-color: hsl(var(--background)) !important;
 }
 
 /* MDXEditor popup container — MDXEditor appends a `.mdxeditor-popup-container`
@@ -411,26 +484,17 @@ html body[data-scroll-locked] {
 }
 
 .rich-text-editor .mdxeditor a {
-  color: hsl(244 70% 45%);
+  color: hsl(var(--primary));
   text-decoration: underline;
-  text-decoration-color: hsl(244 70% 45% / 0.5);
+  text-decoration-color: hsl(var(--primary) / 0.5);
   text-underline-offset: 2px;
 }
 
 @media (prefers-color-scheme: dark) {
   .rich-text-editor .mdxeditor a {
-    color: hsl(244 80% 75%);
-    text-decoration-color: hsl(244 80% 75% / 0.5);
+    color: hsl(var(--primary));
+    text-decoration-color: hsl(var(--primary) / 0.5);
   }
-}
-
-/* String list inline rows — room for overlaid remove icon. */
-.string-list-markdown-editor .rich-text-editor--inline [class*='_toolbarRoot'] {
-  padding-right: 1.75rem !important;
-}
-
-.string-list-markdown-editor .rich-text-editor--inline .mdxeditor [contenteditable='true'] {
-  padding-right: 1.75rem !important;
 }
 
 /* MDXEditor code block (CodeMirror wrapper) — soften the chrome so the block
@@ -505,16 +569,16 @@ html body[data-scroll-locked] {
 }
 
 .markdown-view a {
-  color: hsl(244 70% 45%);
+  color: hsl(var(--primary));
   text-decoration: underline;
-  text-decoration-color: hsl(244 70% 45% / 0.5);
+  text-decoration-color: hsl(var(--primary) / 0.5);
   text-underline-offset: 2px;
 }
 
 @media (prefers-color-scheme: dark) {
   .markdown-view a {
-    color: hsl(244 80% 75%);
-    text-decoration-color: hsl(244 80% 75% / 0.5);
+    color: hsl(var(--primary));
+    text-decoration-color: hsl(var(--primary) / 0.5);
   }
 }
 
@@ -593,4 +657,184 @@ html body[data-scroll-locked] {
 
 .scrollbar-hidden::-webkit-scrollbar {
   display: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Page composer: CV entries edited in place, set like the PDF.        */
+/* ------------------------------------------------------------------ */
+.composer {
+  line-height: 1.45;
+}
+
+.composer-field {
+  display: block;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  padding: 0.0625rem 0.25rem;
+  margin-inline: -0.25rem;
+  border-radius: 0.1875rem;
+  outline: none;
+  box-shadow: inset 0 -1px 0 transparent;
+  transition:
+    box-shadow 120ms ease-out,
+    background-color 120ms ease-out;
+}
+
+.composer-field::placeholder {
+  color: hsl(var(--page-ink-muted) / 0.6);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.composer-field:hover {
+  box-shadow: inset 0 -1px 0 hsl(var(--page-rule));
+}
+
+.composer-field:focus {
+  background-color: hsl(var(--primary) / 0.05);
+  box-shadow: inset 0 -2px 0 hsl(var(--primary));
+}
+
+.composer-field--error,
+.composer-field--error:hover {
+  box-shadow: inset 0 -2px 0 hsl(var(--destructive));
+}
+
+/* Field name, shown above a field while it has focus. */
+.composer-slot::before {
+  content: attr(data-label);
+  position: absolute;
+  bottom: calc(100% + 0.125rem);
+  left: 0;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1;
+  color: hsl(var(--primary));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease-out;
+}
+
+.composer-slot:focus-within::before {
+  opacity: 1;
+}
+
+.composer-date {
+  color-scheme: light;
+}
+
+.composer-date--empty:not(:focus) {
+  color: transparent;
+}
+
+.composer-date-slot:focus-within .composer-date-hint {
+  display: none;
+}
+
+.composer-rendered .markdown-view {
+  font-size: inherit;
+  line-height: inherit;
+  padding: 0.0625rem 0;
+}
+
+.composer-rendered .markdown-view p {
+  margin: 0;
+}
+
+/* Rich editor inside the page: no box, no white fill; toolbar only on focus. */
+.composer .rich-text-editor .mdxeditor {
+  font-family: var(--font-resume);
+  font-size: inherit !important;
+  line-height: inherit !important;
+  color: hsl(var(--page-ink));
+}
+
+.composer .rich-text-editor .mdxeditor [class*='_contentEditable']:not([class*='_placeholder']),
+.composer .rich-text-editor .mdxeditor [contenteditable='true'] {
+  background-color: hsl(var(--primary) / 0.04) !important;
+  border: 0 !important;
+  box-shadow: inset 0 -2px 0 hsl(var(--primary));
+  border-radius: 0.1875rem !important;
+  padding: 0.375rem 0.5rem !important;
+  color: hsl(var(--page-ink));
+}
+
+.composer .rich-text-editor [class*='_toolbarRoot'] {
+  background-color: hsl(var(--page)) !important;
+  border-bottom: 0 !important;
+  box-shadow: 0 0 0 1px hsl(var(--page-rule));
+  border-radius: 999px !important;
+  margin-bottom: 0.375rem !important;
+  min-height: 2rem !important;
+  width: fit-content;
+  font-family: var(--font-sans);
+}
+
+.composer .rich-text-editor [class*='_toolbarRoot'] [data-toolbar-item] {
+  color: hsl(var(--page-ink-muted)) !important;
+}
+
+.composer .markdown-editor-idle {
+  margin-inline: -0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.1875rem;
+}
+
+.composer .markdown-editor-idle:hover {
+  box-shadow: inset 0 -1px 0 hsl(var(--page-rule));
+}
+
+.composer .markdown-view,
+.cv-paper .markdown-view {
+  --tw-prose-body: hsl(var(--page-ink));
+  --tw-prose-bold: hsl(var(--page-ink));
+  --tw-prose-headings: hsl(var(--page-ink));
+  --tw-prose-bullets: hsl(var(--page-ink));
+  --tw-prose-invert-body: hsl(var(--page-ink));
+  --tw-prose-invert-bold: hsl(var(--page-ink));
+  color: hsl(var(--page-ink));
+  font-size: inherit;
+}
+
+.cv-paper .markdown-view a {
+  color: inherit;
+  text-decoration-color: hsl(var(--page-ink) / 0.4);
+}
+
+/* Inside the printed page, UI components use the light token set in both
+   schemes so buttons and fields read correctly on white paper. */
+.cv-paper {
+  --background: 0 0% 100%;
+  --foreground: 218 15% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 218 15% 10%;
+  --primary: 224 74% 47%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 214 13% 92%;
+  --secondary-foreground: 218 15% 10%;
+  --muted: 214 13% 92%;
+  --muted-foreground: 221 11% 40%;
+  --accent: 224 74% 95%;
+  --accent-foreground: 224 74% 32%;
+  --destructive: 0 68% 48%;
+  --border: 215 14% 85%;
+  --input: 215 14% 80%;
+  --ring: 224 74% 47%;
+}
+
+/* Entry actions stay quiet until the entry is hovered or focused. Touch
+   devices have no hover, so the actions stay visible there. */
+@media (hover: hover) {
+  .cv-entry .cv-entry-actions {
+    opacity: 0;
+    transition: opacity 120ms ease-out;
+  }
+
+  .cv-entry:hover .cv-entry-actions,
+  .cv-entry:focus-within .cv-entry-actions {
+    opacity: 1;
+  }
 }
