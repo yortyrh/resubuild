@@ -50,7 +50,7 @@ export function RegisterForm() {
           {linkedinOauth ? <ContinueWithLinkedInButton /> : null}
           <div className="relative">
             <Separator />
-            <span className="bg-card text-muted-foreground absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-2 text-xs uppercase">
+            <span className="bg-card text-muted-foreground absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-2 text-xs">
               or
             </span>
           </div>

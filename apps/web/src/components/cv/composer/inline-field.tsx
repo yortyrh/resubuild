@@ -28,6 +28,8 @@ interface InlineFieldProps {
   required?: boolean;
   error?: string;
   autoFocus?: boolean;
+  /** Size the field to its text, so following inline text sits right after it. */
+  fit?: boolean;
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
 }
 
@@ -49,6 +51,7 @@ export function InlineField({
   required = false,
   error,
   autoFocus,
+  fit = false,
   onKeyDown,
 }: InlineFieldProps) {
   const errorId = useId();
@@ -73,7 +76,8 @@ export function InlineField({
     autoFocus,
     onKeyDown,
     className: cn(
-      'composer-field w-full min-w-0 bg-transparent',
+      'composer-field min-w-0 bg-transparent',
+      fit ? 'w-auto max-w-full min-w-[8ch] [field-sizing:content]' : 'w-full',
       toneClass[tone],
       align === 'right' && 'text-right',
       align === 'center' && 'text-center',
@@ -82,7 +86,10 @@ export function InlineField({
   };
 
   return (
-    <span className={cn('composer-slot relative block min-w-0', className)} data-label={label}>
+    <span
+      className={cn('composer-slot relative min-w-0', fit ? 'inline-block' : 'block', className)}
+      data-label={label}
+    >
       {multiline ? (
         <textarea
           ref={textareaRef}

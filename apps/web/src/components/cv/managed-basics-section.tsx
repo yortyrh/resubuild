@@ -155,7 +155,7 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
 
   if (editing) {
     return (
-      <div className="cv-paper px-5 py-5 text-[0.9375rem] leading-[1.45] sm:px-8 sm:py-7">
+      <div className="cv-paper max-w-[52rem] px-5 py-6 text-[0.9375rem] leading-[1.45] sm:px-10 sm:py-9">
         <ResumeItemForm
           saving={saving}
           error={error}
@@ -215,7 +215,7 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
   }
 
   return (
-    <div className="cv-paper px-5 py-5 text-[0.9375rem] leading-[1.45] sm:px-8 sm:py-7">
+    <div className="cv-paper max-w-[52rem] px-5 py-6 text-[0.9375rem] leading-[1.45] sm:px-10 sm:py-9">
       <input
         ref={profilePhotoInputRef}
         type="file"

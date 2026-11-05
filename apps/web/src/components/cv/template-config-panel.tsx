@@ -225,9 +225,7 @@ export const TemplateConfigPanel = memo(function TemplateConfigPanel({
       className={cn('no-print surface-soft w-full shrink-0 space-y-3 px-2 py-1 text-sm', className)}
     >
       <div className="space-y-2 px-2 pb-2 pt-2">
-        <Label className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-          Sections
-        </Label>
+        <Label className="text-muted-foreground text-[13px] font-medium">Sections</Label>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -251,9 +249,7 @@ export const TemplateConfigPanel = memo(function TemplateConfigPanel({
       </div>
 
       <div className="space-y-2 px-2 pb-2 pt-2">
-        <Label className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-          Header fields
-        </Label>
+        <Label className="text-muted-foreground text-[13px] font-medium">Header fields</Label>
         <div className="grid gap-1.5">
           {BASICS_FIELD_LABELS.map(({ key, label }) => (
             <label key={key} className="flex items-center gap-2">
@@ -271,9 +267,7 @@ export const TemplateConfigPanel = memo(function TemplateConfigPanel({
       </div>
 
       <div className="space-y-2 px-2 pb-2 pt-2">
-        <Label className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-          Experience fields
-        </Label>
+        <Label className="text-muted-foreground text-[13px] font-medium">Experience fields</Label>
         <div className="grid gap-1.5">
           {WORK_FIELD_LABELS.map(({ key, label }) => (
             <label key={key} className="flex items-center gap-2">

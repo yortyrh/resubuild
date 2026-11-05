@@ -113,14 +113,14 @@ export function WorkSection() {
                   tone="title"
                   value={item.name}
                   onChange={(name) => onChange({ ...item, name })}
-                  className="w-auto max-w-full flex-[1_1_12rem]"
+                  fit
                 />
                 <ComposerSeparator show={Boolean(item.name && item.location)} />
                 <InlineField
                   label="Location"
                   value={item.location}
                   onChange={(location) => onChange({ ...item, location })}
-                  className="flex-[1_1_8rem]"
+                  fit
                 />
               </>
             }

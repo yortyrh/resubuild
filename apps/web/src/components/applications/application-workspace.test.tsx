@@ -155,7 +155,7 @@ describe('ApplicationWorkspace tabs', () => {
       level: 1,
       name: 'Acme',
     });
-    expect(heading).toHaveClass('text-2xl', 'font-semibold');
+    expect(heading).toHaveClass('display', 'truncate');
 
     // The position is rendered as a muted subtitle beneath the heading. Scope
     // to the heading row so we don't match the Job summary tab's Position dd.

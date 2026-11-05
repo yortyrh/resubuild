@@ -26,8 +26,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
               <div className="flex min-h-screen flex-col">
                 <DashboardTopBar />
-                <main className="bg-muted/30 flex-1 px-4 py-4">
-                  <div className="w-full">{children}</div>
+                <main className="bg-desk flex-1 px-4 py-6 sm:px-8 sm:py-8">
+                  <div className="mx-auto w-full max-w-7xl">{children}</div>
                 </main>
               </div>
             </div>

@@ -10,7 +10,7 @@ export default function NewApplicationPage() {
 
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Prepare application</h1>
+          <h1 className="display text-[2rem] sm:text-[2.5rem]">Prepare application</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             Paste a job posting or upload a file. One run produces a tailored CV and cover letter.
           </p>

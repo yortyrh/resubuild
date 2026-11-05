@@ -28,7 +28,7 @@ export function DashboardShellSkeleton() {
           <Skeleton className="ml-1 h-4 w-48" />
         </header>
 
-        <main className="bg-muted/30 flex-1 px-4 py-4">
+        <main className="bg-desk flex-1 px-4 py-6 sm:px-8 sm:py-8">
           <div className="mx-auto w-full max-w-6xl space-y-6">
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-2">

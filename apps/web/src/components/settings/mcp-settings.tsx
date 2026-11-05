@@ -113,7 +113,7 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-6">
       <div>
         {backHref ? (
           <Link
@@ -123,7 +123,7 @@ export function McpSettings({ backHref, backLabel }: McpSettingsProps = {}) {
             ← {backLabel ?? 'Back'}
           </Link>
         ) : null}
-        <h1 className="text-2xl font-semibold">MCP access</h1>
+        <h1 className="display text-[2rem] sm:text-[2.5rem]">MCP access</h1>
         <p className="text-muted-foreground mt-2 text-sm">
           Connect Cursor, Claude Desktop, or other MCP clients to manage CVs and job applications
           with long-lived API keys.

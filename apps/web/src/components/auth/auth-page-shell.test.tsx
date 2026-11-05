@@ -19,10 +19,11 @@ describe('AuthPageShell', () => {
     expect(wrapper).not.toBeNull();
     expect(wrapper!.className).toContain('min-h-screen');
     expect(wrapper!.className).toContain('min-h-dvh');
-    expect(wrapper!.className).toContain('items-center');
-    expect(wrapper!.className).toContain('justify-center');
-    expect(wrapper!.className).toContain('py-8');
-    expect(wrapper!.className).toContain('sm:py-16');
+    const formColumn = wrapper!.firstElementChild;
+    expect(formColumn!.className).toContain('items-center');
+    expect(formColumn!.className).toContain('justify-center');
+    expect(formColumn!.className).toContain('py-8');
+    expect(formColumn!.className).toContain('sm:py-16');
   });
 
   it('uses reduced card padding below the sm breakpoint', () => {

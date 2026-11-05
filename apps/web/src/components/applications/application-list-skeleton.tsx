@@ -62,16 +62,16 @@ export function ApplicationListSkeleton() {
         <Table aria-label="Applications">
           <TableHeader>
             <TableRow className="divider-soft hover:bg-transparent">
-              <TableHead className="text-muted-foreground bg-muted/30 h-10 text-xs font-medium uppercase tracking-wide">
+              <TableHead className="text-muted-foreground bg-muted/30 h-10 text-[13px] font-medium">
                 Company
               </TableHead>
-              <TableHead className="text-muted-foreground bg-muted/30 h-10 text-xs font-medium uppercase tracking-wide">
+              <TableHead className="text-muted-foreground bg-muted/30 h-10 text-[13px] font-medium">
                 Position
               </TableHead>
-              <TableHead className="text-muted-foreground bg-muted/30 h-10 text-xs font-medium uppercase tracking-wide">
+              <TableHead className="text-muted-foreground bg-muted/30 h-10 text-[13px] font-medium">
                 Application status
               </TableHead>
-              <TableHead className="text-muted-foreground bg-muted/30 h-10 text-right text-xs font-medium uppercase tracking-wide">
+              <TableHead className="text-muted-foreground bg-muted/30 h-10 text-right text-[13px] font-medium">
                 Actions
               </TableHead>
             </TableRow>

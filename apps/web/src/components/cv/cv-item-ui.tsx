@@ -193,7 +193,7 @@ export function ResumeItemRow({
           {children ? <div className="mt-1">{children}</div> : null}
         </div>
       </div>
-      <div className="cv-entry-actions mt-1.5 flex flex-wrap items-center gap-1 font-sans">
+      <div className="cv-entry-actions bg-page absolute -top-3.5 right-2 z-10 flex items-center gap-0.5 rounded-full p-0.5 font-sans shadow-[0_0_0_1px_hsl(var(--page-rule)),0_4px_12px_-4px_hsl(218_15%_10%/0.18)]">
         {reorder ? (
           <>
             <Button
@@ -240,7 +240,7 @@ export function ResumeItemRow({
             type="button"
             variant="ghost"
             size="sm"
-            className="text-destructive hover:text-destructive ml-auto"
+            className="text-destructive hover:text-destructive"
             onClick={onDelete}
           >
             Delete

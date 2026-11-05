@@ -102,7 +102,7 @@ export function EducationSection() {
                   placeholder="Degree, e.g. Bachelor of Science"
                   value={item.studyType}
                   onChange={(studyType) => onChange({ ...item, studyType })}
-                  className="flex-[1_1_10rem]"
+                  fit
                 />
                 <ComposerSeparator show={Boolean(item.studyType && item.area)} />
                 <InlineField
@@ -111,7 +111,7 @@ export function EducationSection() {
                   placeholder="Area, e.g. Computer Science"
                   value={item.area}
                   onChange={(area) => onChange({ ...item, area })}
-                  className="flex-[1_1_10rem]"
+                  fit
                 />
               </>
             }

@@ -551,14 +551,14 @@ export function ManagedArraySection<T extends WithItemId>({
     <div className="space-y-3">
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
-      <div className="cv-paper cv-section-page px-5 py-5 text-[0.9375rem] leading-[1.45] sm:px-8 sm:py-7">
+      <div className="cv-paper cv-section-page max-w-[52rem] px-5 py-6 text-[0.9375rem] leading-[1.45] sm:px-10 sm:py-9">
         {items.length === 0 && editingId === null && !creating ? (
           <p className="text-page-ink-muted font-sans text-sm">
             No entries yet. Add one below and it appears here as it will print.
           </p>
         ) : null}
 
-        <div className="space-y-2">
+        <div className="space-y-5">
           {reorderEnabled ? (
             <DndContext
               sensors={sensors}

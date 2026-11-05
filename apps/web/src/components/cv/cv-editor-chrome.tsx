@@ -55,7 +55,7 @@ export function CvEditorChrome({ cvId, children }: CvEditorChromeProps) {
 
       <div className="min-w-0 flex-1 space-y-6">
         <div className="no-print flex flex-wrap items-center gap-2">
-          <h1 className="min-w-0 flex-1 truncate text-xl font-semibold tracking-tight sm:text-2xl">
+          <h1 className="display min-w-0 flex-1 truncate text-[2rem] sm:text-[2.5rem]">
             {getSectionLabel(activeSection)}
           </h1>
           <Button

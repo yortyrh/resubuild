@@ -228,7 +228,7 @@ export function ApplicationWorkspace({ id }: { id: string }) {
       <div className="no-print px-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-2xl font-semibold tracking-tight">
+            <h1 className="display truncate text-[2rem] sm:text-[2.5rem]">
               {data.jobCompany?.trim() || 'Application'}
             </h1>
             {data.jobTitle?.trim() ? (

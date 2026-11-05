@@ -21,6 +21,7 @@ import { downloadCvJson, downloadCvPdf } from '@/lib/api';
 import { triggerBrowserDownload } from '@/lib/download';
 import { useDeleteCv } from '@/lib/queries/cv-mutations';
 import { useCvList } from '@/lib/queries/cv-queries';
+import { cn } from '@/lib/utils';
 
 interface CvCardBasics {
   name: string;
@@ -153,15 +154,20 @@ export function CvList() {
 
   if (cvs.length === 0) {
     return (
-      <article className="surface-soft text-card-foreground p-4">
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold">No CVs yet</div>
-          <div className="text-muted-foreground mt-0 text-sm font-normal leading-snug">
-            Create your first Resubuild CV.
+      <article className="grid items-center gap-8 py-6 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] sm:py-12">
+        <div
+          aria-hidden
+          className="border-input/80 bg-background/60 mx-auto aspect-[8.5/11] w-40 rounded-sm border border-dashed sm:w-full"
+        />
+        <div className="max-w-md space-y-3">
+          <h1 className="display text-[2rem] sm:text-[2.5rem]">No CVs yet</h1>
+          <p className="text-muted-foreground text-lg">
+            Create your first Resubuild CV. Import the one you already have as a PDF, Word file,
+            image, or link, or start from a blank page.
+          </p>
+          <div className="pt-2">
+            <NewCvDropdown label="Create CV" />
           </div>
-        </div>
-        <div className="divider-soft mt-4 flex gap-2 border-t pt-4">
-          <NewCvDropdown label="Create CV" />
         </div>
       </article>
     );
@@ -171,15 +177,15 @@ export function CvList() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">My CVs</h1>
-          <p className="text-muted-foreground">
+          <h1 className="display text-[2rem] sm:text-[2.5rem]">My CVs</h1>
+          <p className="text-muted-foreground mt-2">
             Create and edit CVs that follow the JSON Resume schema.
           </p>
         </div>
         <NewCvDropdown />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
         {cvs.map((cv) => {
           const basics = readCvBasics(cv.data);
           const displayTitle = basics.name || cv.title;
@@ -188,39 +194,42 @@ export function CvList() {
           const exportKind = isExportingThis ? exporting?.kind : undefined;
 
           return (
-            <article key={cv.id} className="surface-soft text-card-foreground flex gap-4 p-4">
+            <article key={cv.id} className="group/cv flex min-w-0 flex-col gap-3">
               <Link
                 href={`/dashboard/cv/${cv.id}`}
                 aria-label={`Edit ${displayTitle}`}
-                className="focus-visible:ring-ring w-30 block shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2"
+                className="focus-visible:ring-ring block rounded-sm transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
               >
-                <CvTemplateThumbnail templateId={cv.templateId} label={`${displayTitle} preview`} />
+                <CvTemplateThumbnail
+                  templateId={cv.templateId}
+                  label={`${displayTitle} preview`}
+                  className="group-hover/cv:shadow-[0_0_0_1px_hsl(var(--primary)/0.5),0_12px_28px_-12px_hsl(218_15%_10%/0.35)]"
+                />
               </Link>
 
-              <div className="flex min-w-0 flex-1 flex-col">
-                <div className="flex items-start gap-2">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <Link
-                      href={`/dashboard/cv/${cv.id}`}
-                      className={
-                        hasStructuredHeader ? 'block text-xl font-semibold' : 'block font-semibold'
-                      }
-                    >
-                      {displayTitle}
-                    </Link>
-                    {hasStructuredHeader && basics.label ? (
-                      <div className="text-muted-foreground text-sm font-normal">
-                        {basics.label}
-                      </div>
-                    ) : null}
-                    <CvCardContactRow email={basics.email} phone={basics.phone} url={basics.url} />
-                    <div className="text-muted-foreground/80 text-xs font-normal">
-                      Updated {new Date(cv.updated_at).toLocaleString()}
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <div className="min-w-0 space-y-0.5">
+                  <Link
+                    href={`/dashboard/cv/${cv.id}`}
+                    className={cn(
+                      'hover:text-primary block truncate',
+                      hasStructuredHeader ? 'text-base font-semibold' : 'font-semibold',
+                    )}
+                  >
+                    {displayTitle}
+                  </Link>
+                  {hasStructuredHeader && basics.label ? (
+                    <div className="text-muted-foreground truncate text-sm font-normal">
+                      {basics.label}
                     </div>
+                  ) : null}
+                  <CvCardContactRow email={basics.email} phone={basics.phone} url={basics.url} />
+                  <div className="text-muted-foreground/80 text-xs font-normal">
+                    Updated {new Date(cv.updated_at).toLocaleString()}
                   </div>
                 </div>
 
-                <div className="divider-soft mt-auto flex flex-nowrap items-start justify-start gap-2 border-t pt-3">
+                <div className="mt-auto flex flex-nowrap items-center gap-1">
                   <Button asChild size="sm" variant="outline">
                     <Link
                       href={`/dashboard/cv/${cv.id}/preview`}

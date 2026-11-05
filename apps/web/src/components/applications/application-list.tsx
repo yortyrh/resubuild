@@ -161,7 +161,7 @@ export function ApplicationList() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Applications</h1>
+        <h1 className="display text-[2rem] sm:text-[2.5rem]">Applications</h1>
         <Button asChild aria-label="Prepare application">
           <Link href="/dashboard/applications/new">
             <FilePlus2 className="size-4 shrink-0 sm:mr-2" aria-hidden="true" />

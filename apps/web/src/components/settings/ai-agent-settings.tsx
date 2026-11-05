@@ -257,9 +257,9 @@ export function AiAgentSettings({ backHref, backLabel }: AiAgentSettingsProps = 
   const hasReconfigurationRequired = accounts.some((account) => account.reconfigurationRequired);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">AI agent settings</h1>
+        <h1 className="display text-[2rem] sm:text-[2.5rem]">AI agent settings</h1>
         <p className="text-muted-foreground mt-2 text-sm">
           Bring your own API keys from providers you subscribe to (Anthropic, OpenAI, Google,
           OpenRouter). Cursor or ChatGPT subscriptions do not expose API keys — use a provider key

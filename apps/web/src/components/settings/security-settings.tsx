@@ -60,7 +60,7 @@ export function SecuritySettings({ backHref, backLabel }: SecuritySettingsProps 
       ) : null}
 
       <div>
-        <h1 className="text-2xl font-semibold">
+        <h1 className="display text-[2rem] sm:text-[2.5rem]">
           {hasPassword ? 'Change password' : 'Set a password'}
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">

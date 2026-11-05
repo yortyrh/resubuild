@@ -28,21 +28,22 @@ export function CvTemplateThumbnail({
       role="img"
       aria-label={label}
       className={cn(
-        'border-input/40 bg-background text-muted-foreground relative aspect-[8.5/11] w-full overflow-hidden rounded-md border shadow-sm',
+        'bg-page text-page-ink-muted relative aspect-[8.5/11] w-full overflow-hidden rounded-sm shadow-[0_0_0_1px_hsl(var(--page-rule)),0_1px_2px_hsl(218_15%_10%/0.06)] transition-shadow [container-type:inline-size]',
         className,
       )}
       data-template={variant}
     >
-      <div className="absolute inset-0 flex flex-col gap-1.5 p-2 text-[5px] leading-tight">
+      <div className="absolute inset-0 flex flex-col gap-[5cqw] p-[8cqw] text-[4.2cqw] leading-tight">
         <ThumbnailHeader variant={variant} />
-        <div className="mt-1 space-y-1">
-          {Array.from({ length: 3 }, (_, sectionIndex) => (
-            <div key={sectionIndex} className="space-y-0.5">
+        <div className="mt-[3.3cqw] space-y-[4cqw]">
+          {Array.from({ length: 5 }, (_, sectionIndex) => (
+            <div key={sectionIndex} className="space-y-[1.7cqw]">
               <span
                 className={cn(
                   'block font-semibold tracking-wide',
                   variant === 'classic' || variant === 'left' ? 'uppercase' : 'normal-case',
-                  variant === 'classic' && 'border-muted-foreground/40 border-b pb-0.5 text-center',
+                  variant === 'classic' &&
+                    'border-page-ink-muted/40 border-b pb-[1.7cqw] text-center',
                   variant === 'left' && 'text-left',
                   variant === 'modern' && 'text-left font-light',
                   variant === 'tabular' && 'text-left',
@@ -50,12 +51,12 @@ export function CvTemplateThumbnail({
               >
                 Section
               </span>
-              <div className="space-y-[2px]">
-                {Array.from({ length: 2 }, (_, lineIndex) => (
+              <div className="space-y-[1.7cqw]">
+                {Array.from({ length: 3 }, (_, lineIndex) => (
                   <div
                     key={lineIndex}
-                    className="bg-muted-foreground/30 h-[3px] rounded-sm"
-                    style={{ width: `${90 - lineIndex * 12}%` }}
+                    className="bg-page-ink-muted/30 h-[2.2cqw] rounded-sm"
+                    style={{ width: `${94 - ((lineIndex * 17 + sectionIndex * 9) % 30)}%` }}
                   />
                 ))}
               </div>
@@ -78,11 +79,11 @@ function ThumbnailHeader({ variant }: { variant: CvThumbnailTemplateId }) {
   if (variant === 'classic') {
     return (
       <div className="text-center">
-        <div className="bg-foreground/80 mx-auto h-1.5 w-3/5 rounded-sm" />
-        <div className="bg-muted-foreground/40 mx-auto mt-1 h-1 w-2/5 rounded-sm" />
-        <div className="mt-1 flex justify-center gap-1">
+        <div className="bg-page-ink/80 mx-auto h-[5cqw] w-3/5 rounded-sm" />
+        <div className="bg-page-ink-muted/40 mx-auto mt-[3.3cqw] h-[3.3cqw] w-2/5 rounded-sm" />
+        <div className="mt-[3.3cqw] flex justify-center gap-[3.3cqw]">
           {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="bg-muted-foreground/40 h-[3px] w-3 rounded-sm" />
+            <div key={i} className="bg-page-ink-muted/40 h-[2.2cqw] w-[10cqw] rounded-sm" />
           ))}
         </div>
       </div>
@@ -91,12 +92,12 @@ function ThumbnailHeader({ variant }: { variant: CvThumbnailTemplateId }) {
 
   if (variant === 'modern') {
     return (
-      <div className="border-muted-foreground/30 border-b pb-1">
-        <div className="bg-foreground/80 h-1.5 w-3/5 rounded-sm" />
-        <div className="bg-muted-foreground/40 mt-1 h-1 w-2/5 rounded-sm" />
-        <div className="mt-1 flex gap-1">
+      <div className="border-page-ink-muted/30 border-b pb-[3.3cqw]">
+        <div className="bg-page-ink/80 h-[5cqw] w-3/5 rounded-sm" />
+        <div className="bg-page-ink-muted/40 mt-[3.3cqw] h-[3.3cqw] w-2/5 rounded-sm" />
+        <div className="mt-[3.3cqw] flex gap-[3.3cqw]">
           {Array.from({ length: 3 }, (_, i) => (
-            <div key={i} className="bg-muted-foreground/40 h-[3px] w-3 rounded-sm" />
+            <div key={i} className="bg-page-ink-muted/40 h-[2.2cqw] w-[10cqw] rounded-sm" />
           ))}
         </div>
       </div>
@@ -105,14 +106,14 @@ function ThumbnailHeader({ variant }: { variant: CvThumbnailTemplateId }) {
 
   if (variant === 'tabular') {
     return (
-      <div className="border-muted-foreground/30 flex items-start justify-between border-b pb-1">
-        <div className="flex-1 pr-1">
-          <div className="bg-foreground/80 h-1.5 w-4/5 rounded-sm" />
-          <div className="bg-muted-foreground/40 mt-1 h-1 w-3/5 rounded-sm" />
+      <div className="border-page-ink-muted/30 flex items-start justify-between border-b pb-[3.3cqw]">
+        <div className="flex-1 pr-[3.3cqw]">
+          <div className="bg-page-ink/80 h-[5cqw] w-4/5 rounded-sm" />
+          <div className="bg-page-ink-muted/40 mt-[3.3cqw] h-[3.3cqw] w-3/5 rounded-sm" />
         </div>
-        <div className="w-1/3 space-y-[2px]">
+        <div className="w-1/3 space-y-[1.7cqw]">
           {Array.from({ length: 3 }, (_, i) => (
-            <div key={i} className="bg-muted-foreground/40 h-[3px] w-full rounded-sm" />
+            <div key={i} className="bg-page-ink-muted/40 h-[2.2cqw] w-full rounded-sm" />
           ))}
         </div>
       </div>
@@ -121,12 +122,12 @@ function ThumbnailHeader({ variant }: { variant: CvThumbnailTemplateId }) {
 
   // left
   return (
-    <div className="border-muted-foreground/40 border-b pb-1">
-      <div className="bg-foreground/80 h-1.5 w-3/5 rounded-sm" />
-      <div className="bg-muted-foreground/40 mt-1 h-1 w-2/5 rounded-sm" />
-      <div className="mt-1 flex gap-1">
+    <div className="border-page-ink-muted/40 border-b pb-[3.3cqw]">
+      <div className="bg-page-ink/80 h-[5cqw] w-3/5 rounded-sm" />
+      <div className="bg-page-ink-muted/40 mt-[3.3cqw] h-[3.3cqw] w-2/5 rounded-sm" />
+      <div className="mt-[3.3cqw] flex gap-[3.3cqw]">
         {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="bg-muted-foreground/40 h-[3px] w-3 rounded-sm" />
+          <div key={i} className="bg-page-ink-muted/40 h-[2.2cqw] w-[10cqw] rounded-sm" />
         ))}
       </div>
     </div>

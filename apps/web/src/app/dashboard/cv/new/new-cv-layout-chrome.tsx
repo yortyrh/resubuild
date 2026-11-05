@@ -15,8 +15,8 @@ export function NewCvLayoutChrome({ children }: { children: React.ReactNode }) {
       <NewCvFlowBreadcrumb pageLabel={breadcrumbLabel} />
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-          <p className="text-muted-foreground">{subtitle}</p>
+          <h1 className="display text-[2rem] sm:text-[2.5rem]">{title}</h1>
+          <p className="text-muted-foreground mt-2 max-w-[65ch]">{subtitle}</p>
         </div>
         <Button asChild variant="outline">
           <Link href="/dashboard">Cancel</Link>

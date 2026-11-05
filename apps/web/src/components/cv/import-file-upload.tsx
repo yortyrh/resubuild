@@ -124,7 +124,7 @@ export function ImportFileUpload({
   };
 
   const dashedBoxClassName = cn(
-    'border-input bg-background h-28 w-full rounded-lg border border-dashed px-4',
+    'border-input bg-background min-h-28 w-full rounded-lg border-2 border-dashed px-4',
     disabled && 'opacity-50',
   );
 
@@ -175,7 +175,7 @@ export function ImportFileUpload({
           aria-disabled={disabled}
           className={cn(
             dashedBoxClassName,
-            'hover:bg-accent/40 focus-visible:ring-ring flex w-full flex-col items-center justify-center gap-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+            'hover:border-primary/60 hover:bg-accent/40 focus-visible:ring-ring flex min-h-52 w-full flex-col items-center justify-center gap-2 py-8 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
             dragActive && 'border-primary bg-accent/30',
             disabled && 'pointer-events-none',
           )}
@@ -198,8 +198,10 @@ export function ImportFileUpload({
           onDrop={handleDrop}
           aria-describedby={validationError ? `${inputId}-error` : undefined}
         >
-          <Upload className="text-muted-foreground size-8" aria-hidden />
-          <span className="text-sm font-medium">{hint}</span>
+          <span className="bg-accent text-accent-foreground mb-1 inline-flex size-12 items-center justify-center rounded-full">
+            <Upload className="size-5" aria-hidden />
+          </span>
+          <span className="text-base font-medium">{hint}</span>
           <span className="text-muted-foreground text-xs">Max {formatFileSize(maxBytes)}</span>
         </button>
       )}

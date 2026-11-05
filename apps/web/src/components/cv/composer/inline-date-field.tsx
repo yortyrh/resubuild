@@ -64,7 +64,7 @@ export function InlineDateField({
     'aria-describedby': error ? errorId : undefined,
     className: cn(
       'composer-field composer-date w-[8.5rem] bg-transparent text-right text-[0.875rem] tabular-nums',
-      !safeValue && emptyHint && 'composer-date--empty',
+      !safeValue && precision !== 'year' && 'composer-date--empty',
       error && 'composer-field--error',
     ),
   };
@@ -77,7 +77,7 @@ export function InlineDateField({
           min={1000}
           max={2999}
           step={1}
-          placeholder={emptyHint ?? 'YYYY'}
+          placeholder={emptyHint ?? label}
           value={inputValue}
           onChange={(event) => onChange(fromNativeInputValue(event.target.value, 'year'))}
           {...shared}
@@ -91,12 +91,12 @@ export function InlineDateField({
           {...shared}
         />
       )}
-      {!safeValue && emptyHint ? (
+      {!safeValue && precision !== 'year' ? (
         <span
           aria-hidden
           className="composer-date-hint text-page-ink-muted pointer-events-none absolute right-0 top-0 text-[0.875rem]"
         >
-          {emptyHint}
+          {emptyHint ?? label}
         </span>
       ) : null}
       <fieldset

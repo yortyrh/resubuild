@@ -258,8 +258,10 @@ html body[data-scroll-locked] {
     border-color: hsl(var(--border) / 0.5);
   }
 
+  /* The preview frame is a darker tray so the white page keeps its edge. */
   .cv-export-preview {
     overflow: hidden !important;
+    background-color: hsl(var(--muted));
   }
 }
 
@@ -662,86 +664,98 @@ html body[data-scroll-locked] {
 /* ------------------------------------------------------------------ */
 /* Page composer: CV entries edited in place, set like the PDF.        */
 /* ------------------------------------------------------------------ */
-.composer {
-  line-height: 1.45;
-}
+@layer components {
+  .composer {
+    line-height: 1.45;
+  }
 
-.composer-field {
-  display: block;
-  color: inherit;
-  font: inherit;
-  line-height: inherit;
-  padding: 0.0625rem 0.25rem;
-  margin-inline: -0.25rem;
-  border-radius: 0.1875rem;
-  outline: none;
-  box-shadow: inset 0 -1px 0 transparent;
-  transition:
-    box-shadow 120ms ease-out,
-    background-color 120ms ease-out;
-}
+  .composer-field {
+    /* Font and color come from Tailwind preflight (inherit) and tone utilities. */
+    display: block;
+    padding: 0.0625rem 0.25rem;
+    margin-inline: -0.25rem;
+    border-radius: 0.1875rem;
+    outline: none;
+    box-shadow: inset 0 -1px 0 transparent;
+    transition:
+      box-shadow 120ms ease-out,
+      background-color 120ms ease-out;
+  }
 
-.composer-field::placeholder {
-  color: hsl(var(--page-ink-muted) / 0.6);
-  font-style: normal;
-  font-weight: 400;
-}
+  .composer-field::placeholder {
+    color: hsl(var(--page-ink-muted) / 0.6);
+    font-style: normal;
+    font-weight: 400;
+  }
 
-.composer-field:hover {
-  box-shadow: inset 0 -1px 0 hsl(var(--page-rule));
-}
+  .composer-field:hover {
+    box-shadow: inset 0 -1px 0 hsl(var(--page-rule));
+  }
 
-.composer-field:focus {
-  background-color: hsl(var(--primary) / 0.05);
-  box-shadow: inset 0 -2px 0 hsl(var(--primary));
-}
+  .composer-field:focus {
+    background-color: hsl(var(--primary) / 0.05);
+    box-shadow: inset 0 -2px 0 hsl(var(--primary));
+  }
 
-.composer-field--error,
-.composer-field--error:hover {
-  box-shadow: inset 0 -2px 0 hsl(var(--destructive));
-}
+  .composer-field--error,
+  .composer-field--error:hover {
+    box-shadow: inset 0 -2px 0 hsl(var(--destructive));
+  }
 
-/* Field name, shown above a field while it has focus. */
-.composer-slot::before {
-  content: attr(data-label);
-  position: absolute;
-  bottom: calc(100% + 0.125rem);
-  left: 0;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-style: normal;
-  font-weight: 500;
-  line-height: 1;
-  color: hsl(var(--primary));
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease-out;
-}
+  /* Field name, shown above a field while it has focus. */
+  .composer-slot::before {
+    content: attr(data-label);
+    position: absolute;
+    bottom: calc(100% + 0.125rem);
+    left: 0;
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 1;
+    color: hsl(var(--primary));
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease-out;
+  }
 
-.composer-slot:focus-within::before {
-  opacity: 1;
-}
+  .composer-slot:focus-within::before {
+    opacity: 1;
+  }
 
-.composer-date {
-  color-scheme: light;
-}
+  .composer-date {
+    color-scheme: light;
+  }
 
-.composer-date--empty:not(:focus) {
-  color: transparent;
-}
+  .composer-date--empty:not(:focus) {
+    color: transparent;
+  }
 
-.composer-date-slot:focus-within .composer-date-hint {
-  display: none;
-}
+  .composer-date-slot:focus-within .composer-date-hint {
+    display: none;
+  }
 
-.composer-rendered .markdown-view {
-  font-size: inherit;
-  line-height: inherit;
-  padding: 0.0625rem 0;
-}
+  .composer-rendered .markdown-view {
+    font-size: inherit;
+    line-height: inherit;
+    padding: 0.0625rem 0;
+  }
 
-.composer-rendered .markdown-view p {
-  margin: 0;
+  .composer-rendered .markdown-view p {
+    margin: 0;
+  }
+
+  .composer-date::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    width: 0.75rem;
+    margin-left: 0.125rem;
+    cursor: pointer;
+  }
+
+  .composer-date:hover::-webkit-calendar-picker-indicator,
+  .composer-date:focus::-webkit-calendar-picker-indicator {
+    opacity: 0.5;
+  }
 }
 
 /* Rich editor inside the page: no box, no white fill; toolbar only on focus. */

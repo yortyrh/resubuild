@@ -192,7 +192,7 @@ describe('CvList', () => {
     // The name is the linkable title, the label is a muted subtitle.
     const nameLink = await screen.findByRole('link', { name: 'Yorty Ruiz Hernández' });
     expect(nameLink).toHaveAttribute('href', '/dashboard/cv/cv-2');
-    expect(nameLink).toHaveClass('text-xl', 'font-semibold');
+    expect(nameLink).toHaveClass('text-base', 'font-semibold');
 
     expect(screen.getByText('Python Backend Engineer')).toBeInTheDocument();
   });
