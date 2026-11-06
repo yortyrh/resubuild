@@ -79,6 +79,72 @@ describe('ApplicationRepository', () => {
     ).resolves.toMatchObject({ user_id: user.id });
   });
 
+  describe('job posting trace', () => {
+    const summary = {
+      requirements: ['5+ years of TypeScript', 'Team leadership'],
+      keywords: ['NestJS', 'PostgreSQL'],
+      language: 'es',
+    };
+
+    it('defaults the job source URL, file name and summary to null', async () => {
+      const row = await repository.create(user, { status: 'queued', job_source_type: 'text' });
+
+      expect(row.job_source_url).toBeNull();
+      expect(row.job_source_file_name).toBeNull();
+      expect(row.job_summary).toBeNull();
+    });
+
+    it('persists the job source URL, file name and summary on create', async () => {
+      const row = await repository.create(user, {
+        status: 'queued',
+        job_source_type: 'url',
+        job_source_url: 'https://jobs.example.com/123',
+        job_source_file_name: 'job-offer.pdf',
+        job_summary: summary,
+      });
+
+      const stored = await repository.findOne(user, row.id);
+      expect(stored).toMatchObject({
+        job_source_url: 'https://jobs.example.com/123',
+        job_source_file_name: 'job-offer.pdf',
+        job_summary: summary,
+      });
+    });
+
+    it('updates the stored job summary', async () => {
+      const row = await repository.create(user, { status: 'queued', job_source_type: 'text' });
+
+      const updated = await repository.update(user, row.id, {
+        status: 'ready',
+        job_summary: { requirements: ['SQL'], keywords: [], language: null },
+      });
+
+      expect(updated?.job_summary).toEqual({ requirements: ['SQL'], keywords: [], language: null });
+      await expect(repository.findOne(user, row.id)).resolves.toMatchObject({
+        job_summary: { requirements: ['SQL'], keywords: [], language: null },
+      });
+    });
+
+    it('does not expose the job posting trace to another user', async () => {
+      const row = await repository.create(user, {
+        status: 'ready',
+        job_source_type: 'url',
+        job_source_url: 'https://jobs.example.com/123',
+        job_summary: summary,
+        job_raw_text: 'Secret posting',
+      });
+
+      await expect(repository.findOne(other, row.id)).resolves.toBeNull();
+      await expect(repository.findAll(other)).resolves.toEqual([]);
+      await expect(
+        repository.update(other, row.id, { job_summary: { requirements: [], keywords: [] } }),
+      ).resolves.toBeNull();
+      await expect(repository.findOne(user, row.id)).resolves.toMatchObject({
+        job_summary: summary,
+      });
+    });
+  });
+
   describe('update drafts', () => {
     it('finds the newest active (queued/running) hidden draft for a source application', async () => {
       const source = await repository.create(user, { status: 'ready', job_source_type: 'text' });

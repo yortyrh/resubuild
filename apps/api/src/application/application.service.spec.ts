@@ -2362,4 +2362,456 @@ describe('ApplicationService', () => {
 
     expect(cvCloneService.deepClone).not.toHaveBeenCalled();
   });
+
+  describe('job posting trace', () => {
+    const storedSummary = {
+      requirements: ['5+ years of TypeScript', 'Team leadership'],
+      keywords: ['NestJS', 'PostgreSQL'],
+      language: 'es',
+    };
+
+    function mockSuccessfulPrepareWorkflow(jobSummary: Record<string, unknown> = {}) {
+      repository.create.mockResolvedValue({ id: 'app-1', status: 'queued' });
+      repository.update.mockResolvedValue({ id: 'app-1', status: 'ready' });
+      cvService.findAll.mockResolvedValue([]);
+      jest.mocked(runPrepareApplicationWorkflow).mockResolvedValue({
+        sourceCvId: 'cv-1',
+        jobSummary: {
+          title: 'Engineer',
+          company: 'Acme',
+          requirements: ['5+ years of TypeScript'],
+          keywords: ['NestJS'],
+          ...jobSummary,
+        },
+        jobRawText: 'We need an engineer',
+        coverLetter: 'Dear team',
+        coverLetterEmailSubject: 'Application',
+        selectionRationale: 'Strong match',
+        tailorPatch: {},
+        errors: [],
+      } as never);
+      normalizedRepo.assembleFullResume.mockResolvedValue({
+        basics: { name: 'Jane Doe', label: 'Engineer' },
+        work: [],
+        skills: [],
+      });
+      cvCloneService.deepClone.mockResolvedValue({ id: 'clone-1', sourceCvId: 'cv-1' });
+    }
+
+    function readyPatchFor(id: string): Record<string, unknown> | undefined {
+      const call = repository.update.mock.calls.find(
+        ([, callId, patch]: [unknown, string, Record<string, unknown>]) =>
+          callId === id && patch.status === 'ready',
+      );
+      return call?.[2] as Record<string, unknown> | undefined;
+    }
+
+    function expectNoPatchOverwrites(original: Record<string, unknown>, fields: string[]) {
+      for (const [, , patch] of repository.update.mock.calls as Array<
+        [unknown, string, Record<string, unknown>]
+      >) {
+        for (const field of fields) {
+          if (field in patch) {
+            expect(patch[field]).toEqual(original[field]);
+          }
+        }
+      }
+    }
+
+    function mockSuccessfulUpdateWorkflow() {
+      mockLiveBaseCv(normalizedRepo);
+      normalizedRepo.assembleFullResume
+        .mockResolvedValueOnce({ basics: { name: 'Jane Doe' }, work: [], skills: [] })
+        .mockResolvedValueOnce({
+          basics: { name: 'Jane Doe', label: 'Lead' },
+          work: [],
+          skills: [],
+        })
+        .mockResolvedValueOnce({
+          basics: { name: 'Jane Doe', label: 'Lead' },
+          work: [],
+          skills: [],
+        });
+      jest.mocked(runUpdateApplicationWorkflow).mockResolvedValue({
+        sourceCvId: 'cv-1',
+        coverLetter: 'Updated letter',
+        coverLetterEmailSubject: 'Updated subject',
+        selectionRationale: 'Updated rationale',
+        tailorPatch: {},
+        errors: [],
+      });
+      cvCloneService.deepClone.mockResolvedValue({ id: 'clone-2', sourceCvId: 'cv-1' });
+      cvService.remove.mockResolvedValue(undefined);
+      normalizedRepo.replaceNormalizedCv.mockResolvedValue(undefined);
+    }
+
+    function readyUrlRow(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'app-1',
+        status: 'ready',
+        job_source_type: 'url',
+        job_source_url: 'https://jobs.example.com/123',
+        job_source_file_name: null,
+        job_summary: storedSummary,
+        job_raw_text: 'Job text',
+        tailored_cv_id: 'clone-1',
+        cover_letter: 'Old letter',
+        job_title: 'Engineer',
+        job_company: 'Acme',
+        ...baseApplicationSource,
+        ...overrides,
+      };
+    }
+
+    it('stores the trimmed job URL for a URL intake and no file name', async () => {
+      mockSuccessfulPrepareWorkflow();
+
+      await service.prepare(user, { url: '  https://jobs.example.com/123  ' });
+
+      expect(repository.create).toHaveBeenCalledTimes(1);
+      expect(repository.create).toHaveBeenCalledWith(
+        user,
+        expect.objectContaining({
+          job_source_type: 'url',
+          job_source_url: 'https://jobs.example.com/123',
+          job_source_file_name: null,
+        }),
+      );
+    });
+
+    it('stores the uploaded PDF file name and ignores a URL sent with the file', async () => {
+      mockSuccessfulPrepareWorkflow();
+
+      await service.prepare(user, {
+        url: 'https://jobs.example.com/ignored',
+        file: {
+          mimetype: 'application/pdf',
+          originalname: 'job-offer.pdf',
+          size: 1024,
+          buffer: Buffer.from('pdf-content'),
+        } as Express.Multer.File,
+      });
+
+      expect(repository.create).toHaveBeenCalledWith(
+        user,
+        expect.objectContaining({
+          job_source_type: 'pdf',
+          job_source_file_name: 'job-offer.pdf',
+          job_source_url: null,
+        }),
+      );
+    });
+
+    it('stores the uploaded screenshot file name for an image intake', async () => {
+      mockSuccessfulPrepareWorkflow();
+
+      await service.prepare(user, {
+        file: {
+          mimetype: 'image/png',
+          originalname: 'posting-screenshot.png',
+          size: 2048,
+          buffer: Buffer.from('png-content'),
+        } as Express.Multer.File,
+      });
+
+      expect(repository.create).toHaveBeenCalledWith(
+        user,
+        expect.objectContaining({
+          job_source_type: 'image',
+          job_source_file_name: 'posting-screenshot.png',
+          job_source_url: null,
+        }),
+      );
+    });
+
+    it('stores neither URL nor file name for a text intake', async () => {
+      mockSuccessfulPrepareWorkflow();
+
+      await service.prepare(user, { text: 'We need an engineer' });
+
+      expect(repository.create).toHaveBeenCalledWith(
+        user,
+        expect.objectContaining({
+          job_source_type: 'text',
+          job_source_url: null,
+          job_source_file_name: null,
+        }),
+      );
+    });
+
+    it('does not store a whitespace-only URL sent alongside job text', async () => {
+      mockSuccessfulPrepareWorkflow();
+
+      await service.prepare(user, { text: 'We need an engineer', url: '   ' });
+
+      expect(repository.create).toHaveBeenCalledWith(
+        user,
+        expect.objectContaining({
+          job_source_type: 'text',
+          job_source_url: null,
+          job_source_file_name: null,
+        }),
+      );
+    });
+
+    it('saves the workflow job summary on the application after a successful prepare', async () => {
+      mockSuccessfulPrepareWorkflow({
+        requirements: ['5+ years of TypeScript', 'Team leadership'],
+        keywords: ['NestJS', 'PostgreSQL'],
+        language: 'es',
+      });
+
+      await service.prepare(user, { text: 'We need an engineer' });
+      await flushBackgroundJobs();
+
+      const patch = readyPatchFor('app-1');
+      expect(patch).toBeDefined();
+      expect(patch?.job_summary).toEqual({
+        requirements: ['5+ years of TypeScript', 'Team leadership'],
+        keywords: ['NestJS', 'PostgreSQL'],
+        language: 'es',
+      });
+    });
+
+    it('saves a null language in the job summary when the workflow detects none', async () => {
+      mockSuccessfulPrepareWorkflow({ requirements: [], keywords: [] });
+
+      await service.prepare(user, { text: 'We need an engineer' });
+      await flushBackgroundJobs();
+
+      const patch = readyPatchFor('app-1');
+      expect(patch).toBeDefined();
+      expect(patch?.job_summary).toStrictEqual({
+        requirements: [],
+        keywords: [],
+        language: null,
+      });
+    });
+
+    it('does not save a job summary when the prepare workflow fails', async () => {
+      mockSuccessfulPrepareWorkflow();
+      jest.mocked(runPrepareApplicationWorkflow).mockResolvedValue({
+        sourceCvId: undefined,
+        jobSummary: { title: 'Engineer', company: 'Acme', requirements: ['X'], keywords: ['Y'] },
+        jobRawText: 'text',
+        coverLetter: '',
+        coverLetterEmailSubject: '',
+        selectionRationale: '',
+        tailorPatch: {},
+        errors: ['No matching CV'],
+      });
+
+      await service.prepare(user, { text: 'We need an engineer' });
+      await flushBackgroundJobs();
+
+      for (const [, , patch] of repository.update.mock.calls as Array<
+        [unknown, string, Record<string, unknown>]
+      >) {
+        expect(patch).not.toHaveProperty('job_summary');
+      }
+    });
+
+    it('keeps the stored job URL and file name when retrying from stored job text', async () => {
+      const failedRow = {
+        id: 'app-1',
+        status: 'failed',
+        job_source_type: 'url',
+        job_source_url: 'https://jobs.example.com/123',
+        job_source_file_name: null,
+        job_summary: storedSummary,
+        job_raw_text: 'Stored job text',
+        tailored_cv_id: null,
+      };
+      mockSuccessfulPrepareWorkflow();
+      repository.findOne.mockResolvedValue(failedRow);
+      repository.update.mockImplementation(async (_user, _id, patch) => ({
+        ...failedRow,
+        ...patch,
+      }));
+
+      await service.retry(user, 'app-1');
+      await flushBackgroundJobs();
+
+      expect(runPrepareApplicationWorkflow).toHaveBeenCalled();
+      expect(readyPatchFor('app-1')).toBeDefined();
+      expectNoPatchOverwrites(failedRow, ['job_source_url', 'job_source_file_name']);
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('copies the job posting trace into the retry draft when a tailored clone exists', async () => {
+      const failedRow = readyUrlRow({
+        status: 'failed',
+        job_source_type: 'pdf',
+        job_source_url: null,
+        job_source_file_name: 'job-offer.pdf',
+      });
+      setupStagedUpdateMocks(failedRow);
+      mockSuccessfulUpdateWorkflow();
+
+      await service.retry(user, 'app-1');
+      await flushBackgroundJobs();
+
+      expect(repository.create).toHaveBeenCalledWith(
+        user,
+        expect.objectContaining({
+          source_application_id: 'app-1',
+          job_source_type: 'pdf',
+          job_source_url: null,
+          job_source_file_name: 'job-offer.pdf',
+          job_summary: storedSummary,
+        }),
+      );
+      expect(runUpdateApplicationWorkflow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          jobSummary: expect.objectContaining({
+            requirements: storedSummary.requirements,
+            keywords: storedSummary.keywords,
+            language: 'es',
+          }),
+        }),
+      );
+    });
+
+    it('copies the job posting trace into the update draft', async () => {
+      const readyRow = readyUrlRow();
+      setupStagedUpdateMocks(readyRow);
+      mockSuccessfulUpdateWorkflow();
+
+      await service.updateApplication(user, 'app-1', { message: 'Emphasize leadership' });
+
+      expect(repository.create).toHaveBeenCalledWith(
+        user,
+        expect.objectContaining({
+          source_application_id: 'app-1',
+          is_list_visible: false,
+          job_source_type: 'url',
+          job_source_url: 'https://jobs.example.com/123',
+          job_source_file_name: null,
+          job_summary: storedSummary,
+        }),
+      );
+    });
+
+    it('keeps the job posting trace on the active application after the update swap', async () => {
+      const readyRow = readyUrlRow();
+      const { draftRow } = setupStagedUpdateMocks(readyRow);
+      mockSuccessfulUpdateWorkflow();
+
+      await service.updateApplication(user, 'app-1', { message: 'Emphasize leadership' });
+      await flushBackgroundJobs();
+
+      expect(repository.update).toHaveBeenCalledWith(user, 'draft-1', {
+        is_list_visible: true,
+        source_application_id: null,
+      });
+      expect(repository.remove).toHaveBeenCalledWith(user, 'app-1');
+      expectNoPatchOverwrites(readyRow, [
+        'job_source_url',
+        'job_source_file_name',
+        'job_source_type',
+        'job_summary',
+      ]);
+      expect(draftRow).toMatchObject({
+        job_source_type: 'url',
+        job_source_url: 'https://jobs.example.com/123',
+        job_summary: storedSummary,
+      });
+    });
+
+    it('passes the stored requirements, keywords and language to the update workflow', async () => {
+      setupStagedUpdateMocks(readyUrlRow());
+      mockSuccessfulUpdateWorkflow();
+
+      await service.updateApplication(user, 'app-1', { message: 'Emphasize leadership' });
+      await flushBackgroundJobs();
+
+      expect(runUpdateApplicationWorkflow).toHaveBeenCalledTimes(1);
+      const [input] = jest.mocked(runUpdateApplicationWorkflow).mock.calls[0];
+      expect(input.jobSummary).toEqual({
+        title: 'Engineer',
+        company: 'Acme',
+        requirements: ['5+ years of TypeScript', 'Team leadership'],
+        keywords: ['NestJS', 'PostgreSQL'],
+        language: 'es',
+      });
+    });
+
+    it('falls back to empty requirements and keywords when no job summary is stored', async () => {
+      setupStagedUpdateMocks(readyUrlRow({ job_summary: null }));
+      mockSuccessfulUpdateWorkflow();
+
+      await service.updateApplication(user, 'app-1', { message: 'Emphasize leadership' });
+      await flushBackgroundJobs();
+
+      expect(runUpdateApplicationWorkflow).toHaveBeenCalledTimes(1);
+      const [input] = jest.mocked(runUpdateApplicationWorkflow).mock.calls[0];
+      expect(input.jobSummary.requirements).toEqual([]);
+      expect(input.jobSummary.keywords).toEqual([]);
+      expect(input.jobSummary.language).toBeUndefined();
+      expect(input.jobSummary.title).toBe('Engineer');
+      expect(input.jobSummary.company).toBe('Acme');
+    });
+
+    it('exposes the job posting trace in the application detail', async () => {
+      repository.findOne.mockResolvedValue({
+        id: 'app-1',
+        status: 'ready',
+        job_source_type: 'url',
+        job_source_url: 'https://jobs.example.com/123',
+        job_source_file_name: 'job-offer.pdf',
+        job_summary: storedSummary,
+        job_raw_text: 'Full job posting text',
+        cover_letter: 'Dear team',
+      });
+
+      const detail = await service.findOne(user, 'app-1');
+
+      expect(repository.findOne).toHaveBeenCalledWith(user, 'app-1');
+      expect(detail).toMatchObject({
+        jobSourceType: 'url',
+        jobSourceUrl: 'https://jobs.example.com/123',
+        jobSourceFileName: 'job-offer.pdf',
+        jobSummary: storedSummary,
+        jobRawText: 'Full job posting text',
+      });
+    });
+
+    it('exposes null trace fields for applications saved before the trace existed', async () => {
+      repository.findOne.mockResolvedValue({
+        id: 'app-1',
+        status: 'ready',
+        job_source_type: 'url',
+        job_source_url: null,
+        job_source_file_name: null,
+        job_summary: null,
+        job_raw_text: 'Old posting text',
+        cover_letter: 'Dear team',
+      });
+
+      const detail = await service.findOne(user, 'app-1');
+
+      expect(detail.jobSourceUrl).toBeNull();
+      expect(detail.jobSourceFileName).toBeNull();
+      expect(detail.jobSummary).toBeNull();
+      expect(detail.jobRawText).toBe('Old posting text');
+    });
+
+    it('does not expose another user’s application detail', async () => {
+      const otherUser = { id: 'u2', email: 'other@test.dev' } as never;
+      repository.findOne.mockImplementation(async (requester: { id: string }, id: string) =>
+        requester.id === 'u1' && id === 'app-1'
+          ? {
+              id: 'app-1',
+              user_id: 'u1',
+              status: 'ready',
+              job_source_url: 'https://jobs.example.com/123',
+              job_raw_text: 'Secret posting',
+            }
+          : null,
+      );
+
+      await expect(service.findOne(otherUser, 'app-1')).rejects.toThrow(NotFoundException);
+      expect(repository.findOne).toHaveBeenCalledWith(otherUser, 'app-1');
+    });
+  });
 });
