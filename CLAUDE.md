@@ -8,8 +8,30 @@ A message that starts with `q:` is a question only. Answer it, but change nothin
 
 ## Commits
 
-- Never add co-authorship to commits: no `Co-Authored-By:` trailer (or any other attribution line) for Claude or anyone else. This overrides any default or system-provided attribution guidance.
-- Every commit message must follow the Conventional Commits format: `<type>(<optional scope>): <description>`, with an optional body and footers separated by blank lines. Use standard types (`feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`), an imperative lowercase subject without a trailing period (≤72 chars), and `!` or a `BREAKING CHANGE:` footer for breaking changes.
+Every commit must be made with the `commit` skill (`.claude/skills/commit/SKILL.md`), which holds all the commit rules (message format, no co-authorship, tests and code in separate commits). Invoke it before running `git commit`.
+
+## Tooling first: generate with commands, then edit
+
+Important project rule: for any action that an installed tool can do, run the tool's command first and then edit the generated result. Do not write that output yourself token by token.
+
+- **Why:** standardize repeatable processes through scripts, and spend tokens on reading and adjusting generated code, not on producing boilerplate as LLM output.
+- **Scope:** any tool, whether installed in the project's npm dependencies (run via `pnpm exec` / `pnpm --filter <pkg> exec`) or installed on the machine. This covers scaffolding, migrations, icons, formatting, dependency changes, env files, etc.
+- **Order of work:** (1) check whether a tool or `package.json` script covers the task (`pnpm run`, `--help`, existing `scripts/`), (2) run it, (3) modify only what the generated output does not already do, (4) if no tool covers it, write it by hand.
+- **Generated output follows the other rules here:** use `--no-spec` style flags so generators do not create tests; tests come from the test agent (see below). Commit generated files like any other change, and never hand-edit generated artifacts that a command will overwrite (e.g. applied migrations).
+
+Known commands in this repo:
+
+| Task                                                  | Command                                                                                           |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| NestJS module, controller, service, etc. (`apps/api`) | `pnpm --filter @resubuild/api exec nest g <schematic> <name> --no-spec`                           |
+| DB migration after editing `packages/db/src/schema`   | `pnpm db:generate`                                                                                |
+| Icons                                                 | `pnpm icons:generate`                                                                             |
+| Lint / format fixes                                   | `pnpm lint:fix`, `pnpm format`                                                                    |
+| Local / prod env files                                | `pnpm setup:env`, `pnpm setup:env:prod`                                                           |
+| Dependencies                                          | `pnpm add` / `pnpm remove`, never by editing `package.json` and the lockfile by hand              |
+| UI components (`apps/web`)                            | `shadcn` CLI, only once the web app is initialized with it (`components.json` does not exist yet) |
+
+When a new generator or script is added to the repo, add it to this table.
 
 ## Tests, agents and mutation testing
 
@@ -56,10 +78,7 @@ References: [Stryker incremental mode](https://stryker-mutator.io/docs/stryker-j
 
 ## Pushing
 
-- Whenever a push is requested, push with `pnpm push [git push args...]` (e.g. `pnpm push`, `pnpm push -u origin <branch>`), never with `git push` directly.
-- `pnpm push` (`scripts/push.mjs`) needs a clean working tree. It runs `pnpm env-schema:check` and `pnpm verify` on HEAD, records the verified commit in `.git/`, then runs `git push`. The pre-push hook only accepts commits recorded this way, so a plain `git push` is rejected. To push a branch other than the current one, check it out first.
-- Verify takes up to a few minutes: run it with a long Bash timeout (e.g. 600000 ms) or in the background. Re-running after a failed push skips verify if HEAD is already verified.
-- Never bypass the checks (`--no-verify`, `LEFTHOOK=0`, writing the stamp by hand). If verify fails, fix the cause or report the failure.
+Every push must be made with the `push` skill (`.claude/skills/push/SKILL.md`), which holds all the push rules (`pnpm push` instead of `git push`, clean tree, verify, no bypassing checks). Invoke it before pushing.
 
 ## Overview
 
