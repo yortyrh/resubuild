@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { Resume } from '@resubuild/types';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ManagedBasicsSection } from './managed-basics-section';
 
@@ -73,5 +73,54 @@ describe('ManagedBasicsSection title layout', () => {
     expect(placeholder).not.toBeNull();
     expect(placeholder!.className).toContain('h-20');
     expect(placeholder!.className).toContain('w-20');
+  });
+});
+
+describe('ManagedBasicsSection edited-row highlight', () => {
+  afterEach(() => cleanup());
+
+  it('is not highlighted initially or while editing', () => {
+    const { container } = render(
+      <ManagedBasicsSection cvId="cv-1" basics={basics} onBasicsChange={vi.fn()} />,
+    );
+    expect(container.querySelector('article[data-highlighted]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^edit$/i }));
+    expect(container.querySelector('article[data-highlighted]')).toBeNull();
+  });
+
+  it('highlights the row after Cancel and clears it on the next edit', () => {
+    const { container } = render(
+      <ManagedBasicsSection cvId="cv-1" basics={basics} onBasicsChange={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^edit$/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    const article = container.querySelector('article[data-highlighted]') as HTMLElement | null;
+    expect(article).not.toBeNull();
+    expect(article!.className).toContain('outline');
+
+    fireEvent.click(screen.getByRole('button', { name: /^edit$/i }));
+    expect(container.querySelector('article[data-highlighted]')).toBeNull();
+  });
+
+  it('highlights the row after Escape cancels', () => {
+    const { container } = render(
+      <ManagedBasicsSection cvId="cv-1" basics={basics} onBasicsChange={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^edit$/i }));
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(container.querySelector('article[data-highlighted]')).not.toBeNull();
+  });
+
+  it('removes the highlight on a pointerdown outside the row, not inside it', () => {
+    const { container } = render(
+      <ManagedBasicsSection cvId="cv-1" basics={basics} onBasicsChange={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^edit$/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    const article = container.querySelector('article[data-highlighted]') as HTMLElement;
+    fireEvent.pointerDown(article);
+    expect(container.querySelector('article[data-highlighted]')).not.toBeNull();
+    fireEvent.pointerDown(document.body);
+    expect(container.querySelector('article[data-highlighted]')).toBeNull();
   });
 });
