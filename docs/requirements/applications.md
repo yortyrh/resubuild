@@ -6,6 +6,7 @@ A signed-in user with configured AI settings (REQ-IMP-008) can prepare an applic
 
 - The base CV defaults to AI selection. The user may pick a specific CV instead.
 - Preparation runs as a background job with visible progress. It is rejected when AI settings are missing.
+- The application keeps a trace of the posting: the source type, the URL (link source) or the uploaded file's name (PDF or screenshot source), the job text the AI extracted or received, and the job summary (requirements, keywords, posting language). Applications created before this trace existed have no URL, file name or summary; they are not backfilled.
 
 ### REQ-APP-002 Base CV selection
 
@@ -55,3 +56,4 @@ Updating an application builds a hidden replacement while the current version st
 - On success, the replacement takes over atomically and the old version is removed.
 - On failure or timeout, the original stays untouched.
 - At most one pending replacement exists per application.
+- The replacement, and a retry, keep the posting trace (REQ-APP-001): source type, URL, file name and job summary. The stored requirements, keywords and language are fed back to the AI on update. A retry that reruns the full preparation saves the job summary it produces.

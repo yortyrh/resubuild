@@ -1,6 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, type Database, desc, eq, inArray, jobApplication } from '@resubuild/db';
-import type { JobApplicationRow, JobApplicationStatus, JobSourceType } from '@resubuild/types';
+import type {
+  JobApplicationJobSummary,
+  JobApplicationRow,
+  JobApplicationStatus,
+  JobSourceType,
+} from '@resubuild/types';
 import type { AuthenticatedRequest } from '../auth/session-auth.guard';
 import { DATABASE } from '../database/database.tokens';
 import { pickColumns } from '../database/db-scope';
@@ -20,6 +25,9 @@ export interface CreateJobApplicationInput {
   cover_letter?: string | null;
   cover_letter_email_subject?: string | null;
   selection_rationale?: string | null;
+  job_source_url?: string | null;
+  job_source_file_name?: string | null;
+  job_summary?: JobApplicationJobSummary | null;
 }
 
 export type UpdateJobApplicationInput = Partial<
@@ -39,6 +47,7 @@ export type UpdateJobApplicationInput = Partial<
     | 'source_cv_snapshot'
     | 'source_application_id'
     | 'is_list_visible'
+    | 'job_summary'
   >
 >;
 
@@ -72,6 +81,9 @@ export class ApplicationRepository {
         cover_letter: input.cover_letter ?? null,
         cover_letter_email_subject: input.cover_letter_email_subject ?? null,
         selection_rationale: input.selection_rationale ?? null,
+        job_source_url: input.job_source_url ?? null,
+        job_source_file_name: input.job_source_file_name ?? null,
+        job_summary: input.job_summary ?? null,
       })
       .returning();
 

@@ -6,6 +6,13 @@ export type JobApplicationStatus = 'queued' | 'running' | 'ready' | 'failed';
 
 export type JobSourceType = 'url' | 'text' | 'pdf' | 'image';
 
+/** Job posting summary saved from the prepare workflow (requirements, keywords, language). */
+export interface JobApplicationJobSummary {
+  requirements: string[];
+  keywords: string[];
+  language?: string | null;
+}
+
 export interface JobApplicationRow {
   id: string;
   user_id: string;
@@ -14,6 +21,11 @@ export interface JobApplicationRow {
   job_company?: string | null;
   job_source_type?: JobSourceType | null;
   job_raw_text?: string | null;
+  /** Job posting URL given at intake (`url` source). */
+  job_source_url?: string | null;
+  /** Original name of the uploaded job posting file (`pdf` / `image` source). */
+  job_source_file_name?: string | null;
+  job_summary?: JobApplicationJobSummary | null;
   source_cv_id?: string | null;
   tailored_cv_id?: string | null;
   cover_letter?: string | null;
@@ -38,6 +50,9 @@ export interface JobApplicationDetail {
   jobCompany?: string | null;
   jobSourceType?: JobSourceType | null;
   jobRawText?: string | null;
+  jobSourceUrl?: string | null;
+  jobSourceFileName?: string | null;
+  jobSummary?: JobApplicationJobSummary | null;
   sourceCvId?: string | null;
   tailoredCvId?: string | null;
   coverLetter?: string | null;
@@ -91,6 +106,9 @@ export function jobApplicationRowToDetail(
     jobCompany: sanitizeOptionalAiText(row.job_company),
     jobSourceType: row.job_source_type,
     jobRawText: row.job_raw_text,
+    jobSourceUrl: row.job_source_url,
+    jobSourceFileName: row.job_source_file_name,
+    jobSummary: row.job_summary,
     sourceCvId: row.source_cv_id,
     tailoredCvId: row.tailored_cv_id,
     coverLetter: sanitizeOptionalAiText(row.cover_letter),

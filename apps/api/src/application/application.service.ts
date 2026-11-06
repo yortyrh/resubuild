@@ -52,6 +52,17 @@ export interface PrepareApplicationIntake {
   file?: Express.Multer.File;
 }
 
+/** Job posting origin and summary that a retry or update draft inherits from its application. */
+function jobPostingTraceFromRow(
+  row: JobApplicationRow,
+): Pick<JobApplicationRow, 'job_source_url' | 'job_source_file_name' | 'job_summary'> {
+  return {
+    job_source_url: row.job_source_url ?? null,
+    job_source_file_name: row.job_source_file_name ?? null,
+    job_summary: row.job_summary ?? null,
+  };
+}
+
 export interface UpdateApplicationIntake {
   message?: string;
   sourceCvId?: string;
@@ -92,6 +103,9 @@ export class ApplicationService {
     const row = await this.repository.create(user, {
       status: 'queued',
       job_source_type: sourceType,
+      job_source_url: sourceType === 'url' ? (intake.url?.trim() ?? null) : null,
+      job_source_file_name:
+        sourceType === 'pdf' || sourceType === 'image' ? intake.file?.originalname || null : null,
       user_message: intake.message ?? null,
       intake_source_cv_id: intake.sourceCvId ?? null,
     });
@@ -169,6 +183,7 @@ export class ApplicationService {
       const draft = await this.repository.create(user, {
         status: 'queued',
         job_source_type: row.job_source_type ?? 'text',
+        ...jobPostingTraceFromRow(row),
         user_message: row.user_message,
         intake_source_cv_id: row.intake_source_cv_id ?? null,
         source_application_id: id,
@@ -355,6 +370,7 @@ export class ApplicationService {
     const draft = await this.repository.create(user, {
       status: 'queued',
       job_source_type: row.job_source_type ?? 'text',
+      ...jobPostingTraceFromRow(row),
       user_message: intake.message ?? row.user_message ?? null,
       intake_source_cv_id: row.intake_source_cv_id ?? null,
       source_application_id: id,
@@ -740,6 +756,11 @@ export class ApplicationService {
         job_title: result.jobSummary.title,
         job_company: result.jobSummary.company,
         job_raw_text: result.jobRawText,
+        job_summary: {
+          requirements: result.jobSummary.requirements,
+          keywords: result.jobSummary.keywords,
+          language: result.jobSummary.language ?? null,
+        },
         source_cv_id: resolvedSource?.liveSourceCvId ?? null,
         source_cv_snapshot: sourceCvSnapshot as unknown as Record<string, unknown>,
         tailored_cv_id: clone.id,
@@ -768,11 +789,13 @@ export class ApplicationService {
   }
 
   private buildJobSummaryFromRow(row: JobApplicationRow): JobSummary {
+    const stored = row.job_summary;
     return {
       title: row.job_title?.trim() || 'Role',
       company: row.job_company?.trim() || 'Company',
-      requirements: [],
-      keywords: [],
+      requirements: Array.isArray(stored?.requirements) ? stored.requirements : [],
+      keywords: Array.isArray(stored?.keywords) ? stored.keywords : [],
+      language: stored?.language ?? undefined,
     };
   }
 

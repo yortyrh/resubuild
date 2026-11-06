@@ -29,6 +29,13 @@
       "when": 1793896231584,
       "tag": "0003_ai_usage_and_included_source",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793995805690,
+      "tag": "0004_job_posting_trace",
+      "breakpoints": true
     }
   ]
 }

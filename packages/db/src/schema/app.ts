@@ -415,6 +415,12 @@ export const jobApplication = pgTable(
       { onDelete: 'set null' },
     ),
     is_list_visible: boolean('is_list_visible').notNull().default(true),
+    /** Job posting URL given at intake (`url` source); null for text/file intakes and old rows. */
+    job_source_url: text('job_source_url'),
+    /** Original name of the uploaded job posting file (`pdf` / `image` source). */
+    job_source_file_name: text('job_source_file_name'),
+    /** Workflow job summary: `{ requirements, keywords, language }`. */
+    job_summary: jsonb('job_summary'),
   },
   (t) => [
     index('job_application_source_application_id_idx')
