@@ -31,7 +31,7 @@ Type:
 
 Radius: `--radius` (0.5rem) for panels; buttons, inputs, tabs and chips use `rounded-md`, so controls share one shape; the CV page uses a small radius (0.25rem) so it reads as paper. No pill buttons.
 
-Logo: `components/brand/brand-logo.tsx`. `BrandMark` is the page-and-rising-arrow mark (page in `currentColor`, arrow and spark in `--primary`); `BrandLogo` adds the "Resubuild" wordmark as live text. `public/icon.svg` is the same drawing with fixed colors; the PNG icons and `src/app/favicon.ico` are rendered from it.
+Logo: `components/brand/brand-logo.tsx`. `BrandMark` is the page-and-rising-arrow mark (page in `currentColor`, arrow and spark in `--primary`); `BrandLogo` adds the "Resubuild" wordmark as live text. `public/icon.svg` is the same drawing with fixed colors; `pnpm icons:generate` (also run by `pnpm build`) renders the PNG icons and `src/app/favicon.ico` from it.
 
 ## Surfaces
 
