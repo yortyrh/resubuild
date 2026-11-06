@@ -196,3 +196,84 @@ describe('ApplicationJobPostingPanel posting content', () => {
     expect(screen.getByText('No job posting text was saved.')).toBeInTheDocument();
   });
 });
+
+describe('ApplicationJobPostingPanel dates', () => {
+  /** Text of the field that the given label names (label plus value). */
+  function fieldText(label: string): string {
+    return screen.getByText(label).parentElement?.textContent ?? '';
+  }
+
+  it('shows the created and the updated date', () => {
+    renderPanel({
+      createdAt: '2024-05-10T12:00:00.000Z',
+      updatedAt: '2026-03-15T12:00:00.000Z',
+    });
+
+    expect(fieldText('Created')).toMatch(/2024/);
+    expect(fieldText('Created')).not.toMatch(/2026/);
+    expect(fieldText('Updated')).toMatch(/2026/);
+    expect(fieldText('Updated')).not.toMatch(/2024/);
+  });
+
+  it('does not crash or show "Invalid Date" when both dates are invalid', () => {
+    expect(() =>
+      renderPanel({ createdAt: 'not-a-date', updatedAt: 'also-not-a-date' }),
+    ).not.toThrow();
+
+    expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Created')).not.toBeInTheDocument();
+    expect(screen.queryByText('Updated')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Job posting content' })).toBeInTheDocument();
+  });
+
+  it('still shows the valid date when the other one is invalid', () => {
+    renderPanel({ createdAt: 'not-a-date', updatedAt: '2026-03-15T12:00:00.000Z' });
+
+    expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Created')).not.toBeInTheDocument();
+    expect(fieldText('Updated')).toMatch(/2026/);
+  });
+});
+
+describe('ApplicationJobPostingPanel empty fields', () => {
+  const emptyValues = [null, undefined, '', '   '];
+
+  it.each(emptyValues)('omits the position when it is %j', (jobTitle) => {
+    renderPanel({ jobTitle });
+
+    expect(screen.queryByText('Position')).not.toBeInTheDocument();
+    expect(screen.getByText('Company')).toBeInTheDocument();
+  });
+
+  it.each(emptyValues)('omits the company when it is %j', (jobCompany) => {
+    renderPanel({ jobCompany });
+
+    expect(screen.queryByText('Company')).not.toBeInTheDocument();
+    expect(screen.getByText('Position')).toBeInTheDocument();
+  });
+
+  it.each(emptyValues)('omits the base CV when its title is %j', (sourceCvTitle) => {
+    renderPanel({ sourceCvTitle, sourceCvFromSnapshot: true });
+
+    expect(screen.queryByText('Base CV')).not.toBeInTheDocument();
+    expect(screen.queryByText(/saved copy/)).not.toBeInTheDocument();
+    expect(screen.getByText('Why this CV')).toBeInTheDocument();
+  });
+
+  it.each(emptyValues)(
+    'omits why this CV was chosen when the rationale is %j',
+    (selectionRationale) => {
+      renderPanel({ selectionRationale });
+
+      expect(screen.queryByText('Why this CV')).not.toBeInTheDocument();
+      expect(screen.getByText('Base CV')).toBeInTheDocument();
+    },
+  );
+
+  it('omits a whitespace-only language', () => {
+    renderPanel({ jobSummary: { requirements: ['SQL'], keywords: ['Go'], language: '   ' } });
+
+    expect(screen.queryByText('Language')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Requirements' })).toBeInTheDocument();
+  });
+});

@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApplicationLetterEditDialog } from './application-letter-edit-dialog';
 
@@ -193,5 +194,68 @@ describe('ApplicationLetterEditDialog', () => {
     // so a future regression that drops the prop would fail this test.
     expect(screen.getByTestId('mock-editor')).toHaveAttribute('data-free-form', 'true');
     expect(editorPropsHistory.at(-1)?.freeForm).toBe(true);
+  });
+});
+
+describe('ApplicationLetterEditDialog rendered letter refresh', () => {
+  const letterHtmlKey = ['application', 'app-1', 'letter-html'];
+
+  function renderWithClient() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(letterHtmlKey, '<html><body>Old letter</body></html>');
+    const onOpenChange = vi.fn();
+    render(
+      <QueryClientProvider client={client}>
+        <ApplicationLetterEditDialog
+          applicationId="app-1"
+          open
+          onOpenChange={onOpenChange}
+          initialValue="Initial body"
+        />
+      </QueryClientProvider>,
+    );
+    return { client, onOpenChange };
+  }
+
+  beforeEach(() => {
+    mockUpdateApplicationLetter.mockResolvedValue({
+      ...readyApplication,
+      coverLetter: 'Edited body',
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('marks the rendered letter document stale after a successful save', async () => {
+    const user = userEvent.setup();
+    const { client } = renderWithClient();
+    expect(client.getQueryState(letterHtmlKey)?.isInvalidated).toBe(false);
+
+    await user.click(screen.getByTestId('simulate-edit'));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith('Cover letter saved');
+    });
+    expect(client.getQueryState(letterHtmlKey)?.isInvalidated).toBe(true);
+  });
+
+  it('keeps the rendered letter document when the save fails', async () => {
+    mockUpdateApplicationLetter.mockRejectedValue(new Error('Save failed (500)'));
+    const user = userEvent.setup();
+    const { client, onOpenChange } = renderWithClient();
+
+    await user.click(screen.getByTestId('simulate-edit'));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Save failed (500)');
+    });
+    expect(client.getQueryState(letterHtmlKey)?.isInvalidated).toBe(false);
+    expect(client.getQueryData(letterHtmlKey)).toBe('<html><body>Old letter</body></html>');
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
 });

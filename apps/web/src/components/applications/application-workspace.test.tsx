@@ -577,3 +577,119 @@ describe('ApplicationWorkspace cover letter tab', () => {
     expect(editButton).toBeDisabled();
   });
 });
+
+describe('ApplicationWorkspace error states', () => {
+  const originalCreateObjectURL = URL.createObjectURL;
+  const originalRevokeObjectURL = URL.revokeObjectURL;
+
+  beforeEach(() => {
+    window.sessionStorage.clear();
+    mockWorkspaceDefaults();
+    URL.createObjectURL = vi.fn(() => 'blob:cv-pdf');
+    URL.revokeObjectURL = vi.fn();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
+  });
+
+  function setupUserWithFailingClipboard() {
+    const user = userEvent.setup();
+    const writeText = vi
+      .spyOn(navigator.clipboard, 'writeText')
+      .mockRejectedValue(new Error('Clipboard permission denied'));
+    return { user, writeText };
+  }
+
+  it('keeps Download CV PDF disabled until the tailored CV template is known', async () => {
+    window.sessionStorage.setItem(STORAGE_KEY, 'tailored-cv');
+    let resolveCv: (cv: unknown) => void = () => {};
+    mockGetCv.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCv = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+
+    renderWorkspace();
+
+    const downloadButton = await screen.findByRole('button', { name: 'Download CV PDF' });
+    expect(downloadButton).toBeDisabled();
+    await user.click(downloadButton);
+    expect(mockDownloadCvPdf).not.toHaveBeenCalled();
+
+    resolveCv({ id: 'cv-1', templateId: 'modern', data: { basics: {} } });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Download CV PDF' })).toBeEnabled();
+    });
+  });
+
+  it('shows an error toast when the tailored CV PDF download fails', async () => {
+    window.sessionStorage.setItem(STORAGE_KEY, 'tailored-cv');
+    mockDownloadCvPdf.mockRejectedValue(new Error('PDF export failed (500)'));
+    const user = userEvent.setup();
+
+    renderWorkspace();
+
+    const downloadButton = await screen.findByRole('button', { name: 'Download CV PDF' });
+    await waitFor(() => {
+      expect(downloadButton).toBeEnabled();
+    });
+    await user.click(downloadButton);
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('PDF export failed (500)');
+    });
+    expect(toast.success).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Download CV PDF' })).toBeEnabled();
+    });
+  });
+
+  it('shows an error toast when copying the posting is rejected by the clipboard', async () => {
+    const { user, writeText } = setupUserWithFailingClipboard();
+
+    renderWorkspace();
+
+    await user.click(await screen.findByRole('button', { name: /Copy posting/ }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Copy failed');
+    });
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(toast.success).not.toHaveBeenCalledWith('Job posting copied');
+  });
+
+  it('shows an error toast when copying the subject is rejected by the clipboard', async () => {
+    window.sessionStorage.setItem(STORAGE_KEY, 'cover-letter');
+    const { user, writeText } = setupUserWithFailingClipboard();
+
+    renderWorkspace();
+
+    await user.click(await screen.findByRole('button', { name: /Copy subject/ }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Copy failed');
+    });
+    expect(writeText).toHaveBeenCalledWith('Subject');
+    expect(toast.success).not.toHaveBeenCalledWith('Subject copied');
+  });
+
+  it('shows the CV preview error message when the preview cannot be built', async () => {
+    window.sessionStorage.setItem(STORAGE_KEY, 'tailored-cv');
+    mockUseCvPreviewHtml.mockReturnValue({
+      html: null,
+      loading: false,
+      error: 'Could not render the CV preview',
+    });
+
+    renderWorkspace();
+
+    expect(await screen.findByText('Could not render the CV preview')).toBeInTheDocument();
+    expect(screen.queryByTitle('Resume preview')).not.toBeInTheDocument();
+  });
+});
