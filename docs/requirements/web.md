@@ -6,7 +6,7 @@ Anonymous visitors at `/` see a marketing page instead of being redirected to lo
 
 - Sections:
   - a sticky pill navigation (section links that mark the section in view, Features, Log in, Get started free); on small screens the links move into a menu
-  - hero with the PDF→editable-CV promise, calls to action (try the live demo, and "Import your CV free" while the free import wizard is open, REQ-IMP-011), and a proof strip of three panes: the CV you have, the entry in the page editor, and the printed page. One highlight is typed in the editor and appears on the page; with reduced motion both show the finished text
+  - hero with the PDF→editable-CV promise, calls to action (try the live demo, and "Import your CV free" while the free import wizard is open, REQ-IMP-011), an animated walkthrough beside the text on wide screens (below it on small ones: import a PDF, edit on the page, tailor a copy for a job, export the PDF; a recreation of the app, not a recording; reduced motion shows a still frame), and below both a proof strip of three panes: the CV you have, the entry in the page editor, and the printed page. One highlight is typed in the editor and appears on the page; with reduced motion both show the finished text
   - how it works, numbered (Import → Edit on the page → Export PDF)
   - the page editor (plain-text bullets, paste splitting, Markdown, fields where they print)
   - ownership: private data, the open JSON Resume format, bring your own AI key, MCP access

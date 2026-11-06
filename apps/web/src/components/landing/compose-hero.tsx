@@ -2,6 +2,7 @@
 
 import { FileText } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 const TYPED = 'Cut checkout latency by 40% by moving pricing to the edge';
 
@@ -15,7 +16,7 @@ const existing = [
  * printed page. One highlight is typed in the editor and appears on the page as
  * it is typed. With reduced motion, both show the finished text.
  */
-export function ComposeHero() {
+export function ComposeHero({ className }: { className?: string }) {
   const [typed, setTyped] = useState(TYPED.length);
   const [running, setRunning] = useState(false);
 
@@ -41,7 +42,12 @@ export function ComposeHero() {
   const text = TYPED.slice(0, typed);
 
   return (
-    <div className="grid gap-4 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.25fr)_minmax(0,1fr)] md:gap-5">
+    <div
+      className={cn(
+        'grid gap-4 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.25fr)_minmax(0,1fr)] md:gap-5',
+        className,
+      )}
+    >
       <figure className="flex flex-col gap-3">
         <div
           aria-hidden

@@ -6,6 +6,7 @@ import { ComposeHero } from '@/components/landing/compose-hero';
 import { MarketingFaq } from '@/components/landing/faq';
 import { MarketingFooter } from '@/components/landing/footer';
 import { MarketingHeader } from '@/components/landing/header';
+import { HeroDemo } from '@/components/landing/hero-demo';
 
 export const dynamic = 'force-static';
 
@@ -71,11 +72,14 @@ export default function MarketingPage() {
 
         <main id="main-content">
           <Band className="pb-20 pt-14 sm:pt-20">
-            <section aria-labelledby="hero-title" className="flex flex-col gap-12">
+            <section
+              aria-labelledby="hero-title"
+              className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-10"
+            >
               <div className="flex max-w-[46rem] flex-col items-start gap-6">
                 <h1
                   id="hero-title"
-                  className="display text-[3rem] sm:text-[4.5rem] lg:text-[5.25rem]"
+                  className="display text-[3rem] sm:text-[4.5rem] lg:text-[4.25rem] xl:text-[5.25rem]"
                 >
                   Drop in a PDF. Get back a CV you can edit.
                 </h1>
@@ -97,7 +101,8 @@ export default function MarketingPage() {
                   Free during the public beta. No watermark. Your data exports as JSON Resume.
                 </p>
               </div>
-              <ComposeHero />
+              <HeroDemo />
+              <ComposeHero className="lg:col-span-2" />
             </section>
           </Band>
 
