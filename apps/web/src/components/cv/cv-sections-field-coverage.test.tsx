@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { Resume } from '@resubuild/types';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QueryProvider } from '@/components/providers/query-provider';
 import type { CvSectionSlug } from './cv-section-nav';
@@ -38,6 +38,8 @@ vi.mock('@/lib/cv-item-api', () => ({
 
 vi.mock('@/lib/api', () => ({
   uploadResumeMedia: vi.fn(),
+  listCvs: vi.fn(),
+  getCv: vi.fn(),
   getCvWork: vi.fn().mockResolvedValue([]),
   getCvVolunteer: vi.fn().mockResolvedValue([]),
   getCvEducation: vi.fn().mockResolvedValue([]),
@@ -58,6 +60,20 @@ vi.mock('./cv-editor-provider', () => ({
   useCvEditor: () => useCvEditorMock(),
 }));
 
+import {
+  getCvAwards,
+  getCvCertificates,
+  getCvEducation,
+  getCvInterests,
+  getCvLanguages,
+  getCvProfiles,
+  getCvProjects,
+  getCvPublications,
+  getCvReferences,
+  getCvSkills,
+  getCvVolunteer,
+  getCvWork,
+} from '@/lib/api';
 import { AwardsSection } from './sections/awards-section';
 import { CertificatesSection } from './sections/certificates-section';
 import { EducationSection } from './sections/education-section';
@@ -208,26 +224,58 @@ function fullyPopulatedResume(): Resume {
   } as unknown as Resume;
 }
 
+function sectionRows(rows: unknown) {
+  return (rows ?? []) as Record<string, unknown>[];
+}
+
+/** The editor context carries only the cv id; every section loads its own list from the API. */
 function setupEditor(resume: Resume) {
   useCvEditorMock.mockReturnValue({
     cvId: 'cv-1',
-    resume,
-    loading: false,
-    error: null,
-    setResume: vi.fn(),
     mountedSection: null,
     setMountedSection: vi.fn(),
   });
+  vi.mocked(getCvWork).mockResolvedValue(sectionRows(resume.work));
+  vi.mocked(getCvVolunteer).mockResolvedValue(sectionRows(resume.volunteer));
+  vi.mocked(getCvEducation).mockResolvedValue(sectionRows(resume.education));
+  vi.mocked(getCvSkills).mockResolvedValue(sectionRows(resume.skills));
+  vi.mocked(getCvProjects).mockResolvedValue(sectionRows(resume.projects));
+  vi.mocked(getCvAwards).mockResolvedValue(sectionRows(resume.awards));
+  vi.mocked(getCvCertificates).mockResolvedValue(sectionRows(resume.certificates));
+  vi.mocked(getCvPublications).mockResolvedValue(sectionRows(resume.publications));
+  vi.mocked(getCvLanguages).mockResolvedValue(sectionRows(resume.languages));
+  vi.mocked(getCvInterests).mockResolvedValue(sectionRows(resume.interests));
+  vi.mocked(getCvReferences).mockResolvedValue(sectionRows(resume.references));
+  vi.mocked(getCvProfiles).mockResolvedValue(sectionRows(resume.basics?.profiles));
 }
 
-function renderSection(activeSection: RenderableSection, resume: Resume) {
+const SECTION_GETTERS = {
+  work: getCvWork,
+  volunteer: getCvVolunteer,
+  education: getCvEducation,
+  skills: getCvSkills,
+  projects: getCvProjects,
+  awards: getCvAwards,
+  certificates: getCvCertificates,
+  publications: getCvPublications,
+  languages: getCvLanguages,
+  interests: getCvInterests,
+} as const;
+
+async function renderSection(activeSection: RenderableSection, resume: Resume) {
   setupEditor(resume);
   const Section = SECTION_COMPONENTS[activeSection];
-  return render(
+  const view = render(
     <QueryProvider>
       <Section />
     </QueryProvider>,
   );
+  await waitFor(() => {
+    expect(SECTION_GETTERS[activeSection]).toHaveBeenCalledWith('cv-1');
+    expect(screen.queryByRole('status', { name: /^Loading .* entries$/ })).not.toBeInTheDocument();
+    expect(view.container.querySelector('article:not([aria-hidden="true"])')).not.toBeNull();
+  });
+  return view;
 }
 
 function expectLinkedTitle(label: string, href: string) {
@@ -244,9 +292,9 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Work view', () => {
-    it('shows all fields when populated', () => {
+    it('shows all fields when populated', async () => {
       const resume = fullyPopulatedResume();
-      renderSection('work', resume);
+      await renderSection('work', resume);
 
       expect(screen.getByText('Staff Engineer')).toBeInTheDocument();
       expectLinkedTitle('Acme Corp', 'https://acme.example.com');
@@ -258,7 +306,7 @@ describe('CvSections field coverage', () => {
       expect(screen.getAllByText('Scaled to 10M users').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('renders markdown highlights as formatted output', () => {
+    it('renders markdown highlights as formatted output', async () => {
       const resume = fullyPopulatedResume();
       resume.work = [
         {
@@ -268,7 +316,7 @@ describe('CvSections field coverage', () => {
           highlights: ['**Reduced API latency by 40%**'],
         },
       ] as unknown as Resume['work'];
-      const { container } = renderSection('work', resume);
+      const { container } = await renderSection('work', resume);
 
       const strong = container.querySelector('strong');
       expect(strong).not.toBeNull();
@@ -276,12 +324,12 @@ describe('CvSections field coverage', () => {
       expect(container.textContent).not.toContain('**');
     });
 
-    it('omits empty optional fields', () => {
+    it('omits empty optional fields', async () => {
       const resume = fullyPopulatedResume();
       resume.work = [
         { id: '00000000-0000-4000-8000-000000000101', position: 'Dev', name: 'Co' },
       ] as unknown as Resume['work'];
-      renderSection('work', resume);
+      await renderSection('work', resume);
 
       expect(screen.getByText('Dev')).toBeInTheDocument();
       expect(screen.getByText('Co')).toBeInTheDocument();
@@ -291,9 +339,9 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Volunteer view', () => {
-    it('links organization in subtitle when url is populated', () => {
+    it('links organization in subtitle when url is populated', async () => {
       const resume = fullyPopulatedResume();
-      renderSection('volunteer', resume);
+      await renderSection('volunteer', resume);
 
       expect(screen.getByText('Mentor')).toBeInTheDocument();
       expectLinkedTitle('Code for Good', 'https://codeforgood.org');
@@ -303,9 +351,9 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Education view', () => {
-    it('links institution and shows study type as subtitle', () => {
+    it('links institution and shows study type as subtitle', async () => {
       const resume = fullyPopulatedResume();
-      renderSection('education', resume);
+      await renderSection('education', resume);
 
       expectLinkedTitle('MIT', 'https://mit.edu');
       expect(screen.getByText(/Bachelor, Computer Science/)).toBeInTheDocument();
@@ -315,9 +363,9 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Projects view', () => {
-    it('links name and shows entity and type in body', () => {
+    it('links name and shows entity and type in body', async () => {
       const resume = fullyPopulatedResume();
-      renderSection('projects', resume);
+      await renderSection('projects', resume);
 
       expectLinkedTitle('Resume Builder', 'https://resume.example.com');
       expect(screen.getByText('Entity')).toBeInTheDocument();
@@ -330,9 +378,9 @@ describe('CvSections field coverage', () => {
       expect(screen.getByText('Open source resume tool.')).toBeInTheDocument();
     });
 
-    it('renders roles as labeled pills with distinct styling', () => {
+    it('renders roles as labeled pills with distinct styling', async () => {
       const resume = fullyPopulatedResume();
-      renderSection('projects', resume);
+      await renderSection('projects', resume);
 
       expect(screen.getByText('Roles')).toBeInTheDocument();
       expect(screen.getByText('Lead')).toBeInTheDocument();
@@ -342,9 +390,9 @@ describe('CvSections field coverage', () => {
       expect(rolePill).toHaveClass(...roleTagPillClassName.split(' '));
     });
 
-    it('renders keywords as labeled tag pills without comma-separated prefix', () => {
+    it('renders keywords as labeled tag pills without comma-separated prefix', async () => {
       const resume = fullyPopulatedResume();
-      const { container } = renderSection('projects', resume);
+      const { container } = await renderSection('projects', resume);
 
       expect(screen.getByText('Keywords')).toBeInTheDocument();
       expect(screen.getByText('React')).toBeInTheDocument();
@@ -358,9 +406,9 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Skills view', () => {
-    it('renders keywords as tag pills without a label', () => {
+    it('renders keywords as tag pills without a label', async () => {
       const resume = fullyPopulatedResume();
-      renderSection('skills', resume);
+      await renderSection('skills', resume);
 
       expect(screen.queryByText('Keywords')).not.toBeInTheDocument();
       expect(screen.getByText('TS')).toBeInTheDocument();
@@ -373,9 +421,9 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Interests view', () => {
-    it('renders keywords as labeled tag pills', () => {
+    it('renders keywords as labeled tag pills', async () => {
       const resume = fullyPopulatedResume();
-      renderSection('interests', resume);
+      await renderSection('interests', resume);
 
       expect(screen.getByText('Keywords')).toBeInTheDocument();
       expect(screen.getByText('outdoors')).toBeInTheDocument();
@@ -388,9 +436,9 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Awards view', () => {
-    it('shows awarder as subtitle when populated', () => {
+    it('shows awarder as subtitle when populated', async () => {
       const resume = fullyPopulatedResume();
-      renderSection('awards', resume);
+      await renderSection('awards', resume);
 
       expect(screen.getByText('Best Paper')).toBeInTheDocument();
       expect(screen.getByText('Jun 2023')).toBeInTheDocument();
@@ -400,9 +448,9 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Certificates view', () => {
-    it('links certificate name without raw url in body', () => {
+    it('links certificate name without raw url in body', async () => {
       const resume = fullyPopulatedResume();
-      renderSection('certificates', resume);
+      await renderSection('certificates', resume);
 
       expectLinkedTitle('AWS Certified', 'https://aws.amazon.com/cert/123');
       expect(screen.getByText('Amazon')).toBeInTheDocument();
@@ -411,9 +459,9 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Publications view', () => {
-    it('links publication name without raw url in body', () => {
+    it('links publication name without raw url in body', async () => {
       const resume = fullyPopulatedResume();
-      renderSection('publications', resume);
+      await renderSection('publications', resume);
 
       expectLinkedTitle('Scaling Microservices', 'https://oreilly.com/scaling');
       expect(screen.getByText("O'Reilly")).toBeInTheDocument();
@@ -423,9 +471,9 @@ describe('CvSections field coverage', () => {
   });
 
   describe('Languages view', () => {
-    it('shows fluency as subtitle', () => {
+    it('shows fluency as subtitle', async () => {
       const resume = fullyPopulatedResume();
-      renderSection('languages', resume);
+      await renderSection('languages', resume);
 
       expect(screen.getByText('English')).toBeInTheDocument();
       expect(screen.getByText('Native')).toBeInTheDocument();

@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ManagedArraySection } from './managed-array-section';
 
 beforeAll(() => {
   HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -9,27 +8,18 @@ beforeAll(() => {
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-vi.mock('@/lib/queries/cv-queries', () => ({
-  useCvSection: () => ({ data: undefined, isLoading: false, error: null }),
-}));
+const mockGetCvSkills = vi.fn();
 
-const runState = vi.hoisted(() => ({ calls: 0 }));
+vi.mock('@/lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api')>();
+  return {
+    ...actual,
+    getCvSkills: (...args: unknown[]) => mockGetCvSkills(...args),
+  };
+});
 
-async function run(action: () => Promise<unknown>, onSuccess: (r: unknown) => unknown) {
-  runState.calls += 1;
-  const result = await action();
-  await onSuccess(result);
-}
-
-vi.mock('@/lib/queries/cv-mutations', () => ({
-  useSectionItemMutations: () => ({
-    saving: false,
-    error: null,
-    setError: vi.fn(),
-    run,
-    refetchSectionItems: vi.fn().mockResolvedValue([]),
-  }),
-}));
+import { renderWithQueryClient } from '@/lib/queries/test-utils';
+import { ManagedArraySection } from './managed-array-section';
 
 type Item = { id?: string; name?: string };
 
@@ -39,26 +29,28 @@ const items: Item[] = [
   { id: 'c', name: 'Gamma' },
 ];
 
-function setup() {
-  return render(
+const update = vi.fn();
+
+async function setup() {
+  const view = renderWithQueryClient(
     <ManagedArraySection<Item>
       cvId="cv-1"
       sectionKey="skills"
-      items={items}
-      onItemsChange={vi.fn()}
       entityLabel="Skill"
       addLabel="Add skill"
       createEmpty={() => ({ name: '' })}
       toPayload={(item) => item}
       api={{
         create: vi.fn().mockResolvedValue({}),
-        update: vi.fn().mockResolvedValue({ item: { id: 'b', name: 'Beta' } }),
+        update,
         delete: vi.fn(),
       }}
       renderView={(item) => ({ title: item.name ?? '' })}
       renderForm={() => <input aria-label="Name" />}
     />,
   );
+  await screen.findByText('Gamma');
+  return view;
 }
 
 function highlightedTitles(container: HTMLElement): string[] {
@@ -86,23 +78,26 @@ function editRow(container: HTMLElement, name: string) {
 
 describe('ManagedArraySection edited-row highlight', () => {
   beforeEach(() => {
-    runState.calls = 0;
+    mockGetCvSkills.mockReset();
+    mockGetCvSkills.mockResolvedValue(items);
+    update.mockReset();
+    update.mockResolvedValue({ item: { id: 'b', name: 'Beta' } });
   });
   afterEach(() => cleanup());
 
-  it('marks no row initially', () => {
-    const { container } = setup();
+  it('marks no row initially', async () => {
+    const { container } = await setup();
     expect(highlightedTitles(container)).toEqual([]);
   });
 
-  it('does not mark a row while it is being edited', () => {
-    const { container } = setup();
+  it('does not mark a row while it is being edited', async () => {
+    const { container } = await setup();
     editRow(container, 'Beta');
     expect(container.querySelectorAll('article[data-highlighted]')).toHaveLength(0);
   });
 
-  it('marks only the edited row after Cancel', () => {
-    const { container } = setup();
+  it('marks only the edited row after Cancel', async () => {
+    const { container } = await setup();
     editRow(container, 'Beta');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     const marked = highlightedTitles(container);
@@ -113,8 +108,8 @@ describe('ManagedArraySection edited-row highlight', () => {
     expect(rowFor(container, 'Gamma').hasAttribute('data-highlighted')).toBe(false);
   });
 
-  it('marks the edited row after Escape cancels', () => {
-    const { container } = setup();
+  it('marks the edited row after Escape cancels', async () => {
+    const { container } = await setup();
     editRow(container, 'Gamma');
     fireEvent.keyDown(document.body, { key: 'Escape' });
     const marked = highlightedTitles(container);
@@ -123,10 +118,10 @@ describe('ManagedArraySection edited-row highlight', () => {
   });
 
   it('marks the edited row after a successful save', async () => {
-    const { container } = setup();
+    const { container } = await setup();
     editRow(container, 'Beta');
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(runState.calls).toBe(1));
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
     await waitFor(() => {
       const marked = highlightedTitles(container);
       expect(marked).toHaveLength(1);
@@ -134,16 +129,16 @@ describe('ManagedArraySection edited-row highlight', () => {
     });
   });
 
-  it('clears the mark when another edit starts', () => {
-    const { container } = setup();
+  it('clears the mark when another edit starts', async () => {
+    const { container } = await setup();
     editRow(container, 'Beta');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     editRow(container, 'Alpha');
     expect(highlightedTitles(container)).toEqual([]);
   });
 
-  it('moves the mark to the newly edited row after the second cancel', () => {
-    const { container } = setup();
+  it('moves the mark to the newly edited row after the second cancel', async () => {
+    const { container } = await setup();
     editRow(container, 'Beta');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     editRow(container, 'Alpha');
@@ -153,8 +148,8 @@ describe('ManagedArraySection edited-row highlight', () => {
     expect(marked[0]).toContain('Alpha');
   });
 
-  it('clears the mark when the create form is started', () => {
-    const { container } = setup();
+  it('clears the mark when the create form is started', async () => {
+    const { container } = await setup();
     editRow(container, 'Beta');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(highlightedTitles(container)).toHaveLength(1);
@@ -162,15 +157,15 @@ describe('ManagedArraySection edited-row highlight', () => {
     expect(highlightedTitles(container)).toEqual([]);
   });
 
-  it('does not mark any row after cancelling the create form', () => {
-    const { container } = setup();
+  it('does not mark any row after cancelling the create form', async () => {
+    const { container } = await setup();
     fireEvent.click(screen.getByRole('button', { name: 'Add skill' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(highlightedTitles(container)).toEqual([]);
   });
 
-  it('removes the mark on a pointerdown outside the highlighted row', () => {
-    const { container } = setup();
+  it('removes the mark on a pointerdown outside the highlighted row', async () => {
+    const { container } = await setup();
     editRow(container, 'Beta');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(highlightedTitles(container)).toHaveLength(1);
@@ -178,8 +173,8 @@ describe('ManagedArraySection edited-row highlight', () => {
     expect(highlightedTitles(container)).toEqual([]);
   });
 
-  it('keeps the mark on a pointerdown inside the highlighted row', () => {
-    const { container } = setup();
+  it('keeps the mark on a pointerdown inside the highlighted row', async () => {
+    const { container } = await setup();
     editRow(container, 'Beta');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     fireEvent.pointerDown(rowFor(container, 'Beta'));
