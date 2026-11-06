@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DashboardBreadcrumbProvider } from '@/components/dashboard/dashboard-breadcrumb-context';
 import { ApplicationWorkspace } from './application-workspace';
@@ -11,6 +12,8 @@ const mockGetApplication = vi.fn();
 const mockGetCv = vi.fn();
 const mockGetApplicationLetterHtml = vi.fn();
 const mockDownloadApplicationLetterPdf = vi.fn();
+const mockDownloadCvPdf = vi.fn();
+const mockUseCvPreviewHtml = vi.fn();
 
 vi.mock('@/lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api')>();
@@ -20,8 +23,25 @@ vi.mock('@/lib/api', async (importOriginal) => {
     getCv: (...args: unknown[]) => mockGetCv(...args),
     getApplicationLetterHtml: (...args: unknown[]) => mockGetApplicationLetterHtml(...args),
     downloadApplicationLetterPdf: (...args: unknown[]) => mockDownloadApplicationLetterPdf(...args),
+    downloadCvPdf: (...args: unknown[]) => mockDownloadCvPdf(...args),
   };
 });
+
+vi.mock('@/components/cv/use-cv-preview-html', () => ({
+  useCvPreviewHtml: (...args: unknown[]) => mockUseCvPreviewHtml(...args),
+}));
+
+vi.mock('@/components/applications/application-job-posting-panel', () => ({
+  ApplicationJobPostingPanel: ({
+    application,
+  }: {
+    application: { id: string; jobRawText?: string | null };
+  }) => (
+    <div data-testid="mock-job-posting-panel">
+      {application.id}:{application.jobRawText ?? ''}
+    </div>
+  ),
+}));
 
 vi.mock('@/components/cv/markdown-view', () => ({
   MarkdownView: ({ value }: { value?: string | null }) => (
@@ -60,9 +80,38 @@ const readyApplication = {
   coverLetter: 'Hello world',
   coverLetterEmailSubject: 'Subject',
   tailoredCvId: 'cv-1',
+  jobSourceType: 'url' as const,
+  jobSourceUrl: 'https://jobs.example.com/123',
+  jobSourceFileName: null,
+  jobRawText: '  We are hiring a senior engineer.  ',
+  jobSummary: { requirements: ['TypeScript'], keywords: ['NestJS'], language: 'en' },
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
+
+const LETTER_HTML = '<html><body><p>Rendered letter</p></body></html>';
+const CV_HTML = '<html><body><p>Rendered CV</p></body></html>';
+
+function mockWorkspaceDefaults() {
+  mockGetApplication.mockResolvedValue(readyApplication);
+  mockGetCv.mockResolvedValue({
+    id: 'cv-1',
+    templateId: 'modern',
+    data: { basics: { name: 'Test User' } },
+  });
+  mockGetApplicationLetterHtml.mockResolvedValue(LETTER_HTML);
+  mockUseCvPreviewHtml.mockReturnValue({ html: CV_HTML, loading: false, error: null });
+  mockDownloadCvPdf.mockResolvedValue({
+    blob: new Blob(['%PDF'], { type: 'application/pdf' }),
+    filename: 'Jane Doe - Senior Engineer.pdf',
+  });
+}
+
+function setupUserWithClipboard() {
+  const user = userEvent.setup();
+  const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+  return { user, writeText };
+}
 
 function renderWorkspace() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -78,8 +127,7 @@ function renderWorkspace() {
 describe('ApplicationWorkspace tabs', () => {
   beforeEach(() => {
     window.sessionStorage.clear();
-    mockGetApplication.mockResolvedValue(readyApplication);
-    mockGetCv.mockResolvedValue({ data: { basics: { name: 'Test User' } } });
+    mockWorkspaceDefaults();
   });
 
   afterEach(() => {
@@ -92,16 +140,17 @@ describe('ApplicationWorkspace tabs', () => {
 
     const triggers = await screen.findAllByRole('tab');
     expect(triggers.map((t) => t.textContent)).toEqual([
-      'Job summary',
+      'Job posting',
       'Tailored CV',
       'Cover letter',
     ]);
+    expect(screen.queryByRole('tab', { name: 'Job summary' })).not.toBeInTheDocument();
   });
 
-  it('defaults to the Job summary tab when nothing is stored', async () => {
+  it('defaults to the Job posting tab when nothing is stored', async () => {
     renderWorkspace();
 
-    const summaryTab = await screen.findByRole('tab', { name: 'Job summary' });
+    const summaryTab = await screen.findByRole('tab', { name: 'Job posting' });
     await waitFor(() => {
       expect(summaryTab).toHaveAttribute('data-state', 'active');
     });
@@ -118,12 +167,23 @@ describe('ApplicationWorkspace tabs', () => {
     });
   });
 
-  it('falls back to the Job summary tab when sessionStorage has an unknown value', async () => {
+  it('keeps the stored "summary" tab id for the Job posting tab', async () => {
+    window.sessionStorage.setItem(STORAGE_KEY, 'summary');
+
+    renderWorkspace();
+
+    const postingTab = await screen.findByRole('tab', { name: 'Job posting' });
+    await waitFor(() => {
+      expect(postingTab).toHaveAttribute('data-state', 'active');
+    });
+  });
+
+  it('falls back to the Job posting tab when sessionStorage has an unknown value', async () => {
     window.sessionStorage.setItem(STORAGE_KEY, 'not-a-real-tab');
 
     renderWorkspace();
 
-    const summaryTab = await screen.findByRole('tab', { name: 'Job summary' });
+    const summaryTab = await screen.findByRole('tab', { name: 'Job posting' });
     await waitFor(() => {
       expect(summaryTab).toHaveAttribute('data-state', 'active');
     });
@@ -158,7 +218,7 @@ describe('ApplicationWorkspace tabs', () => {
     expect(heading).toHaveClass('display', 'truncate');
 
     // The position is rendered as a muted subtitle beneath the heading. Scope
-    // to the heading row so we don't match the Job summary tab's Position dd.
+    // to the heading row so we don't match the Job posting tab's Position.
     const headingRow = heading.parentElement;
     expect(headingRow).not.toBeNull();
     const subtitle = within(headingRow!).getByText('Senior Engineer');
@@ -244,12 +304,10 @@ describe('ApplicationWorkspace tabs', () => {
   });
 });
 
-describe('ApplicationWorkspace cover letter tab', () => {
+describe('ApplicationWorkspace job posting tab', () => {
   beforeEach(() => {
     window.sessionStorage.clear();
-    window.sessionStorage.setItem(STORAGE_KEY, 'cover-letter');
-    mockGetApplication.mockResolvedValue(readyApplication);
-    mockGetCv.mockResolvedValue({ data: { basics: { name: 'Test User' } } });
+    mockWorkspaceDefaults();
   });
 
   afterEach(() => {
@@ -257,25 +315,242 @@ describe('ApplicationWorkspace cover letter tab', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the cover letter through the read-only MarkdownView', async () => {
+  it('renders the job posting panel with the application', async () => {
+    renderWorkspace();
+
+    const panel = await screen.findByTestId('mock-job-posting-panel');
+    expect(panel).toHaveTextContent('app-1:');
+    expect(panel).toHaveTextContent('We are hiring a senior engineer.');
+  });
+
+  it('copies the job posting as plain text', async () => {
+    const { user, writeText } = setupUserWithClipboard();
+    renderWorkspace();
+
+    const copyButton = await screen.findByRole('button', { name: /Copy posting/ });
+    expect(copyButton).toBeEnabled();
+    await user.click(copyButton);
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(
+        'Position: Senior Engineer\nCompany: Acme\nSource: https://jobs.example.com/123\n\nWe are hiring a senior engineer.',
+      );
+    });
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(toast.success).toHaveBeenCalledWith('Job posting copied');
+  });
+
+  it('disables Copy posting when there is nothing to copy', async () => {
+    mockGetApplication.mockResolvedValue({
+      ...readyApplication,
+      jobTitle: '  ',
+      jobCompany: null,
+      jobSourceUrl: null,
+      jobRawText: '   ',
+    });
+
+    renderWorkspace();
+
+    const copyButton = await screen.findByRole('button', { name: /Copy posting/ });
+    expect(copyButton).toBeDisabled();
+  });
+
+  it('enables Copy posting when only the posting text is saved', async () => {
+    const { user, writeText } = setupUserWithClipboard();
+    mockGetApplication.mockResolvedValue({
+      ...readyApplication,
+      jobTitle: null,
+      jobCompany: null,
+      jobSourceUrl: null,
+      jobRawText: 'Only the text',
+    });
+
+    renderWorkspace();
+
+    const copyButton = await screen.findByRole('button', { name: /Copy posting/ });
+    expect(copyButton).toBeEnabled();
+    await user.click(copyButton);
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith('Only the text');
+    });
+  });
+
+  it('does not show Copy posting on the other tabs', async () => {
+    window.sessionStorage.setItem(STORAGE_KEY, 'cover-letter');
+
+    renderWorkspace();
+
+    await screen.findByRole('button', { name: /Copy letter/ });
+    expect(screen.queryByRole('button', { name: /Copy posting/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('ApplicationWorkspace tailored CV tab', () => {
+  const originalCreateObjectURL = URL.createObjectURL;
+  const originalRevokeObjectURL = URL.revokeObjectURL;
+
+  beforeEach(() => {
+    window.sessionStorage.clear();
+    window.sessionStorage.setItem(STORAGE_KEY, 'tailored-cv');
+    mockWorkspaceDefaults();
+    URL.createObjectURL = vi.fn(() => 'blob:cv-pdf');
+    URL.revokeObjectURL = vi.fn();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
+  });
+
+  it('renders the tailored CV preview in an iframe instead of the basics view', async () => {
+    renderWorkspace();
+
+    const frame = await screen.findByTitle('Resume preview');
+    expect(frame.tagName).toBe('IFRAME');
+    expect(frame.getAttribute('srcdoc')).toContain('Rendered CV');
+    expect(screen.queryByTestId('mock-basics')).not.toBeInTheDocument();
+  });
+
+  it('builds the preview from the tailored CV and its template', async () => {
+    renderWorkspace();
+
+    await waitFor(() => {
+      expect(mockUseCvPreviewHtml).toHaveBeenCalledWith('cv-1', 'modern');
+    });
+    expect(mockGetCv).toHaveBeenCalledWith('cv-1');
+  });
+
+  it('falls back to the classic template when the CV has none', async () => {
+    mockGetCv.mockResolvedValue({ id: 'cv-1', templateId: null, data: { basics: {} } });
+
+    renderWorkspace();
+
+    await waitFor(() => {
+      expect(mockUseCvPreviewHtml).toHaveBeenCalledWith('cv-1', 'classic');
+    });
+    expect(mockUseCvPreviewHtml).not.toHaveBeenCalledWith('cv-1', 'modern');
+  });
+
+  it('does not render the preview iframe while the preview is loading', async () => {
+    mockUseCvPreviewHtml.mockReturnValue({ html: null, loading: true, error: null });
+
+    renderWorkspace();
+
+    await screen.findByRole('tab', { name: 'Tailored CV' });
+    expect(screen.queryByTitle('Resume preview')).not.toBeInTheDocument();
+  });
+
+  it('keeps the Edit CV and Preview links', async () => {
+    renderWorkspace();
+
+    const editLink = await screen.findByRole('link', { name: /Edit CV/ });
+    expect(editLink).toHaveAttribute('href', '/dashboard/cv/cv-1?applicationId=app-1');
+    expect(screen.getByRole('link', { name: 'Preview' })).toHaveAttribute(
+      'href',
+      '/dashboard/cv/cv-1/preview?applicationId=app-1',
+    );
+  });
+
+  it('downloads the tailored CV PDF with its template', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    await waitFor(() => {
+      expect(mockUseCvPreviewHtml).toHaveBeenCalledWith('cv-1', 'modern');
+    });
+    const downloadButton = await screen.findByRole('button', { name: 'Download CV PDF' });
+    await user.click(downloadButton);
+
+    await waitFor(() => {
+      expect(mockDownloadCvPdf).toHaveBeenCalledWith('cv-1', 'modern');
+    });
+    expect(mockDownloadCvPdf).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not show Download CV PDF on the other tabs', async () => {
+    window.sessionStorage.setItem(STORAGE_KEY, 'summary');
+
+    renderWorkspace();
+
+    await screen.findByRole('button', { name: /Copy posting/ });
+    expect(screen.queryByRole('button', { name: 'Download CV PDF' })).not.toBeInTheDocument();
+  });
+});
+
+describe('ApplicationWorkspace cover letter tab', () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+    window.sessionStorage.setItem(STORAGE_KEY, 'cover-letter');
+    mockWorkspaceDefaults();
+    mockGetApplication.mockResolvedValue({
+      ...readyApplication,
+      coverLetterEmailSubject: '  Application for Senior Engineer  ',
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('shows the email subject', async () => {
+    renderWorkspace();
+
+    expect(await screen.findByText('Email subject')).toBeInTheDocument();
+    expect(screen.getByText('Application for Senior Engineer')).toBeInTheDocument();
+  });
+
+  it('falls back to a subject built from the position and company', async () => {
+    mockGetApplication.mockResolvedValue({ ...readyApplication, coverLetterEmailSubject: '' });
+
+    renderWorkspace();
+
+    expect(await screen.findByText('Application — Senior Engineer at Acme')).toBeInTheDocument();
+  });
+
+  it('copies only the subject', async () => {
+    const { user, writeText } = setupUserWithClipboard();
+    renderWorkspace();
+
+    await user.click(await screen.findByRole('button', { name: /Copy subject/ }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith('Application for Senior Engineer');
+    });
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(toast.success).toHaveBeenCalledWith('Subject copied');
+  });
+
+  it('renders the letter HTML in an iframe', async () => {
+    renderWorkspace();
+
+    const frame = await screen.findByTitle('Cover letter preview');
+    expect(frame.tagName).toBe('IFRAME');
+    expect(frame.getAttribute('srcdoc')).toContain('Rendered letter');
+    expect(mockGetApplicationLetterHtml).toHaveBeenCalledWith('app-1');
+    expect(screen.queryByTestId('mock-markdown-view')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the MarkdownView when the letter HTML cannot be loaded', async () => {
+    mockGetApplicationLetterHtml.mockRejectedValue(new Error('Request failed (500)'));
+
     renderWorkspace();
 
     const view = await screen.findByTestId('mock-markdown-view');
     expect(view).toHaveTextContent('Hello world');
+    expect(screen.queryByTitle('Cover letter preview')).not.toBeInTheDocument();
   });
 
-  it('caps the cover letter preview at a scrollable max height', async () => {
+  it('keeps the letter actions', async () => {
     renderWorkspace();
 
-    const view = await screen.findByTestId('mock-markdown-view');
-    // The view is wrapped in a constrained container so long letters
-    // don't dominate the workspace tab — the wrapper carries the
-    // `overflow-y-auto` so the inner MarkdownView scrolls instead of
-    // pushing the rest of the page down.
-    const wrapper = view.parentElement;
-    expect(wrapper).not.toBeNull();
-    expect(wrapper).toHaveClass('overflow-y-auto');
-    expect(wrapper?.className).toMatch(/max-h-/);
+    expect(await screen.findByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Copy letter/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Print' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'PDF' })).toBeInTheDocument();
   });
 
   it('exposes the Edit button before Copy letter in the action bar', async () => {
