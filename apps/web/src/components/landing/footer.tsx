@@ -1,7 +1,6 @@
-import Image from 'next/image';
 import Link from 'next/link';
+import { BrandLogo } from '@/components/brand/brand-logo';
 import { Band } from '@/components/landing/band';
-import logoSvg from '@/components/landing/logo-vectorized.svg';
 
 const links = [
   { href: '/features', label: 'Features' },
@@ -14,14 +13,7 @@ export function MarketingFooter() {
     <footer className="border-border border-t py-12">
       <Band className="flex flex-col items-start gap-8 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-3">
-          <Image
-            src={logoSvg}
-            alt="Resubuild"
-            width={2172}
-            height={724}
-            className="h-9 w-auto"
-            sizes="120px"
-          />
+          <BrandLogo />
           <p className="text-muted-foreground text-sm">
             © {new Date().getFullYear()} Resubuild. Built on the open JSON Resume standard.
           </p>

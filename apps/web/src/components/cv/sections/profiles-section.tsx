@@ -2,11 +2,10 @@
 
 import { resolveProfileUrl } from '@resubuild/resume-template';
 import type { ResumeProfile } from '@resubuild/types';
-import { ComposerRow, EntryComposer } from '@/components/cv/composer/entry-composer';
-import { InlineField } from '@/components/cv/composer/inline-field';
 import { SocialNetworkTitle } from '@/components/cv/contact-icons';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { ExternalLink } from '@/components/cv/external-link';
+import { TextField } from '@/components/cv/form-fields';
 import { SocialNetworkCombobox } from '@/components/cv/social-network-combobox';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
@@ -59,35 +58,23 @@ export function ProfilesSection() {
         })(),
       })}
       renderForm={(item, onChange) => (
-        <EntryComposer className="space-y-3">
-          <div className="font-sans">
-            <SocialNetworkCombobox
-              value={item.network}
-              onChange={(network) => onChange({ ...item, network })}
-            />
-          </div>
-          <ComposerRow
-            left={
-              <InlineField
-                label="Username"
-                tone="title"
-                value={item.username}
-                onChange={(username) => onChange({ ...item, username })}
-              />
-            }
-            right={
-              <InlineField
-                label="Profile URL"
-                type="url"
-                tone="meta"
-                align="right"
-                value={item.url}
-                onChange={(url) => onChange({ ...item, url })}
-                className="w-64"
-              />
-            }
+        <>
+          <SocialNetworkCombobox
+            value={item.network}
+            onChange={(network) => onChange({ ...item, network })}
           />
-        </EntryComposer>
+          <TextField
+            label="Username"
+            value={item.username}
+            onChange={(username) => onChange({ ...item, username })}
+          />
+          <TextField
+            label="URL"
+            type="url"
+            value={item.url}
+            onChange={(url) => onChange({ ...item, url })}
+          />
+        </>
       )}
     />
   );

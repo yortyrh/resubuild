@@ -22,7 +22,7 @@ export function CvListSkeleton() {
           <Skeleton className="h-10 w-40" />
           <Skeleton className="h-4 w-72 max-w-full" />
         </div>
-        <Skeleton className="h-10 w-28 shrink-0 rounded-full" />
+        <Skeleton className="h-10 w-28 shrink-0 rounded-md" />
       </div>
 
       <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">

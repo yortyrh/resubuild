@@ -250,7 +250,7 @@ describe('CvSections field coverage', () => {
 
       expect(screen.getByText('Staff Engineer')).toBeInTheDocument();
       expectLinkedTitle('Acme Corp', 'https://acme.example.com');
-      expect(screen.getByText(/, Remote/)).toBeInTheDocument();
+      expect(screen.getByText('Remote')).toBeInTheDocument();
       expect(screen.queryByText('https://acme.example.com')).not.toBeInTheDocument();
       expect(screen.getByText(/2020-01/)).toBeInTheDocument();
       expect(screen.getByText('Led platform team.')).toBeInTheDocument();
@@ -308,8 +308,8 @@ describe('CvSections field coverage', () => {
       renderSection('education', resume);
 
       expectLinkedTitle('MIT', 'https://mit.edu');
-      expect(screen.getByText(/Bachelor, Computer Science/)).toBeInTheDocument();
-      expect(screen.getByText(/, 3\.9/)).toBeInTheDocument();
+      expect(screen.getByText(/Bachelor — Computer Science/)).toBeInTheDocument();
+      expect(screen.getByText('Score: 3.9')).toBeInTheDocument();
       expect(screen.queryByText('https://mit.edu')).not.toBeInTheDocument();
     });
   });

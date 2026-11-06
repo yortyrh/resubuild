@@ -1,11 +1,10 @@
 'use client';
 
 import { Menu, X } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useId, useState } from 'react';
-import logoSvg from '@/components/landing/logo-vectorized.svg';
+import { BrandLogo } from '@/components/brand/brand-logo';
 import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
@@ -71,17 +70,9 @@ export function MarketingHeader() {
 
   return (
     <header className="no-print sticky top-0 z-50 px-3 pt-3 sm:px-5">
-      <div className="bg-card/85 mx-auto flex h-14 max-w-6xl items-center gap-4 rounded-full py-2 pl-5 pr-2 shadow-[0_0_0_1px_hsl(var(--border)),0_8px_24px_-16px_hsl(218_15%_10%/0.35)] backdrop-blur-md">
+      <div className="bg-card/85 mx-auto flex h-14 max-w-6xl items-center gap-4 rounded-xl py-2 pl-5 pr-2 shadow-[0_0_0_1px_hsl(var(--border)),0_8px_24px_-16px_hsl(var(--shadow-ink)/0.35)] backdrop-blur-md">
         <Link href="/" className="flex shrink-0 items-center rounded-sm">
-          <Image
-            src={logoSvg}
-            alt="Resubuild"
-            width={2172}
-            height={724}
-            className="h-8 w-auto"
-            priority
-            sizes="112px"
-          />
+          <BrandLogo className="text-lg" />
         </Link>
 
         <nav aria-label="Primary" className="hidden flex-1 justify-center md:flex">
@@ -92,7 +83,7 @@ export function MarketingHeader() {
                   href={href}
                   aria-current={isCurrent(id) ? 'true' : undefined}
                   className={cn(
-                    'focus-visible:ring-ring rounded-full px-3 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2',
+                    'focus-visible:ring-ring rounded-md px-3 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2',
                     isCurrent(id)
                       ? 'bg-accent text-accent-foreground'
                       : 'text-muted-foreground hover:text-foreground',
@@ -108,13 +99,13 @@ export function MarketingHeader() {
         <div className="ml-auto flex items-center gap-1 md:ml-0">
           <Link
             href="/login"
-            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring hidden rounded-full px-3 py-1.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 sm:inline-flex"
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring hidden rounded-md px-3 py-1.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 sm:inline-flex"
           >
             Log in
           </Link>
           <Link
             href="/register"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring inline-flex h-10 items-center rounded-full px-5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring inline-flex h-10 items-center rounded-md px-5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
           >
             Get started free
           </Link>
@@ -135,7 +126,7 @@ export function MarketingHeader() {
         <nav
           id={menuId}
           aria-label="Mobile"
-          className="bg-card mx-auto mt-2 max-w-6xl rounded-3xl p-3 shadow-[0_0_0_1px_hsl(var(--border)),0_16px_32px_-16px_hsl(218_15%_10%/0.35)] md:hidden"
+          className="bg-card mx-auto mt-2 max-w-6xl rounded-3xl p-3 shadow-[0_0_0_1px_hsl(var(--border)),0_16px_32px_-16px_hsl(var(--shadow-ink)/0.35)] md:hidden"
         >
           <ul className="flex flex-col">
             {NAV_LINKS.map(({ href, id, label }) => (

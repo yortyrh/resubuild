@@ -16,10 +16,6 @@ vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname(),
 }));
 
-vi.mock('@/components/landing/logo-vectorized.svg', () => ({
-  default: '/logo.svg',
-}));
-
 vi.mock('@/lib/queries/auth-mutations', () => ({
   useLogout: () => ({ mutate: vi.fn(), isPending: false }),
 }));

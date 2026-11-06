@@ -1,12 +1,11 @@
 'use client';
 
 import type { ResumeCertificate } from '@resubuild/types';
-import { ComposerRow, EntryComposer } from '@/components/cv/composer/entry-composer';
-import { InlineDateField } from '@/components/cv/composer/inline-date-field';
-import { InlineField } from '@/components/cv/composer/inline-field';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { validateRequiredDateOnCreate } from '@/components/cv/cv-section-helpers';
 import { linkedEntityLabel } from '@/components/cv/external-link';
+import { TextField } from '@/components/cv/form-fields';
+import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { cvCertificateApi } from '@/lib/cv-item-api';
@@ -41,41 +40,31 @@ export function CertificatesSection() {
         };
       }}
       renderForm={(item, onChange, context) => (
-        <EntryComposer>
-          <ComposerRow
-            left={
-              <InlineField
-                label="Certificate name"
-                tone="title"
-                value={item.name}
-                onChange={(name) => onChange({ ...item, name })}
-              />
-            }
-            right={
-              <InlineDateField
-                label="Date"
-                required={context?.mode === 'create'}
-                value={item.date}
-                error={context?.fieldErrors.date}
-                onChange={(date) => onChange({ ...item, date })}
-              />
-            }
+        <>
+          <TextField
+            label="Name"
+            value={item.name}
+            onChange={(name) => onChange({ ...item, name })}
           />
-          <InlineField
+          <IsoDateField
+            label="Date"
+            required={context?.mode === 'create'}
+            value={item.date}
+            error={context?.fieldErrors.date}
+            onChange={(date) => onChange({ ...item, date })}
+          />
+          <TextField
             label="Issuer"
-            tone="meta"
-            placeholder="Issued by"
             value={item.issuer}
             onChange={(issuer) => onChange({ ...item, issuer })}
           />
-          <InlineField
-            label="Link"
+          <TextField
+            label="URL"
             type="url"
-            tone="meta"
             value={item.url}
             onChange={(url) => onChange({ ...item, url })}
           />
-        </EntryComposer>
+        </>
       )}
     />
   );

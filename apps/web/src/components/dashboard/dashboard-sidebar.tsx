@@ -1,11 +1,10 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
+import { BrandLogo, BrandMark } from '@/components/brand/brand-logo';
 import { useDashboardSidebar } from '@/components/dashboard/dashboard-sidebar-context';
 import { DashboardSidebarNav } from '@/components/dashboard/dashboard-sidebar-nav';
 import { UserMenu } from '@/components/dashboard/user-menu';
-import logoSvg from '@/components/landing/logo-vectorized.svg';
 import { cn } from '@/lib/utils';
 
 interface DashboardSidebarProps {
@@ -28,24 +27,9 @@ export function DashboardSidebar({ onNavClick, alwaysExpanded = false }: Dashboa
           onClick={onNavClick}
         >
           {isCollapsed ? (
-            <Image
-              src="/icon.svg"
-              alt="Resubuild"
-              width={40}
-              height={40}
-              priority
-              unoptimized
-              className="h-6 w-6"
-            />
+            <BrandMark title="Resubuild" className="text-foreground size-7" />
           ) : (
-            <Image
-              src={logoSvg}
-              alt="Resubuild"
-              width={120}
-              height={42}
-              priority
-              className="h-[42px] w-[120px]"
-            />
+            <BrandLogo className="py-2 text-lg" />
           )}
         </Link>
       </div>

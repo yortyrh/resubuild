@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { linkedEntityLabel, linkedEntitySubtitle } from '@/components/cv/external-link';
 import { MarkdownView } from '@/components/cv/markdown-view';
+import { MetadataLabel } from '@/components/cv/metadata-field';
 
 export function formatDateRange(start?: string, end?: string): string {
   if (!start && !end) {
@@ -52,13 +53,13 @@ export function highlightBody(values?: string[], options?: { markdown?: boolean;
     return null;
   }
   const useMarkdown = options?.markdown ?? false;
-  const title = options?.title;
+  const title = options?.title ?? 'Highlights';
   return (
-    <div className="mt-1">
-      {title ? <p className="text-page-ink-muted text-[0.875rem] italic">{title}</p> : null}
-      <ul className="marker:text-page-ink list-disc space-y-0.5 pl-5 font-normal">
+    <div className="mt-3 space-y-2">
+      <MetadataLabel>{title}</MetadataLabel>
+      <ul className="list-disc space-y-1 pl-5 text-sm font-normal">
         {values.map((value, index) => (
-          <li key={index}>
+          <li key={`${value}-${index}`}>
             {useMarkdown ? <MarkdownView value={value} variant="inline" /> : value}
           </li>
         ))}
@@ -89,34 +90,4 @@ export function positionEntityView(
     return { title: <span>{entity}</span> };
   }
   return { title: <span>{fallback}</span> };
-}
-
-/**
- * Heading for a dated entry, set like the export template: the organization
- * (linked when it has a URL) and location on the first line, the role in italics
- * below.
- */
-export function printedEntryView(
-  entity: string | undefined,
-  url: string | undefined,
-  location: string | undefined,
-  role: string | undefined,
-  fallback: string,
-): { title: ReactNode; subtitle?: ReactNode } {
-  const entityNode = entity ? linkedEntityLabel(entity, url) : null;
-  if (!entityNode && !role) {
-    return { title: <span>{fallback}</span> };
-  }
-  if (!entityNode) {
-    return { title: <span>{role}</span> };
-  }
-  return {
-    title: (
-      <span>
-        {entityNode}
-        {location ? <span className="font-normal">, {location}</span> : null}
-      </span>
-    ),
-    subtitle: role ? <span>{role}</span> : undefined,
-  };
 }

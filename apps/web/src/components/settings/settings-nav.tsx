@@ -29,7 +29,7 @@ export function SettingsNav() {
                 href={href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'focus-visible:ring-ring flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2',
+                  'focus-visible:ring-ring flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2',
                   active
                     ? 'bg-accent text-accent-foreground font-medium'
                     : 'text-muted-foreground hover:bg-secondary hover:text-foreground',

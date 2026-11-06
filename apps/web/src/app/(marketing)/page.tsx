@@ -147,7 +147,7 @@ export default function MarketingPage() {
             </section>
           </Band>
 
-          <div className="bg-[hsl(218_15%_10%)] text-[hsl(214_18%_92%)]">
+          <div className="bg-[hsl(var(--shadow-ink))] text-[hsl(140_10%_92%)]">
             <Band className="py-20">
               <section
                 aria-labelledby="ownership-title"
@@ -163,7 +163,7 @@ export default function MarketingPage() {
                       className="flex flex-col gap-2 border-t border-white/20 pt-4"
                     >
                       <dt className="wide text-lg font-semibold">{item.title}</dt>
-                      <dd className="text-[hsl(214_14%_70%)]">{item.body}</dd>
+                      <dd className="text-[hsl(145_7%_70%)]">{item.body}</dd>
                     </div>
                   ))}
                 </dl>

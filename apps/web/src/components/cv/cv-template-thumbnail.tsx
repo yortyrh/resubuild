@@ -28,7 +28,7 @@ export function CvTemplateThumbnail({
       role="img"
       aria-label={label}
       className={cn(
-        'bg-page text-page-ink-muted relative aspect-[8.5/11] w-full overflow-hidden rounded-sm shadow-[0_0_0_1px_hsl(var(--page-rule)),0_1px_2px_hsl(218_15%_10%/0.06)] transition-shadow [container-type:inline-size]',
+        'bg-page text-page-ink-muted relative aspect-[8.5/11] w-full overflow-hidden rounded-sm shadow-[0_0_0_1px_hsl(var(--page-rule)),0_1px_2px_hsl(var(--shadow-ink)/0.06)] transition-shadow [container-type:inline-size]',
         className,
       )}
       data-template={variant}

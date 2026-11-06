@@ -203,7 +203,7 @@ export function CvList() {
                 <CvTemplateThumbnail
                   templateId={cv.templateId}
                   label={`${displayTitle} preview`}
-                  className="group-hover/cv:shadow-[0_0_0_1px_hsl(var(--primary)/0.5),0_12px_28px_-12px_hsl(218_15%_10%/0.35)]"
+                  className="group-hover/cv:shadow-[0_0_0_1px_hsl(var(--primary)/0.5),0_12px_28px_-12px_hsl(var(--shadow-ink)/0.35)]"
                 />
               </Link>
 

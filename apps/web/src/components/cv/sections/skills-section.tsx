@@ -1,9 +1,8 @@
 'use client';
 
 import type { ResumeSkill } from '@resubuild/types';
-import { ComposerRow, EntryComposer } from '@/components/cv/composer/entry-composer';
-import { InlineField } from '@/components/cv/composer/inline-field';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
+import { TextField } from '@/components/cv/form-fields';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
@@ -36,37 +35,24 @@ export function SkillsSection() {
         body: <TagsList values={item.keywords ?? []} />,
       })}
       renderForm={(item, onChange) => (
-        <EntryComposer>
-          <ComposerRow
-            left={
-              <InlineField
-                label="Skill group"
-                tone="title"
-                placeholder="Skill group, e.g. Backend"
-                value={item.name}
-                onChange={(name) => onChange({ ...item, name })}
-              />
-            }
-            right={
-              <InlineField
-                label="Level"
-                tone="meta"
-                align="right"
-                placeholder="Level, e.g. Advanced"
-                value={item.level}
-                onChange={(level) => onChange({ ...item, level })}
-                className="w-48"
-              />
-            }
+        <>
+          <TextField
+            label="Name"
+            value={item.name}
+            onChange={(name) => onChange({ ...item, name })}
+          />
+          <TextField
+            label="Level"
+            value={item.level}
+            onChange={(level) => onChange({ ...item, level })}
           />
           <TagsInput
-            variant="inline"
             label="Keywords"
-            placeholder="Type a skill and press Enter or comma"
+            description="Press Enter to add each keyword tag."
             values={item.keywords ?? []}
             onChange={(keywords) => onChange({ ...item, keywords })}
           />
-        </EntryComposer>
+        </>
       )}
     />
   );

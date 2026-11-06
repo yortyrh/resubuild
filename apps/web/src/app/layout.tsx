@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist_Mono, Instrument_Sans } from 'next/font/google';
+import { Geist_Mono, IBM_Plex_Sans } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { AppProviders } from '@/components/providers/app-providers';
 import { siteConfig } from '@/lib/site';
 import './globals.css';
 
-const instrumentSans = Instrument_Sans({
-  variable: '--font-instrument-sans',
+const plexSans = IBM_Plex_Sans({
+  variable: '--font-plex-sans',
   subsets: ['latin'],
   axes: ['wdth'],
   display: 'swap',
@@ -22,8 +22,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#edeff2' },
-    { media: '(prefers-color-scheme: dark)', color: '#111418' },
+    { media: '(prefers-color-scheme: light)', color: '#eef1ef' },
+    { media: '(prefers-color-scheme: dark)', color: '#101512' },
   ],
 };
 
@@ -98,10 +98,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${instrumentSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${plexSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <AppProviders>
           {children}
