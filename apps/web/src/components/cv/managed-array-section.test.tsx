@@ -476,6 +476,76 @@ describe('ManagedArraySection edit, create, delete', () => {
     ).toEqual(['a', 'c']);
   });
 
+  it("removes the deleted entry's own cache key and keeps the others", async () => {
+    mockGetCvWork.mockResolvedValueOnce(threeItems).mockResolvedValue([
+      { id: 'a', name: 'Alpha' },
+      { id: 'c', name: 'Gamma' },
+    ]);
+    const api = makeApi();
+    api.delete.mockResolvedValue({});
+
+    const { container, queryClient } = renderSection({ api });
+    await screen.findByText('Beta');
+    expect(queryClient.getQueryData(cvKeys.sectionItem(CV, 'work', 'b'))).toEqual({
+      id: 'b',
+      name: 'Beta',
+    });
+
+    fireEvent.click(within(rowFor(container, 'Beta')).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith(CV, 'b'));
+    await waitFor(() => expect(cardTitles(container)).toEqual(['Alpha', 'Gamma']));
+    await waitFor(() => expect(mockGetCvWork.mock.calls.length).toBeGreaterThanOrEqual(2));
+
+    expect(queryClient.getQueryState(cvKeys.sectionItem(CV, 'work', 'b'))).toBeUndefined();
+    expect(queryClient.getQueryData(cvKeys.sectionItem(CV, 'work', 'a'))).toEqual({
+      id: 'a',
+      name: 'Alpha',
+    });
+    expect(queryClient.getQueryData(cvKeys.sectionItem(CV, 'work', 'c'))).toEqual({
+      id: 'c',
+      name: 'Gamma',
+    });
+  });
+
+  it('saves an edit with the typed values when the server response has no item', async () => {
+    mockGetCvWork.mockResolvedValue(threeItems);
+    const api = makeApi();
+    api.update.mockResolvedValue({});
+
+    const { container, queryClient } = renderSection({ api });
+    await screen.findByText('Beta');
+
+    fireEvent.click(within(rowFor(container, 'Beta')).getByRole('button', { name: 'Edit' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), {
+      target: { value: 'Beta draft' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Beta draft')).toBeInTheDocument();
+    expect(api.update).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('textbox', { name: 'Name' })).not.toBeInTheDocument();
+    expect(cardTitles(container)).toEqual(['Alpha', 'Beta draft', 'Gamma']);
+    expect(queryClient.getQueryData(cvKeys.sectionItem(CV, 'work', 'b'))).toEqual({
+      id: 'b',
+      name: 'Beta draft',
+    });
+    expect(queryClient.getQueryData(cvKeys.sectionList(CV, 'work'))).toEqual([
+      { id: 'a', name: 'Alpha' },
+      { id: 'b', name: 'Beta draft' },
+      { id: 'c', name: 'Gamma' },
+    ]);
+    expect(queryClient.getQueryData(cvKeys.sectionItem(CV, 'work', 'a'))).toEqual({
+      id: 'a',
+      name: 'Alpha',
+    });
+    expect(queryClient.getQueryData(cvKeys.sectionItem(CV, 'work', 'c'))).toEqual({
+      id: 'c',
+      name: 'Gamma',
+    });
+  });
+
   it('does not delete when the confirmation is cancelled', async () => {
     mockGetCvWork.mockResolvedValue(threeItems);
     const api = makeApi();
