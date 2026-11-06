@@ -2,9 +2,9 @@
 
 import type { ResumeCertificate } from '@resubuild/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { validateRequiredDateOnCreate } from '@/components/cv/cv-section-helpers';
+import { formatIsoDate, validateRequiredDateOnCreate } from '@/components/cv/cv-section-helpers';
 import { linkedEntityLabel } from '@/components/cv/external-link';
-import { TextField } from '@/components/cv/form-fields';
+import { FieldRow, FormGroup, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
@@ -26,6 +26,7 @@ export function CertificatesSection() {
       onItemsChange={(certificates) => setResume((prev) => ({ ...prev, certificates }))}
       entityLabel="Certificate"
       addLabel="Add certificate"
+      emptyText="Professional certifications and licenses."
       createEmpty={() => ({})}
       toPayload={(item) => item as Record<string, unknown>}
       api={cvCertificateApi}
@@ -35,36 +36,39 @@ export function CertificatesSection() {
         const certificateLabel = item.name || 'Certificate';
         return {
           title: <span>{linkedEntityLabel(certificateLabel, item.url) ?? certificateLabel}</span>,
-          meta: item.date ? <div>{item.date}</div> : undefined,
-          body: item.issuer ? <p className="text-sm font-normal">{item.issuer}</p> : null,
+          subtitle: item.issuer || undefined,
+          dates: formatIsoDate(item.date),
         };
       }}
       renderForm={(item, onChange, context) => (
-        <>
-          <TextField
-            label="Name"
-            value={item.name}
-            onChange={(name) => onChange({ ...item, name })}
-          />
-          <IsoDateField
-            label="Date"
-            required={context?.mode === 'create'}
-            value={item.date}
-            error={context?.fieldErrors.date}
-            onChange={(date) => onChange({ ...item, date })}
-          />
-          <TextField
-            label="Issuer"
-            value={item.issuer}
-            onChange={(issuer) => onChange({ ...item, issuer })}
-          />
-          <TextField
-            label="URL"
-            type="url"
-            value={item.url}
-            onChange={(url) => onChange({ ...item, url })}
-          />
-        </>
+        <FormGroup title="Certificate">
+          <FieldRow>
+            <TextField
+              label="Name"
+              value={item.name}
+              onChange={(name) => onChange({ ...item, name })}
+            />
+            <TextField
+              label="Issuer"
+              value={item.issuer}
+              onChange={(issuer) => onChange({ ...item, issuer })}
+            />
+            <IsoDateField
+              label="Date"
+              required={context?.mode === 'create'}
+              value={item.date}
+              error={context?.fieldErrors.date}
+              onChange={(date) => onChange({ ...item, date })}
+            />
+            <TextField
+              label="URL"
+              type="url"
+              placeholder="https://"
+              value={item.url}
+              onChange={(url) => onChange({ ...item, url })}
+            />
+          </FieldRow>
+        </FormGroup>
       )}
     />
   );

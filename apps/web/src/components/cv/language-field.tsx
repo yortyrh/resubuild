@@ -115,8 +115,8 @@ export function LanguageField({
   };
 
   return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
+    <div className="min-w-0 space-y-1.5">
+      <Label className="flex min-h-5 items-center">{label}</Label>
       {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
       <div ref={wrapperRef} className="relative">
         <Button

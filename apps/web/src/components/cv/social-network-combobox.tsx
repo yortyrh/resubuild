@@ -122,8 +122,10 @@ export function SocialNetworkCombobox({
   const displayValue = open ? query : trimmedValue;
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor={`${listId}-input`}>{label}</Label>
+    <div className="min-w-0 space-y-1.5">
+      <Label htmlFor={`${listId}-input`} className="flex min-h-5 items-center">
+        {label}
+      </Label>
       {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
       <div ref={wrapperRef} className="relative">
         <div className="relative">

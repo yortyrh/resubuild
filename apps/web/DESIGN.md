@@ -4,31 +4,34 @@ Authoritative styling rules for `apps/web`. Read this before adding dashboard pa
 
 ## Idea
 
-A résumé is typeset paper. The app is a desk with paper on it: quiet grey chrome, white panels, and wherever CV content appears it is set as the CV itself (the export template's serif and layout), not as a form. Actions and focus use a proofreader's blue pencil. Yellow marker is reserved for text that AI tailoring changed.
+Ink and ledger. A CV is a serious document, so the app reads like well-kept records: a quiet green-grey desk, white panels, near-black ink, and one ledger green for actions and focus. The CV itself (preview, thumbnails, marketing figures) is set in the export template's serif; editing happens in plain, labelled forms. Yellow marker is reserved for text that AI tailoring changed.
 
 ## Tokens (`src/app/globals.css`)
 
 | Token                                                     | Light     | Dark      | Use                                                    |
 | --------------------------------------------------------- | --------- | --------- | ------------------------------------------------------ |
-| `--desk` (`bg-desk`)                                      | `#EDEFF2` | `#111418` | page ground: body, dashboard `<main>`, marketing pages |
-| `--card` / `--background`                                 | `#FFFFFF` | `#181C21` | panels, inputs, popovers                               |
-| `--foreground`                                            | `#16191E` | `#E8EBEF` | text                                                   |
-| `--muted-foreground`                                      | `#5A6170` | `#9AA2B0` | secondary text                                         |
-| `--border` / `--input`                                    | `#CDD2D9` | `#2A3039` | hairlines, control borders                             |
-| `--primary` / `--ring`                                    | `#1F4FD1` | `#7FA2F5` | pencil blue: primary actions, focus, active nav        |
+| `--desk` (`bg-desk`)                                      | `#EEF1EF` | `#101512` | page ground: body, dashboard `<main>`, marketing pages |
+| `--card` / `--background`                                 | `#FFFFFF` | `#171C19` | panels, inputs, popovers                               |
+| `--foreground`                                            | `#17201C` | `#E8EDE9` | text (ink)                                             |
+| `--muted-foreground`                                      | `#5B6661` | `#9AA59F` | secondary text, dates, hints                           |
+| `--border` / `--input`                                    | `#CFD6D2` | `#2C3330` | hairlines, control borders                             |
+| `--primary` / `--ring`                                    | `#1E6B52` | `#6CC2A0` | ledger green: primary actions, focus, active nav       |
 | `--marker`                                                | `#F2D04B` | same      | only for AI-changed text (`.marker-text`)              |
+| `--shadow-ink`                                            | `#131B17` | same      | overlays, shadows, the dark marketing band             |
 | `--page`, `--page-ink`, `--page-ink-muted`, `--page-rule` | fixed     | fixed     | the printed page; identical in both schemes            |
 
 Values are HSL triplets: use `hsl(var(--x) / alpha)`. Dark mode follows `prefers-color-scheme`.
 
 Type:
 
-- `font-sans` is Instrument Sans (variable width). Page and section headings use `.display` (condensed 78%, bold, tight leading); card titles use `.wide`.
+- `font-sans` is IBM Plex Sans (variable, with a width axis). Page and section headings use `.display` (85% width, semibold, tight leading); card and dialog titles use `.wide`. Scale: 12px hints, 13px labels, 14px body and inputs, 15px entry titles, 28px section titles. Dates and counts use `tabular-nums`.
 - `font-resume` is the export template stack (Georgia, Cambria, Times). Use it only for CV content.
 - `font-mono` (Geist Mono) is for the JSON editor and code only.
 - No ALL-CAPS labels, no eyebrow labels above headings, no gradients, no arrows appended to button text.
 
-Radius: `--radius` (0.5rem) for panels; buttons, pills and tabs are fully rounded; the CV page uses a small radius (0.25rem) so it reads as paper.
+Radius: `--radius` (0.5rem) for panels; buttons, inputs, tabs and chips use `rounded-md`, so controls share one shape; the CV page uses a small radius (0.25rem) so it reads as paper. No pill buttons.
+
+Logo: `components/brand/brand-logo.tsx`. `BrandMark` is the page-and-rising-arrow mark (page in `currentColor`, arrow and spark in `--primary`); `BrandLogo` adds the "Resubuild" wordmark as live text. `public/icon.svg` is the same drawing with fixed colors; the PNG icons and `src/app/favicon.ico` are rendered from it.
 
 ## Surfaces
 
@@ -42,7 +45,6 @@ Do **not** substitute `rounded-lg border`, `rounded-md border bg-white`, or `bor
 
 `cv-paper` is the CV page: `--page` background, `--page-ink` text, `font-resume`, a hairline edge. It re-declares the light token set, so buttons and fields inside it look right in dark mode too. Use it for:
 
-- CV editor section pages (`ManagedArraySection`, `ManagedBasicsSection`): capped at `max-w-[52rem]`
 - CV list thumbnails (`CvTemplateThumbnail`) and decorative specimens (`components/brand/cv-specimen.tsx`)
 - marketing figures that show CV content
 
@@ -55,17 +57,24 @@ Inputs, selects and dropdown shells use `border-input` + `rounded-md border` + `
 - Section footers / action rows: `divider-soft` + `border-t`
 - App header: `chrome-divider` + `border-b`
 
-## CV editor: page composer
+## CV editor: forms
 
-Entries are edited in place on the section page (`components/cv/composer/`):
+Section pages are capped at `max-w-[52rem]` and show entries as `surface-soft` cards (`ResumeItemRow` in `components/cv/cv-item-ui.tsx`):
 
-- `EntryComposer`, `ComposerRow` (left/right like the template's "Employer ...... Dates" line), `ComposerBlock` (small sans caption naming a block), `ComposerExtra` (collapsed block for stored-but-not-printed fields).
-- `InlineField`: a borderless field in the CV's typography with a `tone` (`name`, `title` bold, `subtitle` italic, `body`, `meta`). Its name is the placeholder, the accessible name, and a small pencil-blue hint while focused. Use `fit` when inline text follows it.
-- `InlineDateField`: compact ISO date with a year/month/day switch on focus; `emptyHint="Present"` for open end dates.
-- `BulletListField`: one plain-text, auto-growing field per bullet (highlights, courses). Never use the rich editor for single-line values.
-- Long text (summaries, descriptions, reference text) uses `MarkdownEditor` with `deferUntilFocus`, which shows rendered Markdown until focused and only then loads MDXEditor (code-split).
-- `ResumeItemForm` / `SectionCreateForm` wrap the composer in a pencil-blue ring with Cancel / Save; Escape cancels.
-- View rows (`ResumeItemRow`) are set like the page; their actions float as a small toolbar on hover or focus (always visible on touch).
+- Dated sections pass `dates` (from `formatDateRange` / `formatIsoDate`, e.g. `Mar 2022 – Present`); they render in a fixed left date rail so the section scans like a timeline. Undated sections omit it.
+- Title 15px semibold, subtitle `text-foreground/80`, `meta` muted, body capped at 75ch.
+- Actions sit top right and are always visible: move up/down (icon), cross-section move (ghost), Edit (outline), Delete (icon). Drag handle on the left.
+
+Editing replaces the card with `ResumeItemForm` / `SectionCreateForm`: a white card with a `ring-primary/50` edge, a title ("Edit work entry", "New work entry"), and a Save / Cancel bar that is `sticky bottom-0`. Escape cancels.
+
+Inside the form (`components/cv/form-fields.tsx`):
+
+- `FormGroup` titles a group of fields; the title sits in a left column on `md+`. `FieldRow` puts two fields side by side from `sm`.
+- `TextField` has a visible label, an optional one-line hint under the label, and an error under the control. Use `markdown` only for long text (summaries, descriptions, reference text); it renders `MarkdownEditor` with `deferUntilFocus`, an input-like box that loads MDXEditor on click.
+- `IsoDateField` has a small Year / Month / Day switch beside its label. Put "leave the end date empty" hints under the date row, not on one field, so both inputs stay aligned.
+- `BulletListField` (`components/cv/bullet-list-field.tsx`): one bordered, auto-growing plain-text field per bullet for highlights and courses. Never use the rich editor for single-line values.
+- `TagsInput`: chips and the text field in one input-sized box.
+- Empty sections show a dashed box with one line saying what belongs there, then the Add button.
 
 ## Marketing pages
 
@@ -110,8 +119,8 @@ When adding or refactoring UI in `apps/web`:
 3. Never copy `border` from generated/mock HTML export templates into dashboard chrome
 4. After preview or panel changes, compare visually with `/dashboard` CV list cards
 5. Before shipping applications UI, read the **Applications** table in this doc — do not use bare `rounded-lg border` on dashboard panels
-6. Single-line values (highlights, courses, names, titles) → plain inputs (`InlineField`, `BulletListField`). Long-form text on the dashboard (summaries, job description, optional instruction, cover letter) → the project `MarkdownEditor`, not a bare `<Textarea>`; inside the CV composer pass `deferUntilFocus`.
-7. CV content anywhere in the UI → `cv-paper` + `font-resume`, laid out like the export template.
+6. Single-line values (highlights, courses, names, titles) → plain inputs (`TextField`, `BulletListField`). Long-form text on the dashboard (summaries, job description, optional instruction, cover letter) → the project `MarkdownEditor`, not a bare `<Textarea>`; in CV entry forms use `TextField markdown` (which passes `deferUntilFocus`).
+7. CV content shown as a document (preview, thumbnails, marketing figures) → `cv-paper` + `font-resume`. The editor itself uses forms and cards in `font-sans`.
 
 ## Dashboard sidebar
 
@@ -135,7 +144,8 @@ The dashboard layout is `md:grid md:grid-cols-[auto_1fr]`. The rail width is dri
 ## Related files
 
 - Tokens and utilities: `src/app/globals.css`
-- Page composer: `src/components/cv/composer/`
+- Editor forms and cards: `src/components/cv/form-fields.tsx`, `cv-item-ui.tsx`, `bullet-list-field.tsx`
+- Logo: `src/components/brand/brand-logo.tsx`, `public/icon.svg`
 - Marketing: `src/components/landing/`, `src/app/(marketing)/`
 - Sidebar primitives: `src/components/dashboard/dashboard-sidebar.tsx`, `dashboard-sidebar-nav.tsx`, `dashboard-sidebar-sections.tsx`, `dashboard-sidebar-shell.tsx`
 - Sidebar state: `src/components/dashboard/dashboard-sidebar-context.tsx`

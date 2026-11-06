@@ -155,8 +155,9 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
 
   if (editing) {
     return (
-      <div className="cv-paper max-w-[52rem] px-5 py-6 text-[0.9375rem] leading-[1.45] sm:px-10 sm:py-9">
+      <div className="max-w-[52rem]">
         <ResumeItemForm
+          title="Edit basics"
           saving={saving}
           error={error}
           onSave={() => saveBasics(draft)}
@@ -215,7 +216,7 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
   }
 
   return (
-    <div className="cv-paper max-w-[52rem] px-5 py-6 text-[0.9375rem] leading-[1.45] sm:px-10 sm:py-9">
+    <div className="max-w-[52rem]">
       <input
         ref={profilePhotoInputRef}
         type="file"
@@ -234,19 +235,14 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
               onDelete={handleDeletePhoto}
             />
             <div className="min-w-0 flex-1 space-y-1">
-              <div className="text-2xl tracking-tight">{basics.name || 'Untitled'}</div>
+              <div className="wide text-2xl leading-tight">{basics.name || 'Untitled'}</div>
               {basics.label ? (
-                <div className="text-[1.0625rem] font-normal">{basics.label}</div>
+                <div className="text-foreground/80 text-base font-normal">{basics.label}</div>
               ) : null}
               {contactSegments.length > 0 ? (
-                <p className="text-page-ink-muted flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.8125rem] font-normal">
+                <p className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-[0.8125rem] font-normal">
                   {contactSegments.map((segment, i) => (
-                    <span key={`contact-${i}`} className="inline-flex items-center">
-                      {i > 0 ? (
-                        <span className="text-muted-foreground/60 me-3" aria-hidden="true">
-                          •
-                        </span>
-                      ) : null}
+                    <span key={`contact-${i}`} className="inline-flex min-w-0 items-center">
                       {segment}
                     </span>
                   ))}
@@ -258,7 +254,7 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
         onEdit={startEdit}
       >
         {basics.summary ? (
-          <div className="border-page-rule mt-3 border-t pt-3">
+          <div className="border-border/70 mt-1 border-t pt-3">
             <MarkdownView value={basics.summary} variant="block" />
           </div>
         ) : null}

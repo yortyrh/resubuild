@@ -9,22 +9,23 @@ The editor has one view per section (Basics, Social profiles, Work, Volunteer, E
 
 ### REQ-EDIT-002 View, edit, create, delete
 
-Each section shows its entries on a white page set in the export template's typeface and layout, so the section reads like the printed CV.
+Each section shows its entries as cards. In dated sections (Work, Volunteer, Education, Projects, Awards, Certificates, Publications) the dates sit in a left column, formatted as `Mar 2022` (or the year or day the entry stores).
 
-- Edit replaces the entry in place with a page composer until Save or Cancel: the fields sit where they print (organization and dates on the first line, role in italics below, bullets as a list) and are set in the same type. Create opens the composer at the end of the page; Escape cancels; Delete asks for confirmation.
-- The view shows every field the form can edit. Fields the template does not print (the work description) are marked as not printed.
+- Edit replaces the card in place with a form until Save or Cancel. The form groups its fields under titles (for example Role, Dates, Details), every field has a visible label, and the Save / Cancel bar stays visible while the form is taller than the window. Create opens the same form at the end of the section; Escape cancels; Delete asks for confirmation.
+- An empty section says what belongs in it.
+- The view shows every field the form can edit. The form notes fields the template does not print (the work description).
 - While an entry is being edited the list does not re-sort; it re-sorts after Save.
 
 ### REQ-EDIT-003 Required dates
 
-Saving a Work, Volunteer, Education, or Project entry requires a start date. Awards and certificates require a date; publications require a release date. These rules apply to interactive saves only, not to imports. An entry without an end date shows "Current".
+Saving a Work, Volunteer, Education, or Project entry requires a start date. Awards and certificates require a date; publications require a release date. These rules apply to interactive saves only, not to imports. An entry without an end date shows "Present".
 
 ### REQ-EDIT-004 Markdown fields
 
 Summaries, descriptions, highlights, and reference text are stored as Markdown.
 
-- Summaries, descriptions, and reference text are edited with the rich Markdown editor. It loads only when the field is focused; until then the field shows its rendered text.
-- Highlights and courses are edited as plain text, one field per bullet. Markdown typed by hand or written by AI (for example `**40%**` or a link) is kept as text, shown rendered while the bullet is not focused, and rendered in the read view and the export.
+- Summaries, descriptions, and reference text are edited with the rich Markdown editor. It loads only when the field is clicked or focused; until then the field shows its rendered text in the same box.
+- Single-line values never use the rich editor. Highlights and courses are edited as plain text, one field per bullet. Markdown typed by hand or written by AI (for example `**40%**` or a link) stays visible as text in the field and is rendered in the read view and the export.
 - In the read view they are rendered as formatted, sanitized HTML, the same way in every section.
 - Links (Markdown links and URL fields) open in a new tab.
 - CV fields allow only a limited grammar: no headings, code blocks, or images. Cover letters allow the full grammar.
@@ -43,7 +44,7 @@ Highlights and courses are edited as ordered bullets inside the parent entry:
 
 ### REQ-EDIT-006 Basics
 
-- The header is edited as it prints: name, headline (the JSON Resume `label`, a job title), and the contact line, followed by location and Summary.
+- The form has Identity (name, headline: the JSON Resume `label`, a job title), Contact (email, phone, website), Location, and Summary groups.
 - Location uses structured fields; the country is chosen from an ISO-code list.
 - Social profiles are edited in their own section. The network field suggests known networks but accepts free text; known networks show their brand icon.
 - The languages field is a searchable list.

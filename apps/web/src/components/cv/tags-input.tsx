@@ -2,14 +2,13 @@
 
 import { X } from 'lucide-react';
 import { useCallback, useId, useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { FieldLabel } from '@/components/cv/form-fields';
 
-export const tagPillClassName = 'bg-muted rounded-md px-2 py-1 text-sm';
+export const tagPillClassName =
+  'bg-secondary text-secondary-foreground rounded-md px-2 py-0.5 text-[0.8125rem]';
 
 export const roleTagPillClassName =
-  'bg-primary/10 text-primary rounded-md px-2 py-1 text-sm dark:bg-primary/20';
+  'bg-accent text-accent-foreground rounded-md px-2 py-0.5 text-[0.8125rem]';
 
 interface TagsInputProps {
   label: string;
@@ -17,8 +16,6 @@ interface TagsInputProps {
   values: string[];
   onChange: (values: string[]) => void;
   placeholder?: string;
-  /** `inline`: chips and the field share one line, set inside the page composer. */
-  variant?: 'default' | 'inline';
 }
 
 function splitTags(text: string): string[] {
@@ -28,16 +25,21 @@ function splitTags(text: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Tags in one input-sized box: chips first, then the text field. Enter or a comma
+ * adds a tag, Backspace in the empty field removes the last one, and pasting a
+ * comma-separated list adds each item.
+ */
 export function TagsInput({
   label,
   description,
   values,
   onChange,
   placeholder = 'Type and press Enter',
-  variant = 'default',
 }: TagsInputProps) {
   const [draft, setDraft] = useState('');
   const inputId = useId();
+  const descriptionId = `${inputId}-description`;
 
   const removeAt = (index: number) => {
     onChange(values.filter((_, i) => i !== index));
@@ -62,21 +64,24 @@ export function TagsInput({
     setDraft('');
   }, [draft, onChange, values]);
 
-  if (variant === 'inline') {
-    return (
-      <div className="flex flex-wrap items-center gap-1.5">
-        <label htmlFor={inputId} className="sr-only">
-          {label}
-        </label>
+  return (
+    <div className="min-w-0 space-y-1.5">
+      <FieldLabel
+        htmlFor={inputId}
+        label={label}
+        description={description}
+        descriptionId={descriptionId}
+      />
+      <div className="border-input bg-background hover:border-foreground/30 focus-within:border-primary focus-within:ring-primary/25 flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border px-2 py-1.5 transition-colors focus-within:ring-2">
         {values.map((tag, index) => (
           <span
             key={`${tag}-${index}`}
-            className="bg-secondary text-foreground inline-flex items-center gap-1 rounded-full py-0.5 pl-2.5 pr-1 font-sans text-[0.8125rem]"
+            className="bg-secondary text-secondary-foreground inline-flex items-center gap-1 rounded-[0.3rem] py-0.5 pl-2 pr-0.5 text-[0.8125rem]"
           >
             {tag}
             <button
               type="button"
-              className="text-muted-foreground hover:text-foreground focus-visible:ring-primary/30 rounded-full p-0.5 focus-visible:outline-none focus-visible:ring-2"
+              className="text-muted-foreground hover:text-foreground hover:bg-background focus-visible:ring-ring/40 rounded-sm p-0.5 focus-visible:outline-none focus-visible:ring-2"
               aria-label={`Remove ${tag}`}
               onClick={() => removeAt(index)}
             >
@@ -87,7 +92,8 @@ export function TagsInput({
         <input
           id={inputId}
           value={draft}
-          placeholder={values.length === 0 ? placeholder : 'Add…'}
+          aria-describedby={description ? descriptionId : undefined}
+          placeholder={values.length === 0 ? placeholder : 'Add another…'}
           onChange={(e) => {
             const next = e.target.value;
             if (/[,;]/.test(next)) {
@@ -110,56 +116,18 @@ export function TagsInput({
               return;
             }
             if (e.key !== 'Enter') return;
+            if (draft.trim()) {
+              e.preventDefault();
+              commitDraft();
+              return;
+            }
             e.preventDefault();
-            if (draft.trim()) commitDraft();
+            e.currentTarget.form?.requestSubmit();
           }}
           onBlur={commitDraft}
-          className="composer-field min-w-[8rem] flex-1 bg-transparent font-sans text-[0.8125rem]"
+          className="placeholder:text-muted-foreground/80 h-7 min-w-[8rem] flex-1 bg-transparent px-1 text-sm outline-none"
         />
       </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
-      <div className="flex flex-wrap gap-2">
-        {values.map((tag, index) => (
-          <span
-            key={`${tag}-${index}`}
-            className={cn(tagPillClassName, 'inline-flex items-center gap-1')}
-          >
-            {tag}
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-foreground"
-              aria-label={`Remove ${tag}`}
-              onClick={() => removeAt(index)}
-            >
-              <X className="size-3.5" />
-            </button>
-          </span>
-        ))}
-      </div>
-      <Input
-        value={draft}
-        placeholder={placeholder}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key !== 'Enter') {
-            return;
-          }
-          if (draft.trim()) {
-            e.preventDefault();
-            commitDraft();
-            return;
-          }
-          e.currentTarget.form?.requestSubmit();
-        }}
-        onBlur={commitDraft}
-        className={cn(values.length > 0 && 'mt-1')}
-      />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import type { ResumeVolunteer } from '@resubuild/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
+import { BulletListField } from '@/components/cv/bullet-list-field';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import {
   formatDateRange,
@@ -11,7 +12,7 @@ import {
   trimStringList,
   validateRequiredStartDate,
 } from '@/components/cv/cv-section-helpers';
-import { StringListField, TextField } from '@/components/cv/form-fields';
+import { FieldRow, FormGroup, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
@@ -58,6 +59,7 @@ export function VolunteerSection() {
       onItemsChange={(volunteer) => setResume((prev) => ({ ...prev, volunteer }))}
       entityLabel="Volunteer entry"
       addLabel="Add volunteer experience"
+      emptyText="Unpaid roles, community work and open-source stewardship."
       createEmpty={() => ({ highlights: [] })}
       toPayload={(item) => ({
         ...(item as Record<string, unknown>),
@@ -85,7 +87,7 @@ export function VolunteerSection() {
         return {
           title,
           subtitle,
-          meta: <div>{formatDateRange(item.startDate, item.endDate)}</div>,
+          dates: formatDateRange(item.startDate, item.endDate),
           body: (
             <>
               <MarkdownView value={item.summary} variant="block" />
@@ -96,48 +98,61 @@ export function VolunteerSection() {
       }}
       renderForm={(item, onChange, context) => (
         <>
-          <TextField
-            label="Organization"
-            value={item.organization}
-            onChange={(organization) => onChange({ ...item, organization })}
-          />
-          <TextField
-            label="Position"
-            value={item.position}
-            onChange={(position) => onChange({ ...item, position })}
-          />
-          <TextField
-            label="URL"
-            type="url"
-            value={item.url}
-            onChange={(url) => onChange({ ...item, url })}
-          />
-          <IsoDateField
-            label="Start date"
-            required
-            value={item.startDate}
-            error={context?.fieldErrors.startDate}
-            onChange={(startDate) => onChange({ ...item, startDate })}
-          />
-          <IsoDateField
-            label="End date"
-            value={item.endDate}
-            onChange={(endDate) => onChange({ ...item, endDate })}
-          />
-          <TextField
-            label="Summary"
-            markdown="block"
-            multiline
-            value={item.summary}
-            onChange={(summary) => onChange({ ...item, summary })}
-          />
-          <StringListField
-            label="Highlights"
-            description="Quantifiable achievement bullets saved with this entry on Save."
-            markdown
-            values={item.highlights ?? []}
-            onChange={(highlights) => onChange({ ...item, highlights })}
-          />
+          <FormGroup title="Role">
+            <FieldRow>
+              <TextField
+                label="Position"
+                value={item.position}
+                onChange={(position) => onChange({ ...item, position })}
+              />
+              <TextField
+                label="Organization"
+                value={item.organization}
+                onChange={(organization) => onChange({ ...item, organization })}
+              />
+            </FieldRow>
+            <TextField
+              label="URL"
+              type="url"
+              placeholder="https://"
+              value={item.url}
+              onChange={(url) => onChange({ ...item, url })}
+            />
+          </FormGroup>
+          <FormGroup title="Dates">
+            <FieldRow>
+              <IsoDateField
+                label="Start date"
+                required
+                value={item.startDate}
+                error={context?.fieldErrors.startDate}
+                onChange={(startDate) => onChange({ ...item, startDate })}
+              />
+              <IsoDateField
+                label="End date"
+                value={item.endDate}
+                onChange={(endDate) => onChange({ ...item, endDate })}
+              />
+            </FieldRow>
+            <p className="text-muted-foreground -mt-2 text-xs">
+              Leave the end date empty if it is ongoing.
+            </p>
+          </FormGroup>
+          <FormGroup title="Details">
+            <TextField
+              label="Summary"
+              markdown
+              value={item.summary}
+              onChange={(summary) => onChange({ ...item, summary })}
+            />
+            <BulletListField
+              label="Highlights"
+              itemLabel="Highlight"
+              description="One achievement per line. Enter starts a new one."
+              values={item.highlights ?? []}
+              onChange={(highlights) => onChange({ ...item, highlights })}
+            />
+          </FormGroup>
         </>
       )}
     />

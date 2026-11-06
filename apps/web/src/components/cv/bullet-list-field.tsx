@@ -9,20 +9,11 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
-  useState,
 } from 'react';
-import { MarkdownView } from '@/components/cv/markdown-view';
 import { cn } from '@/lib/utils';
-
-/** Inline Markdown worth rendering when the bullet is not being edited. */
-const INLINE_MARKDOWN = /(\*\*|__|\*[^\s*]|_[^\s_]|`|~~|\[[^\]]*\]\()/;
 
 /** Leading list markers people paste from other CVs ("- ", "* ", "• ", "1. "). */
 const LIST_MARKER = /^\s*(?:[-*•‣◦▪–]|\d+[.)])\s+/;
-
-export function hasInlineMarkdown(value: string): boolean {
-  return INLINE_MARKDOWN.test(value);
-}
 
 export function splitPastedBullets(text: string): string[] {
   return text
@@ -49,20 +40,23 @@ interface BulletListFieldProps {
   label: string;
   values?: string[];
   onChange: (values: string[]) => void;
+  /** Short hint shown under the group label. */
+  description?: string;
   placeholder?: string;
   className?: string;
 }
 
 /**
- * Bullets edited as plain text, one auto-growing field per bullet, set like the
- * printed list. Markdown typed by hand or written by AI is kept as text and shown
- * rendered while the bullet is not focused.
+ * Bullets edited as plain text, one auto-growing field per bullet. Markdown typed
+ * by hand or written by AI (e.g. `**40%**`) stays visible as text here and is
+ * rendered in the read view and the export.
  */
 export function BulletListField({
   itemLabel,
   label,
   values = [],
   onChange,
+  description,
   placeholder,
   className,
 }: BulletListFieldProps) {
@@ -78,7 +72,6 @@ export function BulletListField({
 
   const fieldRefs = useRef(new Map<string, HTMLTextAreaElement>());
   const pendingFocus = useRef<PendingFocus | null>(null);
-  const [focusedId, setFocusedId] = useState<string | null>(null);
 
   const latest = useRef({ values, onChange });
   latest.current = { values, onChange };
@@ -221,12 +214,6 @@ export function BulletListField({
       nextIds.splice(index + 1, 0, ...newIds);
       commit(nextValues, nextIds, { id: nextIds[index + lastIndex]!, caret });
     },
-    focus(id: string) {
-      setFocusedId(id);
-    },
-    blur(id: string) {
-      setFocusedId((current) => (current === id ? null : current));
-    },
     register(id: string, node: HTMLTextAreaElement | null) {
       if (node) fieldRefs.current.set(id, node);
       else fieldRefs.current.delete(id);
@@ -239,10 +226,13 @@ export function BulletListField({
   };
 
   return (
-    <fieldset className={cn('composer-bullets min-w-0 border-0 p-0', className)}>
-      <legend className="sr-only">{label}</legend>
+    <fieldset className={cn('min-w-0 space-y-2 border-0 p-0', className)}>
+      <legend className="text-[0.8125rem] font-medium leading-5">{label}</legend>
+      {description ? (
+        <p className="text-muted-foreground -mt-1.5 text-xs leading-snug">{description}</p>
+      ) : null}
       {values.length > 0 ? (
-        <ul className="list-none space-y-0.5 p-0">
+        <ul className="list-none space-y-2 p-0">
           {values.map((value, index) => {
             const id = ids[index]!;
             return (
@@ -254,7 +244,6 @@ export function BulletListField({
                 value={value}
                 itemLabel={itemLabel}
                 placeholder={placeholder}
-                focused={focusedId === id}
                 handlers={handlers}
               />
             );
@@ -264,9 +253,9 @@ export function BulletListField({
       <button
         type="button"
         onClick={addRow}
-        className="composer-add text-page-ink-muted hover:text-primary focus-visible:text-primary focus-visible:ring-primary/30 mt-1 inline-flex items-center gap-1.5 rounded-sm py-0.5 pl-[1.1rem] font-sans text-[0.8125rem] font-medium focus-visible:outline-none focus-visible:ring-2"
+        className="text-primary hover:bg-accent focus-visible:ring-ring/40 -ml-1 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2"
       >
-        <Plus className="size-3.5" aria-hidden />
+        <Plus className="size-4" aria-hidden />
         Add {itemLabel.toLowerCase()}
       </button>
     </fieldset>
@@ -278,8 +267,6 @@ interface BulletRowHandlers {
   remove: (index: number) => void;
   keyDown: (index: number, event: KeyboardEvent<HTMLTextAreaElement>) => void;
   paste: (index: number, event: ClipboardEvent<HTMLTextAreaElement>) => void;
-  focus: (id: string) => void;
-  blur: (id: string) => void;
   register: (id: string, node: HTMLTextAreaElement | null) => void;
 }
 
@@ -290,7 +277,6 @@ interface BulletRowProps {
   value: string;
   itemLabel: string;
   placeholder?: string;
-  focused: boolean;
   handlers: BulletRowHandlers;
 }
 
@@ -301,11 +287,9 @@ const BulletRow = memo(function BulletRow({
   value,
   itemLabel,
   placeholder,
-  focused,
   handlers,
 }: BulletRowProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const showRendered = !focused && hasInlineMarkdown(value);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: value triggers the resize
   useLayoutEffect(() => {
@@ -316,46 +300,34 @@ const BulletRow = memo(function BulletRow({
   }, [value]);
 
   return (
-    <li className="composer-bullet group relative flex items-start gap-2">
-      <span aria-hidden className="text-page-ink mt-0 w-3 shrink-0 select-none text-center">
+    <li className="group flex items-start gap-2">
+      <span
+        aria-hidden
+        className="text-muted-foreground w-3 shrink-0 select-none pt-[0.5625rem] text-center text-sm leading-5"
+      >
         •
       </span>
-      <span className="relative min-w-0 flex-1">
-        <textarea
-          ref={(node) => {
-            textareaRef.current = node;
-            handlers.register(id, node);
-          }}
-          rows={1}
-          value={value}
-          aria-label={`${itemLabel} ${index + 1} of ${total}`}
-          placeholder={placeholder ?? itemLabel}
-          onChange={(event) => handlers.change(index, event.target.value)}
-          onKeyDown={(event) => handlers.keyDown(index, event)}
-          onPaste={(event) => handlers.paste(index, event)}
-          onFocus={() => handlers.focus(id)}
-          onBlur={() => handlers.blur(id)}
-          className={cn(
-            'composer-field w-full resize-none overflow-hidden bg-transparent',
-            showRendered && 'text-transparent',
-          )}
-        />
-        {showRendered ? (
-          <span
-            aria-hidden
-            className="composer-rendered bg-page pointer-events-none absolute inset-0"
-          >
-            <MarkdownView value={value} variant="inline" className="composer-markdown" />
-          </span>
-        ) : null}
-      </span>
+      <textarea
+        ref={(node) => {
+          textareaRef.current = node;
+          handlers.register(id, node);
+        }}
+        rows={1}
+        value={value}
+        aria-label={`${itemLabel} ${index + 1} of ${total}`}
+        placeholder={placeholder ?? itemLabel}
+        onChange={(event) => handlers.change(index, event.target.value)}
+        onKeyDown={(event) => handlers.keyDown(index, event)}
+        onPaste={(event) => handlers.paste(index, event)}
+        className="border-input bg-background placeholder:text-muted-foreground/80 hover:border-foreground/30 focus-visible:border-primary focus-visible:ring-primary/25 min-h-10 min-w-0 flex-1 resize-none overflow-hidden rounded-md border px-3 py-[0.5625rem] text-sm leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2"
+      />
       <button
         type="button"
         aria-label={`Remove ${itemLabel.toLowerCase()} ${index + 1}`}
         onClick={() => handlers.remove(index)}
-        className="text-page-ink-muted hover:text-destructive focus-visible:text-destructive focus-visible:ring-primary/30 mt-0.5 shrink-0 rounded-sm p-0.5 opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 group-focus-within:opacity-100 group-hover:opacity-100"
+        className="text-muted-foreground hover:text-destructive hover:bg-secondary focus-visible:ring-ring/40 mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2"
       >
-        <X className="size-3.5" aria-hidden />
+        <X className="size-4" aria-hidden />
       </button>
     </li>
   );

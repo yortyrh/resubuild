@@ -116,11 +116,15 @@ export interface ManagedArraySectionProps<T extends WithItemId> {
   onItemsChange: (items: T[]) => void;
   entityLabel: string;
   addLabel: string;
+  /** One line shown when the section has no entries, saying what belongs here. */
+  emptyText?: string;
   createEmpty: () => T;
   toPayload: (item: T) => Record<string, unknown>;
   renderView: (item: T) => {
     title: ReactNode;
     subtitle?: ReactNode;
+    /** Date range for the left rail; pass a string (possibly empty) in dated sections. */
+    dates?: ReactNode;
     meta?: ReactNode;
     body?: ReactNode;
   };
@@ -144,6 +148,7 @@ export function ManagedArraySection<T extends WithItemId>({
   onItemsChange,
   entityLabel,
   addLabel,
+  emptyText,
   createEmpty,
   toPayload,
   renderView,
@@ -461,6 +466,7 @@ export function ManagedArraySection<T extends WithItemId>({
       <ResumeItemRow
         title={view.title}
         subtitle={view.subtitle}
+        dates={view.dates}
         meta={view.meta}
         isDragging={isDragging}
         onEdit={() => startEdit(item)}
@@ -535,6 +541,7 @@ export function ManagedArraySection<T extends WithItemId>({
     return editingId === item.id && draft ? (
       <ResumeItemForm
         key={itemKey}
+        title={`Edit ${entityLabel.toLowerCase()}`}
         saving={actionsDisabled}
         error={error}
         onSave={saveEdit}
@@ -547,35 +554,37 @@ export function ManagedArraySection<T extends WithItemId>({
     );
   });
 
+  const formOpen = editingId !== null || creating;
+
   return (
-    <div className="space-y-3">
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
+    <div className="max-w-[52rem] space-y-3">
+      {error && !formOpen ? (
+        <p role="alert" className="text-destructive text-sm">
+          {error}
+        </p>
+      ) : null}
 
-      <div className="cv-paper cv-section-page max-w-[52rem] px-5 py-6 text-[0.9375rem] leading-[1.45] sm:px-10 sm:py-9">
-        {items.length === 0 && editingId === null && !creating ? (
-          <p className="text-page-ink-muted font-sans text-sm">
-            No entries yet. Add one below and it appears here as it will print.
-          </p>
-        ) : null}
-
-        <div className="space-y-5">
-          {reorderEnabled ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-                {itemList}
-              </SortableContext>
-            </DndContext>
-          ) : (
-            itemList
-          )}
+      {items.length === 0 && !creating ? (
+        <div className="border-border rounded-lg border border-dashed px-5 py-8">
+          <p className="text-foreground text-sm font-medium">No entries yet</p>
+          {emptyText ? <p className="text-muted-foreground mt-1 text-sm">{emptyText}</p> : null}
         </div>
+      ) : null}
 
+      {reorderEnabled ? (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">{itemList}</div>
+          </SortableContext>
+        </DndContext>
+      ) : (
+        <div className="space-y-3">{itemList}</div>
+      )}
+
+      <div className="pt-1">
         <SectionCreateForm
           label={addLabel}
+          title={`New ${entityLabel.toLowerCase()}`}
           open={creating && createDraft !== null}
           onOpen={startCreate}
           saving={actionsDisabled}

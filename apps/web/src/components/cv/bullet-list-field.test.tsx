@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { BulletListField, hasInlineMarkdown, splitPastedBullets } from './bullet-list-field';
+import { BulletListField, splitPastedBullets } from './bullet-list-field';
 
 afterEach(() => {
   cleanup();
@@ -145,13 +145,8 @@ describe('BulletListField', () => {
     expect(document.activeElement).toBe(bullets()[0]);
   });
 
-  it('shows Markdown rendered while the bullet is not focused, raw while editing', () => {
+  it('keeps Markdown as plain text in the field', () => {
     const { container } = render(<Harness initial={['Cut latency by **40%**']} />);
-
-    expect(container.querySelector('strong')?.textContent).toBe('40%');
-
-    bullets()[0]!.focus();
-    fireEvent.focus(bullets()[0]!);
 
     expect(container.querySelector('strong')).toBeNull();
     expect(bullets()[0]).toHaveValue('Cut latency by **40%**');
@@ -159,13 +154,6 @@ describe('BulletListField', () => {
 });
 
 describe('bullet helpers', () => {
-  it('detects inline Markdown', () => {
-    expect(hasInlineMarkdown('Plain text, 40% faster')).toBe(false);
-    expect(hasInlineMarkdown('Used **Go**')).toBe(true);
-    expect(hasInlineMarkdown('See [docs](https://example.com)')).toBe(true);
-    expect(hasInlineMarkdown('Wrote `kubectl` plugins')).toBe(true);
-  });
-
   it('splits pasted lines', () => {
     expect(splitPastedBullets('* a\r\n* b')).toEqual(['a', 'b']);
   });

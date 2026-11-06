@@ -3,16 +3,28 @@
 import type { ReactNode } from 'react';
 import { linkedEntityLabel, linkedEntitySubtitle } from '@/components/cv/external-link';
 import { MarkdownView } from '@/components/cv/markdown-view';
-import { MetadataLabel } from '@/components/cv/metadata-field';
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** ISO date (YYYY, YYYY-MM or YYYY-MM-DD) as "2022", "Mar 2022" or "15 Mar 2022". */
+export function formatIsoDate(value?: string): string {
+  if (!value) return '';
+  const match = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/.exec(value.trim());
+  if (!match) return value;
+  const [, year, month, day] = match;
+  const monthName = month ? MONTHS[Number(month) - 1] : undefined;
+  if (!monthName) return year!;
+  return day ? `${Number(day)} ${monthName} ${year}` : `${monthName} ${year}`;
+}
 
 export function formatDateRange(start?: string, end?: string): string {
   if (!start && !end) {
     return '';
   }
   if (!end) {
-    return start ? `${start} – Current` : '';
+    return start ? `${formatIsoDate(start)} – Present` : '';
   }
-  return `${start ?? ''} – ${end}`;
+  return `${formatIsoDate(start)} – ${formatIsoDate(end)}`;
 }
 
 export function validateRequiredStartDate(item: {
@@ -53,13 +65,13 @@ export function highlightBody(values?: string[], options?: { markdown?: boolean;
     return null;
   }
   const useMarkdown = options?.markdown ?? false;
-  const title = options?.title ?? 'Highlights';
+  const title = options?.title;
   return (
-    <div className="mt-3 space-y-2">
-      <MetadataLabel>{title}</MetadataLabel>
-      <ul className="list-disc space-y-1 pl-5 text-sm font-normal">
+    <div className="mt-2">
+      {title ? <p className="text-muted-foreground mb-1 text-xs font-medium">{title}</p> : null}
+      <ul className="marker:text-muted-foreground list-disc space-y-1 pl-5 font-normal">
         {values.map((value, index) => (
-          <li key={`${value}-${index}`}>
+          <li key={index}>
             {useMarkdown ? <MarkdownView value={value} variant="inline" /> : value}
           </li>
         ))}

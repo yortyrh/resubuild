@@ -13,11 +13,12 @@ describe('formatDateRange', () => {
   });
 
   it('shows Current when end date is absent', () => {
-    expect(formatDateRange('2000-10-12')).toBe('2000-10-12 – Current');
+    expect(formatDateRange('2000-10-12')).toBe('12 Oct 2000 – Present');
   });
 
   it('shows completed range when both dates are set', () => {
-    expect(formatDateRange('2018-01', '2020-06')).toBe('2018-01 – 2020-06');
+    expect(formatDateRange('2018-01', '2020-06')).toBe('Jan 2018 – Jun 2020');
+    expect(formatDateRange('2018', 'not a date')).toBe('2018 – not a date');
   });
 });
 

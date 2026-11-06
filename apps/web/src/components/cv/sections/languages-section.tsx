@@ -2,7 +2,7 @@
 
 import type { ResumeLanguage } from '@resubuild/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { TextField } from '@/components/cv/form-fields';
+import { FieldRow, FormGroup, TextField } from '@/components/cv/form-fields';
 import { LanguageField } from '@/components/cv/language-field';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
@@ -25,6 +25,7 @@ export function LanguagesSection() {
       onItemsChange={(languages) => setResume((prev) => ({ ...prev, languages }))}
       entityLabel="Language"
       addLabel="Add language"
+      emptyText="Languages you speak and how well."
       createEmpty={() => ({})}
       toPayload={(item) => item as Record<string, unknown>}
       api={cvLanguageApi}
@@ -33,18 +34,21 @@ export function LanguagesSection() {
         subtitle: item.fluency || undefined,
       })}
       renderForm={(item, onChange) => (
-        <>
-          <LanguageField
-            label="Language"
-            value={item.language}
-            onChange={(language) => onChange({ ...item, language })}
-          />
-          <TextField
-            label="Fluency"
-            value={item.fluency}
-            onChange={(fluency) => onChange({ ...item, fluency })}
-          />
-        </>
+        <FormGroup title="Language">
+          <FieldRow>
+            <LanguageField
+              label="Language"
+              value={item.language}
+              onChange={(language) => onChange({ ...item, language })}
+            />
+            <TextField
+              label="Fluency"
+              placeholder="Native, Fluent, B2…"
+              value={item.fluency}
+              onChange={(fluency) => onChange({ ...item, fluency })}
+            />
+          </FieldRow>
+        </FormGroup>
       )}
     />
   );

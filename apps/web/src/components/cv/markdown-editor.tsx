@@ -23,7 +23,7 @@ function EditorPlaceholderBox({ minRows }: { minRows: number }) {
     <div
       aria-hidden
       className="border-input bg-background animate-pulse rounded-md border"
-      style={{ minHeight: `${minRows * 1.5 + 1.5}rem` }}
+      style={{ minHeight: `${minRows * 1.5 + 2.25}rem` }}
     />
   );
 }
@@ -46,19 +46,27 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, DeferredMarkdownE
       return (
         <div
           className={cn(
-            'markdown-editor-idle group relative cursor-text rounded-md px-3 py-2.5 transition-colors',
+            'markdown-editor-idle border-input bg-background hover:border-foreground/30 group relative cursor-text rounded-md border transition-colors',
             className,
           )}
         >
-          {value.trim() ? (
-            <MarkdownView value={value} variant={variant} />
-          ) : (
-            <p className="text-muted-foreground text-sm">{placeholder ?? label}</p>
-          )}
+          <div
+            aria-hidden
+            className="bg-muted/60 border-border/70 text-muted-foreground flex h-9 items-center rounded-t-[0.3125rem] border-b px-3 text-xs"
+          >
+            Click to edit. Formatting tools appear here.
+          </div>
+          <div className="min-h-24 px-3 py-3 text-sm">
+            {value.trim() ? (
+              <MarkdownView value={value} variant={variant} />
+            ) : (
+              <p className="text-muted-foreground/80">{placeholder ?? label}</p>
+            )}
+          </div>
           <button
             type="button"
             aria-label={label}
-            className="focus-visible:ring-primary/30 absolute inset-0 rounded-md focus-visible:outline-none focus-visible:ring-2"
+            className="focus-visible:ring-primary/25 focus-visible:border-primary absolute inset-0 rounded-md focus-visible:outline-none focus-visible:ring-2"
             onClick={() => setActive(true)}
             onFocus={() => setActive(true)}
           />

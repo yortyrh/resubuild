@@ -2,7 +2,7 @@
 
 import type { ResumeSkill } from '@resubuild/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { TextField } from '@/components/cv/form-fields';
+import { FieldRow, FormGroup, TextField } from '@/components/cv/form-fields';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
@@ -26,6 +26,7 @@ export function SkillsSection() {
       onItemsChange={(skills) => setResume((prev) => ({ ...prev, skills }))}
       entityLabel="Skill"
       addLabel="Add skill"
+      emptyText="Group related skills, e.g. Frontend with React, TypeScript and CSS."
       createEmpty={() => ({ keywords: [] })}
       toPayload={(item) => item as Record<string, unknown>}
       api={cvSkillApi}
@@ -35,24 +36,28 @@ export function SkillsSection() {
         body: <TagsList values={item.keywords ?? []} />,
       })}
       renderForm={(item, onChange) => (
-        <>
-          <TextField
-            label="Name"
-            value={item.name}
-            onChange={(name) => onChange({ ...item, name })}
-          />
-          <TextField
-            label="Level"
-            value={item.level}
-            onChange={(level) => onChange({ ...item, level })}
-          />
+        <FormGroup title="Skill">
+          <FieldRow>
+            <TextField
+              label="Name"
+              placeholder="Backend development"
+              value={item.name}
+              onChange={(name) => onChange({ ...item, name })}
+            />
+            <TextField
+              label="Level"
+              placeholder="Expert"
+              value={item.level}
+              onChange={(level) => onChange({ ...item, level })}
+            />
+          </FieldRow>
           <TagsInput
             label="Keywords"
-            description="Press Enter to add each keyword tag."
+            description="Enter or a comma adds each keyword."
             values={item.keywords ?? []}
             onChange={(keywords) => onChange({ ...item, keywords })}
           />
-        </>
+        </FormGroup>
       )}
     />
   );

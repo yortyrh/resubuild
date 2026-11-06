@@ -8,7 +8,11 @@ import { CvEditorHeaderActions } from '@/components/cv/cv-editor-header-actions'
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { CvSectionSkeleton } from '@/components/cv/cv-editor-skeleton';
 import { CvSectionContent } from '@/components/cv/cv-section-content';
-import { getSectionLabel, resolveActiveSectionFromPathname } from '@/components/cv/cv-section-nav';
+import {
+  getSectionDescription,
+  getSectionLabel,
+  resolveActiveSectionFromPathname,
+} from '@/components/cv/cv-section-nav';
 import { CvSectionNav } from '@/components/cv/cv-section-nav-links';
 import { useApplicationForCv } from '@/components/cv/use-application-for-cv';
 import { useDashboardBreadcrumb } from '@/components/dashboard/dashboard-breadcrumb-context';
@@ -47,22 +51,25 @@ export function CvEditorChrome({ cvId, children }: CvEditorChromeProps) {
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-      <aside aria-label="CV sections" className="hidden shrink-0 lg:block lg:w-56">
+      <aside aria-label="CV sections" className="hidden shrink-0 lg:block lg:w-52">
         <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
           <CvSectionNav cvId={cvId} navState="expanded" density="comfortable" />
         </div>
       </aside>
 
       <div className="min-w-0 flex-1 space-y-6">
-        <div className="no-print flex flex-wrap items-center gap-2">
-          <h1 className="display min-w-0 flex-1 truncate text-[2rem] sm:text-[2.5rem]">
-            {getSectionLabel(activeSection)}
-          </h1>
+        <div className="no-print flex flex-wrap items-start gap-x-3 gap-y-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="display truncate text-[1.75rem]">{getSectionLabel(activeSection)}</h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              {getSectionDescription(activeSection)}
+            </p>
+          </div>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="shrink-0 lg:hidden"
+            className="mt-1 shrink-0 lg:hidden"
             onClick={() => setSectionsOpen(true)}
             aria-label="Show sections"
             aria-expanded={sectionsOpen}
@@ -72,7 +79,7 @@ export function CvEditorChrome({ cvId, children }: CvEditorChromeProps) {
             <span className="hidden sm:inline">Sections</span>
           </Button>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto mt-1 flex items-center gap-2">
             {application ? <CvApplicationPromoteButton application={application} /> : null}
             <CvEditorHeaderActions cvId={cvId} className="w-auto" />
           </div>

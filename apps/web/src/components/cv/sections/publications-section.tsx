@@ -2,9 +2,12 @@
 
 import type { ResumePublication } from '@resubuild/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { validateRequiredReleaseDateOnCreate } from '@/components/cv/cv-section-helpers';
+import {
+  formatIsoDate,
+  validateRequiredReleaseDateOnCreate,
+} from '@/components/cv/cv-section-helpers';
 import { linkedEntityLabel } from '@/components/cv/external-link';
-import { TextField } from '@/components/cv/form-fields';
+import { FieldRow, FormGroup, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
@@ -27,6 +30,7 @@ export function PublicationsSection() {
       onItemsChange={(publications) => setResume((prev) => ({ ...prev, publications }))}
       entityLabel="Publication"
       addLabel="Add publication"
+      emptyText="Articles, papers, books and talks."
       createEmpty={() => ({})}
       toPayload={(item) => item as Record<string, unknown>}
       api={cvPublicationApi}
@@ -37,42 +41,48 @@ export function PublicationsSection() {
         return {
           title: <span>{linkedEntityLabel(publicationLabel, item.url) ?? publicationLabel}</span>,
           subtitle: item.publisher || undefined,
-          meta: item.releaseDate ? <div>{item.releaseDate}</div> : undefined,
+          dates: formatIsoDate(item.releaseDate),
           body: <MarkdownView value={item.summary} variant="block" />,
         };
       }}
       renderForm={(item, onChange, context) => (
         <>
-          <TextField
-            label="Name"
-            value={item.name}
-            onChange={(name) => onChange({ ...item, name })}
-          />
-          <TextField
-            label="Publisher"
-            value={item.publisher}
-            onChange={(publisher) => onChange({ ...item, publisher })}
-          />
-          <IsoDateField
-            label="Release date"
-            required={context?.mode === 'create'}
-            value={item.releaseDate}
-            error={context?.fieldErrors.releaseDate}
-            onChange={(releaseDate) => onChange({ ...item, releaseDate })}
-          />
-          <TextField
-            label="URL"
-            type="url"
-            value={item.url}
-            onChange={(url) => onChange({ ...item, url })}
-          />
-          <TextField
-            label="Summary"
-            markdown="block"
-            multiline
-            value={item.summary}
-            onChange={(summary) => onChange({ ...item, summary })}
-          />
+          <FormGroup title="Publication">
+            <FieldRow>
+              <TextField
+                label="Name"
+                value={item.name}
+                onChange={(name) => onChange({ ...item, name })}
+              />
+              <TextField
+                label="Publisher"
+                value={item.publisher}
+                onChange={(publisher) => onChange({ ...item, publisher })}
+              />
+              <IsoDateField
+                label="Release date"
+                required={context?.mode === 'create'}
+                value={item.releaseDate}
+                error={context?.fieldErrors.releaseDate}
+                onChange={(releaseDate) => onChange({ ...item, releaseDate })}
+              />
+              <TextField
+                label="URL"
+                type="url"
+                placeholder="https://"
+                value={item.url}
+                onChange={(url) => onChange({ ...item, url })}
+              />
+            </FieldRow>
+          </FormGroup>
+          <FormGroup title="Details">
+            <TextField
+              label="Summary"
+              markdown
+              value={item.summary}
+              onChange={(summary) => onChange({ ...item, summary })}
+            />
+          </FormGroup>
         </>
       )}
     />

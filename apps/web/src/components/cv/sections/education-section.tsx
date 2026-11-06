@@ -1,6 +1,7 @@
 'use client';
 
 import type { ResumeEducation } from '@resubuild/types';
+import { BulletListField } from '@/components/cv/bullet-list-field';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import {
   formatDateRange,
@@ -9,7 +10,7 @@ import {
   validateRequiredStartDate,
 } from '@/components/cv/cv-section-helpers';
 import { linkedEntityLabel } from '@/components/cv/external-link';
-import { StringListField, TextField } from '@/components/cv/form-fields';
+import { FieldRow, FormGroup, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
@@ -31,6 +32,7 @@ export function EducationSection() {
       onItemsChange={(education) => setResume((prev) => ({ ...prev, education }))}
       entityLabel="Education entry"
       addLabel="Add education"
+      emptyText="Degrees, diplomas and programs, newest first."
       createEmpty={() => ({ courses: [] })}
       toPayload={(item) => ({
         ...(item as Record<string, unknown>),
@@ -41,67 +43,79 @@ export function EducationSection() {
       sortItems={sortDateRangeSectionItems}
       renderView={(item) => {
         const institutionLabel = item.institution || 'Education entry';
-        const subtitle = [item.studyType, item.area].filter(Boolean).join(' — ');
+        const subtitle = [item.studyType, item.area].filter(Boolean).join(', ');
         return {
           title: <span>{linkedEntityLabel(institutionLabel, item.url) ?? institutionLabel}</span>,
           subtitle: subtitle || undefined,
-          meta: (
-            <div>
-              <div>{formatDateRange(item.startDate, item.endDate)}</div>
-              {item.score ? <div>Score: {item.score}</div> : null}
-            </div>
-          ),
-          body: highlightBody(item.courses, { title: 'Courses' }),
+          dates: formatDateRange(item.startDate, item.endDate),
+          meta: item.score ? `Score: ${item.score}` : undefined,
+          body: highlightBody(item.courses, { title: 'Courses', markdown: true }),
         };
       }}
       renderForm={(item, onChange, context) => (
         <>
-          <TextField
-            label="Institution"
-            value={item.institution}
-            onChange={(institution) => onChange({ ...item, institution })}
-          />
-          <TextField
-            label="Area"
-            description='e.g. "Computer Science".'
-            value={item.area}
-            onChange={(area) => onChange({ ...item, area })}
-          />
-          <TextField
-            label="Study type"
-            description='e.g. "Bachelor".'
-            value={item.studyType}
-            onChange={(studyType) => onChange({ ...item, studyType })}
-          />
-          <TextField
-            label="URL"
-            type="url"
-            value={item.url}
-            onChange={(url) => onChange({ ...item, url })}
-          />
-          <IsoDateField
-            label="Start date"
-            required
-            value={item.startDate}
-            error={context?.fieldErrors.startDate}
-            onChange={(startDate) => onChange({ ...item, startDate })}
-          />
-          <IsoDateField
-            label="End date"
-            value={item.endDate}
-            onChange={(endDate) => onChange({ ...item, endDate })}
-          />
-          <TextField
-            label="Score"
-            value={item.score}
-            onChange={(score) => onChange({ ...item, score })}
-          />
-          <StringListField
-            label="Courses"
-            description="Notable courses saved with this entry on Save."
-            values={item.courses ?? []}
-            onChange={(courses) => onChange({ ...item, courses })}
-          />
+          <FormGroup title="Program">
+            <TextField
+              label="Institution"
+              value={item.institution}
+              onChange={(institution) => onChange({ ...item, institution })}
+            />
+            <FieldRow>
+              <TextField
+                label="Study type"
+                placeholder="Bachelor"
+                value={item.studyType}
+                onChange={(studyType) => onChange({ ...item, studyType })}
+              />
+              <TextField
+                label="Area"
+                placeholder="Computer Science"
+                value={item.area}
+                onChange={(area) => onChange({ ...item, area })}
+              />
+              <TextField
+                label="Score"
+                placeholder="3.9 GPA"
+                value={item.score}
+                onChange={(score) => onChange({ ...item, score })}
+              />
+              <TextField
+                label="URL"
+                type="url"
+                placeholder="https://"
+                value={item.url}
+                onChange={(url) => onChange({ ...item, url })}
+              />
+            </FieldRow>
+          </FormGroup>
+          <FormGroup title="Dates">
+            <FieldRow>
+              <IsoDateField
+                label="Start date"
+                required
+                value={item.startDate}
+                error={context?.fieldErrors.startDate}
+                onChange={(startDate) => onChange({ ...item, startDate })}
+              />
+              <IsoDateField
+                label="End date"
+                value={item.endDate}
+                onChange={(endDate) => onChange({ ...item, endDate })}
+              />
+            </FieldRow>
+            <p className="text-muted-foreground -mt-2 text-xs">
+              Leave the end date empty if you are still enrolled.
+            </p>
+          </FormGroup>
+          <FormGroup title="Courses">
+            <BulletListField
+              label="Courses"
+              itemLabel="Course"
+              description="Notable courses, one per line."
+              values={item.courses ?? []}
+              onChange={(courses) => onChange({ ...item, courses })}
+            />
+          </FormGroup>
         </>
       )}
     />

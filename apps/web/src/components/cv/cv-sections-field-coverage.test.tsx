@@ -252,7 +252,7 @@ describe('CvSections field coverage', () => {
       expectLinkedTitle('Acme Corp', 'https://acme.example.com');
       expect(screen.getByText('Remote')).toBeInTheDocument();
       expect(screen.queryByText('https://acme.example.com')).not.toBeInTheDocument();
-      expect(screen.getByText(/2020-01/)).toBeInTheDocument();
+      expect(screen.getByText(/Jan 2020/)).toBeInTheDocument();
       expect(screen.getByText('Led platform team.')).toBeInTheDocument();
       expect(screen.getByText('Full-stack platform engineering.')).toBeInTheDocument();
       expect(screen.getAllByText('Scaled to 10M users').length).toBeGreaterThanOrEqual(1);
@@ -308,7 +308,7 @@ describe('CvSections field coverage', () => {
       renderSection('education', resume);
 
       expectLinkedTitle('MIT', 'https://mit.edu');
-      expect(screen.getByText(/Bachelor — Computer Science/)).toBeInTheDocument();
+      expect(screen.getByText(/Bachelor, Computer Science/)).toBeInTheDocument();
       expect(screen.getByText('Score: 3.9')).toBeInTheDocument();
       expect(screen.queryByText('https://mit.edu')).not.toBeInTheDocument();
     });
@@ -393,7 +393,7 @@ describe('CvSections field coverage', () => {
       renderSection('awards', resume);
 
       expect(screen.getByText('Best Paper')).toBeInTheDocument();
-      expect(screen.getByText('2023-06')).toBeInTheDocument();
+      expect(screen.getByText('Jun 2023')).toBeInTheDocument();
       expect(screen.getByText('IEEE')).toBeInTheDocument();
       expect(screen.getByText('Award for best conference paper.')).toBeInTheDocument();
     });

@@ -2,7 +2,7 @@
 
 import type { ResumeInterest } from '@resubuild/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { TextField } from '@/components/cv/form-fields';
+import { FormGroup, TextField } from '@/components/cv/form-fields';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { TagsInput } from '@/components/cv/tags-input';
 import { TagsList } from '@/components/cv/tags-list';
@@ -26,6 +26,7 @@ export function InterestsSection() {
       onItemsChange={(interests) => setResume((prev) => ({ ...prev, interests }))}
       entityLabel="Interest"
       addLabel="Add interest"
+      emptyText="Topics outside work that say something about you."
       createEmpty={() => ({ keywords: [] })}
       toPayload={(item) => item as Record<string, unknown>}
       api={cvInterestApi}
@@ -34,7 +35,7 @@ export function InterestsSection() {
         body: <TagsList label="Keywords" values={item.keywords ?? []} />,
       })}
       renderForm={(item, onChange) => (
-        <>
+        <FormGroup title="Interest">
           <TextField
             label="Name"
             value={item.name}
@@ -42,10 +43,11 @@ export function InterestsSection() {
           />
           <TagsInput
             label="Keywords"
+            description="Enter or a comma adds each keyword."
             values={item.keywords ?? []}
             onChange={(keywords) => onChange({ ...item, keywords })}
           />
-        </>
+        </FormGroup>
       )}
     />
   );

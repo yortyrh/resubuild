@@ -2,7 +2,7 @@
 
 import type { ResumeReference } from '@resubuild/types';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
-import { TextField } from '@/components/cv/form-fields';
+import { FormGroup, TextField } from '@/components/cv/form-fields';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
@@ -25,6 +25,7 @@ export function ReferencesSection() {
       onItemsChange={(references) => setResume((prev) => ({ ...prev, references }))}
       entityLabel="Reference"
       addLabel="Add reference"
+      emptyText="People who can vouch for your work."
       createEmpty={() => ({})}
       toPayload={(item) => item as Record<string, unknown>}
       api={cvReferenceApi}
@@ -33,22 +34,21 @@ export function ReferencesSection() {
         body: <MarkdownView value={item.reference} variant="block" />,
       })}
       renderForm={(item, onChange) => (
-        <>
+        <FormGroup title="Reference">
           <TextField
             label="Name"
-            description="Reference full name."
+            description="Full name, and title or company if it helps."
             value={item.name}
             onChange={(name) => onChange({ ...item, name })}
           />
           <TextField
             label="Reference"
-            markdown="block"
-            multiline
-            description="Recommendation text."
+            description="What they say about you, in their words."
+            markdown
             value={item.reference}
             onChange={(reference) => onChange({ ...item, reference })}
           />
-        </>
+        </FormGroup>
       )}
     />
   );

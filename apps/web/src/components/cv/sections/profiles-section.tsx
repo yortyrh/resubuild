@@ -5,7 +5,7 @@ import type { ResumeProfile } from '@resubuild/types';
 import { SocialNetworkTitle } from '@/components/cv/contact-icons';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import { ExternalLink } from '@/components/cv/external-link';
-import { TextField } from '@/components/cv/form-fields';
+import { FieldRow, FormGroup, TextField } from '@/components/cv/form-fields';
 import { SocialNetworkCombobox } from '@/components/cv/social-network-combobox';
 import { SortableManagedArraySection } from '@/components/cv/sortable-managed-array-section';
 import { useSectionMount } from '@/components/cv/use-section-mount';
@@ -36,6 +36,7 @@ export function ProfilesSection() {
       }
       entityLabel="Profile"
       addLabel="Add social profile"
+      emptyText="LinkedIn, GitHub and other public profiles."
       createEmpty={() => ({})}
       toPayload={(item) => item as Record<string, unknown>}
       api={profileApi}
@@ -43,7 +44,9 @@ export function ProfilesSection() {
         title: (
           <SocialNetworkTitle network={item.network}>
             {item.network || 'Network'}
-            {item.username ? ` — ${item.username}` : ''}
+            {item.username ? (
+              <span className="text-muted-foreground font-normal"> {item.username}</span>
+            ) : null}
           </SocialNetworkTitle>
         ),
         body: (() => {
@@ -58,23 +61,26 @@ export function ProfilesSection() {
         })(),
       })}
       renderForm={(item, onChange) => (
-        <>
-          <SocialNetworkCombobox
-            value={item.network}
-            onChange={(network) => onChange({ ...item, network })}
-          />
-          <TextField
-            label="Username"
-            value={item.username}
-            onChange={(username) => onChange({ ...item, username })}
-          />
+        <FormGroup title="Profile">
+          <FieldRow>
+            <SocialNetworkCombobox
+              value={item.network}
+              onChange={(network) => onChange({ ...item, network })}
+            />
+            <TextField
+              label="Username"
+              value={item.username}
+              onChange={(username) => onChange({ ...item, username })}
+            />
+          </FieldRow>
           <TextField
             label="URL"
             type="url"
+            placeholder="https://"
             value={item.url}
             onChange={(url) => onChange({ ...item, url })}
           />
-        </>
+        </FormGroup>
       )}
     />
   );

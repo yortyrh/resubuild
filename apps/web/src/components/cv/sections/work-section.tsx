@@ -3,6 +3,7 @@
 import type { ResumeWork } from '@resubuild/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
+import { BulletListField } from '@/components/cv/bullet-list-field';
 import { useCvEditor } from '@/components/cv/cv-editor-provider';
 import {
   formatDateRange,
@@ -11,7 +12,7 @@ import {
   trimStringList,
   validateRequiredStartDate,
 } from '@/components/cv/cv-section-helpers';
-import { StringListField, TextField } from '@/components/cv/form-fields';
+import { FieldRow, FormGroup, TextField } from '@/components/cv/form-fields';
 import { IsoDateField } from '@/components/cv/iso-date-field';
 import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
@@ -51,6 +52,7 @@ export function WorkSection() {
       onItemsChange={(work) => setResume((prev) => ({ ...prev, work }))}
       entityLabel="Work entry"
       addLabel="Add work experience"
+      emptyText="Jobs you held, newest first. Each one needs at least a start date."
       createEmpty={() => ({ highlights: [] })}
       toPayload={(item) => ({
         ...(item as Record<string, unknown>),
@@ -78,12 +80,8 @@ export function WorkSection() {
         return {
           title,
           subtitle,
-          meta: (
-            <div>
-              <div>{formatDateRange(item.startDate, item.endDate)}</div>
-              {item.location ? <div>{item.location}</div> : null}
-            </div>
-          ),
+          dates: formatDateRange(item.startDate, item.endDate),
+          meta: item.location || undefined,
           body: (
             <>
               <div className="space-y-3">
@@ -97,61 +95,75 @@ export function WorkSection() {
       }}
       renderForm={(item, onChange, context) => (
         <>
-          <TextField
-            label="Company"
-            value={item.name}
-            onChange={(name) => onChange({ ...item, name })}
-          />
-          <TextField
-            label="Position"
-            value={item.position}
-            onChange={(position) => onChange({ ...item, position })}
-          />
-          <TextField
-            label="Location"
-            value={item.location}
-            onChange={(location) => onChange({ ...item, location })}
-          />
-          <TextField
-            label="URL"
-            type="url"
-            value={item.url}
-            onChange={(url) => onChange({ ...item, url })}
-          />
-          <IsoDateField
-            label="Start date"
-            required
-            value={item.startDate}
-            error={context?.fieldErrors.startDate}
-            onChange={(startDate) => onChange({ ...item, startDate })}
-          />
-          <IsoDateField
-            label="End date"
-            value={item.endDate}
-            onChange={(endDate) => onChange({ ...item, endDate })}
-          />
-          <TextField
-            label="Summary"
-            description="2–3 sentence elevator pitch for this role."
-            markdown="block"
-            multiline
-            value={item.summary}
-            onChange={(summary) => onChange({ ...item, summary })}
-          />
-          <TextField
-            label="Description"
-            markdown="block"
-            multiline
-            value={item.description}
-            onChange={(description) => onChange({ ...item, description })}
-          />
-          <StringListField
-            label="Highlights"
-            description="Quantifiable achievement bullets saved with this entry on Save."
-            markdown
-            values={item.highlights ?? []}
-            onChange={(highlights) => onChange({ ...item, highlights })}
-          />
+          <FormGroup title="Role">
+            <FieldRow>
+              <TextField
+                label="Position"
+                value={item.position}
+                onChange={(position) => onChange({ ...item, position })}
+              />
+              <TextField
+                label="Company"
+                value={item.name}
+                onChange={(name) => onChange({ ...item, name })}
+              />
+              <TextField
+                label="Location"
+                placeholder="City, country or Remote"
+                value={item.location}
+                onChange={(location) => onChange({ ...item, location })}
+              />
+              <TextField
+                label="URL"
+                type="url"
+                placeholder="https://"
+                value={item.url}
+                onChange={(url) => onChange({ ...item, url })}
+              />
+            </FieldRow>
+          </FormGroup>
+          <FormGroup title="Dates">
+            <FieldRow>
+              <IsoDateField
+                label="Start date"
+                required
+                value={item.startDate}
+                error={context?.fieldErrors.startDate}
+                onChange={(startDate) => onChange({ ...item, startDate })}
+              />
+              <IsoDateField
+                label="End date"
+                value={item.endDate}
+                onChange={(endDate) => onChange({ ...item, endDate })}
+              />
+            </FieldRow>
+            <p className="text-muted-foreground -mt-2 text-xs">
+              Leave the end date empty if you still work here.
+            </p>
+          </FormGroup>
+          <FormGroup title="Details">
+            <TextField
+              label="Summary"
+              description="Two or three sentences about the role."
+              markdown
+              value={item.summary}
+              onChange={(summary) => onChange({ ...item, summary })}
+            />
+            <TextField
+              label="Description"
+              description="Context about the company or team. The PDF template does not print it."
+              markdown
+              value={item.description}
+              onChange={(description) => onChange({ ...item, description })}
+            />
+            <BulletListField
+              label="Highlights"
+              itemLabel="Highlight"
+              description="One achievement per line, with numbers where you have them. Enter starts a new one."
+              values={item.highlights ?? []}
+              onChange={(highlights) => onChange({ ...item, highlights })}
+            />
+          </FormGroup>
         </>
       )}
     />
