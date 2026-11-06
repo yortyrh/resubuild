@@ -9,6 +9,7 @@ CV content follows the [JSON Resume](https://jsonresume.org/schema) schema: basi
 A user can create, list, open, and delete CVs. The library lists only the user's own regular CVs; copies created for job applications are hidden from it (see REQ-APP-004).
 
 - Deleting a CV from the library asks for confirmation in an in-app dialog that names the CV and cannot be dismissed while the delete is running.
+- Each library card shows a static skeleton thumbnail of the CV's template (unknown templates fall back to Classic). The thumbnail contains no text: the header, section headings and entry lines are all placeholder bars. Section headings follow the template's heading style (Classic: centered with a rule below; Left aligned: left with a rule below; Modern and Tabular: left without a rule). Sections vary in length so they do not read as one repeated block, and every section shown fits inside the page without being cut off at the bottom.
 
 ### REQ-CV-003 Title derived from basics
 

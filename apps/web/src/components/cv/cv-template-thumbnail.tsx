@@ -33,37 +33,102 @@ export function CvTemplateThumbnail({
       )}
       data-template={variant}
     >
-      <div className="absolute inset-0 flex flex-col gap-[5cqw] p-[8cqw] text-[4.2cqw] leading-tight">
+      <div className="absolute inset-0 flex flex-col gap-[6cqw] p-[8cqw]">
         <ThumbnailHeader variant={variant} />
-        <div className="mt-[3.3cqw] space-y-[4cqw]">
-          {Array.from({ length: 5 }, (_, sectionIndex) => (
-            <div key={sectionIndex} className="space-y-[1.7cqw]">
-              <span
-                className={cn(
-                  'block font-semibold tracking-wide',
-                  variant === 'classic' || variant === 'left' ? 'uppercase' : 'normal-case',
-                  variant === 'classic' &&
-                    'border-page-ink-muted/40 border-b pb-[1.7cqw] text-center',
-                  variant === 'left' && 'text-left',
-                  variant === 'modern' && 'text-left font-light',
-                  variant === 'tabular' && 'text-left',
-                )}
-              >
-                Section
-              </span>
-              <div className="space-y-[1.7cqw]">
-                {Array.from({ length: 3 }, (_, lineIndex) => (
-                  <div
-                    key={lineIndex}
-                    className="bg-page-ink-muted/30 h-[2.2cqw] rounded-sm"
-                    style={{ width: `${94 - ((lineIndex * 17 + sectionIndex * 9) % 30)}%` }}
-                  />
-                ))}
-              </div>
-            </div>
+        <div className={cn(variant === 'modern' ? 'space-y-[5.5cqw]' : 'space-y-[5cqw]')}>
+          {SECTIONS.map((section, sectionIndex) => (
+            <ThumbnailSection key={sectionIndex} variant={variant} section={section} />
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+interface SkeletonSection {
+  /** Heading bar width, in % of the available width. */
+  headingWidth: number;
+  /** Entry line widths, in %. The first line is drawn darker, like an entry title. */
+  lines: number[];
+}
+
+/**
+ * Fixed skeleton content. Sections deliberately differ in length so the page
+ * reads like a real CV, and the total height (about 80cqw for the sections
+ * plus 23cqw for the header) stays inside the 113cqw of usable page height,
+ * so the last section is never cut off.
+ */
+const SECTIONS: SkeletonSection[] = [
+  { headingWidth: 30, lines: [62, 94, 86] },
+  { headingWidth: 36, lines: [56, 92, 88, 72] },
+  { headingWidth: 24, lines: [48, 80] },
+  { headingWidth: 28, lines: [58, 90, 66] },
+];
+
+const HEADING_STYLE: Record<CvThumbnailTemplateId, { align: 'center' | 'left'; rule: boolean }> = {
+  classic: { align: 'center', rule: true },
+  left: { align: 'left', rule: true },
+  modern: { align: 'left', rule: false },
+  tabular: { align: 'left', rule: false },
+};
+
+function ThumbnailSection({
+  variant,
+  section,
+}: {
+  variant: CvThumbnailTemplateId;
+  section: SkeletonSection;
+}) {
+  const { align, rule } = HEADING_STYLE[variant];
+  const isTabular = variant === 'tabular';
+
+  const heading = (
+    <div
+      data-thumbnail-heading=""
+      data-align={align}
+      data-rule={String(rule)}
+      className={cn(rule && 'border-page-ink-muted/40 border-b pb-[1.5cqw]', isTabular && 'w-1/4')}
+    >
+      <div
+        className={cn(
+          'rounded-sm',
+          variant === 'modern' ? 'bg-page-ink/35 h-[2.2cqw]' : 'bg-page-ink/60 h-[2.8cqw]',
+          align === 'center' && 'mx-auto',
+        )}
+        style={{ width: isTabular ? '80%' : `${section.headingWidth}%` }}
+      />
+    </div>
+  );
+
+  const lines = (
+    <div className={cn('space-y-[1.6cqw]', isTabular && 'flex-1')}>
+      {section.lines.map((width, lineIndex) => (
+        <div
+          key={lineIndex}
+          data-thumbnail-line=""
+          className={cn(
+            'h-[2.2cqw] rounded-sm',
+            lineIndex === 0 ? 'bg-page-ink-muted/45' : 'bg-page-ink-muted/25',
+          )}
+          style={{ width: `${width}%` }}
+        />
+      ))}
+    </div>
+  );
+
+  if (isTabular) {
+    return (
+      <div data-thumbnail-section="" className="flex items-start gap-[4cqw]">
+        {heading}
+        {lines}
+      </div>
+    );
+  }
+
+  return (
+    <div data-thumbnail-section="" className="space-y-[2cqw]">
+      {heading}
+      {lines}
     </div>
   );
 }
