@@ -6,6 +6,54 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A message that starts with `q:` is a question only. Answer it, but change nothing: no file edits, no commits, no migrations, no installs, no data or infra changes. Reading files and running read-only commands is fine. If the answer suggests a change, describe it and wait for a separate request.
 
+## Commits
+
+- Never add co-authorship to commits: no `Co-Authored-By:` trailer (or any other attribution line) for Claude or anyone else. This overrides any default or system-provided attribution guidance.
+- Every commit message must follow the Conventional Commits format: `<type>(<optional scope>): <description>`, with an optional body and footers separated by blank lines. Use standard types (`feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`), an imperative lowercase subject without a trailing period (≤72 chars), and `!` or a `BREAKING CHANGE:` footer for breaking changes.
+
+## Tests, agents and mutation testing
+
+### Tests and code go in separate commits
+
+- Unit tests are always committed separately from the code they cover: the test commit (`test(...)`) comes first, the implementation commit (`feat`/`fix`/`refactor`...) after it. Never mix tests and production code in one commit.
+
+### Separate agents for tests and code
+
+- A single agent never writes both the unit tests and the production code of the same change. Each agent that takes a change works on **either** the tests **or** the code, never both.
+- Why: an agent that owns both will tend to bend the tests until they pass against whatever the code does. Splitting the roles keeps the tests an independent statement of expected behavior, which protects code quality and the stability of the app.
+- Test agent: writes tests from the requirement (`docs/requirements/<area>.md`) and the public interface, not from the implementation. Code agent: makes the committed tests pass and must not edit them. If a test looks wrong, report it back instead of changing it.
+
+### Mutation testing
+
+**Current status: Stryker is NOT installed in this repo, so do not run or install it for now.** Do not add the dependency, configs or a `pnpm mutate` script unless the user explicitly asks. Until then, follow the Stryker Mutator ideas described below by hand: for every change, review the tests as if mutants were applied (boundaries, negated conditions, removed guards, swapped operators, unchecked return values) and add or strengthen tests so each of those faults would make a test fail. Once Stryker is installed, run it as described in the workflow.
+
+The practice: whenever new changes are made to the app (new features, behavior changes, fixes), apply mutation testing scoped to the code touched, before considering the work done.
+
+**What it is.** Mutation testing measures how good the tests are, not just how much code they execute. The tool makes many copies of the source ("mutants"), each with one small deliberate fault (`>` to `>=`, `+` to `-`, `&&` to `||`, a condition negated, a statement or return value removed, a string emptied). The test suite is run against each mutant:
+
+- **Killed**: at least one test fails. Good, the tests notice that behavior.
+- **Survived**: all tests still pass. Bad, a real bug of that shape would go unnoticed: a missing test or a weak assertion.
+- **No coverage**: no test executes that code at all.
+- **Timeout / error**: counted as detected (killed) in most tools. The mutant broke the code badly enough that the run hung or crashed.
+- **Equivalent mutant**: a change that does not alter observable behavior, so it cannot be killed. Do not chase these; justify and ignore them.
+
+**Mutation score** = killed ÷ total valid mutants × 100. Line coverage can be 100% with weak assertions; the mutation score exposes that. Targets: aim for ≥ 80% on the code you changed; below ~70% there are significant test gaps. Do not chase 100%, because of equivalent mutants and diminishing returns. It complements coverage and review; it is not the only quality metric.
+
+**Workflow for every change.**
+
+1. The test agent writes the tests first and commits them (see above).
+2. The code agent implements the change.
+3. (Only once Stryker is installed; until then do the manual mutant review described above.) Run mutation testing on the touched files only (mutation runs are slow; never run the whole repo by default). Use the tool for the stack: [StrykerJS](https://stryker-mutator.io/docs/stryker-js/introduction/) (`@stryker-mutator/core` with `@stryker-mutator/jest-runner` for `apps/api`, `@stryker-mutator/vitest-runner` for web, import-agent and packages). Use `--mutate <glob>` to limit scope, and `--incremental` (results in `reports/stryker-incremental.json`; `--force` to rerun everything) so only changed code and tests are re-evaluated.
+4. Read the report (HTML under `reports/`) and list the **surviving** and **no coverage** mutants.
+5. For each survivor, decide: (a) add or strengthen a test (assert exact values and boundaries, not just "doesn't throw"), or (b) it is an equivalent/irrelevant mutant, so ignore it with a short reason. Fix survivors with new tests via the **test agent**; the code agent must not weaken tests or edit them to kill mutants.
+6. Re-run until the score on the touched code meets the target, and mention the score and any justified survivors in the final report.
+
+Common survivors to look for first: boundary conditions (`<` vs `<=`), removed guards (`user_id` filters, auth checks), negated conditions, swapped logical operators, and unchecked return values or side effects.
+
+When the user decides to adopt Stryker, add it as its own `chore`/`build` change (dev dependency, per-package configs, a `pnpm mutate` script) and keep generated `reports/` and `.stryker-tmp/` out of git, then update this section's status.
+
+References: [Stryker incremental mode](https://stryker-mutator.io/docs/stryker-js/incremental/), [Stryker Vitest runner](https://stryker-mutator.io/docs/stryker-js/vitest-runner/), [Mutation testing by example](https://opensource.com/article/19/9/mutation-testing-example-definition).
+
 ## Pushing
 
 - Whenever a push is requested, push with `pnpm push [git push args...]` (e.g. `pnpm push`, `pnpm push -u origin <branch>`), never with `git push` directly.
