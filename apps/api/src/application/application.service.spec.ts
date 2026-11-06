@@ -2524,6 +2524,25 @@ describe('ApplicationService', () => {
       );
     });
 
+    it('stores a null file name when the uploaded file has an empty name', async () => {
+      mockSuccessfulPrepareWorkflow();
+
+      await service.prepare(user, {
+        file: {
+          mimetype: 'application/pdf',
+          originalname: '',
+          size: 1024,
+          buffer: Buffer.from('pdf-content'),
+        } as Express.Multer.File,
+      });
+
+      expect(repository.create).toHaveBeenCalledTimes(1);
+      const [, row] = repository.create.mock.calls[0] as [unknown, Record<string, unknown>];
+      expect(row.job_source_type).toBe('pdf');
+      expect(row.job_source_file_name).toBeNull();
+      expect(row.job_source_url).toBeNull();
+    });
+
     it('stores neither URL nor file name for a text intake', async () => {
       mockSuccessfulPrepareWorkflow();
 
@@ -2751,6 +2770,65 @@ describe('ApplicationService', () => {
       expect(input.jobSummary.title).toBe('Engineer');
       expect(input.jobSummary.company).toBe('Acme');
     });
+
+    it('passes an undefined language, not null, when the stored summary has a null language', async () => {
+      setupStagedUpdateMocks(
+        readyUrlRow({
+          job_summary: { requirements: ['SQL'], keywords: ['Go'], language: null },
+        }),
+      );
+      mockSuccessfulUpdateWorkflow();
+
+      await service.updateApplication(user, 'app-1', { message: 'Emphasize leadership' });
+      await flushBackgroundJobs();
+
+      expect(runUpdateApplicationWorkflow).toHaveBeenCalledTimes(1);
+      const [input] = jest.mocked(runUpdateApplicationWorkflow).mock.calls[0];
+      expect(input.jobSummary.language).toBeUndefined();
+      expect(input.jobSummary.requirements).toEqual(['SQL']);
+      expect(input.jobSummary.keywords).toEqual(['Go']);
+    });
+
+    it('falls back to empty lists when the stored requirements and keywords are not arrays', async () => {
+      setupStagedUpdateMocks(
+        readyUrlRow({
+          job_summary: { requirements: 'SQL, Go', keywords: { 0: 'NestJS' }, language: 'en' },
+        }),
+      );
+      mockSuccessfulUpdateWorkflow();
+
+      await service.updateApplication(user, 'app-1', { message: 'Emphasize leadership' });
+      await flushBackgroundJobs();
+
+      expect(runUpdateApplicationWorkflow).toHaveBeenCalledTimes(1);
+      const [input] = jest.mocked(runUpdateApplicationWorkflow).mock.calls[0];
+      expect(input.jobSummary.requirements).toEqual([]);
+      expect(input.jobSummary.keywords).toEqual([]);
+      expect(input.jobSummary.language).toBe('en');
+    });
+
+    it.each([
+      ['a string', 'not a summary'],
+      ['a number', 42],
+      ['an array', ['SQL', 'Go']],
+    ])(
+      'falls back to empty lists and no language when the stored job summary is %s',
+      async (_label, jobSummary) => {
+        setupStagedUpdateMocks(readyUrlRow({ job_summary: jobSummary }));
+        mockSuccessfulUpdateWorkflow();
+
+        await service.updateApplication(user, 'app-1', { message: 'Emphasize leadership' });
+        await flushBackgroundJobs();
+
+        expect(runUpdateApplicationWorkflow).toHaveBeenCalledTimes(1);
+        const [input] = jest.mocked(runUpdateApplicationWorkflow).mock.calls[0];
+        expect(input.jobSummary.requirements).toEqual([]);
+        expect(input.jobSummary.keywords).toEqual([]);
+        expect(input.jobSummary.language).toBeUndefined();
+        expect(input.jobSummary.title).toBe('Engineer');
+        expect(input.jobSummary.company).toBe('Acme');
+      },
+    );
 
     it('exposes the job posting trace in the application detail', async () => {
       repository.findOne.mockResolvedValue({
