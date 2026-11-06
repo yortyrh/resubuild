@@ -1,0 +1,25 @@
+{
+  "name": "@resubuild/hero-demo",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Remotion source of the animated demo shown in the landing hero",
+  "scripts": {
+    "studio": "remotion studio --port=3100",
+    "render:gif": "remotion render HeroDemo ../web/public/hero-demo.gif --codec=gif --every-nth-frame=2 --scale=1.5",
+    "render:poster": "remotion still HeroDemo ../web/public/hero-demo-poster.png --frame=420 --scale=1.5",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.541",
+    "@remotion/google-fonts": "4.0.541",
+    "@remotion/transitions": "4.0.541",
+    "lucide-react": "^1.69.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "remotion": "4.0.541"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.16",
+    "typescript": "^5.9.3"
+  }
+}

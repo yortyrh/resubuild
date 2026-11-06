@@ -21,15 +21,16 @@ Important project rule: for any action that an installed tool can do, run the to
 
 Known commands in this repo:
 
-| Task                                                  | Command                                                                                           |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| NestJS module, controller, service, etc. (`apps/api`) | `pnpm --filter @resubuild/api exec nest g <schematic> <name> --no-spec`                           |
-| DB migration after editing `packages/db/src/schema`   | `pnpm db:generate`                                                                                |
-| Icons                                                 | `pnpm icons:generate`                                                                             |
-| Lint / format fixes                                   | `pnpm lint:fix`, `pnpm format`                                                                    |
-| Local / prod env files                                | `pnpm setup:env`, `pnpm setup:env:prod`                                                           |
-| Dependencies                                          | `pnpm add` / `pnpm remove`, never by editing `package.json` and the lockfile by hand              |
-| UI components (`apps/web`)                            | `shadcn` CLI, only once the web app is initialized with it (`components.json` does not exist yet) |
+| Task                                                    | Command                                                                                           |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| NestJS module, controller, service, etc. (`apps/api`)   | `pnpm --filter @resubuild/api exec nest g <schematic> <name> --no-spec`                           |
+| DB migration after editing `packages/db/src/schema`     | `pnpm db:generate`                                                                                |
+| Icons                                                   | `pnpm icons:generate`                                                                             |
+| Landing hero demo GIF / still poster (`apps/hero-demo`) | `pnpm --filter @resubuild/hero-demo render:gif`, `render:poster`; preview with `... studio`       |
+| Lint / format fixes                                     | `pnpm lint:fix`, `pnpm format`                                                                    |
+| Local / prod env files                                  | `pnpm setup:env`, `pnpm setup:env:prod`                                                           |
+| Dependencies                                            | `pnpm add` / `pnpm remove`, never by editing `package.json` and the lockfile by hand              |
+| UI components (`apps/web`)                              | `shadcn` CLI, only once the web app is initialized with it (`components.json` does not exist yet) |
 
 When a new generator or script is added to the repo, add it to this table.
 
@@ -87,6 +88,7 @@ Resubuild: JSON Resume–based CV builder with AI import (PDF/DOCX/image/URL), M
 - `apps/web` — Next.js App Router UI. Route groups `(auth)`, `(marketing)`, `auth/` (callbacks), `dashboard/{cv,applications,templates,settings}`, `features`. Bearer session token lives in `localStorage` (`src/lib/auth-session.ts`); Better Auth endpoints go through `src/lib/auth/client.ts`, everything else through `src/lib/api.ts`, both to `NEXT_PUBLIC_API_URL`. Server-state hooks in `src/lib/queries`.
 - `apps/api` — NestJS 11 REST API (port 3001). Feature modules under `src/`: `auth` (Better Auth at `/api/auth/*`, `SessionAuthGuard`, OAuth handoff), `database` (Drizzle pool, `DbScope`), `storage` (S3 `ObjectStorageService`), `mail` (SMTP `MailService`), `cv` (CRUD, items, clone, template presentation), `import` (async import jobs), `import-llm-config` / `ai-agent` (per-user LLM settings), `application` (job-application prep), `cv-export` / `export-storage` (Puppeteer PDF), `media`, `mcp` (MCP server via `@rekog/mcp-nest`, per-user API key), `validation` (AJV).
 - `apps/import-agent` — Mastra workflow for resume import; consumed by `apps/api`.
+- `apps/hero-demo` — Remotion project that draws the animated demo in the landing hero (a recreation of the app, not a recording). Its output (`apps/web/public/hero-demo.gif` and `hero-demo-poster.png`) is committed; re-render after UI or copy changes. Preview with `pnpm --filter @resubuild/hero-demo studio` (port 3100; there is deliberately no `dev` or `build` script, so `pnpm dev` and `pnpm build` skip it).
 - `packages/db` (Drizzle schema, SQL migrations in `packages/db/migrations`, PGlite test helper `@resubuild/db/testing`), `email-templates` (React Email), `schemas` (JSON Resume schema), `types` (shared TS types), `resume-template` (HTML renderer shared by web preview and API PDF export), `import-models` (pinned Mastra provider/model catalog).
 - Backing services are plain Postgres (`DATABASE_URL`), S3-compatible storage (`S3_*`) and SMTP (`SMTP_*`). Local dev runs them from `docker-compose.dev.yml`.
 
