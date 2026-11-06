@@ -18,11 +18,11 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { sanitizeResumeItemPayload } from '@resubuild/types';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   type ButtonHTMLAttributes,
   type ReactNode,
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -36,6 +36,7 @@ import {
   ResumeItemRow,
   SectionCreateForm,
 } from '@/components/cv/cv-item-ui';
+import { Button } from '@/components/ui/button';
 import {
   type CvItemMutationResponse,
   type ReorderableCvSection,
@@ -45,17 +46,19 @@ import {
   getItemId,
   getOrderedItemIds,
   idsOrderEqual,
-  mergeItemById,
   moveIdDown,
   moveIdUp,
   orderItemsByIds,
-  removeItemById,
   type WithItemId,
 } from '@/lib/cv-section-order';
-import { sectionItemsNeedHydration } from '@/lib/cv-section-refetch';
-import { useSectionItemMutations } from '@/lib/queries/cv-mutations';
+import {
+  removeSectionItem,
+  useSectionItemMutations,
+  writeSectionItem,
+  writeSectionList,
+} from '@/lib/queries/cv-mutations';
 import type { CvArraySectionKey } from '@/lib/queries/cv-queries';
-import { useCvSection } from '@/lib/queries/cv-queries';
+import { useCvSectionItem, useCvSectionList } from '@/lib/queries/cv-queries';
 
 interface SectionReorderConfig {
   section: ReorderableCvSection;
@@ -99,6 +102,25 @@ function SortableItemShell({
   );
 }
 
+/**
+ * One card's data: its own entry key, falling back to the list entry (also used
+ * for rows without an id, which have no entry key).
+ */
+function SectionEntry<T extends WithItemId>({
+  cvId,
+  sectionKey,
+  entry,
+  children,
+}: {
+  cvId: string;
+  sectionKey: CvArraySectionKey;
+  entry: T;
+  children: (item: T) => ReactNode;
+}) {
+  const { data } = useCvSectionItem<T>(cvId, sectionKey, entry.id ?? '');
+  return <>{children(data ?? entry)}</>;
+}
+
 interface ArraySectionApi {
   create: (cvId: string, item: Record<string, unknown>) => Promise<CvItemMutationResponse>;
   update: (
@@ -112,8 +134,6 @@ interface ArraySectionApi {
 export interface ManagedArraySectionProps<T extends WithItemId> {
   cvId: string;
   sectionKey: CvArraySectionKey;
-  items: T[];
-  onItemsChange: (items: T[]) => void;
   entityLabel: string;
   addLabel: string;
   /** One line shown when the section has no entries, saying what belongs here. */
@@ -144,8 +164,6 @@ export interface ManagedArraySectionProps<T extends WithItemId> {
 export function ManagedArraySection<T extends WithItemId>({
   cvId,
   sectionKey,
-  items,
-  onItemsChange,
   entityLabel,
   addLabel,
   emptyText,
@@ -160,16 +178,12 @@ export function ManagedArraySection<T extends WithItemId>({
   sortItems,
   crossSectionMove,
 }: ManagedArraySectionProps<T>) {
-  const needsHydration = sectionItemsNeedHydration(items);
-  const {
-    data: sectionData,
-    isLoading: sectionLoading,
-    error: sectionQueryError,
-  } = useCvSection<T>(cvId, sectionKey, { enabled: needsHydration });
-  const { saving, error, setError, run, refetchSectionItems } = useSectionItemMutations(
-    cvId,
-    sectionKey,
-  );
+  const queryClient = useQueryClient();
+  // The server list is the only source of entries: `undefined` until it has
+  // loaded, so an empty section is never assumed.
+  const listQuery = useCvSectionList<T>(cvId, sectionKey);
+  const listItems = listQuery.data;
+  const { saving, error, setError, run } = useSectionItemMutations(cvId, sectionKey);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -185,44 +199,12 @@ export function ManagedArraySection<T extends WithItemId>({
   const [moving, setMoving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const reorderSeqRef = useRef(0);
-  const onItemsChangeRef = useRef(onItemsChange);
-  const setErrorRef = useRef(setError);
-  const hydratedForCvIdRef = useRef<string | null>(null);
 
-  onItemsChangeRef.current = onItemsChange;
-  setErrorRef.current = setError;
-
-  useEffect(() => {
-    if (hydratedForCvIdRef.current !== null && hydratedForCvIdRef.current !== cvId) {
-      hydratedForCvIdRef.current = null;
-    }
-  }, [cvId]);
-
-  useEffect(() => {
-    if (!needsHydration || !sectionData) {
-      return;
-    }
-    if (hydratedForCvIdRef.current === cvId) {
-      return;
-    }
-
-    hydratedForCvIdRef.current = cvId;
-    onItemsChangeRef.current(sectionData);
-  }, [cvId, needsHydration, sectionData]);
-
-  useEffect(() => {
-    if (sectionQueryError) {
-      setErrorRef.current(
-        sectionQueryError instanceof Error
-          ? sectionQueryError.message
-          : 'Failed to refresh section entries',
-      );
-    }
-  }, [sectionQueryError]);
-
-  const applySortedItems = useCallback(
-    (nextItems: T[]) => (sortItems ? sortItems(nextItems) : nextItems),
-    [sortItems],
+  // While an entry is edited the list does not change (the draft is local), so
+  // it only re-sorts once the save writes the cache.
+  const items = useMemo(
+    () => (listItems ? (sortItems ? sortItems(listItems) : listItems) : []),
+    [listItems, sortItems],
   );
 
   // The draft stays local while typing: pushing it into the whole CV on each
@@ -285,8 +267,12 @@ export function ManagedArraySection<T extends WithItemId>({
     await run(
       () => api.update(cvId, editingId, sanitizeResumeItemPayload(toPayload(draft))),
       (result) => {
-        const updated = (result.item ?? draft) as T;
-        onItemsChange(applySortedItems(mergeItemById(items, updated)));
+        if (!result.item) {
+          writeSectionItem(queryClient, cvId, sectionKey, {
+            ...(draft as Record<string, unknown>),
+            id: editingId,
+          });
+        }
         cancelEdit();
       },
       successMessages?.update ?? `${entityLabel} updated`,
@@ -320,8 +306,7 @@ export function ManagedArraySection<T extends WithItemId>({
     }
     await run(
       () => api.create(cvId, sanitizeResumeItemPayload(toPayload(createDraft))),
-      async () => {
-        onItemsChange(await refetchSectionItems<T>());
+      () => {
         cancelCreate();
       },
       successMessages?.create ?? `${entityLabel} added`,
@@ -337,7 +322,7 @@ export function ManagedArraySection<T extends WithItemId>({
     await run(
       () => api.delete(cvId, itemId),
       () => {
-        onItemsChange(removeItemById(items, itemId));
+        removeSectionItem(queryClient, cvId, sectionKey, itemId);
         setDeleteId(null);
         if (editingId === itemId) {
           cancelEdit();
@@ -373,11 +358,7 @@ export function ManagedArraySection<T extends WithItemId>({
   const actionsDisabled = saving || moving;
 
   const reorderEnabled =
-    reorder !== undefined &&
-    items.length >= 2 &&
-    editingId === null &&
-    !creating &&
-    !sectionItemsNeedHydration(items);
+    reorder !== undefined && items.length >= 2 && editingId === null && !creating;
 
   const persistReorder = useCallback(
     async (order: string[], snapshotItems: T[]) => {
@@ -390,8 +371,9 @@ export function ManagedArraySection<T extends WithItemId>({
         return;
       }
 
-      const optimisticItems = orderItemsByIds(snapshotItems, order);
-      onItemsChange(optimisticItems);
+      const writeList = (next: T[]) =>
+        writeSectionList(queryClient, cvId, sectionKey, next as Record<string, unknown>[]);
+      writeList(orderItemsByIds(snapshotItems, order));
       setError(null);
 
       const seq = ++reorderSeqRef.current;
@@ -410,19 +392,19 @@ export function ManagedArraySection<T extends WithItemId>({
         const serverItems = result.items as T[];
         const serverIds = getOrderedItemIds(serverItems, entityLabel);
         if (!idsOrderEqual(order, serverIds)) {
-          onItemsChange(serverItems);
+          writeList(serverItems);
         }
       } catch (err) {
         if (seq !== reorderSeqRef.current) {
           return;
         }
 
-        onItemsChange(snapshotItems);
+        writeList(snapshotItems);
         const message = err instanceof Error ? err.message : 'Reorder failed';
         setError(message);
       }
     },
-    [cvId, entityLabel, onItemsChange, reorder, setError],
+    [cvId, entityLabel, queryClient, reorder, sectionKey, setError],
   );
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -522,8 +504,20 @@ export function ManagedArraySection<T extends WithItemId>({
   // biome-ignore lint/correctness/useExhaustiveDependencies: handlers only close over the listed state and stable setters
   const viewRows = useMemo(
     () =>
-      new Map(items.map((item, index) => [item.id ?? `row-${index}`, renderViewRow(item, index)])),
+      new Map(
+        items.map((entry, index) => {
+          const rowKey = entry.id ?? `row-${index}`;
+          return [
+            rowKey,
+            <SectionEntry<T> key={rowKey} cvId={cvId} sectionKey={sectionKey} entry={entry}>
+              {(item) => renderViewRow(item, index)}
+            </SectionEntry>,
+          ] as const;
+        }),
+      ),
     [
+      cvId,
+      sectionKey,
       items,
       renderView,
       reorderEnabled,
@@ -535,7 +529,7 @@ export function ManagedArraySection<T extends WithItemId>({
     ],
   );
 
-  if (needsHydration && sectionLoading) {
+  if (listQuery.isPending) {
     return (
       <div
         className="space-y-4"
@@ -544,6 +538,32 @@ export function ManagedArraySection<T extends WithItemId>({
         aria-label={`Loading ${entityLabel.toLowerCase()} entries`}
       >
         <CvGenericSectionSkeleton />
+      </div>
+    );
+  }
+
+  if (!listItems) {
+    const message =
+      listQuery.error instanceof Error
+        ? listQuery.error.message
+        : `Could not load ${entityLabel.toLowerCase()} entries`;
+    return (
+      <div className="max-w-[52rem]">
+        <div
+          role="alert"
+          className="border-destructive/40 flex flex-wrap items-center gap-3 rounded-lg border border-dashed px-5 py-6"
+        >
+          <p className="text-destructive flex-1 text-sm">{message}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={listQuery.isFetching}
+            onClick={() => void listQuery.refetch()}
+          >
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }

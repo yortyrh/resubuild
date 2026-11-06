@@ -14,7 +14,7 @@ type InterestItem = SectionItem<ResumeInterest>;
 
 export function InterestsSection() {
   useSectionMount('interests');
-  const { cvId, resume, setResume } = useCvEditor();
+  const { cvId } = useCvEditor();
 
   return (
     <SortableManagedArraySection<InterestItem>
@@ -22,8 +22,6 @@ export function InterestsSection() {
       sectionKey="interests"
       reorderSection="interests"
       reorderSectionLabel="interest"
-      items={resume.interests ?? []}
-      onItemsChange={(interests) => setResume((prev) => ({ ...prev, interests }))}
       entityLabel="Interest"
       addLabel="Add interest"
       emptyText="Topics outside work that say something about you."

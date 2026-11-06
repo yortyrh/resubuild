@@ -22,14 +22,12 @@ type EducationItem = SectionItem<ResumeEducation>;
 
 export function EducationSection() {
   useSectionMount('education');
-  const { cvId, resume, setResume } = useCvEditor();
+  const { cvId } = useCvEditor();
 
   return (
     <ManagedArraySection<EducationItem>
       cvId={cvId}
       sectionKey="education"
-      items={resume.education ?? []}
-      onItemsChange={(education) => setResume((prev) => ({ ...prev, education }))}
       entityLabel="Education entry"
       addLabel="Add education"
       emptyText="Degrees, diplomas and programs, newest first."

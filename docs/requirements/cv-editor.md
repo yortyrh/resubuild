@@ -64,6 +64,10 @@ Profiles, skills, languages, interests, and references can be reordered by drag-
 
 The editor and dashboard show placeholder skeletons while loading. The layout does not shift horizontally when content height changes or a dialog opens.
 
+- The CV header (title and basics), each section's list and each entry load and are cached separately. Nothing assumes a section is empty before the server says so.
+- A section shows a skeleton until its list has loaded, the empty state only when the server returned no entries, and an error with a retry action when the load failed (never the empty state).
+- Reloading the CV header, or saving or reloading another section, never clears or hides a section's entries.
+
 ### REQ-EDIT-010 Breadcrumbs
 
 The editor and the new-CV pages (create from scratch, import from file, import from URL) show a breadcrumb back to the CV list.

@@ -18,7 +18,7 @@ import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { cvVolunteerApi } from '@/lib/cv-item-api';
-import { removeItemById, sortDateRangeSectionItems } from '@/lib/cv-section-order';
+import { sortDateRangeSectionItems } from '@/lib/cv-section-order';
 import type { SectionItem } from '@/lib/cv-section-refetch';
 import { moveWorkVolunteerEntry } from '@/lib/move-work-volunteer-entry';
 import type { VolunteerMoveSource } from '@/lib/work-volunteer-move';
@@ -27,9 +27,8 @@ type VolunteerItem = SectionItem<ResumeVolunteer>;
 
 export function VolunteerSection() {
   useSectionMount('volunteer');
-  const { cvId, resume, setResume } = useCvEditor();
+  const { cvId } = useCvEditor();
   const queryClient = useQueryClient();
-  const volunteerItems = (resume.volunteer ?? []) as VolunteerItem[];
 
   const handleMoveToWork = useCallback(
     async (item: VolunteerItem) => {
@@ -43,20 +42,14 @@ export function VolunteerSection() {
         item as VolunteerMoveSource,
         item.id,
       );
-      setResume((prev) => ({
-        ...prev,
-        volunteer: removeItemById(volunteerItems, item.id!),
-      }));
     },
-    [cvId, queryClient, setResume, volunteerItems],
+    [cvId, queryClient],
   );
 
   return (
     <ManagedArraySection<VolunteerItem>
       cvId={cvId}
       sectionKey="volunteer"
-      items={volunteerItems}
-      onItemsChange={(volunteer) => setResume((prev) => ({ ...prev, volunteer }))}
       entityLabel="Volunteer entry"
       addLabel="Add volunteer experience"
       emptyText="Unpaid roles, community work and open-source stewardship."

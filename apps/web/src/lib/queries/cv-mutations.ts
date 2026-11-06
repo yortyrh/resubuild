@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { createCv, deleteCv } from '@/lib/api';
 import type { CvItemMutationResponse } from '@/lib/cv-item-api';
 import type { CvArraySectionKey } from '@/lib/queries/cv-queries';
-import { fetchCvSection } from '@/lib/queries/cv-queries';
 import { cvKeys } from '@/lib/queries/keys';
 
 export function useDeleteCv() {
@@ -35,34 +34,69 @@ export function useCreateCv() {
   });
 }
 
-export function mergeSectionItemInCache(
-  queryClient: ReturnType<typeof useQueryClient>,
-  cvId: string,
-  sectionKey: CvArraySectionKey,
-  item: Record<string, unknown>,
-): void {
-  const sectionQueryKey = cvKeys.section(cvId, sectionKey);
-  const itemId = item.id;
+type QueryClientLike = ReturnType<typeof useQueryClient>;
+type SectionEntry = Record<string, unknown>;
 
+/**
+ * Writes a saved entry into its own key and into its place in the cached section
+ * list (other entries and the order stay as they are). Entries without a string id
+ * are ignored; a list that is not cached is not created.
+ */
+export function writeSectionItem(
+  queryClient: QueryClientLike,
+  cvId: string,
+  section: CvArraySectionKey,
+  item: SectionEntry,
+): void {
+  const itemId = item.id;
   if (typeof itemId !== 'string') {
     return;
   }
 
-  queryClient.setQueryData<Record<string, unknown>[]>(sectionQueryKey, (current) => {
-    if (!current) {
-      return current;
-    }
-
-    return current.map((entry) => (entry.id === itemId ? { ...entry, ...item } : entry));
-  });
+  queryClient.setQueryData<SectionEntry>(cvKeys.sectionItem(cvId, section, itemId), (current) => ({
+    ...current,
+    ...item,
+  }));
+  queryClient.setQueryData<SectionEntry[]>(cvKeys.sectionList(cvId, section), (current) =>
+    current?.map((entry) => (entry.id === itemId ? { ...entry, ...item } : entry)),
+  );
 }
 
-export function invalidateCvSection(
-  queryClient: ReturnType<typeof useQueryClient>,
+/** Replaces the cached section list and seeds each entry's own key. */
+export function writeSectionList(
+  queryClient: QueryClientLike,
   cvId: string,
-  sectionKey: CvArraySectionKey,
+  section: CvArraySectionKey,
+  items: SectionEntry[],
+): void {
+  queryClient.setQueryData(cvKeys.sectionList(cvId, section), items);
+  for (const item of items) {
+    if (typeof item.id === 'string') {
+      queryClient.setQueryData(cvKeys.sectionItem(cvId, section, item.id), item);
+    }
+  }
+}
+
+/** Drops a deleted entry from the cached list and removes its own query. */
+export function removeSectionItem(
+  queryClient: QueryClientLike,
+  cvId: string,
+  section: CvArraySectionKey,
+  itemId: string,
+): void {
+  queryClient.setQueryData<SectionEntry[]>(cvKeys.sectionList(cvId, section), (current) =>
+    current?.filter((entry) => entry.id !== itemId),
+  );
+  queryClient.removeQueries({ queryKey: cvKeys.sectionItem(cvId, section, itemId), exact: true });
+}
+
+/** Marks the section list stale and refetches it if it is shown; entry keys are re-seeded by the refetch. */
+export function invalidateCvSection(
+  queryClient: QueryClientLike,
+  cvId: string,
+  section: CvArraySectionKey,
 ): Promise<void> {
-  return queryClient.invalidateQueries({ queryKey: cvKeys.section(cvId, sectionKey) });
+  return queryClient.invalidateQueries({ queryKey: cvKeys.sectionList(cvId, section) });
 }
 
 export function useSectionItemMutations(cvId: string, sectionKey: CvArraySectionKey) {
@@ -84,12 +118,7 @@ export function useSectionItemMutations(cvId: string, sectionKey: CvArraySection
         const result = await action();
 
         if (options?.mergeItem && result.item) {
-          mergeSectionItemInCache(
-            queryClient,
-            cvId,
-            sectionKey,
-            result.item as Record<string, unknown>,
-          );
+          writeSectionItem(queryClient, cvId, sectionKey, result.item as SectionEntry);
         }
 
         if (options?.invalidateSection) {
@@ -113,13 +142,5 @@ export function useSectionItemMutations(cvId: string, sectionKey: CvArraySection
     [cvId, queryClient, sectionKey],
   );
 
-  const refetchSectionItems = useCallback(async <T>() => {
-    const data = await queryClient.fetchQuery({
-      queryKey: cvKeys.section(cvId, sectionKey),
-      queryFn: () => fetchCvSection<T>(cvId, sectionKey),
-    });
-    return data;
-  }, [cvId, queryClient, sectionKey]);
-
-  return { saving, error, setError, run, refetchSectionItems };
+  return { saving, error, setError, run };
 }

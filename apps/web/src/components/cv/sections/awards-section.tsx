@@ -16,14 +16,12 @@ type AwardItem = SectionItem<ResumeAward>;
 
 export function AwardsSection() {
   useSectionMount('awards');
-  const { cvId, resume, setResume } = useCvEditor();
+  const { cvId } = useCvEditor();
 
   return (
     <ManagedArraySection<AwardItem>
       cvId={cvId}
       sectionKey="awards"
-      items={resume.awards ?? []}
-      onItemsChange={(awards) => setResume((prev) => ({ ...prev, awards }))}
       entityLabel="Award"
       addLabel="Add award"
       emptyText="Prizes, scholarships and recognitions."

@@ -26,14 +26,12 @@ type ProjectItem = SectionItem<ResumeProject>;
 
 export function ProjectsSection() {
   useSectionMount('projects');
-  const { cvId, resume, setResume } = useCvEditor();
+  const { cvId } = useCvEditor();
 
   return (
     <ManagedArraySection<ProjectItem>
       cvId={cvId}
       sectionKey="projects"
-      items={resume.projects ?? []}
-      onItemsChange={(projects) => setResume((prev) => ({ ...prev, projects }))}
       entityLabel="Project"
       addLabel="Add project"
       emptyText="Side projects, open source and notable work outside a single job."

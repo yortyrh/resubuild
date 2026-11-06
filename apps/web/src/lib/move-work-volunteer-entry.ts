@@ -2,7 +2,7 @@ import type { ResumeWork } from '@resubuild/types';
 import { sanitizeResumeItemPayload } from '@resubuild/types';
 import type { QueryClient } from '@tanstack/react-query';
 import { cvVolunteerApi, cvWorkApi } from '@/lib/cv-item-api';
-import { invalidateCvSection } from '@/lib/queries/cv-mutations';
+import { invalidateCvSection, removeSectionItem } from '@/lib/queries/cv-mutations';
 import type { CvArraySectionKey } from '@/lib/queries/cv-queries';
 import {
   mapVolunteerToWork,
@@ -48,6 +48,7 @@ export async function moveWorkVolunteerEntry(
     throw new Error(message);
   }
 
+  removeSectionItem(queryClient, cvId, SOURCE_SECTION[direction], sourceId);
   await Promise.all([
     invalidateCvSection(queryClient, cvId, TARGET_SECTION[direction]),
     invalidateCvSection(queryClient, cvId, SOURCE_SECTION[direction]),

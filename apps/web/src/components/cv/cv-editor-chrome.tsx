@@ -1,5 +1,6 @@
 'use client';
 
+import type { Resume } from '@resubuild/types';
 import { PanelLeftOpen } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { type ReactNode, useEffect, useState } from 'react';
@@ -18,6 +19,7 @@ import { useApplicationForCv } from '@/components/cv/use-application-for-cv';
 import { useDashboardBreadcrumb } from '@/components/dashboard/dashboard-breadcrumb-context';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
+import { useCv } from '@/lib/queries/cv-queries';
 
 interface CvEditorChromeProps {
   cvId: string;
@@ -27,7 +29,11 @@ interface CvEditorChromeProps {
 export function CvEditorChrome({ cvId, children }: CvEditorChromeProps) {
   const pathname = usePathname();
   const activeSection = resolveActiveSectionFromPathname(pathname);
-  const { resume, error, loading, mountedSection } = useCvEditor();
+  const { mountedSection } = useCvEditor();
+  const { data: cv, isLoading: loading, error: queryError } = useCv(cvId);
+  const basics = (cv?.data as Resume | undefined)?.basics ?? null;
+  const error =
+    queryError instanceof Error ? queryError.message : queryError ? 'Failed to load CV' : null;
   const application = useApplicationForCv(cvId);
   const { setBreadcrumb, reset } = useDashboardBreadcrumb();
   const [sectionsOpen, setSectionsOpen] = useState(false);
@@ -42,12 +48,12 @@ export function CvEditorChrome({ cvId, children }: CvEditorChromeProps) {
     setBreadcrumb({
       variant: 'cv',
       cvId,
-      basics: loading ? null : (resume?.basics ?? null),
+      basics: loading ? null : basics,
       activeSection,
       application,
     });
     return () => reset();
-  }, [setBreadcrumb, reset, cvId, resume?.basics, activeSection, application, loading]);
+  }, [setBreadcrumb, reset, cvId, basics, activeSection, application, loading]);
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">

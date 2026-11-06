@@ -13,7 +13,7 @@ type ReferenceItem = SectionItem<ResumeReference>;
 
 export function ReferencesSection() {
   useSectionMount('references');
-  const { cvId, resume, setResume } = useCvEditor();
+  const { cvId } = useCvEditor();
 
   return (
     <SortableManagedArraySection<ReferenceItem>
@@ -21,8 +21,6 @@ export function ReferencesSection() {
       sectionKey="references"
       reorderSection="references"
       reorderSectionLabel="reference"
-      items={resume.references ?? []}
-      onItemsChange={(references) => setResume((prev) => ({ ...prev, references }))}
       entityLabel="Reference"
       addLabel="Add reference"
       emptyText="People who can vouch for your work."

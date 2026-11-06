@@ -22,7 +22,7 @@ const profileApi = {
 
 export function ProfilesSection() {
   useSectionMount('profiles');
-  const { cvId, resume, setResume } = useCvEditor();
+  const { cvId } = useCvEditor();
 
   return (
     <SortableManagedArraySection<ProfileItem>
@@ -30,10 +30,6 @@ export function ProfilesSection() {
       sectionKey="profiles"
       reorderSection="profiles"
       reorderSectionLabel="social profile"
-      items={resume.basics?.profiles ?? []}
-      onItemsChange={(profiles) =>
-        setResume((prev) => ({ ...prev, basics: { ...prev.basics, profiles } }))
-      }
       entityLabel="Profile"
       addLabel="Add social profile"
       emptyText="LinkedIn, GitHub and other public profiles."

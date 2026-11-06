@@ -14,7 +14,7 @@ type SkillItem = SectionItem<ResumeSkill>;
 
 export function SkillsSection() {
   useSectionMount('skills');
-  const { cvId, resume, setResume } = useCvEditor();
+  const { cvId } = useCvEditor();
 
   return (
     <SortableManagedArraySection<SkillItem>
@@ -22,8 +22,6 @@ export function SkillsSection() {
       sectionKey="skills"
       reorderSection="skills"
       reorderSectionLabel="skill"
-      items={resume.skills ?? []}
-      onItemsChange={(skills) => setResume((prev) => ({ ...prev, skills }))}
       entityLabel="Skill"
       addLabel="Add skill"
       emptyText="Group related skills, e.g. Frontend with React, TypeScript and CSS."

@@ -18,7 +18,7 @@ import { ManagedArraySection } from '@/components/cv/managed-array-section';
 import { MarkdownView } from '@/components/cv/markdown-view';
 import { useSectionMount } from '@/components/cv/use-section-mount';
 import { cvWorkApi } from '@/lib/cv-item-api';
-import { removeItemById, sortDateRangeSectionItems } from '@/lib/cv-section-order';
+import { sortDateRangeSectionItems } from '@/lib/cv-section-order';
 import type { SectionItem } from '@/lib/cv-section-refetch';
 import { moveWorkVolunteerEntry } from '@/lib/move-work-volunteer-entry';
 
@@ -26,9 +26,8 @@ type WorkItem = SectionItem<ResumeWork>;
 
 export function WorkSection() {
   useSectionMount('work');
-  const { cvId, resume, setResume } = useCvEditor();
+  const { cvId } = useCvEditor();
   const queryClient = useQueryClient();
-  const workItems = (resume.work ?? []) as WorkItem[];
 
   const handleMoveToVolunteer = useCallback(
     async (item: WorkItem) => {
@@ -36,20 +35,14 @@ export function WorkSection() {
         throw new Error('Cannot move an unsaved work entry');
       }
       await moveWorkVolunteerEntry(queryClient, cvId, 'work-to-volunteer', item, item.id);
-      setResume((prev) => ({
-        ...prev,
-        work: removeItemById(workItems, item.id!),
-      }));
     },
-    [cvId, queryClient, setResume, workItems],
+    [cvId, queryClient],
   );
 
   return (
     <ManagedArraySection<WorkItem>
       cvId={cvId}
       sectionKey="work"
-      items={workItems}
-      onItemsChange={(work) => setResume((prev) => ({ ...prev, work }))}
       entityLabel="Work entry"
       addLabel="Add work experience"
       emptyText="Jobs you held, newest first. Each one needs at least a start date."

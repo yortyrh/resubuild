@@ -16,14 +16,12 @@ type CertificateItem = SectionItem<ResumeCertificate>;
 
 export function CertificatesSection() {
   useSectionMount('certificates');
-  const { cvId, resume, setResume } = useCvEditor();
+  const { cvId } = useCvEditor();
 
   return (
     <ManagedArraySection<CertificateItem>
       cvId={cvId}
       sectionKey="certificates"
-      items={resume.certificates ?? []}
-      onItemsChange={(certificates) => setResume((prev) => ({ ...prev, certificates }))}
       entityLabel="Certificate"
       addLabel="Add certificate"
       emptyText="Professional certifications and licenses."

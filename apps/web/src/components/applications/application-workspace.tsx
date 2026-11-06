@@ -31,7 +31,7 @@ import {
   resolveCoverLetterEmailSubject,
 } from '@/lib/cover-letter-clipboard';
 import { printHtmlDocument } from '@/lib/print-html-document';
-import { useCvSection } from '@/lib/queries/cv-queries';
+import { useCvSectionList } from '@/lib/queries/cv-queries';
 import { cvKeys } from '@/lib/queries/keys';
 
 const POLL_MS = 2500;
@@ -368,7 +368,7 @@ function TailoredCvPanel({
     enabled: Boolean(tailoredCvId),
     refetchOnMount: 'always',
   });
-  const { data: profiles = [], isLoading: isProfilesLoading } = useCvSection<ResumeProfile>(
+  const { data: profiles = [], isLoading: isProfilesLoading } = useCvSectionList<ResumeProfile>(
     tailoredCvId,
     'profiles',
   );

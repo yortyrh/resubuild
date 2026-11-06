@@ -13,7 +13,7 @@ type LanguageItem = SectionItem<ResumeLanguage>;
 
 export function LanguagesSection() {
   useSectionMount('languages');
-  const { cvId, resume, setResume } = useCvEditor();
+  const { cvId } = useCvEditor();
 
   return (
     <SortableManagedArraySection<LanguageItem>
@@ -21,8 +21,6 @@ export function LanguagesSection() {
       sectionKey="languages"
       reorderSection="languages"
       reorderSectionLabel="language"
-      items={resume.languages ?? []}
-      onItemsChange={(languages) => setResume((prev) => ({ ...prev, languages }))}
       entityLabel="Language"
       addLabel="Add language"
       emptyText="Languages you speak and how well."

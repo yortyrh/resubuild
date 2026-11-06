@@ -1,8 +1,12 @@
 /**
  * Query key factories and invalidation rules:
+ * - The CV base (title and basics), each section list and each section entry have
+ *   their own key. `detail` is not a prefix of any section key and a list is not a
+ *   prefix of its entries, so invalidating one never touches the others.
  * - deleteCv / createCv → invalidate cvKeys.list()
- * - item update → setQueryData on cvKeys.section(cvId, section)
- * - item create/delete/reorder → invalidate cvKeys.section(cvId, section)
+ * - basics save → write `data.basics` into cvKeys.detail(cvId)
+ * - item update → write cvKeys.sectionItem and the entry in cvKeys.sectionList
+ * - item create / delete / reorder / move → invalidate cvKeys.sectionList (refetch re-seeds entries)
  * - AI account mutations → invalidate aiAgentKeys.accounts() and aiAgentKeys.active()
  */
 
@@ -12,8 +16,13 @@ export const cvKeys = {
   list: () => cvKeys.lists(),
   details: () => [...cvKeys.all, 'detail'] as const,
   detail: (cvId: string) => [...cvKeys.details(), cvId] as const,
-  sections: (cvId: string) => [...cvKeys.detail(cvId), 'section'] as const,
-  section: (cvId: string, section: string) => [...cvKeys.sections(cvId), section] as const,
+  sections: (cvId: string) => [...cvKeys.all, 'section', cvId] as const,
+  sectionList: (cvId: string, section: string) =>
+    [...cvKeys.sections(cvId), section, 'list'] as const,
+  sectionItems: (cvId: string, section: string) =>
+    [...cvKeys.sections(cvId), section, 'item'] as const,
+  sectionItem: (cvId: string, section: string, itemId: string) =>
+    [...cvKeys.sectionItems(cvId, section), itemId] as const,
 };
 
 export const aiAgentKeys = {

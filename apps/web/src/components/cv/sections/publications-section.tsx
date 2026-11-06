@@ -20,14 +20,12 @@ type PublicationItem = SectionItem<ResumePublication>;
 
 export function PublicationsSection() {
   useSectionMount('publications');
-  const { cvId, resume, setResume } = useCvEditor();
+  const { cvId } = useCvEditor();
 
   return (
     <ManagedArraySection<PublicationItem>
       cvId={cvId}
       sectionKey="publications"
-      items={resume.publications ?? []}
-      onItemsChange={(publications) => setResume((prev) => ({ ...prev, publications }))}
       entityLabel="Publication"
       addLabel="Add publication"
       emptyText="Articles, papers, books and talks."
