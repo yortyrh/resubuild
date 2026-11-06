@@ -22,7 +22,7 @@ const InlineToolbar = () => (
   </>
 );
 
-const BlockToolbar = ({ withInsertCodeBlock = false }: { withInsertCodeBlock?: boolean }) => (
+const BlockToolbar = () => (
   <>
     <button type="button" data-testid="undo-redo">
       UndoRedo
@@ -45,11 +45,6 @@ const BlockToolbar = ({ withInsertCodeBlock = false }: { withInsertCodeBlock?: b
     <button type="button" data-testid="lists-toggle">
       Lists
     </button>
-    {withInsertCodeBlock ? (
-      <button type="button" data-testid="insert-code-block">
-        CodeBlock
-      </button>
-    ) : null}
   </>
 );
 
@@ -94,7 +89,6 @@ vi.mock('@mdxeditor/editor', () => {
       }
       const hasToolbar = plugins?.some((p) => p === 'toolbarPlugin');
       const isInline = contentEditableClassName?.includes('inline');
-      const hasCodeBlock = plugins?.some((p) => p === 'codeBlockPlugin');
       return (
         <div
           data-testid="mdx-editor"
@@ -103,8 +97,7 @@ vi.mock('@mdxeditor/editor', () => {
           data-markdown={markdown ?? ''}
           data-class-name={className ?? ''}
         >
-          {hasToolbar &&
-            (isInline ? <InlineToolbar /> : <BlockToolbar withInsertCodeBlock={hasCodeBlock} />)}
+          {hasToolbar && (isInline ? <InlineToolbar /> : <BlockToolbar />)}
         </div>
       );
     },
@@ -116,8 +109,6 @@ vi.mock('@mdxeditor/editor', () => {
     tablePlugin: vi.fn(() => 'tablePlugin'),
     markdownShortcutPlugin: vi.fn(() => 'markdownShortcutPlugin'),
     headingsPlugin: vi.fn(() => 'headingsPlugin'),
-    codeBlockPlugin: vi.fn(() => 'codeBlockPlugin'),
-    codeMirrorPlugin: vi.fn(() => 'codeMirrorPlugin'),
     BoldItalicUnderlineToggles: () => (
       <button type="button" data-testid="bold-italic-underline">
         BIU
@@ -146,11 +137,6 @@ vi.mock('@mdxeditor/editor', () => {
     ListsToggle: () => (
       <button type="button" data-testid="lists-toggle">
         Lists
-      </button>
-    ),
-    InsertCodeBlock: () => (
-      <button type="button" data-testid="insert-code-block">
-        CodeBlock
       </button>
     ),
     UndoRedo: () => (
@@ -287,23 +273,18 @@ describe('MarkdownEditorImpl', () => {
   });
 
   describe('freeForm mode (cover letter, job description)', () => {
-    it('registers 11 plugins when freeForm is true (adds headings + codeBlock + codeMirror)', () => {
+    it('registers 9 plugins when freeForm is true (adds headings)', () => {
       const { getByTestId } = render(
         <MarkdownEditorImpl value="" onChange={vi.fn()} variant="block" freeForm />,
       );
       const editor = getByTestId('mdx-editor');
-      // 11 plugins: headings, codeBlock, codeMirror, lists, quote, thematicBreak,
+      // 9 plugins: headings, lists, quote, thematicBreak,
       // link, linkDialog, table, toolbar, markdownShortcut
-      expect(editor).toHaveAttribute('data-plugins', '11');
+      expect(editor).toHaveAttribute('data-plugins', '9');
     });
 
-    it('renders the InsertCodeBlock toolbar item when freeForm is true', () => {
+    it('has no code block toolbar item in free-form mode', () => {
       render(<MarkdownEditorImpl value="" onChange={vi.fn()} variant="block" freeForm />);
-      expect(screen.getByTestId('insert-code-block')).toBeInTheDocument();
-    });
-
-    it('still omits InsertCodeBlock when freeForm is false', () => {
-      render(<MarkdownEditorImpl value="" onChange={vi.fn()} variant="block" />);
       expect(screen.queryByTestId('insert-code-block')).not.toBeInTheDocument();
     });
 

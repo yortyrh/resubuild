@@ -187,8 +187,8 @@ describe('ApplicationLetterEditDialog', () => {
   it('opens the editor in free-form mode so headings render as headings', () => {
     renderDialog({});
 
-    // The cover letter surface accepts the full markdown grammar (headings,
-    // code blocks), distinct from the CV section editor which keeps its
+    // The cover letter surface accepts the full markdown grammar (headings),
+    // distinct from the CV section editor which keeps its
     // constrained plugin list. Asserting `freeForm=true` here pins the choice
     // so a future regression that drops the prop would fail this test.
     expect(screen.getByTestId('mock-editor')).toHaveAttribute('data-free-form', 'true');
