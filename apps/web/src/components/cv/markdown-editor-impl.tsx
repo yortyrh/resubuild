@@ -7,10 +7,7 @@ import {
   BoldItalicUnderlineToggles,
   CodeToggle,
   CreateLink,
-  codeBlockPlugin,
-  codeMirrorPlugin,
   headingsPlugin,
-  InsertCodeBlock,
   ListsToggle,
   linkDialogPlugin,
   linkPlugin,
@@ -35,7 +32,7 @@ export interface MarkdownEditorProps {
   placeholder?: string;
   className?: string;
   /**
-   * Opt into the full markdown grammar (headings, code blocks). Off by default so
+   * Opt into the full markdown grammar (headings). Off by default so
    * CV section fields keep their constrained grammar; enable on long-form
    * authoring surfaces like the cover letter or job description.
    */
@@ -50,9 +47,9 @@ export interface MarkdownEditorHandle {
   setMarkdown: (value: string) => void;
 }
 
-type ToolbarContentsProps = Pick<MarkdownEditorProps, 'variant' | 'freeForm'>;
+type ToolbarContentsProps = Pick<MarkdownEditorProps, 'variant'>;
 
-const ToolbarContents: FC<ToolbarContentsProps> = ({ variant, freeForm = false }) => {
+const ToolbarContents: FC<ToolbarContentsProps> = ({ variant }) => {
   if (variant === 'inline') {
     return (
       <>
@@ -73,7 +70,6 @@ const ToolbarContents: FC<ToolbarContentsProps> = ({ variant, freeForm = false }
       <CodeToggle />
       <CreateLink />
       <ListsToggle options={['bullet', 'number']} />
-      {freeForm ? <InsertCodeBlock /> : null}
     </>
   );
 };
@@ -103,25 +99,11 @@ export const MarkdownEditorImpl = forwardRef<MarkdownEditorHandle, MarkdownEdito
         linkDialogPlugin(),
         tablePlugin(),
         toolbarPlugin({
-          toolbarContents: () => <ToolbarContents variant={variant} freeForm={freeForm} />,
+          toolbarContents: () => <ToolbarContents variant={variant} />,
         }),
         markdownShortcutPlugin(),
       ];
-      return freeForm
-        ? [
-            headingsPlugin(),
-            codeBlockPlugin({ defaultCodeBlockLanguage: 'txt' }),
-            codeMirrorPlugin({
-              codeBlockLanguages: {
-                js: 'JavaScript',
-                css: 'CSS',
-                txt: 'text',
-                tsx: 'TypeScript',
-              },
-            }),
-            ...basePlugins,
-          ]
-        : basePlugins;
+      return freeForm ? [headingsPlugin(), ...basePlugins] : basePlugins;
     }, [variant, freeForm]);
 
     useImperativeHandle(
