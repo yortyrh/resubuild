@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { type JobApplicationSummary, updateApplicationLetter } from '@/lib/api';
+import { applicationLetterHtmlKey } from '@/lib/queries/keys';
 
 export interface ApplicationLetterEditDialogProps {
   applicationId: string;
@@ -52,6 +53,7 @@ export function ApplicationLetterEditDialog({
       // The PATCH returns the updated application summary, so we can write it
       // straight into the cache and skip an extra GET.
       queryClient.setQueryData(['application', applicationId], updated);
+      void queryClient.invalidateQueries({ queryKey: applicationLetterHtmlKey(applicationId) });
       toast.success('Cover letter saved');
       onOpenChange(false);
     },

@@ -1,25 +1,28 @@
 'use client';
 
-import type { Resume, ResumeProfile } from '@resubuild/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, Eye, FileDown, PenLine, Printer, Sparkles } from 'lucide-react';
+import { Copy, Eye, FileDown, Loader2, PenLine, Printer, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { CvPreviewDocumentSkeleton } from '@/app/dashboard/cv/[id]/preview/cv-preview-skeleton';
+import { ApplicationJobPostingPanel } from '@/components/applications/application-job-posting-panel';
 import { ApplicationLetterEditDialog } from '@/components/applications/application-letter-edit-dialog';
 import { ApplicationPrepareActions } from '@/components/applications/application-prepare-actions';
 import { ApplicationPrepareProgressBar } from '@/components/applications/application-prepare-progress-bar';
 import { ApplicationUpdateDialog } from '@/components/applications/application-update-dialog';
 import { ApplicationWorkspaceBreadcrumb } from '@/components/applications/application-workspace-breadcrumb';
 import { ApplicationWorkspaceSkeleton } from '@/components/applications/application-workspace-skeleton';
-import { BasicsSectionView } from '@/components/cv/basics-section-view';
+import { CvPreviewIframe } from '@/components/cv/cv-preview-iframe';
 import { MarkdownView } from '@/components/cv/markdown-view';
+import { useCvPreviewHtml } from '@/components/cv/use-cv-preview-html';
 import { useDashboardBreadcrumb } from '@/components/dashboard/dashboard-breadcrumb-context';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   downloadApplicationLetterPdf,
+  downloadCvPdf,
   getApplication,
   getApplicationLetterHtml,
   getCv,
@@ -30,9 +33,10 @@ import {
   formatCoverLetterPlainText,
   resolveCoverLetterEmailSubject,
 } from '@/lib/cover-letter-clipboard';
+import { triggerBrowserDownload } from '@/lib/download';
+import { formatJobPostingPlainText } from '@/lib/job-posting-clipboard';
 import { printHtmlDocument } from '@/lib/print-html-document';
-import { useCvSectionList } from '@/lib/queries/cv-queries';
-import { cvKeys } from '@/lib/queries/keys';
+import { applicationLetterHtmlKey, cvKeys } from '@/lib/queries/keys';
 
 const POLL_MS = 2500;
 
@@ -40,6 +44,7 @@ const WORKSPACE_TAB_STORAGE_KEY = 'application-workspace:lastTab';
 const WORKSPACE_TAB_IDS = ['summary', 'tailored-cv', 'cover-letter'] as const;
 type WorkspaceTabId = (typeof WORKSPACE_TAB_IDS)[number];
 const DEFAULT_WORKSPACE_TAB: WorkspaceTabId = 'summary';
+const DEFAULT_CV_TEMPLATE_ID = 'classic';
 
 function readStoredWorkspaceTab(): WorkspaceTabId {
   if (typeof window === 'undefined') return DEFAULT_WORKSPACE_TAB;
@@ -89,6 +94,17 @@ export function ApplicationWorkspace({ id }: { id: string }) {
     },
   });
 
+  const tailoredCvId = data?.tailoredCvId ?? null;
+  const { data: tailoredCv } = useQuery({
+    queryKey: cvKeys.detail(tailoredCvId ?? ''),
+    queryFn: () => getCv(tailoredCvId!),
+    enabled: Boolean(tailoredCvId) && data?.status === 'ready',
+    refetchOnMount: 'always',
+  });
+  const tailoredCvTemplateId = tailoredCv
+    ? (tailoredCv.templateId ?? DEFAULT_CV_TEMPLATE_ID)
+    : null;
+
   const { setBreadcrumb, reset: resetBreadcrumb } = useDashboardBreadcrumb();
 
   useEffect(() => {
@@ -109,6 +125,7 @@ export function ApplicationWorkspace({ id }: { id: string }) {
     return () => resetBreadcrumb();
   }, [data, setBreadcrumb, resetBreadcrumb]);
   const [printing, setPrinting] = useState(false);
+  const [downloadingCvPdf, setDownloadingCvPdf] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
   const [letterEditOpen, setLetterEditOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<WorkspaceTabId>(() => readStoredWorkspaceTab());
@@ -145,6 +162,31 @@ export function ApplicationWorkspace({ id }: { id: string }) {
     } catch {
       await navigator.clipboard.writeText(plain);
       toast.success('Cover letter copied as plain text');
+    }
+  };
+
+  const copyJobPosting = async () => {
+    if (!data) return;
+    const text = formatJobPostingPlainText(data);
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Job posting copied');
+    } catch {
+      toast.error('Copy failed');
+    }
+  };
+
+  const downloadTailoredCvPdf = async () => {
+    if (!tailoredCvId || !tailoredCvTemplateId) return;
+    setDownloadingCvPdf(true);
+    try {
+      const { blob, filename } = await downloadCvPdf(tailoredCvId, tailoredCvTemplateId);
+      triggerBrowserDownload(blob, filename);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'PDF download failed');
+    } finally {
+      setDownloadingCvPdf(false);
     }
   };
 
@@ -262,11 +304,22 @@ export function ApplicationWorkspace({ id }: { id: string }) {
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <div className="no-print flex flex-wrap items-center justify-between gap-3">
             <TabsList>
-              <TabsTrigger value="summary">Job summary</TabsTrigger>
+              <TabsTrigger value="summary">Job posting</TabsTrigger>
               <TabsTrigger value="tailored-cv">Tailored CV</TabsTrigger>
               <TabsTrigger value="cover-letter">Cover letter</TabsTrigger>
             </TabsList>
             <div className="flex flex-wrap items-center gap-2">
+              {activeTab === 'summary' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!formatJobPostingPlainText(data)}
+                  onClick={() => void copyJobPosting()}
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy posting
+                </Button>
+              ) : null}
               {activeTab === 'tailored-cv' && data.tailoredCvId ? (
                 <>
                   <Button asChild variant="outline" size="sm">
@@ -283,6 +336,20 @@ export function ApplicationWorkspace({ id }: { id: string }) {
                       <Eye className="h-4 w-4" />
                       Preview
                     </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!tailoredCvTemplateId || downloadingCvPdf}
+                    onClick={() => void downloadTailoredCvPdf()}
+                    aria-label="Download CV PDF"
+                  >
+                    {downloadingCvPdf ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <FileDown className="h-4 w-4" />
+                    )}
+                    PDF
                   </Button>
                 </>
               ) : null}
@@ -320,34 +387,19 @@ export function ApplicationWorkspace({ id }: { id: string }) {
           </div>
 
           <TabsContent value="summary" className="space-y-3">
-            <dl className="space-y-2 text-sm">
-              <div>
-                <dt className="text-muted-foreground">Position</dt>
-                <dd>{data.jobTitle}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Company</dt>
-                <dd>{data.jobCompany}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Why this CV</dt>
-                <dd>{data.selectionRationale}</dd>
-              </div>
-            </dl>
+            <ApplicationJobPostingPanel application={data} />
           </TabsContent>
 
           <TabsContent value="tailored-cv" className="space-y-3">
             {data.tailoredCvId ? (
-              <TailoredCvPanel applicationId={data.id} tailoredCvId={data.tailoredCvId} />
+              <TailoredCvPanel tailoredCvId={data.tailoredCvId} templateId={tailoredCvTemplateId} />
             ) : (
               <p className="text-muted-foreground text-sm">No tailored CV is attached.</p>
             )}
           </TabsContent>
 
           <TabsContent value="cover-letter" className="space-y-3">
-            <div className="max-h-[60vh] overflow-y-auto">
-              <MarkdownView value={data.coverLetter} variant="block" />
-            </div>
+            <CoverLetterPanel application={data} />
           </TabsContent>
         </Tabs>
       </div>
@@ -356,32 +408,67 @@ export function ApplicationWorkspace({ id }: { id: string }) {
 }
 
 function TailoredCvPanel({
-  applicationId: _applicationId,
   tailoredCvId,
+  templateId,
 }: {
-  applicationId: string;
   tailoredCvId: string;
+  /** Null until the tailored CV has loaded. */
+  templateId: string | null;
 }) {
-  const { data: cv, isLoading: isCvLoading } = useQuery({
-    queryKey: cvKeys.detail(tailoredCvId),
-    queryFn: () => getCv(tailoredCvId),
-    enabled: Boolean(tailoredCvId),
-    refetchOnMount: 'always',
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const { html, error } = useCvPreviewHtml(tailoredCvId, templateId);
+
+  if (html) {
+    return <CvPreviewIframe html={html} frameRef={frameRef} title="Resume preview" />;
+  }
+
+  if (error) {
+    return <p className="text-destructive text-sm">{error}</p>;
+  }
+
+  return <CvPreviewDocumentSkeleton />;
+}
+
+function CoverLetterPanel({ application }: { application: JobApplicationSummary }) {
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const { data: letterHtml, isError } = useQuery({
+    queryKey: applicationLetterHtmlKey(application.id),
+    queryFn: () => getApplicationLetterHtml(application.id),
   });
-  const { data: profiles = [], isLoading: isProfilesLoading } = useCvSectionList<ResumeProfile>(
-    tailoredCvId,
-    'profiles',
+  const subject = resolveCoverLetterEmailSubject(
+    application.coverLetterEmailSubject,
+    application.jobTitle,
+    application.jobCompany,
   );
-  const basics = (cv?.data as Resume | undefined)?.basics;
-  const isLoading = isCvLoading || isProfilesLoading;
+
+  const copySubject = async () => {
+    try {
+      await navigator.clipboard.writeText(subject);
+      toast.success('Subject copied');
+    } catch {
+      toast.error('Copy failed');
+    }
+  };
 
   return (
     <div className="space-y-3">
-      {isLoading ? (
-        <p className="text-muted-foreground text-sm">Loading CV basics…</p>
-      ) : basics ? (
-        <BasicsSectionView basics={basics} profiles={profiles} showImage={false} />
-      ) : null}
+      <div className="surface-soft text-card-foreground flex flex-wrap items-center justify-between gap-3 p-4">
+        <div className="min-w-0 space-y-0.5">
+          <p className="text-muted-foreground text-[13px]">Email subject</p>
+          <p className="break-words text-sm font-medium">{subject}</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => void copySubject()}>
+          <Copy className="h-4 w-4" />
+          Copy subject
+        </Button>
+      </div>
+      {letterHtml ? (
+        <CvPreviewIframe html={letterHtml} frameRef={frameRef} title="Cover letter preview" />
+      ) : isError ? (
+        <MarkdownView value={application.coverLetter} variant="block" />
+      ) : (
+        <CvPreviewDocumentSkeleton />
+      )}
     </div>
   );
 }

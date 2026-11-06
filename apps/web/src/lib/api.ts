@@ -1,6 +1,7 @@
 'use client';
 
 import type { CvTemplatePresentationConfig } from '@resubuild/resume-template';
+import type { JobApplicationJobSummary, JobSourceType } from '@resubuild/types';
 import { getValidAccessToken } from '@/lib/auth-session';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -752,7 +753,12 @@ export interface JobApplicationSummary {
   status: JobApplicationStatus;
   jobTitle?: string | null;
   jobCompany?: string | null;
-  jobSourceType?: string | null;
+  jobSourceType?: JobSourceType | null;
+  /** Job posting text the workflow used (extracted from the link, file or pasted text). */
+  jobRawText?: string | null;
+  jobSourceUrl?: string | null;
+  jobSourceFileName?: string | null;
+  jobSummary?: JobApplicationJobSummary | null;
   sourceCvId?: string | null;
   tailoredCvId?: string | null;
   coverLetter?: string | null;

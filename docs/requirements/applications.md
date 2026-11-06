@@ -38,10 +38,12 @@ The user can list past applications, newest first, with job title, company, stat
 
 ### REQ-APP-008 Workspace
 
-The application workspace has three tabs, in this order: Job summary, Tailored CV, Cover letter.
+The application workspace has three tabs, in this order: Job posting, Tailored CV, Cover letter.
 
 - The header shows the company as the heading and the position as the subtitle.
-- The Tailored CV tab embeds the standard CV editor for the clone. It can show the original Work, Volunteer, and Project entries side by side, read-only.
+- The Job posting tab shows the source (type, the link opening in a new tab or the file name, and the created and updated dates), the details (position, company, language, requirements, keywords), how it was generated (base CV, why this CV, the user's instructions), and the full job text as plain text. When a link source has no saved URL, it says the link was not saved. One copy action places the position, company, link and job text on the clipboard as plain text, for pasting into another assistant.
+- The Tailored CV tab shows the clone rendered with its template, as in the CV preview. Its actions open the clone in the standard CV editor (which can show the original Work, Volunteer, and Project entries side by side, read-only), open the full preview page, and download the clone as PDF with its template.
+- The Cover letter tab shows the email subject with its own copy action, and the letter rendered as the same document used for Print and PDF. When that document cannot be loaded, the letter's Markdown is shown instead. Saving an edited letter refreshes the rendered document.
 - The last selected tab is remembered for the browser session.
 - Print output excludes the app chrome.
 

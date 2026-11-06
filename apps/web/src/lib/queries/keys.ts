@@ -34,6 +34,15 @@ export const aiAgentKeys = {
   included: () => [...aiAgentKeys.all, 'included'] as const,
 };
 
+/**
+ * Rendered cover letter document of an application (same HTML as Print / PDF).
+ * Under `['application', id]`, so invalidating the application also refreshes it;
+ * the letter edit dialog invalidates it on save.
+ */
+export function applicationLetterHtmlKey(applicationId: string) {
+  return ['application', applicationId, 'letter-html'] as const;
+}
+
 export const importKeys = {
   pdfJob: (jobId: string) => ['import', 'job', jobId] as const,
 };
