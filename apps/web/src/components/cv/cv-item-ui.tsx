@@ -9,7 +9,7 @@ import {
   useRef,
 } from 'react';
 import { Button } from '@/components/ui/button';
-import { scheduleScrollAndFocusSectionForm } from '@/lib/focus-section-form';
+import { scheduleScrollSectionFormIntoView } from '@/lib/focus-section-form';
 import { cn } from '@/lib/utils';
 
 interface DeleteItemDialogProps {
@@ -152,6 +152,10 @@ interface ResumeItemRowProps {
   secondaryAction?: ResumeItemSecondaryAction;
   reorder?: ResumeItemRowReorderProps;
   isDragging?: boolean;
+  /** Marks the entry the user was just editing (kept after Cancel/Save so they know where they were). */
+  highlighted?: boolean;
+  /** Called when the user clicks outside a highlighted entry, so the mark can be cleared. */
+  onHighlightDismiss?: () => void;
 }
 
 const iconButtonClassName = 'text-muted-foreground hover:text-foreground size-8 px-0';
@@ -167,16 +171,43 @@ export function ResumeItemRow({
   secondaryAction,
   reorder,
   isDragging = false,
+  highlighted = false,
+  onHighlightDismiss,
 }: ResumeItemRowProps) {
+  const articleRef = useRef<HTMLElement>(null);
+
+  // Keep the entry in view when its form closes; the ring marks where the user was.
+  useEffect(() => {
+    if (highlighted && typeof articleRef.current?.scrollIntoView === 'function') {
+      articleRef.current.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlighted]);
+
+  // A click anywhere outside the entry un-marks it.
+  useEffect(() => {
+    if (!highlighted || !onHighlightDismiss) {
+      return;
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      if (!articleRef.current?.contains(event.target as Node)) {
+        onHighlightDismiss();
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [highlighted, onHighlightDismiss]);
   const moveUpLabel = reorder ? `Move ${reorder.sectionLabel} up` : undefined;
   const moveDownLabel = reorder ? `Move ${reorder.sectionLabel} down` : undefined;
   const hasRail = dates !== undefined;
 
   return (
     <article
+      ref={articleRef}
+      data-highlighted={highlighted || undefined}
       className={cn(
-        'surface-soft text-card-foreground group/entry relative flex gap-2 py-4 pl-2 pr-4 sm:pl-3',
+        'surface-soft text-card-foreground group/entry relative flex scroll-mt-20 gap-2 py-4 pl-2 pr-4 sm:pl-3',
         isDragging && 'ring-primary/40 opacity-70 ring-2',
+        highlighted && 'outline-primary/60 outline outline-2',
       )}
     >
       {reorder?.dragHandleProps ? (
@@ -317,6 +348,25 @@ function EntryFormShell({
   onSave,
   onCancel,
 }: EntryFormShellProps) {
+  // Listen on the document: no field is auto-focused, so focus is usually
+  // outside the form when the user presses Escape. Widgets that use Escape
+  // themselves (open comboboxes) call preventDefault, so they win.
+  const onCancelRef = useRef(onCancel);
+  onCancelRef.current = onCancel;
+  useEffect(() => {
+    if (saving) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !event.defaultPrevented) {
+        event.preventDefault();
+        onCancelRef.current();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [saving]);
+
   return (
     <form
       ref={formRef}
@@ -329,12 +379,6 @@ function EntryFormShell({
         event.preventDefault();
         if (!saving) {
           onSave();
-        }
-      }}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && !saving) {
-          event.preventDefault();
-          onCancel();
         }
       }}
     >
@@ -383,7 +427,7 @@ export function ResumeItemForm({
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    scheduleScrollAndFocusSectionForm(formRef.current);
+    scheduleScrollSectionFormIntoView(formRef.current);
   }, []);
 
   return (
@@ -431,7 +475,7 @@ export function SectionCreateForm({
     if (!open) {
       return;
     }
-    scheduleScrollAndFocusSectionForm(formRef.current);
+    scheduleScrollSectionFormIntoView(formRef.current);
   }, [open]);
 
   if (!open) {

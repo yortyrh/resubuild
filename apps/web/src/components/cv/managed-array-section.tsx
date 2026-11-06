@@ -175,6 +175,8 @@ export function ManagedArraySection<T extends WithItemId>({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Entry last edited; stays marked after Cancel/Save until another form opens.
+  const [lastEditedId, setLastEditedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<T | null>(null);
   const [creating, setCreating] = useState(false);
   const [createDraft, setCreateDraft] = useState<T | null>(null);
@@ -250,6 +252,7 @@ export function ManagedArraySection<T extends WithItemId>({
   };
 
   const startEdit = (item: T) => {
+    setLastEditedId(null);
     setCreating(false);
     setCreateDraft(null);
     try {
@@ -265,6 +268,7 @@ export function ManagedArraySection<T extends WithItemId>({
   };
 
   const cancelEdit = () => {
+    setLastEditedId(editingId);
     setEditingId(null);
     setDraft(null);
     setFieldErrors({});
@@ -291,6 +295,7 @@ export function ManagedArraySection<T extends WithItemId>({
   };
 
   const startCreate = () => {
+    setLastEditedId(null);
     setEditingId(null);
     setDraft(null);
     setCreating(true);
@@ -464,6 +469,8 @@ export function ManagedArraySection<T extends WithItemId>({
 
     const rowElement = (dragHandleProps?: Record<string, unknown>, isDragging = false) => (
       <ResumeItemRow
+        highlighted={item.id !== undefined && item.id === lastEditedId}
+        onHighlightDismiss={() => setLastEditedId(null)}
         title={view.title}
         subtitle={view.subtitle}
         dates={view.dates}
@@ -516,7 +523,16 @@ export function ManagedArraySection<T extends WithItemId>({
   const viewRows = useMemo(
     () =>
       new Map(items.map((item, index) => [item.id ?? `row-${index}`, renderViewRow(item, index)])),
-    [items, renderView, reorderEnabled, actionsDisabled, crossSectionMove, reorder, entityLabel],
+    [
+      items,
+      renderView,
+      reorderEnabled,
+      actionsDisabled,
+      crossSectionMove,
+      reorder,
+      entityLabel,
+      lastEditedId,
+    ],
   );
 
   if (needsHydration && sectionLoading) {

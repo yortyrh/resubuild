@@ -42,6 +42,7 @@ function formatBasicsLocation(basics: NonNullable<Resume['basics']>): string {
 export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBasicsSectionProps) {
   const { saving, error, setError, run } = useCvItemMutation();
   const [editing, setEditing] = useState(false);
+  const [justEdited, setJustEdited] = useState(false);
   const [draft, setDraft] = useState(basics);
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,12 +54,14 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
   const [cropApplying, setCropApplying] = useState(false);
 
   const startEdit = () => {
+    setJustEdited(false);
     setDraft({ ...basics, location: { ...basics.location } });
     setEditing(true);
     setError(null);
   };
 
   const cancelEdit = () => {
+    setJustEdited(true);
     setEditing(false);
     setDraft(basics);
     setError(null);
@@ -225,6 +228,8 @@ export function ManagedBasicsSection({ cvId, basics, onBasicsChange }: ManagedBa
         onChange={handleProfilePhotoSelect}
       />
       <ResumeItemRow
+        highlighted={justEdited}
+        onHighlightDismiss={() => setJustEdited(false)}
         title={
           <div className="flex flex-col gap-4 sm:flex-row">
             <ProfilePhotoThumbnail

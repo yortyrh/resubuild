@@ -11,7 +11,7 @@ The editor has one view per section (Basics, Social profiles, Work, Volunteer, E
 
 Each section shows its entries as cards. In dated sections (Work, Volunteer, Education, Projects, Awards, Certificates, Publications) the dates sit in a left column, formatted as `Mar 2022` (or the year or day the entry stores).
 
-- Edit replaces the card in place with a form until Save or Cancel. The form groups its fields under titles (for example Role, Dates, Details), every field has a visible label, and the Save / Cancel bar stays visible while the form is taller than the window. Create opens the same form at the end of the section; Escape cancels; Delete asks for confirmation.
+- Edit replaces the card in place with a form until Save or Cancel. The form groups its fields under titles (for example Role, Dates, Details), every field has a visible label, and the Save / Cancel bar stays visible while the form is taller than the window. Create opens the same form at the end of the section; Opening a form does not focus any field, so selection widgets never open on their own. Escape cancels from anywhere on the page, unless an open selector uses it first. After Cancel or Save the card that was being edited keeps an outline and stays in view, until the user clicks outside it or opens another form. Delete asks for confirmation.
 - An empty section says what belongs in it.
 - The view shows every field the form can edit. The form notes fields the template does not print (the work description).
 - While an entry is being edited the list does not re-sort; it re-sorts after Save.
