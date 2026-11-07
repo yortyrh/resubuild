@@ -25,6 +25,7 @@ import { OAuthHandoffService } from './oauth-handoff.service';
 import { safeRedirectPath } from './safe-redirect';
 import type { AuthMeResponse, OAuthExchangeResponse } from './session.types';
 import { SessionAuthGuard } from './session-auth.guard';
+import { resolveWebOrigin } from './web-origin';
 
 /** Session cookies Better Auth may set on the API origin during OAuth. */
 const SESSION_COOKIES = [
@@ -46,6 +47,15 @@ export class AuthController {
     private readonly handoff: OAuthHandoffService,
     @Inject(BETTER_AUTH) private readonly auth: Auth,
   ) {}
+
+  /** The requesting web origin when allowed (REQ-AUTH-011), else the configured WEB_URL. */
+  private webOrigin(requested: unknown): string {
+    return resolveWebOrigin(
+      requested,
+      this.authConfig.get('TRUSTED_ORIGINS'),
+      this.authConfig.get('WEB_URL'),
+    );
+  }
 
   @Get('me')
   @UseGuards(SessionAuthGuard)
@@ -84,9 +94,10 @@ export class AuthController {
   async completeOAuth(
     @Req() req: Request,
     @Query('redirect') redirect: string | undefined,
+    @Query('origin') origin: string | undefined,
     @Res() res: Response,
   ): Promise<void> {
-    const webUrl = this.authConfig.get('WEB_URL');
+    const webUrl = this.webOrigin(origin);
     const session = await this.auth.api
       .getSession({ headers: fromNodeHeaders(req.headers) })
       .catch(() => null);
@@ -115,6 +126,7 @@ export class AuthController {
   async startOAuth(
     @Param('provider') provider: string,
     @Query('redirect') redirect: string | undefined,
+    @Query('origin') origin: string | undefined,
     @Res() res: Response,
   ): Promise<void> {
     if (!this.authConfig.enabledOAuthProviders().includes(provider as OAuthProviderId)) {
@@ -122,9 +134,12 @@ export class AuthController {
     }
 
     const apiUrl = this.authConfig.get('BETTER_AUTH_URL');
-    const webUrl = this.authConfig.get('WEB_URL');
+    const webUrl = this.webOrigin(origin);
     const next = safeRedirectPath(redirect);
-    const callbackURL = `${apiUrl}/auth/oauth/complete?redirect=${encodeURIComponent(next)}`;
+    let callbackURL = `${apiUrl}/auth/oauth/complete?redirect=${encodeURIComponent(next)}`;
+    if (webUrl !== this.authConfig.get('WEB_URL')) {
+      callbackURL += `&origin=${encodeURIComponent(webUrl)}`;
+    }
     const errorCallbackURL = `${webUrl}/login?error=oauth`;
 
     const { headers, response } = await this.auth.api.signInSocial({

@@ -161,7 +161,7 @@ export const MANIFEST_SCHEMA = {
   WEB_URL: {
     required: false,
     description:
-      'Public URL of the web app used in email links and OAuth redirects (defaults to APP_URL)',
+      'Default public URL of the web app for email links and OAuth redirects (defaults to APP_URL); the requesting origin is used instead when it is WEB_URL or in CORS_ORIGIN',
     group: 'Server',
   },
   PUBLIC_API_URL: {
@@ -249,7 +249,7 @@ export const MANIFEST_SCHEMA = {
   NEXT_PUBLIC_APP_URL: {
     required: false,
     description:
-      'Public origin of the web app (password-reset redirectTo). Leave blank in local dev to fall back to window.location.origin.',
+      'Fallback public origin of the web app where there is no browser origin (server rendering); in the browser window.location.origin is always used.',
     group: 'Web',
   },
   NEXT_PUBLIC_AUTH_FORGOT_PASSWORD_ENABLED: {

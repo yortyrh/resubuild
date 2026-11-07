@@ -3,11 +3,12 @@
  *
  * The flow runs on the API origin so Better Auth's OAuth state cookie is
  * first-party:
- *   1. The browser navigates to `${API}/auth/oauth/:provider?redirect=…`.
+ *   1. The browser navigates to `${API}/auth/oauth/:provider?redirect=…&origin=…`,
+ *      where `origin` is the web origin the user is on (REQ-AUTH-011).
  *   2. The API redirects to the provider; the provider calls back to
  *      `${API}/api/auth/callback/:provider` (Better Auth).
  *   3. The API trades the new session for a one-time code and redirects to
- *      `${APP}/auth/callback?code=…&redirect=…`.
+ *      `${ORIGIN}/auth/callback?code=…&redirect=…`.
  *   4. `/auth/callback` exchanges the code for the bearer token
  *      (`POST /auth/oauth/exchange`) and continues to `redirect`.
  *
@@ -35,6 +36,7 @@ export type SignInWithLinkedInResult = OAuthSignInResult;
 export function oauthStartUrl(provider: OAuthProvider, redirect = '/dashboard'): string {
   const url = new URL(`/auth/oauth/${provider}`, API_URL);
   url.searchParams.set('redirect', redirect);
+  url.searchParams.set('origin', window.location.origin);
   return url.toString();
 }
 

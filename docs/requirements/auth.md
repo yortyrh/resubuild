@@ -50,7 +50,7 @@ The login page offers "Password" (default), "Email me a code" (6-digit one-time 
 
 Users can sign in with GitHub, Google, and LinkedIn (OpenID Connect), each enabled independently.
 
-- All providers share one callback flow, which redirects to the requested destination (or the dashboard) using the **public** site origin, never an internal container address.
+- All providers share one callback flow, which redirects to the requested destination (or the dashboard) using the **public** site origin, never an internal container address. When the deployment serves the web app from several origins, the flow returns to the origin the user started from (REQ-AUTH-011), on success and on failure.
 - The flow works when the web app and the API are served from different sites: it does not depend on third-party cookies. The API hands the new session to the web app through a single-use code that expires after two minutes.
 - Only same-site relative destinations are honoured (no open redirects).
 - A social sign-in produces the same kind of session as password sign-in; the API needs no provider-specific handling.
@@ -65,3 +65,13 @@ Optional sign-in methods (recovery, email verification, passwordless, each socia
 ### REQ-AUTH-010 Password visibility toggle
 
 The registration password field has a show/hide toggle. It is masked by default and does not change the submitted value.
+
+### REQ-AUTH-011 Requesting web origin
+
+A deployment may serve the same web app from several public origins (for example a staging hostname and a custom domain) against one API. Every redirect and emailed link that sends the user back to the web app uses the origin the user was on when they started the flow, not a single fixed origin.
+
+- Applies to the social sign-in return (success and failure, REQ-AUTH-008) and to the links in recovery (REQ-AUTH-005), email verification (REQ-AUTH-006) and magic-link (REQ-AUTH-007) emails.
+- The API honours a requested origin only when it is in the allowed set: the configured web URL plus every origin in the CORS allow-list. Any other, malformed or missing origin falls back to the configured web URL, so a crafted origin cannot redirect users or emailed links to a third-party site (no open redirects).
+- The origin is compared exactly (scheme, host and port); a trailing slash is ignored.
+- In the browser the web app reports its own origin (`window.location.origin`) to the API; the build-time public app URL is only a fallback where no browser origin exists (server rendering).
+- With a single origin configured, behavior is unchanged.

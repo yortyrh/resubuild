@@ -6,6 +6,7 @@ import { bearer, emailOTP, magicLink } from 'better-auth/plugins';
 import type { MailService } from '../mail/mail.service';
 import type { AuthConfigService } from './config/auth.config';
 import { hashPassword, isLegacyBcryptHash, verifyPassword } from './password-hash';
+import { resolveRequestWebOrigin } from './web-origin';
 
 export const AUTH_BASE_PATH = '/api/auth';
 
@@ -32,6 +33,10 @@ export function webLink(webUrl: string, path: string, token: string): string {
  */
 export function createAuth({ db, mail, config }: CreateAuthDeps): Auth {
   const webUrl = config.get('WEB_URL');
+  const trustedOrigins = config.get('TRUSTED_ORIGINS');
+  /** Web origin the triggering request came from, else the configured WEB_URL. */
+  const webOrigin = (request: Request | null | undefined) =>
+    resolveRequestWebOrigin(request, trustedOrigins, webUrl);
   const passwordless = config.get('AUTH_PASSWORDLESS_ENABLED');
   const requireVerification = config.get('AUTH_EMAIL_VERIFICATION_ENABLED');
 
@@ -49,7 +54,7 @@ export function createAuth({ db, mail, config }: CreateAuthDeps): Auth {
     baseURL: config.get('BETTER_AUTH_URL'),
     basePath: AUTH_BASE_PATH,
     secret: config.get('BETTER_AUTH_SECRET'),
-    trustedOrigins: config.get('TRUSTED_ORIGINS'),
+    trustedOrigins,
     database: drizzleAdapter(db, {
       provider: 'pg',
       schema: { user, session, account, verification },
@@ -70,9 +75,9 @@ export function createAuth({ db, mail, config }: CreateAuthDeps): Auth {
       ...(config.get('AUTH_FORGOT_PASSWORD_ENABLED')
         ? {
             resetPasswordTokenExpiresIn: 60 * 60,
-            sendResetPassword: async ({ user: target, token }) => {
+            sendResetPassword: async ({ user: target, token }, request) => {
               await mail.send('reset-password', target.email, {
-                url: webLink(webUrl, '/reset-password', token),
+                url: webLink(webOrigin(request), '/reset-password', token),
                 expiresInMinutes: 60,
               });
             },
@@ -85,9 +90,9 @@ export function createAuth({ db, mail, config }: CreateAuthDeps): Auth {
     emailVerification: {
       sendOnSignUp: requireVerification,
       autoSignInAfterVerification: true,
-      sendVerificationEmail: async ({ user: target, token }) => {
+      sendVerificationEmail: async ({ user: target, token }, request) => {
         await mail.send('verify-email', target.email, {
-          url: webLink(webUrl, '/auth/verify', token),
+          url: webLink(webOrigin(request), '/auth/verify', token),
         });
       },
     },
@@ -101,9 +106,9 @@ export function createAuth({ db, mail, config }: CreateAuthDeps): Auth {
         ? [
             magicLink({
               expiresIn: 60 * 5,
-              sendMagicLink: async ({ email, token }) => {
+              sendMagicLink: async ({ email, token }, ctx) => {
                 await mail.send('magic-link', email, {
-                  url: webLink(webUrl, '/auth/magic', token),
+                  url: webLink(webOrigin(ctx?.request), '/auth/magic', token),
                   expiresInMinutes: 5,
                 });
               },
