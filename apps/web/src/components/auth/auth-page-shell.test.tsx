@@ -88,4 +88,57 @@ describe('AuthPageShell', () => {
     expect(card).not.toBeNull();
     expect(card!.contains(closeLink)).toBe(true);
   });
+
+  describe('decorative aside', () => {
+    function renderShell() {
+      return render(
+        <AuthPageShell title="Sign in" description="Welcome back">
+          <button type="button">Submit</button>
+        </AuthPageShell>,
+      );
+    }
+
+    it('keeps a hidden-below-lg aside that is hidden from assistive technology', () => {
+      const { container } = renderShell();
+
+      const aside = container.querySelector('aside');
+      expect(aside).not.toBeNull();
+      expect(aside).toHaveAttribute('aria-hidden', 'true');
+      expect(aside!.classList.contains('hidden')).toBe(true);
+      expect(aside!.classList.contains('lg:flex')).toBe(true);
+    });
+
+    it('renders the hero demo gif in the aside', () => {
+      const { container } = renderShell();
+
+      const image = container.querySelector('aside img');
+      expect(image).not.toBeNull();
+      expect(image).toHaveAttribute('src', '/hero-demo.gif');
+    });
+
+    it('serves the still poster to visitors who prefer reduced motion', () => {
+      const { container } = renderShell();
+
+      const source = container.querySelector('aside picture > source');
+      expect(source).not.toBeNull();
+      expect(source).toHaveAttribute('media', '(prefers-reduced-motion: reduce)');
+      expect(source).toHaveAttribute('srcset', '/hero-demo-poster.png');
+      expect(container.querySelector('aside picture > img')).not.toBeNull();
+    });
+
+    it('lazy-loads the demo image', () => {
+      const { container } = renderShell();
+
+      expect(container.querySelector('aside img')).toHaveAttribute('loading', 'lazy');
+    });
+
+    it('no longer shows the static CV specimen or its caption', () => {
+      renderShell();
+
+      expect(screen.queryByText(/Ana Castillo/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Your CV, edited as the page it prints on/),
+      ).not.toBeInTheDocument();
+    });
+  });
 });
