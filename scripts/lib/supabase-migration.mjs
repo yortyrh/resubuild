@@ -76,7 +76,7 @@ export function mapAuthUser(row) {
  * @param {{ id: string, encrypted_password: string | null, created_at: Date | string }} row
  */
 export function mapCredentialAccount(row) {
-  if (!row.encrypted_password || !row.encrypted_password.startsWith('$2')) return null;
+  if (!row.encrypted_password?.startsWith('$2')) return null;
   return {
     account_id: row.id,
     provider_id: 'credential',

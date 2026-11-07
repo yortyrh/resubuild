@@ -10,7 +10,7 @@ import { authKeys } from '@/lib/queries/auth-queries';
 
 /** Only same-origin relative paths; anything else falls back to /dashboard. */
 export function safeNext(next: string | null): string {
-  if (!next || !next.startsWith('/') || next.startsWith('//') || next.includes('\\')) {
+  if (!next?.startsWith('/') || next.startsWith('//') || next.includes('\\')) {
     return '/dashboard';
   }
   return next;
