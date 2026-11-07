@@ -30,7 +30,13 @@ describe('AuthController', () => {
     api = { signInSocial: jest.fn(), getSession: jest.fn() };
     const config = {
       get: (key: string) =>
-        ({ BETTER_AUTH_URL: 'http://api.test', WEB_URL: 'http://web.test' })[key],
+        (
+          ({
+            BETTER_AUTH_URL: 'http://api.test',
+            WEB_URL: 'http://web.test',
+            TRUSTED_ORIGINS: ['http://web.test', 'http://alt.test:8080'],
+          }) as Record<string, unknown>
+        )[key],
       enabledOAuthProviders: () => ['github'],
     } as unknown as AuthConfigService;
     controller = new AuthController(
@@ -65,7 +71,7 @@ describe('AuthController', () => {
       });
       const res = mockResponse();
 
-      await controller.startOAuth('github', '/dashboard/cv', res);
+      await controller.startOAuth('github', '/dashboard/cv', undefined, res);
 
       expect(api.signInSocial).toHaveBeenCalledWith({
         body: {
@@ -91,18 +97,89 @@ describe('AuthController', () => {
         headers: new Headers(),
         response: { url: 'https://p' },
       });
-      await controller.startOAuth('github', 'https://evil.test', mockResponse());
+      await controller.startOAuth('github', 'https://evil.test', undefined, mockResponse());
       expect(api.signInSocial.mock.calls[0][0].body.callbackURL).toContain('redirect=%2Fdashboard');
-      await expect(controller.startOAuth('google', undefined, mockResponse())).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.startOAuth('google', undefined, undefined, mockResponse()),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('fails when Better Auth returns no provider URL', async () => {
       api.signInSocial.mockResolvedValue({ headers: new Headers(), response: {} });
-      await expect(controller.startOAuth('github', undefined, mockResponse())).rejects.toThrow(
-        'Could not start OAuth sign-in',
-      );
+      await expect(
+        controller.startOAuth('github', undefined, undefined, mockResponse()),
+      ).rejects.toThrow('Could not start OAuth sign-in');
+    });
+
+    describe('requesting web origin', () => {
+      beforeEach(() => {
+        api.signInSocial.mockResolvedValue({
+          headers: new Headers(),
+          response: { url: 'https://p' },
+        });
+      });
+
+      it('returns to an allowed requesting origin on success and on failure', async () => {
+        await controller.startOAuth(
+          'github',
+          '/dashboard/cv',
+          'http://alt.test:8080',
+          mockResponse(),
+        );
+
+        expect(api.signInSocial).toHaveBeenCalledWith({
+          body: {
+            provider: 'github',
+            callbackURL:
+              'http://api.test/auth/oauth/complete?redirect=%2Fdashboard%2Fcv&origin=http%3A%2F%2Falt.test%3A8080',
+            errorCallbackURL: 'http://alt.test:8080/login?error=oauth',
+            disableRedirect: true,
+          },
+          returnHeaders: true,
+        });
+      });
+
+      it('normalizes a trailing slash on the requested origin', async () => {
+        await controller.startOAuth(
+          'github',
+          '/dashboard',
+          'http://alt.test:8080/',
+          mockResponse(),
+        );
+
+        const body = api.signInSocial.mock.calls[0][0].body;
+        expect(body.errorCallbackURL).toBe('http://alt.test:8080/login?error=oauth');
+        expect(body.callbackURL.endsWith('&origin=http%3A%2F%2Falt.test%3A8080')).toBe(true);
+      });
+
+      it('accepts the configured web URL as the requesting origin', async () => {
+        await controller.startOAuth('github', '/dashboard', 'http://web.test', mockResponse());
+        expect(api.signInSocial.mock.calls[0][0].body.errorCallbackURL).toBe(
+          'http://web.test/login?error=oauth',
+        );
+      });
+
+      it.each([
+        ['an origin outside the allowed set', 'https://evil.test'],
+        ['a lookalike host', 'http://web.test.evil.test'],
+        ['userinfo that spells an allowed host', 'http://web.test@evil.test'],
+        ['a different port of an allowed host', 'http://alt.test:9999'],
+        ['a protocol-relative URL', '//evil.test'],
+        ['a javascript: URL', 'javascript:alert(1)'],
+        ['an empty value', ''],
+        ['a missing value', undefined],
+        ['a non-string value', ['http://alt.test:8080']],
+      ])('falls back to the configured web URL for %s', async (_label, origin) => {
+        await controller.startOAuth('github', '/dashboard', origin as never, mockResponse());
+
+        const body = api.signInSocial.mock.calls[0][0].body;
+        expect(body.errorCallbackURL).toBe('http://web.test/login?error=oauth');
+        expect(body.callbackURL).not.toContain('evil.test');
+        expect(body.callbackURL).not.toContain('alt.test');
+        expect(body.callbackURL.startsWith('http://api.test/auth/oauth/complete?redirect=')).toBe(
+          true,
+        );
+      });
     });
   });
 
@@ -114,6 +191,7 @@ describe('AuthController', () => {
       await controller.completeOAuth(
         { headers: { cookie: 'better-auth.session_token=x' } } as never,
         '/dashboard',
+        undefined,
         res,
       );
 
@@ -128,9 +206,88 @@ describe('AuthController', () => {
     it('sends the user back to login when there is no session', async () => {
       api.getSession.mockRejectedValue(new Error('no session'));
       const res = mockResponse();
-      await controller.completeOAuth({ headers: {} } as never, undefined, res);
+      await controller.completeOAuth({ headers: {} } as never, undefined, undefined, res);
       expect(handoff.issue).not.toHaveBeenCalled();
       expect(res.redirect).toHaveBeenCalledWith(302, 'http://web.test/login?error=oauth');
+    });
+
+    describe('requesting web origin', () => {
+      const req = { headers: {} } as never;
+
+      beforeEach(() => {
+        api.getSession.mockResolvedValue({ session: { token: 'session-token' }, user: {} });
+      });
+
+      it('sends the user back to an allowed requesting origin on success', async () => {
+        const res = mockResponse();
+        await controller.completeOAuth(req, '/dashboard/cv', 'http://alt.test:8080', res);
+        expect(res.redirect).toHaveBeenCalledTimes(1);
+        expect(res.redirect).toHaveBeenCalledWith(
+          302,
+          'http://alt.test:8080/auth/callback?code=one-time-code&redirect=%2Fdashboard%2Fcv',
+        );
+      });
+
+      it('ignores a trailing slash on the requesting origin', async () => {
+        const res = mockResponse();
+        await controller.completeOAuth(req, '/dashboard', 'http://alt.test:8080/', res);
+        expect(res.redirect).toHaveBeenCalledWith(
+          302,
+          'http://alt.test:8080/auth/callback?code=one-time-code&redirect=%2Fdashboard',
+        );
+      });
+
+      it('sends a failed sign-in back to the requesting origin login page', async () => {
+        api.getSession.mockResolvedValue(null);
+        const res = mockResponse();
+        await controller.completeOAuth(req, '/dashboard', 'http://alt.test:8080', res);
+        expect(handoff.issue).not.toHaveBeenCalled();
+        expect(res.redirect).toHaveBeenCalledWith(302, 'http://alt.test:8080/login?error=oauth');
+      });
+
+      it('still clears the session cookies for a non-default origin', async () => {
+        const res = mockResponse();
+        await controller.completeOAuth(req, '/dashboard', 'http://alt.test:8080', res);
+        expect(res.clearCookie).toHaveBeenCalledWith('better-auth.session_token', { path: '/' });
+      });
+
+      it.each([
+        ['an origin outside the allowed set', 'https://evil.test'],
+        ['a lookalike host', 'http://web.test.evil.test'],
+        ['userinfo that spells an allowed host', 'http://web.test@evil.test'],
+        ['a different port of an allowed host', 'http://alt.test:9999'],
+        ['a protocol-relative URL', '//evil.test'],
+        ['a javascript: URL', 'javascript:alert(1)'],
+        ['an empty value', ''],
+        ['a missing value', undefined],
+        ['a non-string value', ['http://alt.test:8080']],
+      ])('redirects to the configured web URL for %s (success)', async (_label, origin) => {
+        const res = mockResponse();
+        await controller.completeOAuth(req, '/dashboard', origin as never, res);
+        expect(res.redirect).toHaveBeenCalledWith(
+          302,
+          'http://web.test/auth/callback?code=one-time-code&redirect=%2Fdashboard',
+        );
+      });
+
+      it.each([
+        ['an origin outside the allowed set', 'https://evil.test'],
+        ['a missing value', undefined],
+      ])('redirects to the configured web URL for %s (failure)', async (_label, origin) => {
+        api.getSession.mockResolvedValue(null);
+        const res = mockResponse();
+        await controller.completeOAuth(req, '/dashboard', origin as never, res);
+        expect(res.redirect).toHaveBeenCalledWith(302, 'http://web.test/login?error=oauth');
+      });
+
+      it('still sanitises the redirect path on an allowed origin', async () => {
+        const res = mockResponse();
+        await controller.completeOAuth(req, 'https://evil.test', 'http://alt.test:8080', res);
+        expect(res.redirect).toHaveBeenCalledWith(
+          302,
+          'http://alt.test:8080/auth/callback?code=one-time-code&redirect=%2Fdashboard',
+        );
+      });
     });
   });
 

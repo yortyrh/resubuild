@@ -249,4 +249,137 @@ describe('Better Auth integration', () => {
     build({ ...ENV, AUTH_PASSWORDLESS_ENABLED: 'false', AUTH_FORGOT_PASSWORD_ENABLED: 'false' });
     expect((await send(auth)).status).toBe(404);
   });
+
+  describe('requesting web origin in emailed links', () => {
+    const ALT = 'http://alt.test:8080';
+    const MULTI_ENV = { ...ENV, CORS_ORIGIN: `${ALT}, http://other.test/` };
+
+    function post(path: string, body: unknown, origin?: string) {
+      return auth.handler(
+        new Request(`http://api.test/api/auth${path}`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            ...(origin === undefined ? {} : { origin }),
+          },
+          body: JSON.stringify(body),
+        }),
+      );
+    }
+
+    function sentUrl(template: string): string {
+      const call = mail.send.mock.calls.find((c) => c[0] === template);
+      return (call?.[2] as { url: string }).url;
+    }
+
+    beforeEach(() => {
+      build(MULTI_ENV);
+    });
+
+    describe.each([
+      {
+        name: 'reset-password',
+        path: '/request-password-reset',
+        body: { email: 'jane@test.local' },
+        link: '/reset-password',
+        prepare: async () => {
+          await signUp();
+        },
+      },
+      {
+        name: 'magic-link',
+        path: '/sign-in/magic-link',
+        body: { email: 'jane@test.local' },
+        link: '/auth/magic',
+        prepare: async () => {},
+      },
+    ])('$name email', ({ name, path, body, link, prepare }) => {
+      it('links to an allowed second origin when the request came from it', async () => {
+        await prepare();
+        expect((await post(path, body, ALT)).status).toBe(200);
+        expect(new URL(sentUrl(name)).origin).toBe(ALT);
+        expect(sentUrl(name)).toMatch(new RegExp(`^${ALT}${link}\\?token=.+`));
+      });
+
+      it('links to another CORS origin whose configured value had a trailing slash', async () => {
+        await prepare();
+        expect((await post(path, body, 'http://other.test')).status).toBe(200);
+        expect(sentUrl(name)).toMatch(new RegExp(`^http://other\\.test${link}\\?token=.+`));
+      });
+
+      it('links to the configured web URL when the request came from it', async () => {
+        await prepare();
+        expect((await post(path, body, 'http://web.test')).status).toBe(200);
+        expect(sentUrl(name)).toMatch(new RegExp(`^http://web\\.test${link}\\?token=.+`));
+      });
+
+      it('falls back to the configured web URL when there is no Origin header', async () => {
+        await prepare();
+        expect((await post(path, body)).status).toBe(200);
+        expect(sentUrl(name)).toMatch(new RegExp(`^http://web\\.test${link}\\?token=.+`));
+      });
+
+      it('falls back to the configured web URL for a disallowed Origin header', async () => {
+        await prepare();
+        const response = await post(path, body, 'http://evil.test');
+        expect(response.status).toBe(200);
+        expect(sentUrl(name)).toMatch(new RegExp(`^http://web\\.test${link}\\?token=.+`));
+        for (const [, , args] of mail.send.mock.calls) {
+          expect((args as { url?: string }).url ?? '').not.toContain('evil.test');
+        }
+      });
+
+      it('falls back to the configured web URL for a lookalike of an allowed origin', async () => {
+        await prepare();
+        const response = await post(path, body, `${ALT}.evil.test`);
+        expect(response.status).toBe(200);
+        expect(sentUrl(name)).toMatch(new RegExp(`^http://web\\.test${link}\\?token=.+`));
+        for (const [, , args] of mail.send.mock.calls) {
+          expect((args as { url?: string }).url ?? '').not.toContain('evil.test');
+        }
+      });
+    });
+
+    it('links the verification email to the allowed origin that signed the user up', async () => {
+      build({ ...MULTI_ENV, AUTH_EMAIL_VERIFICATION_ENABLED: 'true' });
+      const response = await post(
+        '/sign-up/email',
+        { email: 'jane@test.local', password: 'secret123', name: 'Jane' },
+        ALT,
+      );
+      expect(response.status).toBe(200);
+      expect(sentUrl('verify-email')).toMatch(new RegExp(`^${ALT}/auth/verify\\?token=.+`));
+    });
+
+    it('links the verification email to the configured web URL without an Origin header', async () => {
+      build({ ...MULTI_ENV, AUTH_EMAIL_VERIFICATION_ENABLED: 'true' });
+      const response = await post('/sign-up/email', {
+        email: 'jane@test.local',
+        password: 'secret123',
+        name: 'Jane',
+      });
+      expect(response.status).toBe(200);
+      expect(sentUrl('verify-email')).toMatch(/^http:\/\/web\.test\/auth\/verify\?token=.+/);
+    });
+
+    it('links the verification email to the configured web URL for a disallowed origin', async () => {
+      build({ ...MULTI_ENV, AUTH_EMAIL_VERIFICATION_ENABLED: 'true' });
+      const response = await post(
+        '/sign-up/email',
+        { email: 'jane@test.local', password: 'secret123', name: 'Jane' },
+        'http://evil.test',
+      );
+      expect(response.status).toBe(200);
+      expect(sentUrl('verify-email')).toMatch(/^http:\/\/web\.test\/auth\/verify\?token=.+/);
+      for (const [, , args] of mail.send.mock.calls) {
+        expect((args as { url?: string }).url ?? '').not.toContain('evil.test');
+      }
+    });
+
+    it('keeps programmatic calls without a request on the configured web URL', async () => {
+      await signUp();
+      await auth.api.requestPasswordReset({ body: { email: 'jane@test.local' } });
+      expect(sentUrl('reset-password')).toMatch(/^http:\/\/web\.test\/reset-password\?token=.+/);
+    });
+  });
 });
