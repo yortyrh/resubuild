@@ -50,7 +50,7 @@ Login, register, CV list, applications, every editor section and the preview wor
 
 - Header actions collapse to icon-only buttons on small screens. These buttons keep accessible labels.
 - Tables become stacked cards on small screens.
-- Auth pages center their card in the viewport; on large screens a sample CV page sits beside the form.
+- Auth pages center their card in the viewport; on large screens the landing hero's animated walkthrough (same recreation, same reduced-motion still frame) sits beside the form. The panel is hidden on small screens, and its image loads lazily so those screens do not download it.
 
 ### REQ-WEB-007 Settings
 

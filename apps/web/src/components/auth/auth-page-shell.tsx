@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { BrandLogo } from '@/components/brand/brand-logo';
-import { CvSpecimen } from '@/components/brand/cv-specimen';
+import { HeroDemo } from '@/components/landing/hero-demo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export interface AuthPageShellProps {
@@ -14,7 +14,7 @@ export interface AuthPageShellProps {
 
 /**
  * Auth layout shared by login, register, and related flows: the form on the
- * desk, and on large screens a sample CV page beside it.
+ * desk, and on large screens the landing hero's animated demo beside it.
  *
  * The shell renders a close icon button anchored to the top-right corner of
  * the card so any visitor who lands on an auth page (deep-link, OAuth
@@ -54,11 +54,7 @@ export function AuthPageShell({ title, description, children, footer }: AuthPage
         aria-hidden
         className="relative hidden overflow-hidden bg-[hsl(var(--shadow-ink))] lg:flex lg:flex-col lg:justify-center lg:px-14 xl:px-20"
       >
-        <CvSpecimen className="mx-auto w-full max-w-[30rem] shadow-[0_32px_64px_-24px_rgb(0_0_0/0.6)]" />
-        <p className="mx-auto mt-8 max-w-[30rem] text-[0.9375rem] text-[hsl(145_8%_76%)]">
-          Your CV, edited as the page it prints on. Import the one you have, tailor it for each job,
-          and export a clean PDF.
-        </p>
+        <HeroDemo loading="lazy" className="mx-auto w-full max-w-[34rem]" />
       </aside>
     </div>
   );

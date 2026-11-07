@@ -7,7 +7,13 @@ import { cn } from '@/lib/utils';
  * not a screen recording. Visitors who prefer reduced motion get a still frame,
  * because a GIF cannot be paused.
  */
-export function HeroDemo({ className }: { className?: string }) {
+export function HeroDemo({
+  className,
+  loading,
+}: {
+  className?: string;
+  loading?: 'lazy' | 'eager';
+}) {
   return (
     <figure className={cn('m-0', className)}>
       <div className="surface-soft overflow-hidden">
@@ -19,6 +25,7 @@ export function HeroDemo({ className }: { className?: string }) {
             width={900}
             height={870}
             decoding="async"
+            loading={loading}
             className="block h-auto w-full"
           />
         </picture>
