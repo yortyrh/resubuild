@@ -11,7 +11,7 @@
   <a href="https://app.resubuild.dev">app.resubuild.dev</a> · <a href="#local-development-docker">Run it locally</a> · <a href="https://github.com/yortyrh/resubuild">GitHub</a>
 </p>
 
-![Resubuild banner — AI Resume Builder & Tailoring](./apps/web/public/resubuild-banner.jpg)
+![Resubuild banner: your CV as data, tailored to every job](./apps/web/public/resubuild-banner.jpg)
 
 ## What it does
 
