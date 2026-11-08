@@ -61,6 +61,20 @@ describe('MarketingPage', () => {
     expect(loginLinks.some((link) => link.getAttribute('href') === '/login')).toBe(true);
   });
 
+  it('shows the banner in the hero and the animated demo under "See it work"', () => {
+    render(<MarketingPage />);
+
+    const hero = screen.getByRole('heading', { level: 1 }).closest('section');
+    const banner = hero?.querySelector('img[src="/resubuild-banner.jpg"]');
+    expect(banner).not.toBeNull();
+    expect(banner!.getAttribute('alt')).not.toBe('');
+    expect(hero?.querySelector('img[src="/hero-demo.gif"]')).toBeNull();
+
+    const demo = screen.getByRole('heading', { level: 2, name: /See it work/i }).closest('section');
+    expect(demo).toHaveAttribute('id', 'demo');
+    expect(demo?.querySelector('img[src="/hero-demo.gif"]')).toHaveAttribute('loading', 'lazy');
+  });
+
   it('renders the header "Get started free" CTA pointing to /register', () => {
     render(<MarketingPage />);
 

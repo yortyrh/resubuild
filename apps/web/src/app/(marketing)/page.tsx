@@ -101,8 +101,36 @@ export default function MarketingPage() {
                   Free during the public beta. No watermark. Your data exports as JSON Resume.
                 </p>
               </div>
-              <HeroDemo />
+              <figure className="m-0">
+                <div className="surface-soft overflow-hidden">
+                  {/* biome-ignore lint/performance/noImgElement: the same static file as the README banner and og:image, served as is like the demo GIF */}
+                  <img
+                    src="/resubuild-banner.jpg"
+                    alt="Resubuild: your CV as data, tailored to every job. A CV tailored to a job posting with the AI changes highlighted, beside PDF import, AI tailoring, schema validation and an MCP server."
+                    width={1800}
+                    height={900}
+                    decoding="async"
+                    fetchPriority="high"
+                    className="block h-auto w-full"
+                  />
+                </div>
+              </figure>
               <ComposeHero className="lg:col-span-2" />
+            </section>
+          </Band>
+
+          <Band className="border-border border-t py-20">
+            <section
+              id="demo"
+              aria-labelledby="demo-title"
+              className="grid scroll-mt-24 items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-16"
+            >
+              <BandHeading
+                id="demo-title"
+                title="See it work"
+                lede="Import a PDF into structured fields, type a highlight on the page, then tailor a copy for a job posting and export it as a PDF."
+              />
+              <HeroDemo loading="lazy" />
             </section>
           </Band>
 

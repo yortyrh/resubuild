@@ -1,7 +1,8 @@
 import { cn } from '@/lib/utils';
 
 /**
- * The hero's animated walkthrough: import a PDF, edit it on the page, tailor a
+ * The animated walkthrough shown in "See it work" on the landing page and beside
+ * the auth forms: import a PDF, edit it on the page, tailor a
  * copy for a job and export the PDF. It is a recreation of the app drawn with
  * Remotion (`apps/hero-demo`, `pnpm --filter @resubuild/hero-demo render:gif`),
  * not a screen recording. Visitors who prefer reduced motion get a still frame,
