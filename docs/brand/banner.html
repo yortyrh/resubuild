@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+  <!-- Source of the project banner. See README.md in this folder for how to render it. -->
+  <head>
+    <meta charset="utf-8" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wdth,wght@85..100,400..700&display=block"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --desk: #eef1ef;
+        --card: #ffffff;
+        --ink: #17201c;
+        --muted: #5b6661;
+        --border: #cfd6d2;
+        --primary: #1e6b52;
+        --primary-soft: #e3efea;
+        --marker: #f2d04b;
+        --shadow-ink: #131b17;
+        --page-ink: #1b1f1d;
+        --page-rule: #c9cfcb;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      /* The canvas is 1200x600 (2:1). It centers in a taller window, so a 1200x630 render adds an even band. */
+      html {
+        height: 100%;
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+        background: var(--desk, var(--bg));
+      }
+      body {
+        width: 1200px;
+        height: 600px;
+        overflow: hidden;
+      }
+      body {
+        background: var(--desk);
+        color: var(--ink);
+        font-family: 'IBM Plex Sans', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        position: relative;
+      }
+      .display {
+        font-stretch: 85%;
+        font-variation-settings: 'wdth' 85;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      .left {
+        position: absolute;
+        left: 60px;
+        top: 48px;
+        width: 540px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 30px;
+        font-weight: 600;
+        letter-spacing: -0.015em;
+      }
+      .brand svg {
+        width: 46px;
+        height: 46px;
+      }
+      h1 {
+        margin-top: 36px;
+        font-size: 62px;
+        line-height: 1.02;
+      }
+      h1 .m {
+        background: linear-gradient(
+          transparent 58%,
+          var(--marker) 58%,
+          var(--marker) 94%,
+          transparent 94%
+        );
+        padding: 0 2px;
+      }
+      .sub {
+        margin-top: 20px;
+        font-size: 19px;
+        line-height: 1.45;
+        color: var(--muted);
+        max-width: 520px;
+      }
+      .features {
+        margin-top: 28px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px 24px;
+        max-width: 470px;
+      }
+      .f {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 18px;
+        font-weight: 500;
+      }
+      .f i {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 6px;
+        background: var(--primary-soft);
+        color: var(--primary);
+        flex: none;
+      }
+      .f i svg {
+        width: 19px;
+        height: 19px;
+      }
+      .foot {
+        position: absolute;
+        left: 60px;
+        bottom: 40px;
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        font-size: 16px;
+        color: var(--muted);
+      }
+      .foot b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .foot .dot {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--border);
+      }
+
+      /* Right: the tailoring workspace */
+      .panel {
+        position: absolute;
+        left: 636px;
+        top: 50px;
+        width: 520px;
+        height: 500px;
+        background: var(--card);
+        border-radius: 10px;
+        box-shadow:
+          0 0 0 1px var(--border),
+          0 24px 48px -24px rgba(19, 27, 23, 0.25);
+        padding: 22px 24px;
+      }
+      .ph {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .ph .t {
+        font-size: 24px;
+        line-height: 1.1;
+      }
+      .ph .r {
+        font-size: 14px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--primary);
+        color: #fff;
+        font-weight: 600;
+        font-size: 15px;
+        padding: 10px 16px;
+        border-radius: 6px;
+      }
+      .btn svg {
+        width: 16px;
+        height: 16px;
+      }
+      .tabs {
+        margin-top: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .seg {
+        display: flex;
+        background: var(--desk);
+        padding: 4px;
+        border-radius: 6px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .seg span {
+        padding: 6px 12px;
+        border-radius: 4px;
+      }
+      .seg .on {
+        background: #fff;
+        color: var(--ink);
+        font-weight: 600;
+        box-shadow: 0 0 0 1px var(--border);
+      }
+      .chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--primary);
+        background: var(--primary-soft);
+        padding: 6px 10px;
+        border-radius: 6px;
+      }
+      .chip svg {
+        width: 14px;
+        height: 14px;
+      }
+      .body {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 18px;
+      }
+      .paper {
+        font-family: Georgia, Cambria, 'Times New Roman', serif;
+        color: var(--page-ink);
+        border-radius: 4px;
+        box-shadow: 0 0 0 1px var(--page-rule);
+        padding: 16px 20px;
+        height: 330px;
+        overflow: hidden;
+        background: #fefefd;
+      }
+      .paper .n {
+        text-align: center;
+        font-size: 19px;
+        font-weight: 700;
+      }
+      .paper .j {
+        text-align: center;
+        font-size: 11.5px;
+        margin-top: 2px;
+      }
+      .paper h4 {
+        font-size: 10.5px;
+        letter-spacing: 0.06em;
+        font-weight: 700;
+        margin-top: 13px;
+        padding-bottom: 3px;
+        border-bottom: 1px solid var(--page-rule);
+      }
+      .paper p,
+      .paper li {
+        font-size: 11px;
+        line-height: 1.5;
+        margin-top: 4px;
+      }
+      .paper ul {
+        padding-left: 14px;
+      }
+      .paper .row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        margin-top: 5px;
+      }
+      .paper .row span:last-child {
+        color: #6b716e;
+        font-size: 10px;
+      }
+      mark {
+        background: var(--marker);
+        color: inherit;
+        padding: 0 1px;
+        border-radius: 1px;
+      }
+      .changes h5 {
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .changes .c {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+        font-size: 13.5px;
+        line-height: 1.4;
+        color: var(--muted);
+      }
+      .changes .c::before {
+        content: '';
+        flex: none;
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        background: var(--marker);
+        margin-top: 3px;
+      }
+      .valid {
+        margin-top: 22px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        font-size: 13px;
+        line-height: 1.4;
+        color: var(--muted);
+      }
+      .valid svg {
+        width: 18px;
+        height: 18px;
+        color: var(--primary);
+        flex: none;
+        margin-top: 1px;
+      }
+      .valid b {
+        color: var(--ink);
+        font-weight: 600;
+        display: block;
+      }
+      .steps {
+        position: absolute;
+        left: 672px;
+        bottom: 0;
+        width: 600px;
+        height: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="left">
+      <div class="brand">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 64 64"
+          fill="none"
+          stroke-width="4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path stroke="#17201C" d="M41 27V17L31 7H15a6 6 0 0 0-6 6v38a6 6 0 0 0 6 6h9" />
+          <path stroke="#17201C" d="M31 7v7a3 3 0 0 0 3 3h7" />
+          <path stroke="#17201C" d="M17 32h11M17 42h7" />
+          <path fill="#1E6B52" d="M20 14.5l4 4-4 4-4-4z" />
+          <path stroke="#1E6B52" d="M24 57c15 0 25.5-8 32.5-25.5M47.5 34.5l9-3 1.8 9.6" />
+        </svg>
+        Resubuild
+      </div>
+      <h1 class="display">Your CV as data,<br /><span class="m">tailored</span> to every job.</h1>
+      <p class="sub">
+        Open-source AI résumé builder. Import a PDF, edit it as structured JSON&nbsp;Resume, tailor
+        each application and export a clean PDF.
+      </p>
+      <div class="features">
+        <div class="f">
+          <i
+            ><svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+              <path d="M14 3v5h5" />
+              <path d="M12 11v6M9 14l3 3 3-3" /></svg></i
+          >PDF import
+        </div>
+        <div class="f">
+          <i
+            ><svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
+              <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg></i
+          >AI tailoring
+        </div>
+        <div class="f">
+          <i
+            ><svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" />
+              <path d="M9 12l2 2 4-4" /></svg></i
+          >Schema-validated
+        </div>
+        <div class="f">
+          <i
+            ><svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 7l-5 5 5 5M15 7l5 5-5 5" /></svg></i
+          >MCP server
+        </div>
+      </div>
+    </div>
+    <div class="foot">
+      <b>resubuild.dev</b><span class="dot"></span> <span>Next.js</span><span class="dot"></span
+      ><span>NestJS</span><span class="dot"></span><span>Mastra</span><span class="dot"></span
+      ><span>PostgreSQL</span><span class="dot"></span><span>MIT</span>
+    </div>
+
+    <div class="panel">
+      <div class="ph">
+        <div>
+          <div class="t display">Orbital Freight</div>
+          <div class="r">Senior Product Engineer</div>
+        </div>
+        <div class="btn">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg
+          >PDF
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="seg">
+          <span>Job posting</span><span class="on">Tailored CV</span><span>Cover letter</span>
+        </div>
+        <div class="chip">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" /></svg
+          >3 changes
+        </div>
+      </div>
+      <div class="body">
+        <div class="paper">
+          <div class="n">Ana Castillo</div>
+          <div class="j">Senior Product Engineer</div>
+          <h4>SUMMARY</h4>
+          <p>
+            Product engineer with eight years building checkout and
+            <mark>pricing systems for freight platforms</mark>.
+          </p>
+          <h4>EXPERIENCE</h4>
+          <div class="row">
+            <span><b>Northwind Logistics</b>, Remote</span><span>2021 – Present</span>
+          </div>
+          <ul>
+            <li>
+              Cut checkout latency by 40% by moving the <mark>pricing engine</mark> to the edge
+            </li>
+            <li>Led a team of six through the payments migration</li>
+            <li><mark>Owned rate quoting for 2,000 carriers</mark></li>
+          </ul>
+          <h4>SKILLS</h4>
+          <p>TypeScript, Postgres, React, Low-latency APIs</p>
+        </div>
+        <div class="changes">
+          <h5>What changed</h5>
+          <div class="c">Summary now leads with pricing systems</div>
+          <div class="c">Pricing engine named in your top bullet</div>
+          <div class="c">Carrier quoting added from the job posting</div>
+          <div class="valid">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" />
+              <path d="M9 12l2 2 4-4" /></svg
+            ><span><b>Valid JSON Resume</b>Checked before saving</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
