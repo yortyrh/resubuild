@@ -4,11 +4,11 @@
 [![License](https://img.shields.io/github/license/yortyrh/resubuild)](./LICENSE)
 
 <p align="center">
-  <a href="https://app.resubuild.dev"><img src="https://img.shields.io/badge/▶_Try_Live_Demo-app.resubuild.dev-7C3AED?style=for-the-badge" alt="Try Live Demo" /></a>
+  <a href="https://www.resubuild.dev"><img src="https://img.shields.io/badge/▶_Try_Live_Demo-www.resubuild.dev-1E6B52?style=for-the-badge" alt="Try Live Demo" /></a>
 </p>
 
 <p align="center">
-  <a href="https://app.resubuild.dev">app.resubuild.dev</a> · <a href="#local-development-docker">Run it locally</a> · <a href="https://github.com/yortyrh/resubuild">GitHub</a>
+  <a href="https://www.resubuild.dev">www.resubuild.dev</a> · <a href="#local-development-docker">Run it locally</a> · <a href="https://github.com/yortyrh/resubuild">GitHub</a>
 </p>
 
 ![Resubuild banner: your CV as data, tailored to every job](./apps/web/public/resubuild-banner.jpg)
