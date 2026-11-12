@@ -1,5 +1,7 @@
 # Resubuild
 
+> 📖 **Case study:** [how and why I built it](https://yorty.info/projects/resubuild/) · Built by [Yorty Ruiz Hernandez](https://yorty.info)
+
 [![GitHub stars](https://img.shields.io/github/stars/yortyrh/resubuild)](https://github.com/yortyrh/resubuild)
 [![License](https://img.shields.io/github/license/yortyrh/resubuild)](./LICENSE)
 
